@@ -1,0 +1,66 @@
+# The whole test suite runs with no display attached, on every platform this
+# library claims to support — which is only possible because the renderer is
+# this crate's own, and a frame drawn into a buffer is the frame a window shows.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  # A warning that nobody has to fix is a warning everybody learns to scroll past.
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    name: test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the X11 headers the Linux backend links against
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build, including the examples
+        run: cargo build --all-targets
+
+      - name: Test
+        run: cargo test --all-targets
+
+      - name: Test the documentation's own examples
+        run: cargo test --doc
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the X11 headers the Linux backend links against
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Documentation builds, with every link resolving
+        run: cargo doc --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
