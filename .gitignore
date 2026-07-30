@@ -1,0 +1,6 @@
+# What the compiler makes.
+/target
+Cargo.lock
+
+# What the examples write when they are asked to draw with no window open.
+*.png

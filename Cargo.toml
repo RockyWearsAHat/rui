@@ -1,0 +1,31 @@
+[package]
+name = "rui"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/RockyWearsAHat/rui"
+readme = "README.md"
+description = "A declarative interface library for Rust: structure, style, and behaviour in one language, drawn by its own renderer, with no dependencies."
+keywords = ["gui", "ui", "declarative", "renderer", "no-std-deps"]
+categories = ["gui", "rendering"]
+exclude = ["/.github"]
+
+# Nothing. Not a policy so much as a consequence: the TrueType parser, the glyph
+# rasteriser, the text layout, the PNG writer, and the platform windows are all
+# in this crate, so there is nothing left to depend on.
+[dependencies]
+
+[lints.rust]
+# Not `forbid`: opening a window is the one thing that cannot be done without
+# calling the platform. Every `unsafe` in the crate is inside `src/shell/platform/`,
+# and nothing above it — the elements, the layout, the renderer, the fonts —
+# contains any.
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
