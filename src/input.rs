@@ -113,14 +113,36 @@ impl Modifiers {
     /// No modifiers held.
     pub const NONE: Self = Self { shift: false, control: false, alt: false, command: false };
 
+    /// Whether Control and the accelerator are the same physical key here.
+    ///
+    /// They are everywhere except macOS, which has both. This is the one fact
+    /// about the platform that has to be known *above* the backends, because
+    /// only here is the question asked — and getting it wrong is not a cosmetic
+    /// difference: a backend that reports Control as the accelerator, as X11
+    /// and Windows both must, would otherwise report a modifier that
+    /// [`Modifiers::command_only`] then refuses to see past, and no shortcut on
+    /// either platform would ever match.
+    #[cfg(target_os = "macos")]
+    const CONTROL_IS_ACCELERATOR: bool = false;
+
+    /// The same, where Control is the accelerator.
+    #[cfg(not(target_os = "macos"))]
+    const CONTROL_IS_ACCELERATOR: bool = true;
+
     /// Whether no modifier at all is held.
     pub fn is_empty(self) -> bool {
         self == Self::NONE
     }
 
     /// Whether the accelerator, and nothing else, is held.
+    ///
+    /// Control counts as "something else" only where it is a key in its own
+    /// right. On a platform whose accelerator *is* Control, a backend reports
+    /// one keypress in both fields, and treating that as two modifiers would
+    /// make the accelerator unpressable.
     pub fn command_only(self) -> bool {
-        self.command && !self.shift && !self.alt && !self.control
+        let control_is_extra = self.control && !Self::CONTROL_IS_ACCELERATOR;
+        self.command && !self.shift && !self.alt && !control_is_extra
     }
 }
 
@@ -478,6 +500,30 @@ mod tests {
         input.apply(Event::CloseRequested);
         input.begin_frame();
         assert!(input.close_requested());
+    }
+
+    #[test]
+    fn a_backend_that_reports_control_as_the_accelerator_is_understood() {
+        // What X11 and Windows both send for one press of Control. It has to
+        // read as a bare accelerator, or a shortcut on either platform is
+        // unpressable — which is exactly what it was.
+        let both = Modifiers { control: true, command: true, ..Modifiers::NONE };
+        assert_eq!(both.command_only(), Modifiers::CONTROL_IS_ACCELERATOR);
+
+        // Control alone, with no accelerator, is never a shortcut anywhere.
+        let control = Modifiers { control: true, ..Modifiers::NONE };
+        assert!(!control.command_only());
+    }
+
+    #[test]
+    fn a_second_modifier_still_stops_it_being_a_bare_accelerator() {
+        for extra in [
+            Modifiers { shift: true, ..Modifiers::NONE },
+            Modifiers { alt: true, ..Modifiers::NONE },
+        ] {
+            let held = Modifiers { command: true, ..extra };
+            assert!(!held.command_only(), "{held:?} is the accelerator and something else");
+        }
     }
 
     #[test]
