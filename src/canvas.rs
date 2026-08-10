@@ -25,12 +25,19 @@
 //!
 //! # Antialiasing
 //!
-//! Every shape is a rectangle with shaped corners, and every one of them is
-//! drawn from its signed distance field: the distance from a pixel's centre to
-//! the shape's edge, turned into coverage by `clamp(0.5 - distance, 0, 1)`. This
-//! is one function for fills and strokes both, it is exact rather than sampled,
-//! and it antialiases fractional coordinates without a supersampling pass. A
-//! circle is a square rounded by half its side; a hairline is a stroke.
+//! Every shape here — a rectangle with shaped corners, the band of a ring or an
+//! arc, the capsule of a line — is drawn from its signed distance field: the
+//! distance from a pixel's centre to the shape's edge, turned into coverage by
+//! `clamp(0.5 - distance, 0, 1)`. That is one rule for fills, strokes, and
+//! glows alike, it is exact rather than sampled, and it antialiases fractional
+//! coordinates without a supersampling pass. A circle is a square rounded by
+//! half its side; a hairline is a stroke.
+//!
+//! Three fields is the whole set, and each earns its place by being something
+//! the others cannot say. A rectangle is every panel, row, and control. A band
+//! is a gauge: a reading stated as how far round a circle it has got, which no
+//! rectangle expresses. A capsule is a line between two points at any angle,
+//! which is a bracket, a crosshair, a tick, and a rule with ends on it.
 //!
 //! There are two corner shapes, [`Corner::Round`] and [`Corner::Cut`], and they
 //! cost the same: both are a distance field evaluated over the same band of
@@ -59,8 +66,10 @@
 //!
 //! [`scale`]: Canvas::scale
 
-use crate::color::{Color, blend_over};
-use crate::geom::Rect;
+use crate::color::{Color, blend_add, blend_over};
+use crate::geom::{Insets, Point, Rect};
+use crate::sdf::{Sculpt, Shape};
+use std::f32::consts::TAU;
 
 /// What shape a rectangle's four corners are.
 ///
@@ -361,6 +370,51 @@ impl Canvas {
         self.fill_shape(device, corner, Paint::vertical(device, top, bottom));
     }
 
+    /// Fills a shaped rectangle shading from `left` at its left edge to `right`.
+    ///
+    /// The horizontal companion to [`Canvas::fill_vertical`]. Unlike the vertical
+    /// gradient — whose every row is one colour and so costs a flat fill — a
+    /// horizontal gradient varies along the row, so the colour is evaluated per
+    /// pixel. Reach for it on a readout, a bar, or a lit conduit rather than on a
+    /// panel's whole background.
+    pub fn fill_horizontal(&mut self, rect: Rect, corner: Corner, left: Color, right: Color) {
+        if rect.is_empty() || (!left.is_visible() && !right.is_visible()) {
+            return;
+        }
+        let device = self.device_rect(rect);
+        let corner = self.device_corner(corner, device);
+        let mid_y = device.y + device.h / 2.0;
+        let shade =
+            Shade::linear((device.min_x(), mid_y), (device.max_x(), mid_y), left, right);
+        self.fill_shaded(device, corner, shade);
+    }
+
+    /// Fills a shaped rectangle shading from `c0` at point `a` to `c1` at point
+    /// `b`, along the axis between them.
+    ///
+    /// The general linear gradient: the colour at a pixel is `c0` mixed toward
+    /// `c1` by that pixel's fractional distance along the segment `a`→`b`,
+    /// clamped so everything behind `a` is solid `c0` and everything past `b` is
+    /// solid `c1`. Points are logical units. Costs one mix per covered pixel; see
+    /// [`Canvas::fill_horizontal`].
+    pub fn fill_gradient(
+        &mut self,
+        rect: Rect,
+        corner: Corner,
+        a: Point,
+        b: Point,
+        c0: Color,
+        c1: Color,
+    ) {
+        if rect.is_empty() || (!c0.is_visible() && !c1.is_visible()) {
+            return;
+        }
+        let device = self.device_rect(rect);
+        let corner = self.device_corner(corner, device);
+        let shade = Shade::linear(self.device_point(a), self.device_point(b), c0, c1);
+        self.fill_shaded(device, corner, shade);
+    }
+
     /// Draws a soft halo outside a shaped rectangle's edge.
     ///
     /// `blur` is how far the halo reaches beyond the shape, in logical units,
@@ -372,6 +426,12 @@ impl Canvas {
     /// is how a shadow is offset outward from a small control without the halo
     /// hugging its outline so tightly that it reads as a blurred border. The
     /// corner grows with it, so a cut panel is haloed by a cut shape.
+    ///
+    /// The colour is the caller's, and one that is not a black is a *glow*
+    /// rather than a shadow: light thrown onto what is behind the shape instead
+    /// of light taken away from it. Which of the two an element casts is said
+    /// once, in the theme's own language, by [`El::shadow`](crate::El::shadow)
+    /// and [`El::glow`](crate::El::glow).
     pub fn shadow(
         &mut self,
         rect: Rect,
@@ -401,6 +461,283 @@ impl Canvas {
         let device = self.device_rect(rect);
         let corner = self.device_corner(corner, device);
         self.stroke_shape(device, corner, thickness * self.scale, color);
+    }
+
+    /// Draws a circle's outline, `thickness` units wide.
+    ///
+    /// [`Canvas::arc`] all the way round, and the shape a gauge's track is: the
+    /// whole of the reading it could report, under the part of it that has.
+    pub fn ring(&mut self, center: Point, radius: f32, thickness: f32, color: Color) {
+        self.arc(center, radius, thickness, 0.0, TAU, color);
+    }
+
+    /// Draws part of that outline, from `start` and running `sweep` far.
+    ///
+    /// `radius` is measured to the middle of the band and `thickness` is how
+    /// wide it is, so the band reaches half of that either side — the same
+    /// centring [`Canvas::stroke`] uses, and for the same reason.
+    ///
+    /// Angles are in radians from the direction of the positive x axis, and a
+    /// positive `sweep` runs *clockwise*: y grows downward here, so an
+    /// increasing angle turns the way a clock's hand does. A sweep of a whole
+    /// turn or more is a closed ring, and a negative one runs backwards from
+    /// the same start.
+    ///
+    /// The two ends are round, because an arc is a line bent about a centre and
+    /// a line here has round ends; see [`Canvas::line`].
+    pub fn arc(
+        &mut self,
+        center: Point,
+        radius: f32,
+        thickness: f32,
+        start: f32,
+        sweep: f32,
+        color: Color,
+    ) {
+        if !color.is_visible() || radius <= 0.0 || thickness <= 0.0 || sweep == 0.0 {
+            return;
+        }
+        let band = self.device_band(center, radius, thickness, start, sweep);
+        self.band_shape(&band, color);
+    }
+
+    /// Draws a soft halo either side of that band, without marking the band.
+    ///
+    /// What [`Canvas::shadow`] is to a panel, this is to a gauge: `blur` is how
+    /// far the halo reaches past the band's own edges, fading from `color` to
+    /// nothing across it, and the band is left for whatever casts it to be
+    /// drawn on top. A halo runs both inward and outward, since a line that is
+    /// lit lights what is on either side of it.
+    #[allow(clippy::too_many_arguments)]
+    pub fn arc_glow(
+        &mut self,
+        center: Point,
+        radius: f32,
+        thickness: f32,
+        start: f32,
+        sweep: f32,
+        blur: f32,
+        color: Color,
+    ) {
+        if !color.is_visible() || radius <= 0.0 || thickness <= 0.0 || sweep == 0.0 || blur <= 0.0 {
+            return;
+        }
+        let band = self.device_band(center, radius, thickness, start, sweep);
+        self.band_glow(&band, blur * self.scale, color);
+    }
+
+    /// Fills a disc shading from `inner` at `center` to `outer` at `radius`.
+    ///
+    /// The radial companion to the linear fills: a reactor core, a node aura, or
+    /// a soft point of light. `outer` given a zero alpha makes the disc fade to
+    /// nothing at its rim, which is the aura; two opaque colours make a shaded
+    /// sphere with a clean antialiased edge. `center` and `radius` are logical
+    /// units.
+    pub fn fill_radial(&mut self, center: Point, radius: f32, inner: Color, outer: Color) {
+        if radius <= 0.0 || (!inner.is_visible() && !outer.is_visible()) {
+            return;
+        }
+        let (cx, cy) = self.device_point(center);
+        let r = radius * self.scale;
+        // A disc is a rounded square of corner radius half its side, so the same
+        // distance field that antialiases a panel's corners antialiases its rim.
+        let device = Rect { x: cx - r, y: cy - r, w: 2.0 * r, h: 2.0 * r };
+        let shade = Shade::Radial { inner, outer, cx, cy, inv_radius: 1.0 / r.max(SHADE_EPS) };
+        self.fill_shaded(device, Corner::Round(r), shade);
+    }
+
+    /// Draws `count` radial marks evenly round a circle, the first at `start`.
+    ///
+    /// Each runs from `inner` to `outer` from the centre, so a tick that starts
+    /// where the gauge's band ends reads as a scale beside it and one that
+    /// straddles the band reads as a division of it.
+    ///
+    /// Spaced round the *whole* circle rather than across a sweep, because what
+    /// a scale is for is saying how far round the reading has got — and a scale
+    /// that stretched with the reading would say nothing at all. `start` is
+    /// shared with [`Canvas::arc`] so the first mark can sit at the sweep's own
+    /// beginning.
+    #[allow(clippy::too_many_arguments)]
+    pub fn ticks(
+        &mut self,
+        center: Point,
+        inner: f32,
+        outer: f32,
+        thickness: f32,
+        count: u32,
+        start: f32,
+        color: Color,
+    ) {
+        if count == 0 || outer <= inner {
+            return;
+        }
+        let step = TAU / count as f32;
+        for index in 0..count {
+            let (sin, cos) = (start + step * index as f32).sin_cos();
+            self.line(
+                Point::new(center.x + cos * inner, center.y + sin * inner),
+                Point::new(center.x + cos * outer, center.y + sin * outer),
+                thickness,
+                color,
+            );
+        }
+    }
+
+    /// Draws a straight line from `from` to `to`, `thickness` units wide.
+    ///
+    /// The ends are round rather than square, which is what makes a corner
+    /// bracket meet itself cleanly and a tick sit on a circle without a flat
+    /// edge showing at any angle but the four.
+    pub fn line(&mut self, from: Point, to: Point, thickness: f32, color: Color) {
+        if !color.is_visible() || thickness <= 0.0 {
+            return;
+        }
+        let segment = Segment::new(
+            self.device_point(from),
+            self.device_point(to),
+            thickness * self.scale / 2.0,
+        );
+        self.segment_shape(&segment, color);
+    }
+
+    /// Draws a line through every point in turn.
+    ///
+    /// Each segment is drawn on its own, which is what keeps the scan the same
+    /// one a single line uses. The consequence is that a *translucent* polyline
+    /// is denser where two segments meet, since the join is painted twice —
+    /// which is what a round join looks like, and is why the ends are round.
+    pub fn polyline(&mut self, points: &[Point], thickness: f32, color: Color) {
+        for pair in points.windows(2) {
+            self.line(pair[0], pair[1], thickness, color);
+        }
+    }
+
+    /// Draws a glowing conduit from `from` to `to`: a lit core with an additive
+    /// halo `blur` units wide either side of it.
+    ///
+    /// The neon-HUD counterpart of [`Canvas::line`]. Where a line lays opaque
+    /// paint down, a beam *adds* light through
+    /// [`blend_add`](crate::color::blend_add), so two beams that cross sum toward
+    /// white at the crossing rather than one hiding the other, and a beam over
+    /// its own glow blooms. `thickness` is the lit core's width and `blur` is how
+    /// far the halo reaches past it, fading quadratically to nothing; both are
+    /// logical units. A `blur` of zero is a bare additive line.
+    pub fn beam(&mut self, from: Point, to: Point, thickness: f32, blur: f32, color: Color) {
+        if !color.is_visible() || thickness <= 0.0 {
+            return;
+        }
+        let segment = Segment::new(
+            self.device_point(from),
+            self.device_point(to),
+            thickness * self.scale / 2.0,
+        );
+        self.segment_glow(&segment, blur.max(0.0) * self.scale, color);
+    }
+
+    /// Draws a composable signed-distance [`Shape`] in `paint`, read according
+    /// to `style`; see [`crate::sdf`].
+    ///
+    /// The one entry point for the SDF algebra. Where the built-in shapes each
+    /// carry a hand-written scan, a sculpted shape is an arbitrary tree, so this
+    /// bounds the work by the shape's own [`Shape::bbox`] (grown for a stroke's
+    /// width or a glow's reach), clamps that to the clip, and evaluates the field
+    /// once per pixel inside it. The shape answers in logical units and the field
+    /// is scaled to device pixels here, so the same coverage rule
+    /// `clamp(0.5 - d_device)` that antialiases every other shape antialiases
+    /// this one — a [`Sculpt::Fill`] blends over, a [`Sculpt::Stroke`] folds the
+    /// distance about the edge, and a [`Sculpt::Glow`] adds light through
+    /// [`blend_add`](crate::color::blend_add) so overlapping glows bloom.
+    pub fn sculpt(&mut self, shape: &Shape, paint: &crate::sdf::Paint, style: Sculpt) {
+        let scale = self.scale;
+        // Grow the shape's own bounds by whatever the style reaches past the
+        // edge, plus a pixel of antialiasing, all in logical units.
+        let margin = 1.0
+            + match style {
+                Sculpt::Fill => 0.0,
+                Sculpt::Stroke { width } => width.max(0.0) / 2.0,
+                Sculpt::Glow { radius, .. } => radius.max(0.0),
+            };
+        let bounds =
+            self.clip.intersect(self.device_bounds(shape.bbox().expand(Insets::uniform(margin))));
+        if bounds.is_empty() {
+            return;
+        }
+
+        for y in bounds.top..bounds.bottom {
+            let row = (y as usize) * self.width as usize;
+            let py = (y as f32 + 0.5) / scale;
+            for x in bounds.left..bounds.right {
+                let px = (x as f32 + 0.5) / scale;
+                let p = Point::new(px, py);
+                let d = shape.sd(p);
+                let d_device = d * scale;
+                let index = row + x as usize;
+
+                match style {
+                    Sculpt::Fill => {
+                        let coverage = 0.5 - d_device;
+                        if coverage <= 0.0 {
+                            continue;
+                        }
+                        let color = paint.at(shape, p, d);
+                        self.pixels[index] =
+                            blend_over(self.pixels[index], color, (coverage.min(1.0) * 255.0) as u8);
+                    }
+                    Sculpt::Stroke { width } => {
+                        let folded = d_device.abs() - width.max(0.0) * scale / 2.0;
+                        let coverage = 0.5 - folded;
+                        if coverage <= 0.0 {
+                            continue;
+                        }
+                        let color = paint.at(shape, p, d);
+                        self.pixels[index] =
+                            blend_over(self.pixels[index], color, (coverage.min(1.0) * 255.0) as u8);
+                    }
+                    Sculpt::Glow { radius, intensity } => {
+                        let blur = radius.max(0.0) * scale;
+                        // The interior (and its antialiased edge) is lit through
+                        // the shared coverage rule; outside, the halo falls away
+                        // quadratically to nothing by `blur`, as every glow here
+                        // does — a linear ramp ends visibly.
+                        let core = (0.5 - d_device).clamp(0.0, 1.0);
+                        let halo = if blur > 0.0 && d_device > 0.0 && d_device < blur {
+                            let remaining = 1.0 - d_device / blur;
+                            remaining * remaining
+                        } else {
+                            0.0
+                        };
+                        let coverage = (core.max(halo) * intensity).clamp(0.0, 1.0);
+                        if coverage <= 0.0 {
+                            continue;
+                        }
+                        let color = paint.at(shape, p, d);
+                        self.pixels[index] =
+                            blend_add(self.pixels[index], color, (coverage * 255.0) as u8);
+                    }
+                }
+            }
+        }
+    }
+
+    /// A logical band in device pixels.
+    ///
+    /// The scaling happens here rather than in each of the three entry points
+    /// that need a band, so a radius cannot be scaled twice.
+    fn device_band(
+        &self,
+        center: Point,
+        radius: f32,
+        thickness: f32,
+        start: f32,
+        sweep: f32,
+    ) -> Band {
+        Band::new(
+            self.device_point(center),
+            radius * self.scale,
+            thickness * self.scale / 2.0,
+            start,
+            sweep,
+        )
     }
 
     /// A logical corner in device pixels, clamped to what the shape can hold.
@@ -443,6 +780,11 @@ impl Canvas {
                 self.pixels[index] = blend_over(self.pixels[index], color, coverage);
             }
         }
+    }
+
+    /// A logical point in device pixels, unrounded.
+    fn device_point(&self, point: Point) -> (f32, f32) {
+        (point.x * self.scale, point.y * self.scale)
     }
 
     /// A logical rectangle in device pixels, unrounded.
@@ -554,6 +896,85 @@ impl Canvas {
                 }
             }
             self.blend_span(row, right_start, bounds.right, sample_y, &field, color);
+        }
+    }
+
+    /// Fills a shaped rectangle whose colour varies per pixel; see [`Shade`].
+    ///
+    /// The scan is [`Canvas::fill_shape`]'s, keeping its interior/margin split so
+    /// the distance field's square root is still taken only near the edge. What
+    /// it cannot keep is the bulk word write: the interior colour is no longer
+    /// one value per row, so each interior pixel is written from the shade —
+    /// opaque pixels straight, translucent ones through [`blend_over`].
+    fn fill_shaded(&mut self, device: Rect, corner: Corner, shade: Shade) {
+        let bounds = self.clip.intersect(PixelBounds {
+            left: (device.min_x() - 1.0).floor() as i32,
+            top: (device.min_y() - 1.0).floor() as i32,
+            right: (device.max_x() + 1.0).ceil() as i32,
+            bottom: (device.max_y() + 1.0).ceil() as i32,
+        });
+        if bounds.is_empty() {
+            return;
+        }
+
+        let size = corner.size();
+        let field = DistanceField::new(device, corner);
+        let solid_left = (device.min_x() + size + 1.0).ceil() as i32;
+        let solid_right = (device.max_x() - size - 1.0).floor() as i32;
+        let solid_top = device.min_y() + size + 1.0;
+        let solid_bottom = device.max_y() - size - 1.0;
+
+        for y in bounds.top..bounds.bottom {
+            let sample_y = y as f32 + 0.5;
+            let row = (y as usize) * self.width as usize;
+
+            let interior = (sample_y >= solid_top && sample_y <= solid_bottom)
+                .then(|| (solid_left.max(bounds.left), solid_right.min(bounds.right)))
+                .filter(|(start, end)| end > start);
+
+            let (left_end, right_start) = match interior {
+                Some((start, end)) => (start, end),
+                None => (bounds.right, bounds.right),
+            };
+
+            self.shade_span(row, bounds.left, left_end, sample_y, &field, &shade);
+            if let Some((start, end)) = interior {
+                // No bulk `.fill(word)`: the colour varies along the row.
+                for x in start..end {
+                    let index = row + x as usize;
+                    let c = shade.at(x as f32 + 0.5, sample_y);
+                    self.pixels[index] = if c.a == 255 {
+                        c.to_argb() | 0xff00_0000
+                    } else {
+                        blend_over(self.pixels[index], c, 255)
+                    };
+                }
+            }
+            self.shade_span(row, right_start, bounds.right, sample_y, &field, &shade);
+        }
+    }
+
+    /// The shaded analogue of [`Canvas::blend_span`]: each covered margin pixel
+    /// is blended from the shade's own colour at that point, rather than from one
+    /// colour held for the whole run.
+    fn shade_span(
+        &mut self,
+        row: usize,
+        from: i32,
+        to: i32,
+        sample_y: f32,
+        field: &DistanceField,
+        shade: &Shade,
+    ) {
+        for x in from..to {
+            let fx = x as f32 + 0.5;
+            let coverage = 0.5 - field.at(fx, sample_y);
+            if coverage <= 0.0 {
+                continue;
+            }
+            let index = row + x as usize;
+            self.pixels[index] =
+                blend_over(self.pixels[index], shade.at(fx, sample_y), (coverage.min(1.0) * 255.0) as u8);
         }
     }
 
@@ -684,6 +1105,141 @@ impl Canvas {
         }
     }
 
+    /// Marks the band a ring or an arc occupies, and nothing else.
+    ///
+    /// Banded by row exactly as [`Canvas::stroke_shape`] is, and for the same
+    /// reason: a row that crosses the hole in the middle is two short runs
+    /// rather than one long one, so a gauge costs its own line and never the
+    /// area it encircles.
+    fn band_shape(&mut self, band: &Band, color: Color) {
+        let reach = band.half + 1.0;
+        let bounds = self.band_bounds(band, reach);
+        if bounds.is_empty() {
+            return;
+        }
+
+        for y in bounds.top..bounds.bottom {
+            let sample_y = y as f32 + 0.5;
+            let row = (y as usize) * self.width as usize;
+            for (from, to) in runs(band.spans(sample_y, reach), bounds) {
+                for x in from..to {
+                    let coverage = 0.5 - band.at(x as f32 + 0.5, sample_y);
+                    if coverage <= 0.0 {
+                        continue;
+                    }
+                    let index = row + x as usize;
+                    self.pixels[index] =
+                        blend_over(self.pixels[index], color, (coverage.min(1.0) * 255.0) as u8);
+                }
+            }
+        }
+    }
+
+    /// The same, for the halo either side of that band.
+    ///
+    /// The falloff is quadratic for the reason [`Canvas::glow_span`] gives: a
+    /// linear ramp ends visibly, and a glow with an outline is not a glow.
+    fn band_glow(&mut self, band: &Band, blur: f32, color: Color) {
+        let bounds = self.band_bounds(band, band.half + blur);
+        if bounds.is_empty() {
+            return;
+        }
+
+        for y in bounds.top..bounds.bottom {
+            let sample_y = y as f32 + 0.5;
+            let row = (y as usize) * self.width as usize;
+            for (from, to) in runs(band.spans(sample_y, band.half + blur), bounds) {
+                for x in from..to {
+                    let distance = band.at(x as f32 + 0.5, sample_y);
+                    // The band itself is left alone: whatever casts the halo
+                    // covers it.
+                    if distance <= 0.0 || distance >= blur {
+                        continue;
+                    }
+                    let remaining = 1.0 - distance / blur;
+                    let index = row + x as usize;
+                    self.pixels[index] = blend_over(
+                        self.pixels[index],
+                        color,
+                        (remaining * remaining * 255.0) as u8,
+                    );
+                }
+            }
+        }
+    }
+
+    /// Everything a band of this reach could mark, in whole pixels.
+    fn band_bounds(&self, band: &Band, reach: f32) -> PixelBounds {
+        let outer = band.radius + reach;
+        self.clip.intersect(PixelBounds {
+            left: (band.center_x - outer).floor() as i32,
+            top: (band.center_y - outer).floor() as i32,
+            right: (band.center_x + outer).ceil() as i32,
+            bottom: (band.center_y + outer).ceil() as i32,
+        })
+    }
+
+    /// Marks the capsule a line occupies, and nothing else.
+    ///
+    /// Narrowed per row to the strip the line crosses that row in, so a
+    /// diagonal across a window costs its own length rather than the area of
+    /// the box it spans.
+    fn segment_shape(&mut self, segment: &Segment, color: Color) {
+        let reach = segment.half + 1.0;
+        let bounds = self.clip.intersect(segment.bounds(reach));
+        if bounds.is_empty() {
+            return;
+        }
+
+        for y in bounds.top..bounds.bottom {
+            let sample_y = y as f32 + 0.5;
+            let row = (y as usize) * self.width as usize;
+            for (from, to) in runs([segment.span(sample_y, reach), None], bounds) {
+                for x in from..to {
+                    let coverage = 0.5 - segment.at(x as f32 + 0.5, sample_y);
+                    if coverage <= 0.0 {
+                        continue;
+                    }
+                    let index = row + x as usize;
+                    self.pixels[index] =
+                        blend_over(self.pixels[index], color, (coverage.min(1.0) * 255.0) as u8);
+                }
+            }
+        }
+    }
+
+    /// Adds a glowing line's light to the buffer: a lit core, and a halo that
+    /// falls away with distance from the line.
+    ///
+    /// The additive counterpart of [`Canvas::segment_shape`]. It keeps that
+    /// scan's per-row narrowing to the strip the line crosses, but reads the
+    /// distance field across the whole reach — core and halo alike — and
+    /// composites with [`blend_add`](crate::color::blend_add) so overlapping
+    /// beams brighten toward white instead of the later one hiding the earlier.
+    fn segment_glow(&mut self, segment: &Segment, blur: f32, color: Color) {
+        let reach = segment.half + blur + 1.0;
+        let bounds = self.clip.intersect(segment.bounds(reach));
+        if bounds.is_empty() {
+            return;
+        }
+
+        for y in bounds.top..bounds.bottom {
+            let sample_y = y as f32 + 0.5;
+            let row = (y as usize) * self.width as usize;
+            for (from, to) in runs([segment.span(sample_y, reach), None], bounds) {
+                for x in from..to {
+                    let distance = segment.at(x as f32 + 0.5, sample_y);
+                    let coverage = glow_coverage(distance, blur);
+                    if coverage == 0 {
+                        continue;
+                    }
+                    let index = row + x as usize;
+                    self.pixels[index] = blend_add(self.pixels[index], color, coverage);
+                }
+            }
+        }
+    }
+
     /// The same, for an outline: the distance is folded about the shape's edge.
     #[allow(clippy::too_many_arguments)]
     fn stroke_span(
@@ -753,6 +1309,71 @@ impl Paint {
         }
         self.top.mix(self.bottom, (y - self.y) * self.inverse_height)
     }
+}
+
+/// The smallest gradient axis or radius trusted before it is treated as a
+/// point: a zero-length axis or radius collapses the shade to its first colour
+/// rather than dividing by nothing.
+const SHADE_EPS: f32 = 1e-6;
+
+/// A colour that varies across the surface, evaluated per device pixel.
+///
+/// The per-pixel counterpart of [`Paint`]. `Paint` answers one colour for a
+/// whole row, which is why a vertical gradient is free; a `Shade` answers a
+/// colour at a point, which is what a horizontal, angled, or radial gradient
+/// needs and what makes it cost a mix per pixel.
+enum Shade {
+    /// `c0` at `t = 0`, `c1` at `t = 1`, where `t` is the clamped projection of
+    /// the pixel onto the gradient axis. `gx, gy` is the axis vector divided by
+    /// its own squared length, so the projection is `(x-ox)*gx + (y-oy)*gy`.
+    Linear { c0: Color, c1: Color, ox: f32, oy: f32, gx: f32, gy: f32 },
+    /// `inner` at the centre, `outer` at `radius` and beyond; `inv_radius` is
+    /// `1.0 / radius` so the falloff is a multiply.
+    Radial { inner: Color, outer: Color, cx: f32, cy: f32, inv_radius: f32 },
+}
+
+impl Shade {
+    /// A linear gradient from `c0` at device point `a` to `c1` at device point
+    /// `b`, solid beyond either end. A zero-length axis collapses to `c0`.
+    fn linear(a: (f32, f32), b: (f32, f32), c0: Color, c1: Color) -> Self {
+        let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+        let inv = 1.0 / (dx * dx + dy * dy).max(SHADE_EPS);
+        Shade::Linear { c0, c1, ox: a.0, oy: a.1, gx: dx * inv, gy: dy * inv }
+    }
+
+    /// The colour at device pixel centre `(x, y)`.
+    fn at(&self, x: f32, y: f32) -> Color {
+        match *self {
+            Shade::Linear { c0, c1, ox, oy, gx, gy } => {
+                let t = ((x - ox) * gx + (y - oy) * gy).clamp(0.0, 1.0);
+                c0.mix(c1, t)
+            }
+            Shade::Radial { inner, outer, cx, cy, inv_radius } => {
+                let (dx, dy) = (x - cx, y - cy);
+                let t = ((dx * dx + dy * dy).sqrt() * inv_radius).clamp(0.0, 1.0);
+                inner.mix(outer, t)
+            }
+        }
+    }
+}
+
+/// How much light a glowing line lays down at signed `distance` from its core
+/// edge, with a halo `blur` wide.
+///
+/// The lit core is solid, its edge antialiased by the shared `0.5 - distance`
+/// rule; past it the halo falls away quadratically, for the reason
+/// [`Canvas::glow_span`] gives — a linear ramp ends visibly, and a glow with an
+/// outline is not a glow. The two are combined by taking the greater, so the
+/// core's edge meets the halo without a step.
+fn glow_coverage(distance: f32, blur: f32) -> u8 {
+    let core = (0.5 - distance).clamp(0.0, 1.0);
+    let halo = if blur > 0.0 && distance > 0.0 && distance < blur {
+        let remaining = 1.0 - distance / blur;
+        remaining * remaining
+    } else {
+        0.0
+    };
+    (core.max(halo) * 255.0) as u8
 }
 
 /// The signed distance from a point to a shaped rectangle's edge.
@@ -845,6 +1466,208 @@ impl DistanceField {
             offset_x.max(offset_y) - self.size
         }
     }
+}
+
+/// The signed distance from a point to the middle of a ring or an arc.
+///
+/// Negative inside the band, positive outside, zero on its edge — the contract
+/// [`DistanceField`] keeps, so the same two scans that fill a rectangle and
+/// glow from one serve a gauge without knowing it is round.
+///
+/// # Why the ends are a pair of points
+///
+/// Within the sweep, the nearest edge is the band's own and the distance is
+/// `||p - centre| - radius| - half`: one square root and two subtractions.
+/// Past an end, the nearest part of the band *is* that end — so the distance
+/// there is the distance to a disc of the same half width sitting on it, which
+/// is what makes the end round and costs one more square root on the handful of
+/// pixels beyond it.
+struct Band {
+    center_x: f32,
+    center_y: f32,
+    /// To the middle of the band.
+    radius: f32,
+    /// Half the line width: how far the band reaches either side of `radius`.
+    half: f32,
+    /// Where the sweep begins, once normalised to run forwards.
+    start: f32,
+    /// How far it runs from there.
+    sweep: f32,
+    /// The middles of the two round ends, or `None` for a closed ring.
+    ///
+    /// A ring has no ends to cap, and testing a pixel against a sweep of a full
+    /// turn would reject the seam at the start angle — a hairline crack across
+    /// the gauge, in the one place floating point is least likely to agree.
+    ends: Option<[(f32, f32); 2]>,
+}
+
+impl Band {
+    fn new(center: (f32, f32), radius: f32, half: f32, start: f32, sweep: f32) -> Self {
+        // A backwards sweep is the same band read the other way, so it is
+        // turned round here and nothing below has to know a sweep can be
+        // negative.
+        let (start, sweep) = if sweep < 0.0 { (start + sweep, -sweep) } else { (start, sweep) };
+        let ends = (sweep < TAU).then(|| {
+            [on_circle(center, radius, start), on_circle(center, radius, start + sweep)]
+        });
+        Self { center_x: center.0, center_y: center.1, radius, half, start, sweep, ends }
+    }
+
+    /// The distance from `(x, y)` to the band's edge.
+    fn at(&self, x: f32, y: f32) -> f32 {
+        let from_x = x - self.center_x;
+        let from_y = y - self.center_y;
+        let radial = ((from_x * from_x + from_y * from_y).sqrt() - self.radius).abs();
+
+        let Some(ends) = self.ends else {
+            return radial - self.half;
+        };
+        if (from_y.atan2(from_x) - self.start).rem_euclid(TAU) <= self.sweep {
+            return radial - self.half;
+        }
+        let to = |(end_x, end_y): (f32, f32)| {
+            let (dx, dy) = (x - end_x, y - end_y);
+            (dx * dx + dy * dy).sqrt()
+        };
+        to(ends[0]).min(to(ends[1])) - self.half
+    }
+
+    /// The one or two runs of a row this band, grown by `reach`, can touch.
+    ///
+    /// Two whenever the row crosses the hole in the middle, which is the whole
+    /// saving: the interior of a gauge is never scanned to discover that it is
+    /// empty.
+    fn spans(&self, sample_y: f32, reach: f32) -> [Option<(f32, f32)>; 2] {
+        let outer = self.radius + reach;
+        let inner = self.radius - reach;
+        let from_y = (sample_y - self.center_y).abs();
+        if from_y >= outer {
+            return [None, None];
+        }
+        let wide = (outer * outer - from_y * from_y).sqrt();
+        if inner <= 0.0 || from_y >= inner {
+            return [Some((self.center_x - wide, self.center_x + wide)), None];
+        }
+        let narrow = (inner * inner - from_y * from_y).sqrt();
+        [
+            Some((self.center_x - wide, self.center_x - narrow)),
+            Some((self.center_x + narrow, self.center_x + wide)),
+        ]
+    }
+}
+
+/// Where an angle round a circle of this radius lands.
+fn on_circle(center: (f32, f32), radius: f32, angle: f32) -> (f32, f32) {
+    let (sin, cos) = angle.sin_cos();
+    (center.0 + cos * radius, center.1 + sin * radius)
+}
+
+/// The signed distance from a point to a line between two points.
+///
+/// The capsule form: the distance to the nearest point *on the segment*, less
+/// half the line width. Clamping the projection to the segment is what rounds
+/// the ends, and it is one branch-free `clamp` rather than a case for each end.
+struct Segment {
+    ax: f32,
+    ay: f32,
+    /// From the first point to the second.
+    dx: f32,
+    dy: f32,
+    /// One over the segment's squared length, or zero when it has none.
+    ///
+    /// Held as a reciprocal so the projection is a multiply, and zero is what
+    /// makes a segment of no length collapse onto its own first point — which
+    /// draws the dot that a line from somewhere to itself is.
+    inverse_length_squared: f32,
+    /// Half the line width.
+    half: f32,
+    /// The unit normal, and where the line sits along it: `nx*x + ny*y = offset`.
+    ///
+    /// What lets a row be narrowed to the strip the line crosses it in. Without
+    /// it a diagonal across a window would be scanned over its whole bounding
+    /// box, which is the square of the work its own length is.
+    nx: f32,
+    ny: f32,
+    offset: f32,
+}
+
+impl Segment {
+    fn new(from: (f32, f32), to: (f32, f32), half: f32) -> Self {
+        let dx = to.0 - from.0;
+        let dy = to.1 - from.1;
+        let length_squared = dx * dx + dy * dy;
+        // A segment with no length has no direction to take a normal from, so
+        // rows are narrowed against a vertical through it instead.
+        let (inverse_length_squared, nx, ny) = if length_squared > 0.0 {
+            let length = length_squared.sqrt();
+            (1.0 / length_squared, -dy / length, dx / length)
+        } else {
+            (0.0, 1.0, 0.0)
+        };
+        Self {
+            ax: from.0,
+            ay: from.1,
+            dx,
+            dy,
+            inverse_length_squared,
+            half,
+            nx,
+            ny,
+            offset: nx * from.0 + ny * from.1,
+        }
+    }
+
+    /// The distance from `(x, y)` to the capsule's edge.
+    fn at(&self, x: f32, y: f32) -> f32 {
+        let from_x = x - self.ax;
+        let from_y = y - self.ay;
+        let along =
+            ((from_x * self.dx + from_y * self.dy) * self.inverse_length_squared).clamp(0.0, 1.0);
+        let offset_x = from_x - self.dx * along;
+        let offset_y = from_y - self.dy * along;
+        (offset_x * offset_x + offset_y * offset_y).sqrt() - self.half
+    }
+
+    /// Everything a capsule of this reach could mark, in whole pixels.
+    fn bounds(&self, reach: f32) -> PixelBounds {
+        let (bx, by) = (self.ax + self.dx, self.ay + self.dy);
+        PixelBounds {
+            left: (self.ax.min(bx) - reach).floor() as i32,
+            top: (self.ay.min(by) - reach).floor() as i32,
+            right: (self.ax.max(bx) + reach).ceil() as i32,
+            bottom: (self.ay.max(by) + reach).ceil() as i32,
+        }
+    }
+
+    /// The run of a row this capsule, grown by `reach`, can touch.
+    ///
+    /// The strip the *infinite* line makes across the row, which the bounding
+    /// box then cuts to the segment's own extent. Both ends are inside it
+    /// already, since a cap is centred on the line and no wider than the strip.
+    fn span(&self, sample_y: f32, reach: f32) -> Option<(f32, f32)> {
+        if self.nx == 0.0 {
+            // A horizontal line: a row is either within reach of it or misses
+            // it entirely, and the bounds hold the ends either way.
+            return ((self.ny * sample_y - self.offset).abs() <= reach)
+                .then_some((f32::NEG_INFINITY, f32::INFINITY));
+        }
+        let middle = (self.offset - self.ny * sample_y) / self.nx;
+        let spread = (reach / self.nx).abs();
+        Some((middle - spread, middle + spread))
+    }
+}
+
+/// The whole pixels a row's spans come to, clipped and dropped when empty.
+fn runs(
+    spans: [Option<(f32, f32)>; 2],
+    bounds: PixelBounds,
+) -> impl Iterator<Item = (i32, i32)> {
+    let (left, right) = (bounds.left as f32, bounds.right as f32);
+    spans.into_iter().flatten().filter_map(move |(from, to)| {
+        let from = from.floor().clamp(left, right) as i32;
+        let to = to.ceil().clamp(left, right) as i32;
+        (to > from).then_some((from, to))
+    })
 }
 
 /// Whether a device-space rectangle lands exactly on the pixel grid.
@@ -1254,6 +2077,373 @@ mod tests {
         assert_eq!(pixel_at(&canvas, 0, 0), Color::WHITE);
         assert_eq!(pixel_at(&canvas, 2, 2), Color::BLACK);
         assert_eq!(pixel_at(&canvas, 3, 0), Color::BLACK, "the mask wrapped onto the next row");
+    }
+
+    // ----- rings, arcs, and lines --------------------------------------------
+
+    /// The middle of every ring below, in logical units.
+    const MIDDLE: Point = Point::new(20.0, 20.0);
+
+    #[test]
+    fn a_ring_marks_its_band_and_neither_side_of_it() {
+        // What separates a ring from a filled circle: the hole is the point,
+        // and it must survive the scan that writes the band.
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.ring(MIDDLE, 12.0, 2.0, Color::WHITE);
+
+        for (x, y) in [(20u32, 8u32), (20, 32), (8, 20), (32, 20)] {
+            assert!(pixel_at(&canvas, x, y).r > 200, "the band is missing at ({x}, {y})");
+        }
+        assert_eq!(pixel_at(&canvas, 20, 20), Color::BLACK, "the middle is not filled");
+        assert_eq!(pixel_at(&canvas, 20, 1), Color::BLACK, "and nothing is drawn outside it");
+    }
+
+    #[test]
+    fn a_bands_edge_is_antialiased_rather_than_stepped() {
+        // The whole reason this is a distance field and not a plotted circle: a
+        // band an odd fraction of a pixel wide has part-covered pixels at its
+        // edges, at every angle.
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.ring(MIDDLE, 11.7, 1.4, Color::WHITE);
+
+        let column: Vec<u8> = (0..20).map(|y| pixel_at(&canvas, 20, y).r).collect();
+        assert!(
+            column.iter().any(|&value| value > 0 && value < 255),
+            "expected a part-covered pixel down the band's edge, got {column:?}"
+        );
+    }
+
+    #[test]
+    fn an_arc_marks_only_what_it_sweeps() {
+        // Clockwise from the direction of the positive x axis, because y grows
+        // downward: a quarter turn from there is the bottom, never the top.
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.arc(MIDDLE, 12.0, 2.0, 0.0, std::f32::consts::FRAC_PI_2, Color::WHITE);
+
+        assert!(pixel_at(&canvas, 32, 20).r > 200, "the sweep starts at the right");
+        assert!(pixel_at(&canvas, 20, 32).r > 200, "and ends at the bottom");
+        assert_eq!(pixel_at(&canvas, 20, 8), Color::BLACK, "the top is outside it");
+        assert_eq!(pixel_at(&canvas, 8, 20), Color::BLACK, "and so is the left");
+    }
+
+    #[test]
+    fn a_ring_is_an_arc_that_goes_all_the_way_round() {
+        let mut ring = blank(40, 40, 1.0);
+        ring.ring(MIDDLE, 12.0, 2.0, Color::WHITE);
+        let mut swept = blank(40, 40, 1.0);
+        swept.arc(MIDDLE, 12.0, 2.0, 0.0, std::f32::consts::TAU, Color::WHITE);
+
+        assert_eq!(ring.pixels(), swept.pixels());
+        // And it has no seam where the sweep would have begun and ended, which
+        // is why a closed ring is not capped at all.
+        assert!(pixel_at(&ring, 32, 20).r > 200, "a crack opened where the sweep closes");
+    }
+
+    #[test]
+    fn a_sweep_run_backwards_covers_what_the_same_one_forwards_does() {
+        let quarter = std::f32::consts::FRAC_PI_2;
+        let mut forwards = blank(40, 40, 1.0);
+        forwards.arc(MIDDLE, 12.0, 2.0, 0.0, quarter, Color::WHITE);
+        let mut backwards = blank(40, 40, 1.0);
+        backwards.arc(MIDDLE, 12.0, 2.0, quarter, -quarter, Color::WHITE);
+
+        assert_eq!(forwards.pixels(), backwards.pixels());
+    }
+
+    #[test]
+    fn a_bands_halo_surrounds_it_on_both_sides_without_covering_it() {
+        // A lit line lights what is inside the ring as well as what is outside
+        // it, and leaves the band itself for whatever casts the halo.
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.arc_glow(MIDDLE, 12.0, 2.0, 0.0, std::f32::consts::TAU, 5.0, Color::WHITE);
+
+        assert_eq!(pixel_at(&canvas, 20, 8), Color::BLACK, "the band is left for its caster");
+        assert!(pixel_at(&canvas, 20, 6).r > 0, "the halo should reach outward");
+        assert!(pixel_at(&canvas, 20, 12).r > 0, "and inward");
+        assert_eq!(pixel_at(&canvas, 20, 0), Color::BLACK, "and no further than its blur");
+    }
+
+    #[test]
+    fn a_halo_fades_with_distance_from_the_band() {
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.arc_glow(MIDDLE, 12.0, 2.0, 0.0, std::f32::consts::TAU, 6.0, Color::WHITE);
+
+        let near = pixel_at(&canvas, 20, 6).r;
+        let far = pixel_at(&canvas, 20, 3).r;
+        assert!(near > far, "expected the halo to fade outward, got {near} then {far}");
+        assert!(far > 0, "the halo should still be there further out");
+    }
+
+    #[test]
+    fn ticks_are_spaced_evenly_round_the_whole_circle() {
+        // Four of them from the direction of the positive x axis: right, then
+        // bottom, then left, then top — the order the sweep runs in.
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.ticks(MIDDLE, 10.0, 14.0, 2.0, 4, 0.0, Color::WHITE);
+
+        for (x, y) in [(32u32, 20u32), (20, 32), (8, 20), (20, 8)] {
+            assert!(pixel_at(&canvas, x, y).r > 200, "no tick at ({x}, {y})");
+        }
+        assert_eq!(pixel_at(&canvas, 28, 28), Color::BLACK, "a tick appeared between two");
+        assert_eq!(pixel_at(&canvas, 20, 20), Color::BLACK, "the ticks reached the centre");
+    }
+
+    #[test]
+    fn a_tick_ring_of_none_draws_nothing() {
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.ticks(MIDDLE, 10.0, 14.0, 2.0, 0, 0.0, Color::WHITE);
+        assert!(canvas.pixels().iter().all(|&word| Color::from_argb(word) == Color::BLACK));
+    }
+
+    #[test]
+    fn a_line_marks_the_run_between_its_ends_and_stops_there() {
+        let mut canvas = blank(20, 10, 1.0);
+        canvas.line(Point::new(2.0, 5.0), Point::new(18.0, 5.0), 2.0, Color::WHITE);
+
+        assert!(pixel_at(&canvas, 10, 5).r > 200, "the middle of the line");
+        assert!(pixel_at(&canvas, 10, 4).r > 200, "which is two pixels thick");
+        assert_eq!(pixel_at(&canvas, 10, 2), Color::BLACK, "and no thicker");
+        assert_eq!(pixel_at(&canvas, 0, 5), Color::BLACK, "nothing before it begins");
+        assert_eq!(pixel_at(&canvas, 19, 5), Color::BLACK, "nor after it ends");
+    }
+
+    #[test]
+    fn a_diagonal_line_is_antialiased_along_its_whole_length() {
+        // A line at an angle is the case a plotted one gets wrong: every pixel
+        // along it sits a different fraction of the way across the edge.
+        let mut canvas = blank(24, 24, 1.0);
+        canvas.line(Point::new(2.0, 2.0), Point::new(22.0, 20.0), 1.5, Color::WHITE);
+
+        let marked = (0..24)
+            .flat_map(|y| (0..24).map(move |x| (x, y)))
+            .filter(|&(x, y)| pixel_at(&canvas, x, y).r > 0)
+            .count();
+        assert!(marked > 20, "the line should have been drawn at all");
+        let partial = (0..24)
+            .flat_map(|y| (0..24).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                let value = pixel_at(&canvas, x, y).r;
+                value > 0 && value < 255
+            })
+            .count();
+        assert!(partial > 10, "a diagonal drawn without antialiasing is a staircase");
+    }
+
+    #[test]
+    fn a_line_from_a_point_to_itself_is_a_dot_rather_than_nothing() {
+        // The degenerate case the projection has to survive: a segment with no
+        // length has no direction, and dividing by that length would draw a
+        // window full of nothing.
+        let mut canvas = blank(20, 20, 1.0);
+        canvas.line(Point::new(10.0, 10.0), Point::new(10.0, 10.0), 4.0, Color::WHITE);
+
+        assert!(pixel_at(&canvas, 10, 10).r > 200, "the dot should be drawn");
+        assert_eq!(pixel_at(&canvas, 16, 10), Color::BLACK);
+    }
+
+    #[test]
+    fn a_polyline_draws_every_pair_in_turn() {
+        let mut canvas = blank(20, 20, 1.0);
+        let bracket =
+            [Point::new(2.0, 8.0), Point::new(2.0, 2.0), Point::new(8.0, 2.0)];
+        canvas.polyline(&bracket, 2.0, Color::WHITE);
+
+        assert!(pixel_at(&canvas, 2, 6).r > 100, "the arm running down");
+        assert!(pixel_at(&canvas, 6, 2).r > 100, "the arm running across");
+        assert!(pixel_at(&canvas, 2, 2).r > 100, "and the corner they meet at");
+        assert_eq!(pixel_at(&canvas, 10, 10), Color::BLACK, "and nothing between the ends");
+    }
+
+    #[test]
+    fn a_ring_and_a_line_are_scaled_like_everything_else() {
+        // Logical units in, device pixels out, for the round shapes as much as
+        // for the rectangular ones.
+        let mut canvas = blank(40, 40, 2.0);
+        canvas.ring(Point::new(10.0, 10.0), 6.0, 1.0, Color::WHITE);
+        canvas.line(Point::new(1.0, 0.0), Point::new(1.0, 20.0), 1.0, Color::WHITE);
+
+        assert!(pixel_at(&canvas, 20, 8).r > 200, "logical 10 across and 4 up is device 20, 8");
+        assert_eq!(pixel_at(&canvas, 20, 20), Color::BLACK, "the hole is scaled too");
+        assert!(pixel_at(&canvas, 1, 20).r > 200, "a one-unit line is two pixels wide");
+        assert!(pixel_at(&canvas, 2, 20).r > 200);
+        assert_eq!(pixel_at(&canvas, 3, 20), Color::BLACK);
+    }
+
+    #[test]
+    fn a_clip_confines_a_ring_and_a_line_as_it_does_a_rectangle() {
+        let mut canvas = blank(40, 40, 1.0);
+        let previous = canvas.push_clip(Rect::new(0.0, 0.0, 20.0, 40.0));
+        canvas.ring(MIDDLE, 12.0, 2.0, Color::WHITE);
+        canvas.line(Point::new(0.0, 4.0), Point::new(40.0, 4.0), 2.0, Color::WHITE);
+        canvas.pop_clip(previous);
+
+        assert!(pixel_at(&canvas, 8, 20).r > 200, "inside the clip");
+        assert_eq!(pixel_at(&canvas, 32, 20), Color::BLACK, "the band escaped its clip");
+        assert!(pixel_at(&canvas, 10, 4).r > 200);
+        assert_eq!(pixel_at(&canvas, 30, 4), Color::BLACK, "the line escaped its clip");
+    }
+
+    #[test]
+    fn an_invisible_or_impossible_band_draws_nothing() {
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.ring(MIDDLE, 12.0, 2.0, Color::TRANSPARENT);
+        canvas.ring(MIDDLE, 0.0, 2.0, Color::WHITE);
+        canvas.ring(MIDDLE, 12.0, 0.0, Color::WHITE);
+        canvas.ring(MIDDLE, -12.0, 2.0, Color::WHITE);
+        canvas.ring(MIDDLE, 12.0, -2.0, Color::WHITE);
+        canvas.arc(MIDDLE, 12.0, 2.0, 0.0, 0.0, Color::WHITE);
+        canvas.line(Point::new(0.0, 0.0), Point::new(40.0, 40.0), 0.0, Color::WHITE);
+        canvas.line(Point::new(0.0, 0.0), Point::new(40.0, 40.0), -1.0, Color::WHITE);
+        assert!(canvas.pixels().iter().all(|&word| Color::from_argb(word) == Color::BLACK));
+    }
+
+    #[test]
+    fn a_polyline_needs_two_points_before_it_draws() {
+        let mut canvas = blank(20, 20, 1.0);
+        canvas.polyline(&[], 2.0, Color::WHITE);
+        canvas.polyline(&[Point::new(10.0, 10.0)], 2.0, Color::WHITE);
+        assert!(canvas.pixels().iter().all(|&word| Color::from_argb(word) == Color::BLACK));
+    }
+
+    #[test]
+    fn a_band_is_drawn_in_the_colour_it_was_given() {
+        // A glow that is not a black: what a shadow deliberately never is, and
+        // what a live instrument is made of.
+        let mut canvas = blank(40, 40, 1.0);
+        let cyan = Color::rgb(0x5f, 0xd9, 0xf2);
+        canvas.arc_glow(MIDDLE, 12.0, 2.0, 0.0, std::f32::consts::TAU, 5.0, cyan);
+
+        let halo = pixel_at(&canvas, 20, 6);
+        assert!(halo.b > halo.r, "the halo lost the hue it was cast in: {halo:?}");
+    }
+
+    // ----- neon-HUD primitives: shaded fills and glowing beams ---------------
+
+    #[test]
+    fn a_horizontal_gradient_runs_from_its_left_colour_to_its_right_one() {
+        let mut canvas = blank(100, 20, 1.0);
+        canvas.fill_horizontal(
+            Rect::new(0.0, 0.0, 100.0, 20.0),
+            Corner::Square,
+            Color::BLACK,
+            Color::WHITE,
+        );
+
+        let left = pixel_at(&canvas, 0, 10);
+        let middle = pixel_at(&canvas, 50, 10);
+        let right = pixel_at(&canvas, 99, 10);
+        assert!(left.r < 8, "the left should be near the left colour, got {left:?}");
+        assert!((120..=136).contains(&middle.r), "the middle should be halfway, got {middle:?}");
+        assert!(right.r > 247, "the right should be near the right colour, got {right:?}");
+    }
+
+    #[test]
+    fn a_horizontal_gradient_column_is_one_even_colour_down_its_height() {
+        // The vertical mirror of the vertical gradient's row test: a horizontal
+        // gradient varies across a row but must be constant down a column, or a
+        // bar shows a horizontal seam where the interior meets its margins.
+        let mut canvas = blank(60, 40, 1.0);
+        canvas.fill_horizontal(
+            Rect::new(0.0, 0.0, 60.0, 40.0),
+            Corner::Square,
+            Color::BLACK,
+            Color::WHITE,
+        );
+        let expected = pixel_at(&canvas, 30, 20);
+        for y in 0..40 {
+            assert_eq!(pixel_at(&canvas, 30, y), expected, "the column is not even at y = {y}");
+        }
+    }
+
+    #[test]
+    fn a_gradient_between_two_equal_colours_fills_flat() {
+        let mut canvas = blank(30, 30, 1.0);
+        canvas.fill_gradient(
+            Rect::new(0.0, 0.0, 30.0, 30.0),
+            Corner::Square,
+            Point::new(0.0, 0.0),
+            Point::new(30.0, 30.0),
+            Color::WHITE,
+            Color::WHITE,
+        );
+        assert!(canvas.pixels().iter().all(|&word| Color::from_argb(word) == Color::WHITE));
+    }
+
+    #[test]
+    fn a_gradient_is_solid_beyond_either_end_of_its_axis() {
+        // Everything behind `a` is `c0` and everything past `b` is `c1`: the
+        // projection is clamped, so a short axis inside a wide rectangle does not
+        // extrapolate past white.
+        let mut canvas = blank(60, 10, 1.0);
+        canvas.fill_gradient(
+            Rect::new(0.0, 0.0, 60.0, 10.0),
+            Corner::Square,
+            Point::new(20.0, 5.0),
+            Point::new(40.0, 5.0),
+            Color::BLACK,
+            Color::WHITE,
+        );
+        assert_eq!(pixel_at(&canvas, 5, 5), Color::BLACK, "behind the axis stays c0");
+        assert_eq!(pixel_at(&canvas, 55, 5), Color::WHITE, "past the axis stays c1");
+    }
+
+    #[test]
+    fn a_radial_fill_is_brightest_at_its_centre() {
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.fill_radial(Point::new(20.0, 20.0), 15.0, Color::WHITE, Color::BLACK);
+
+        let center = pixel_at(&canvas, 20, 20).r;
+        let mid = pixel_at(&canvas, 20, 12).r;
+        let edge = pixel_at(&canvas, 20, 7).r;
+        assert!(center > 235, "the centre is near the inner colour, got {center}");
+        assert!(center > mid && mid > edge, "expected a falloff, got {center}, {mid}, {edge}");
+        assert_eq!(pixel_at(&canvas, 20, 2), Color::BLACK, "and nothing beyond the radius");
+    }
+
+    #[test]
+    fn a_radial_aura_fades_to_nothing_at_its_rim() {
+        // An outer colour with zero alpha leaves the background showing at the
+        // rim rather than drawing a hard disc edge.
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.fill_radial(Point::new(20.0, 20.0), 15.0, Color::WHITE, Color::WHITE.with_alpha(0));
+
+        assert!(pixel_at(&canvas, 20, 20).r > 235, "near-solid at the centre");
+        let rim = pixel_at(&canvas, 20, 8).r;
+        assert!(rim > 0 && rim < 255, "the aura is part-lit near its rim, got {rim}");
+    }
+
+    #[test]
+    fn crossing_beams_are_brighter_where_they_meet() {
+        // The whole point of an additive beam: two conduits that cross sum toward
+        // white at the crossing rather than one hiding the other.
+        let dim = Color::rgb(120, 0, 0);
+
+        let mut one = blank(40, 40, 1.0);
+        one.beam(Point::new(0.0, 20.0), Point::new(40.0, 20.0), 3.0, 0.0, dim);
+        let single = pixel_at(&one, 20, 20).r;
+
+        let mut both = blank(40, 40, 1.0);
+        both.beam(Point::new(0.0, 20.0), Point::new(40.0, 20.0), 3.0, 0.0, dim);
+        both.beam(Point::new(20.0, 0.0), Point::new(20.0, 40.0), 3.0, 0.0, dim);
+        let crossing = pixel_at(&both, 20, 20).r;
+
+        assert_eq!(single, 120, "one beam lays its own light down");
+        assert_eq!(crossing, 240, "two add toward white where they cross");
+        assert!(crossing > single);
+    }
+
+    #[test]
+    fn a_beams_halo_reaches_beyond_its_core_and_stops_at_the_blur() {
+        let mut canvas = blank(40, 40, 1.0);
+        canvas.beam(Point::new(0.0, 20.0), Point::new(40.0, 20.0), 2.0, 6.0, Color::WHITE);
+
+        let core = pixel_at(&canvas, 20, 20).r;
+        let near = pixel_at(&canvas, 20, 23).r;
+        let far = pixel_at(&canvas, 20, 25).r;
+        assert_eq!(core, 255, "the core is fully lit");
+        assert!(near > 0 && near < 255, "the halo is present but dimmer, got {near}");
+        assert!(near > far, "and fades outward, got {near} then {far}");
+        assert_eq!(pixel_at(&canvas, 20, 30), Color::BLACK, "and stops at the blur");
     }
 
     #[test]

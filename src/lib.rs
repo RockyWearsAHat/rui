@@ -49,7 +49,11 @@
 //!
 //! **Colours are roles, not values.** A style names [`Tone::Surface`] or
 //! [`Tone::Muted`] rather than a particular grey, so one description of an
-//! interface is correct on a light desktop and on a dark one.
+//! interface is correct on a light desktop and on a dark one. Shape works the
+//! same way: a [`Radius`] says how big a corner is and the [`Theme`] says what
+//! shape corners *are*, so a program that hands the library its own theme with
+//! [`App::theme`] changes every panel, button, field, and tag at once — see
+//! [`CornerStyle`].
 //!
 //! **Everything is drawn here.** The rasteriser, the TrueType parser, the text
 //! layout, the antialiasing, and the platform windows are all in this crate,
@@ -71,6 +75,14 @@
 //! - [`Painter::visual`] — whether it is hovered, held, focused, or disabled,
 //!   and how far its hover has eased, so custom drawing reacts exactly as a
 //!   button does.
+//! - [`Painter::ease`] — the same frame-rate-independent curve every built-in
+//!   animation runs on, for anything the hover does not already answer: a
+//!   figure that counts to its new number, a bar that sweeps to its reading.
+//!   Nothing reads a clock, so a test steps it exactly.
+//! - [`Painter::phase`] — the same, for motion that repeats rather than
+//!   arrives: a sweep going round while a connection is being made, a lamp
+//!   pulsing while something wants attention. It never settles, which is why it
+//!   is drawn only while the loop is what the interface is reporting.
 //! - [`El::on_drag`] — where the pointer is *within* it, every frame it is
 //!   held. The difference between a button and a slider, a splitter, a knob, or
 //!   a canvas that pans.
@@ -87,6 +99,12 @@
 //!
 //! - [`El`] and the constructors in [`widgets`] — the structure.
 //! - [`style`] — the look: lengths, roles, alignment, radii, inheritance.
+//! - [`theme`] — what those roles come to: the palette, the measurements, the
+//!   corner shape, and the type scale, either the library's or the
+//!   application's own.
+//! - [`accessibility`] — what the structure *means*: a [`Role`] on every
+//!   element, a name computed from the words inside it, and a frame-to-frame
+//!   diff of the whole for the platform to push.
 //! - [`App`] and [`run`] — the loop.
 //! - [`Memory`] — the little that outlives a frame.
 //! - [`canvas`], [`font`], [`text`](mod@text), [`image`] — the renderer underneath, which
@@ -94,6 +112,9 @@
 //! - [`testing`] — driving the whole of it with no window: the real frame, into
 //!   a buffer, with a font built rather than borrowed so that a width in a test
 //!   is a round number.
+//! - `reload` — a developer's rebuild replacing a running window without losing
+//!   what was on screen. Behind the `reload` feature, off by default, and
+//!   compiled out of everything else entirely.
 //!
 //! # Where the state lives
 //!
@@ -106,6 +127,7 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod accessibility;
 pub mod app;
 pub mod canvas;
 pub mod color;
@@ -117,6 +139,9 @@ pub mod input;
 mod layout;
 pub mod memory;
 pub mod paint;
+#[cfg(feature = "reload")]
+pub mod reload;
+pub mod sdf;
 pub mod shell;
 pub mod style;
 pub mod testing;
@@ -124,21 +149,27 @@ pub mod text;
 pub mod theme;
 pub mod widgets;
 
+pub use accessibility::{AccessNode, AccessTree, AccessUpdate, Role};
 pub use app::{App, run};
 pub use canvas::{Canvas, Corner, Mask};
 pub use color::Color;
 pub use element::{Children, El};
 pub use font::{Font, FontError};
 pub use geom::{Insets, Point, Rect, Size};
-pub use input::{Drag, Event, Input, Key, Modifiers, Phase, PointerButton};
-pub use memory::{Id, Memory, Response};
+pub use input::{Composition, Drag, Event, Input, Key, Modifiers, Phase, PointerButton};
+pub use memory::{FocusSource, Id, Memory, Response};
 pub use paint::{Painter, Visual};
+pub use sdf::{
+    Paint, Sculpt, Shape, arc, bevel, capsule, circle, linear, ngon, polygon, radial, rect,
+    ring, rounded_rect, solid,
+};
 pub use shell::{Error, LoadedFonts, WindowOptions};
 pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Radius, Style, Tone};
 pub use text::{FontId, Fonts, TextStyle};
-pub use theme::{Appearance, Palette, Status, Theme};
+pub use theme::{Appearance, CornerStyle, Palette, Status, Theme};
 pub use widgets::{
-    button, caption, code, col, divider, dot, draw, field, field_row, figure, heading, meter,
+    button, caption, code, col, divider, dot, draw, field, field_group, field_row, figure, heading,
+    meter,
     micro, panel, paragraph, row, section, segmented, spacer, tabs, tag, text, title,
 };
 

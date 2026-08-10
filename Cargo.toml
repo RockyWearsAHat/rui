@@ -16,6 +16,17 @@ exclude = ["/.github"]
 # in this crate, so there is nothing left to depend on.
 [dependencies]
 
+[features]
+# Developer reload: a window that notices it has been rebuilt, saves what it is
+# showing, and starts the new build in its place. Off, and off is the only
+# setting a released program should ever be built with — it watches a file on
+# every frame and it can restart the process, neither of which belongs in
+# something somebody else runs.
+#
+# It adds no dependency. The application supplies its own save and restore, so
+# this library never has to know how to write `S` down; see `src/reload.rs`.
+reload = []
+
 [lints.rust]
 # Not `forbid`: opening a window is the one thing that cannot be done without
 # calling the platform. Every `unsafe` in the crate is inside `src/shell/platform/`,

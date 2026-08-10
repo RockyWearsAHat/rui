@@ -294,3 +294,28 @@ fn a_layout_holds_up_at_a_higher_pixel_density() {
         .expect("the run");
     assert_eq!(plain, dense);
 }
+
+#[test]
+fn a_whole_element_stands_entire_or_is_not_laid_out_at_all() {
+    // Room for everything: the whole word stands at its measured width.
+    let mut roomy = showing(200.0, 40.0, |_| {
+        row((
+            text("name").text_size(SIZE).grow_from_content().key("name"),
+            text("STATE").text_size(SIZE).whole().key("state"),
+        ))
+    });
+    assert_eq!(roomy.rect_of("STATE").expect("the word stands").w, 25.0, "whole, at five units a character");
+
+    // Room short by any amount: the word yields everything rather than an
+    // ellipsis, and the room it held goes to the grower beside it.
+    let mut short = showing(60.0, 40.0, |_| {
+        row((
+            text("a-much-longer-name").text_size(SIZE).grow_from_content().key("name"),
+            text("STATE").text_size(SIZE).whole().key("state"),
+        ))
+    });
+    let state = short.find_key("state").expect("the element still exists").rect;
+    assert_eq!(state.w, 0.0, "never squeezed, only surrendered");
+    let name = short.find_key("name").expect("the name").rect;
+    assert_eq!(name.w, 60.0, "the surrendered room reaches the name");
+}
