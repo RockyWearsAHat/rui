@@ -26,11 +26,23 @@
 //! | [`Painter::visual`] | whether it is hovered, held, focused, or disabled |
 //! | [`El::on_drag`] | where the pointer is, continuously, while held |
 //! | [`El::on_key`], [`El::on_hover`], [`El::layer`] | the keyboard, the pointer arriving, and somewhere to put what opens |
+//!
+//! # And one more line each
+//!
+//! A control the library has never heard of still has to say what it *is*, or
+//! it exists only for people who can see it. So each one below carries a
+//! [`Role`] and, where it has no words of its own, a name — two setters, next
+//! to the drawing they describe. `tests/accessibility.rs` drives this example
+//! and fails if either is missing, which is how the convention is held rather
+//! than merely stated.
+//!
+//! The state and the view are public so that test can drive this exact
+//! interface rather than a copy of it.
 
 use rui::style::{Align, Anchor, Radius};
 use rui::{
-    App, Appearance, Drag, El, Key, Modifiers, Painter, Rect, Size, Tone, caption, code, col, draw,
-    heading, panel, row, text,
+    App, Appearance, Drag, El, Key, Modifiers, Painter, Rect, Role, Size, Tone, caption, code, col,
+    draw, heading, panel, row, text,
 };
 
 // ---------------------------------------------------------------------------
@@ -68,6 +80,10 @@ fn checkbox<S: 'static>(
     .gap(8.0)
     .h(22.0)
     .align(Align::Center)
+    // What it is, and whether it is on. The name needs saying nowhere: the word
+    // beside the box is inside the row, so the row is named after it.
+    .role(Role::Checkbox)
+    .selected(checked)
     .on_click(move |state: &mut S| toggle(state))
 }
 
@@ -93,6 +109,11 @@ fn switch<S: 'static>(on: bool, flip: impl Fn(&mut S) + 'static) -> El<S> {
         painter.fill(Rect::new(x, rect.y + 3.0, knob, knob), Radius::Pill, Tone::Surface);
     })
     .size(34.0, 20.0)
+    // A switch is a checkbox that is drawn differently, and has no words of its
+    // own — so the one thing it cannot work out for itself is its name, which
+    // its caller supplies with `.label`.
+    .role(Role::Checkbox)
+    .selected(on)
     .on_click(move |state: &mut S| flip(state))
 }
 
@@ -119,6 +140,8 @@ fn slider<S: 'static>(value: f32, set: impl Fn(&mut S, f32) + Copy + 'static) ->
     })
     .h(18.0)
     .w(160.0)
+    .role(Role::Slider)
+    .value(format!("{:.0}%", value * 100.0))
     .on_drag(move |state: &mut S, drag: Drag| set(state, drag.fraction().x))
     .on_key(move |state: &mut S, key: Key, _: Modifiers| match key {
         Key::Left => set(state, (value - STEP).max(0.0)),
@@ -157,6 +180,8 @@ fn radio_group<S: 'static>(
             .gap(8.0)
             .h(22.0)
             .align(Align::Center)
+            .role(Role::Radio)
+            .selected(taken)
             .on_click(move |state: &mut S| choose(state, index))
         })
         .collect::<Vec<_>>())
@@ -173,6 +198,10 @@ fn stepper<S: 'static>(value: i32, step: impl Fn(&mut S, i32) + Copy + 'static) 
         .border(1.0, Tone::Border)
         .round(Radius::Control)
         .align(Align::Center)
+        // A number that is nudged rather than typed, which is what a slider is;
+        // the digits inside it are its value, so its caller names it.
+        .role(Role::Slider)
+        .value(value.to_string())
         .on_scroll(move |state: &mut S, _, down: f32| step(state, down.signum() as i32))
         .on_key(move |state: &mut S, key: Key, _| match key {
             Key::Up => step(state, 1),
@@ -201,7 +230,7 @@ fn with_tip<S: 'static>(
 // ---------------------------------------------------------------------------
 
 /// What the controls above are wired to.
-struct Panel {
+pub struct Panel {
     notify: bool,
     dark: bool,
     volume: f32,
@@ -210,8 +239,13 @@ struct Panel {
     tip: bool,
 }
 
+/// What the example opens showing.
+pub fn demo() -> Panel {
+    Panel { notify: true, dark: true, volume: 0.62, format: 1, workers: 8, tip: false }
+}
+
 /// The whole example, as one description.
-fn view(panel_state: &Panel) -> El<Panel> {
+pub fn view(panel_state: &Panel) -> El<Panel> {
     col((
         heading("CONTROLS THIS LIBRARY DOES NOT SHIP"),
         panel(col((
@@ -223,12 +257,14 @@ fn view(panel_state: &Panel) -> El<Panel> {
             ),
             labelled(
                 "Switch",
-                switch(panel_state.dark, |panel: &mut Panel| panel.dark = !panel.dark),
+                switch(panel_state.dark, |panel: &mut Panel| panel.dark = !panel.dark)
+                    .label("Dark appearance"),
             ),
             labelled(
                 "Slider",
                 row((
-                    slider(panel_state.volume, |panel: &mut Panel, value| panel.volume = value),
+                    slider(panel_state.volume, |panel: &mut Panel, value| panel.volume = value)
+                        .label("Volume"),
                     caption(format!("{:.0}%", panel_state.volume * 100.0)),
                 ))
                 .gap(12.0)
@@ -245,7 +281,8 @@ fn view(panel_state: &Panel) -> El<Panel> {
                 with_tip(
                     stepper(panel_state.workers, |panel: &mut Panel, by| {
                         panel.workers = (panel.workers + by).clamp(1, 64)
-                    }),
+                    })
+                    .label("Workers"),
                     "The wheel turns it, and so do the arrow keys.",
                     panel_state.tip,
                     |panel: &mut Panel, over| panel.tip = over,
@@ -265,7 +302,7 @@ fn labelled(name: &str, control: El<Panel>) -> El<Panel> {
 }
 
 fn main() -> Result<(), rui::Error> {
-    let state = Panel { notify: true, dark: true, volume: 0.62, format: 1, workers: 8, tip: false };
+    let state = demo();
 
     // With a directory, this draws itself and stops — the same frame a window
     // would show, on a machine that may not have one.

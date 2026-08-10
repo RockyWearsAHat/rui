@@ -35,7 +35,16 @@
 //! through the tree, so nothing has to be named by hand — until a list is
 //! reordered, at which point [`El::key`] names the row after the thing it shows
 //! and the state follows the row rather than the position.
+//!
+//! # Meaning
+//!
+//! An element also carries a [`Role`], defaulted from what kind of element it
+//! is and set deliberately by every constructor in
+//! [`widgets`](crate::widgets). That is what makes this tree the accessibility
+//! tree rather than something a second structure has to be derived from; see
+//! [`accessibility`](crate::accessibility) for the whole of that decision.
 
+use crate::accessibility::Role;
 use crate::geom::{Insets, Rect, Size};
 use crate::input::{Drag, Key, Modifiers};
 use crate::memory::Id;
@@ -135,11 +144,34 @@ pub struct El<S> {
     pub(crate) ink: Ink,
     /// Whether a scrolling area sticks to the end of its content.
     pub(crate) follows: bool,
+    /// What this element is, for anything that cannot see it.
+    ///
+    /// Defaulted from the kind of node and then set by whichever constructor
+    /// built it, so meaning arrives with the widget rather than being added
+    /// afterwards. See [`accessibility`](crate::accessibility).
+    pub(crate) role: Role,
+    /// What it is called, when the words inside it will not do.
+    pub(crate) label: Option<String>,
+    /// What it holds, when that is not its own text.
+    pub(crate) value: Option<String>,
+    /// Whether it is the chosen one of its group, where that applies.
+    pub(crate) selected: Option<bool>,
 }
 
 impl<S> El<S> {
     /// An element of the given kind, with nothing set on it.
+    ///
+    /// Its role is the one its kind implies — a stack groups, a run of text
+    /// reads as text, an editable line is a field, and an application's own
+    /// drawing is a picture until it says otherwise. Every constructor in
+    /// [`widgets`](crate::widgets) then states its own.
     pub(crate) fn of(node: Node) -> Self {
+        let role = match &node {
+            Node::Stack => Role::Group,
+            Node::Text(_) => Role::Text,
+            Node::Field { .. } => Role::Field,
+            Node::Draw { .. } => Role::Image,
+        };
         Self {
             node,
             style: Style::default(),
@@ -161,6 +193,10 @@ impl<S> El<S> {
             id: Id::ROOT,
             ink: Ink::default(),
             follows: false,
+            role,
+            label: None,
+            value: None,
+            selected: None,
         }
     }
 
@@ -224,6 +260,34 @@ impl<S> El<S> {
     /// The same, asking for `share` times what a plain [`El::grow`] would get.
     pub fn grow_by(mut self, share: f32) -> Self {
         self.style.grow = Some(share.max(0.0));
+        self
+    }
+
+    /// Grows from what its content needs rather than from nothing.
+    ///
+    /// [`El::grow`] deals a share of the leftover measured from zero, which is
+    /// right for a pane or a spacer — their content is whatever fits. A control
+    /// is the other way round: its words come first, and only the room past
+    /// them is up for sharing. A row of buttons growing from content toward a
+    /// stated maximum are uniform whenever the room allows it, share what there
+    /// is when it does not, and no label is squeezed below what it says while a
+    /// shorter sibling still has slack to give.
+    pub fn grow_from_content(mut self) -> Self {
+        self.style.grow = Some(1.0);
+        self.style.grow_from_content = true;
+        self
+    }
+
+    /// Stands whole or is not laid out at all.
+    ///
+    /// When the container shrinks, an ordinary element gives ground gradually
+    /// — its text truncates, its content clips. This one refuses the middle
+    /// state: the moment the layout would hand it less than it measured, it
+    /// collapses to nothing and the room it held goes to its siblings. Say it
+    /// on an element whose meaning is stated elsewhere too, where half the
+    /// words are worse than none of them.
+    pub fn whole(mut self) -> Self {
+        self.style.whole = true;
         self
     }
 
@@ -355,6 +419,23 @@ impl<S> El<S> {
         self
     }
 
+    /// Casts a halo of `tone` around it, reaching `blur` units past its edge.
+    ///
+    /// Not a coloured shadow. A shadow is the absence of light: it is the
+    /// theme's own black at whatever alpha survives the appearance, and it
+    /// falls a little downward because the light comes from above. A glow is
+    /// light — it takes a hue, it is cast evenly in every direction, and what
+    /// it says is that the thing is *live*: a lamp that is lit, the pane that
+    /// has been chosen, a state that wants attention.
+    ///
+    /// That is also why it is worth spending sparingly. A halo on one element
+    /// is a fact about that element; a halo on every element is a filter over
+    /// the window, and the fact is gone.
+    pub fn glow(mut self, blur: f32, tone: impl Into<Tone>) -> Self {
+        self.style.glow = Some((blur, tone.into()));
+        self
+    }
+
     /// Confines its own drawing, and its children's, to its rectangle.
     pub fn clip(mut self) -> Self {
         self.style.clip = true;
@@ -397,6 +478,11 @@ impl<S> El<S> {
     /// most irritating thing an interface can do, and deciding it here — from
     /// whether the reader is at the end — is what stops every application having
     /// to keep that flag itself.
+    ///
+    /// The end it stops at is the nearest join between two children rather than
+    /// the last pixel of the content, so the child at the top of the frame is a
+    /// whole one; see `layout::whole_child_at_top` for what that buys and what
+    /// it costs.
     pub fn follow(mut self) -> Self {
         self.follows = true;
         self.scroll()
@@ -621,6 +707,116 @@ impl<S> El<S> {
     pub fn key(mut self, key: impl Into<String>) -> Self {
         self.key = Some(key.into());
         self
+    }
+
+    // ----- what it means ------------------------------------------------------
+
+    /// States what this element is, for anything that cannot see it.
+    ///
+    /// Every constructor in [`widgets`](crate::widgets) already sets one, so
+    /// this is the escape for a control hand-built out of
+    /// [`draw`](crate::widgets::draw) — a switch, a slider, a row that behaves
+    /// as one item of a list. An element a person can interact with may not
+    /// keep the default [`Role::Group`]: that is a control nobody has named,
+    /// and the enforcement in [`audit`](crate::accessibility::audit) rejects
+    /// it.
+    ///
+    /// ```ignore
+    /// draw(Size::new(34.0, 20.0), knob)
+    ///     .role(Role::Checkbox)
+    ///     .label("Dark appearance")
+    ///     .selected(app.dark)
+    ///     .on_click(|app: &mut App| app.dark = !app.dark)
+    /// ```
+    pub fn role(mut self, role: Role) -> Self {
+        self.role = role;
+        self
+    }
+
+    /// Names this element, for a control whose own words will not do.
+    ///
+    /// Needed only where there are no words to be named after — an icon
+    /// button, a switch, a slider. Everything with text inside it is named by
+    /// that text already, which is what makes the convention free at nearly
+    /// every call site; see [`El::accessible_name`].
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    /// States what this element holds, where that is not its own text.
+    ///
+    /// A field is valued by what is in it and needs none of this. A meter, a
+    /// slider, or a stepper is a number that has to be read aloud as something,
+    /// and only the author knows as what — "62%" rather than "0.62".
+    pub fn value(mut self, value: impl Into<String>) -> Self {
+        self.value = Some(value.into());
+        self
+    }
+
+    /// States whether this is the chosen one of its group.
+    ///
+    /// Set rather than inferred from the fill, because a colour is not a
+    /// semantic: [`Tone::Selection`] is how a chosen row is *drawn*, and a
+    /// theme written next year may draw it some other way without the meaning
+    /// having changed at all.
+    pub fn selected(mut self, selected: bool) -> Self {
+        self.selected = Some(selected);
+        self
+    }
+
+    /// What this element is, for anything that cannot see it.
+    pub fn accessibility_role(&self) -> Role {
+        self.role
+    }
+
+    /// What this element is called.
+    ///
+    /// [`El::label`] if one was given; otherwise the words of its subtree, run
+    /// together — which is HTML's *accessible name computation from contents*,
+    /// and is why `button("Restart")` needs nothing written at its call site.
+    /// A field is excluded from that rule: its text is its value, so a field
+    /// with no label has no name and the enforcement says so.
+    ///
+    /// Layers are left out. A tooltip hanging off a button is not part of what
+    /// the button is called.
+    ///
+    /// ```ignore
+    /// assert_eq!(button("Restart").accessible_name(), "Restart");
+    /// ```
+    pub fn accessible_name(&self) -> String {
+        if let Some(label) = &self.label {
+            return label.clone();
+        }
+        if !self.role.names_from_contents() {
+            return String::new();
+        }
+        let mut name = String::new();
+        self.collect_words(&mut name);
+        name
+    }
+
+    /// Whether this is the chosen one of its group, where that applies at all.
+    pub fn is_selected(&self) -> Option<bool> {
+        self.selected
+    }
+
+    /// Appends this element's own words, and its children's, to `out`.
+    fn collect_words(&self, out: &mut String) {
+        if let Node::Text(text) = &self.node {
+            let text = text.trim();
+            if !text.is_empty() {
+                if !out.is_empty() {
+                    out.push(' ');
+                }
+                out.push_str(text);
+            }
+        }
+        for child in &self.children {
+            if child.style.layer.is_none() {
+                child.collect_words(out);
+            }
+        }
     }
 
     /// What is inside this element.

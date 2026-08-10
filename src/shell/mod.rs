@@ -1,11 +1,28 @@
 //! The window: the only part of the library that talks to an operating system.
 //!
-//! Deliberately the smallest part. A backend does five things — open a window,
-//! say how big it is and whether the desktop is light or dark, hand over the
-//! events it received, and copy a buffer of pixels onto the screen. Everything
-//! else is decided above it, identically everywhere, which is why porting to a
-//! new platform is a few hundred lines against that surface and why a defect in
-//! a widget can never be a platform defect.
+//! Deliberately the smallest part. A backend opens a window, says how big it is
+//! and whether the desktop is light or dark, hands over the events it received,
+//! copies a buffer of pixels onto the screen, carries text to and from the
+//! system clipboard, tells the platform's input method where the text being
+//! composed is on screen, and hands the platform's assistive technology what
+//! the interface now means. Everything else is decided above it, identically
+//! everywhere, which is why porting to a new platform is a few hundred lines
+//! against that surface and why a defect in a widget can never be a platform
+//! defect.
+//!
+//! # What belongs on that list is a choice, not a fixed number
+//!
+//! The list grows when something *can only* be answered by the operating
+//! system. A clipboard is the clear case: it is not a buffer this library could
+//! keep for itself, because the entire point of it is that other programs can
+//! read it. Composition is the same — which characters a keystroke produces is a
+//! question about the person's chosen input method, not about this program.
+//!
+//! Everything else stays out, and the cost of each addition is what keeps that
+//! honest: one method here is three implementations and a documented gap on any
+//! platform that cannot honour it. A capability that a widget could compute for
+//! itself, or that one platform has and the others do not, is not one to widen
+//! the seam for.
 //!
 //! # The loop
 //!
@@ -41,13 +58,15 @@
 pub mod fonts;
 mod platform;
 
+use crate::accessibility::AccessUpdate;
 use crate::app::App;
 use crate::canvas::Canvas;
+use crate::geom::Rect;
 use crate::input::{Event, Input};
 use crate::memory::Memory;
 use crate::font::FontError;
 use crate::text::{FontId, Fonts};
-use crate::theme::{Appearance, Theme};
+use crate::theme::Appearance;
 use std::time::{Duration, Instant};
 
 pub use fonts::{LoadedFonts, load_system_fonts};
@@ -140,6 +159,15 @@ trait Backend: Sized {
 
     /// Collects pending events, waiting up to `timeout` for the first.
     ///
+    /// Not only the ones the window system queued. An assistive technology
+    /// activates a control by messaging an object the backend handed it, at a
+    /// moment of its own choosing, and the answer is to report that here as an
+    /// [`Event::Activated`] rather than to act on it — which is why this seam
+    /// did not have to grow a method for it, and why a screen reader reaches a
+    /// handler by the route a click already takes. See
+    /// [`accessibility`](crate::accessibility) for the invariant that rests on
+    /// it.
+    ///
     /// `redraw` draws and presents one frame immediately, for a backend to call
     /// when the platform has taken the loop away and will not give it back until
     /// a gesture ends. It takes `&Self` and not `&mut Self` because the backend
@@ -162,6 +190,38 @@ trait Backend: Sized {
 
     /// Whether the window is still on screen.
     fn is_open(&self) -> bool;
+
+    /// The plain text on the system clipboard, if it holds any.
+    ///
+    /// `Ok(None)` is a clipboard holding something that is not text, or nothing
+    /// at all, or — on X11, where reading it means asking whichever program owns
+    /// it — an owner that did not answer. All three are the same to a field
+    /// pasting: there is nothing to paste. An `Err` is the platform refusing.
+    fn clipboard_text(&self) -> Result<Option<String>, Error>;
+
+    /// Puts `text` on the system clipboard, replacing whatever was there.
+    fn set_clipboard_text(&self, text: &str) -> Result<(), Error>;
+
+    /// Says where the text being composed is, in the same logical units from
+    /// the top left of the window that an element is drawn in.
+    ///
+    /// An input method draws its own window — the list of candidate characters
+    /// for a syllable, the accent a dead key is holding — and needs to put it
+    /// beside the text it belongs to. `None` means nothing has the keyboard, so
+    /// there is nowhere for it to be.
+    ///
+    /// Told only when it moves, so a platform is free to make this an expensive
+    /// call.
+    fn set_composition_area(&self, area: Option<Rect>) -> Result<(), Error>;
+
+    /// Hands the platform the accessibility nodes that changed since the last
+    /// frame.
+    ///
+    /// A diff and not the whole tree, for the reason [`Backend::present`] sends
+    /// a frame only when it differs: an interface spends most of its life
+    /// unchanged, and pushing an identical tree every frame costs the assistive
+    /// technology, not us.
+    fn update_accessibility(&self, update: &AccessUpdate) -> Result<(), Error>;
 }
 
 /// Everything one frame is drawn from, apart from the window and the program.
@@ -189,6 +249,11 @@ struct Surface {
     /// There is nothing to return it to from in there, and dropping it would
     /// turn a window that can no longer present into one that silently freezes.
     failed: Option<Error>,
+    /// The caret position the input method was last told about.
+    ///
+    /// Kept so it is told only when the answer changes, for the same reason a
+    /// frame is presented only when it differs from the one on screen.
+    composition_area: Option<Rect>,
 }
 
 impl Surface {
@@ -217,14 +282,57 @@ impl Surface {
         }
         fonts.set_scale(scale);
 
-        let theme = Theme::new(window.appearance(), self.ui_font, self.mono_font);
-        self.drawn.clear_vertical(theme.palette.background, theme.palette.background_deep);
+        // The application's own, if it supplied one — asked here rather than
+        // built here, so a window and a test cannot come to disagree about what
+        // the interface looks like. See [`App::theme`].
+        let theme = app.theme_for(window.appearance(), self.ui_font, self.mono_font);
+        app.paint_ground(&mut self.drawn, &theme);
         app.frame(&mut self.drawn, fonts, &self.input, &mut self.memory, &theme);
         self.memory.end_frame(&self.input);
+        self.serve_requests(window)?;
+
+        // The same idea as the comparison below, applied to what the interface
+        // *means* rather than to what it looks like: work out the difference
+        // from the finished result, and send nothing when there is none. Both
+        // are here, next to each other, because they are one principle —
+        // compare the outcome, do not track what you believe is dirty.
+        let update = app.accessibility_update();
+        if !update.is_empty() {
+            window.update_accessibility(update)?;
+        }
 
         if self.drawn.pixels() != self.presented.pixels() {
             window.present(&self.drawn)?;
             std::mem::swap(&mut self.drawn, &mut self.presented);
+        }
+        Ok(())
+    }
+
+    /// Does what the finished frame asked of the operating system.
+    ///
+    /// The other half of [`crate::memory::ClipboardRequest`]: a field cannot
+    /// reach a window, because the description it is drawn from borrows the
+    /// application's state and knows nothing about one. It leaves its intention
+    /// in [`Memory`] and this performs it, one frame's worth at a time, in the
+    /// one place that holds both.
+    ///
+    /// After the frame rather than before it, so that a copy carries what the
+    /// field decided *this* frame rather than what it held on the last one.
+    fn serve_requests<B: Backend>(&mut self, window: &B) -> Result<(), Error> {
+        let request = self.memory.take_clipboard_request();
+        if let Some(text) = request.copy {
+            window.set_clipboard_text(&text)?;
+        }
+        if request.paste {
+            if let Some(text) = window.clipboard_text()? {
+                self.memory.deliver_paste(text);
+            }
+        }
+
+        let area = self.memory.caret_area();
+        if area != self.composition_area {
+            window.set_composition_area(area)?;
+            self.composition_area = area;
         }
         Ok(())
     }
@@ -252,6 +360,7 @@ pub(crate) fn run<S>(
         ui_font,
         mono_font,
         failed: None,
+        composition_area: None,
     };
     let mut events = Vec::new();
 

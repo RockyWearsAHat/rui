@@ -102,6 +102,35 @@ impl Color {
     pub fn luminance(self) -> f32 {
         (0.299 * self.r as f32 + 0.587 * self.g as f32 + 0.114 * self.b as f32) / 255.0
     }
+
+    /// The WCAG contrast ratio between this colour and another, from 1 to 21.
+    ///
+    /// Symmetric — which of the two is the ink does not matter — and computed
+    /// on the linearised relative luminance the guidelines define rather than
+    /// on [`Color::luminance`]'s quick luma, because a legibility law should be
+    /// asserted in the units the law is written in. Alpha is ignored: contrast
+    /// is a question about two colours as they land, and what a translucent one
+    /// lands *as* depends on what is under it, which is not this colour's to
+    /// know.
+    pub fn contrast_ratio(self, other: Self) -> f32 {
+        let (a, b) = (self.relative_luminance(), other.relative_luminance());
+        (a.max(b) + 0.05) / (a.min(b) + 0.05)
+    }
+
+    /// The colour's WCAG relative luminance, from 0 (black) to 1 (white).
+    ///
+    /// Each sRGB channel linearised as the guidelines prescribe, then weighted
+    /// per Rec. 709. Kept private behind [`Color::contrast_ratio`]: a ratio is
+    /// the judgement anything outside actually wants, and two luminances handed
+    /// out separately invite someone to divide them without the 0.05 the
+    /// formula flattens black with.
+    fn relative_luminance(self) -> f32 {
+        let channel = |value: u8| {
+            let c = value as f32 / 255.0;
+            if c <= 0.03928 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+        };
+        0.2126 * channel(self.r) + 0.7152 * channel(self.g) + 0.0722 * channel(self.b)
+    }
 }
 
 /// Composites `source` over `destination` with `coverage` applied to its alpha.
@@ -131,6 +160,33 @@ pub fn blend_over(destination: u32, source: Color, coverage: u8) -> u32 {
     let r = channel(source.r, (destination >> 16) & 0xff);
     let g = channel(source.g, (destination >> 8) & 0xff);
     let b = channel(source.b, destination & 0xff);
+    0xff00_0000 | r << 16 | g << 8 | b
+}
+
+/// Composites `source` onto `destination` by ADDING light, with `coverage`
+/// applied to its alpha, saturating each channel at 255.
+///
+/// Where [`blend_over`] replaces the destination in proportion to alpha, this
+/// adds to it: two lit things overlapping grow brighter and tend toward white,
+/// which is what makes neon bloom rather than merely lie on top. `destination`
+/// is an opaque buffer pixel, so the result stays opaque. Both words are
+/// `0xAARRGGBB`.
+///
+/// `coverage` multiplies the source alpha exactly as it does in [`blend_over`],
+/// so an antialiased edge or a glow falloff dims the light it adds by how much
+/// of the pixel it reaches.
+pub fn blend_add(destination: u32, source: Color, coverage: u8) -> u32 {
+    let alpha = mul_255(source.a, coverage);
+    if alpha == 0 {
+        return destination;
+    }
+    let add = |src: u8, dst: u32| {
+        let sum = mul_255(src, alpha) as u32 + dst;
+        if sum > 255 { 255 } else { sum }
+    };
+    let r = add(source.r, (destination >> 16) & 0xff);
+    let g = add(source.g, (destination >> 8) & 0xff);
+    let b = add(source.b, destination & 0xff);
     0xff00_0000 | r << 16 | g << 8 | b
 }
 
@@ -207,5 +263,78 @@ mod tests {
     fn luminance_orders_black_below_white() {
         assert!(Color::BLACK.luminance() < Color::WHITE.luminance());
         assert_eq!(Color::WHITE.luminance(), 1.0);
+    }
+
+    #[test]
+    fn contrast_spans_its_whole_scale() {
+        // The two ends the formula is defined by: black against white is 21:1,
+        // and a colour against itself is 1:1.
+        let extreme = Color::BLACK.contrast_ratio(Color::WHITE);
+        assert!((extreme - 21.0).abs() < 0.01, "expected 21:1, got {extreme}");
+        let none = Color::rgb(0x80, 0x80, 0x80).contrast_ratio(Color::rgb(0x80, 0x80, 0x80));
+        assert_eq!(none, 1.0);
+    }
+
+    #[test]
+    fn contrast_does_not_care_which_colour_is_the_ink() {
+        let (ink, ground) = (Color::rgb(0x25, 0x63, 0xd4), Color::rgb(0xf2, 0xf3, 0xf5));
+        assert_eq!(ink.contrast_ratio(ground), ground.contrast_ratio(ink));
+    }
+
+    #[test]
+    fn contrast_is_computed_on_linear_light_and_not_on_luma() {
+        // The published figure for #767676 on white is 4.54:1 — the grey WCAG's
+        // own examples sit at. Quick luma lands somewhere else entirely, so
+        // hitting this number is what says the linearisation is really there.
+        let ratio = Color::rgb(0x76, 0x76, 0x76).contrast_ratio(Color::WHITE);
+        assert!((ratio - 4.54).abs() < 0.01, "expected about 4.54:1, got {ratio}");
+    }
+
+    #[test]
+    fn contrast_ignores_alpha() {
+        // A translucent ink's landing depends on what it lands on, which the
+        // ratio of two colours cannot know; it answers for the colours as told.
+        let faint = Color::rgba(0xff, 0xff, 0xff, 10);
+        assert_eq!(faint.contrast_ratio(Color::BLACK), Color::WHITE.contrast_ratio(Color::BLACK));
+    }
+
+    #[test]
+    fn adding_onto_black_is_the_source_scaled_by_coverage() {
+        // Nothing to add to, so the result is exactly the light laid down.
+        let grey = Color::rgb(120, 120, 120);
+        assert_eq!(blend_add(0xff00_0000, grey, 255), 0xff78_7878);
+        // Half coverage is half the light.
+        let half = blend_add(0xff00_0000, grey, 128) & 0xff;
+        assert!((58..=62).contains(&half), "expected about half, got {half}");
+    }
+
+    #[test]
+    fn two_half_lights_add_toward_and_clamp_at_white() {
+        let half = Color::rgb(140, 140, 140);
+        let once = blend_add(0xff00_0000, half, 255);
+        let twice = blend_add(once, half, 255);
+        assert!((twice & 0xff) > (once & 0xff), "adding a second light must brighten");
+
+        // Two lights that would sum past 255 clamp rather than wrap.
+        let bright = Color::rgb(200, 200, 200);
+        let summed = blend_add(blend_add(0xff00_0000, bright, 255), bright, 255);
+        assert_eq!(summed & 0xff, 255, "the channel saturates at white");
+    }
+
+    #[test]
+    fn adding_nothing_leaves_the_pixel_exactly() {
+        let light = Color::rgb(90, 90, 90);
+        assert_eq!(blend_add(0xff12_3456, light, 0), 0xff12_3456, "zero coverage adds nothing");
+        assert_eq!(
+            blend_add(0xff12_3456, Color::TRANSPARENT, 255),
+            0xff12_3456,
+            "a zero-alpha source adds nothing"
+        );
+    }
+
+    #[test]
+    fn adding_always_produces_an_opaque_pixel() {
+        let faint = Color::rgba(10, 20, 30, 3);
+        assert_eq!(blend_add(0xff00_0000, faint, 40) >> 24, 0xff);
     }
 }

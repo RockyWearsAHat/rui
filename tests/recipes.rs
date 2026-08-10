@@ -9,11 +9,17 @@
 //! Each control here is deliberately whole and standalone. Copying one into a
 //! project and changing it is the intended use; see `examples/controls.rs` for
 //! the same set drawn together.
+//!
+//! Every one of them also states what it *is* — a [`Role`], and a name where it
+//! has no words of its own — and every test below ends by asserting that the
+//! interface it drove keeps the accessibility convention. A control nobody can
+//! reach without a pointer is not a finished control, so the tests that say
+//! these work say that too.
 
 use rui::testing::Harness;
 use rui::{
-    Align, Anchor, Drag, El, Key, Modifiers, Painter, Point, Radius, Rect, Size, Tone, caption, col,
-    draw, panel, row, text,
+    Align, Anchor, Drag, El, Key, Modifiers, Painter, Point, Radius, Rect, Role, Size, Tone,
+    caption, col, draw, panel, row, text,
 };
 
 /// Everything the controls below are wired to.
@@ -43,6 +49,8 @@ fn checkbox<S: 'static>(label: &str, checked: bool, toggle: impl Fn(&mut S) + 's
     .gap(8.0)
     .h(22.0)
     .align(Align::Center)
+    .role(Role::Checkbox)
+    .selected(checked)
     .on_click(move |state: &mut S| toggle(state))
 }
 
@@ -55,6 +63,9 @@ fn switch<S: 'static>(on: bool, flip: impl Fn(&mut S) + 'static) -> El<S> {
         painter.fill(Rect::new(x, rect.y + 3.0, knob, knob), Radius::Pill, Tone::Surface);
     })
     .size(34.0, 20.0)
+    .role(Role::Checkbox)
+    .selected(on)
+    .label("Dark appearance")
     .on_click(move |state: &mut S| flip(state))
 }
 
@@ -67,6 +78,9 @@ fn slider<S: 'static>(value: f32, set: impl Fn(&mut S, f32) + Copy + 'static) ->
         painter.fill(Rect::new(rect.x, rect.y, rect.w * value, rect.h), Radius::Pill, Tone::Accent);
     })
     .size(160.0, 18.0)
+    .role(Role::Slider)
+    .label("Volume")
+    .value(format!("{:.0}%", value * 100.0))
     .on_drag(move |state: &mut S, drag: Drag| set(state, drag.fraction().x))
     .on_key(move |state: &mut S, key: Key, _: Modifiers| match key {
         Key::Left => set(state, (value - STEP).max(0.0)),
@@ -97,6 +111,8 @@ fn radio_group<S: 'static>(
             .h(22.0)
             .gap(8.0)
             .align(Align::Center)
+            .role(Role::Radio)
+            .selected(taken)
             .on_click(move |state: &mut S| choose(state, index))
         })
         .collect::<Vec<_>>())
@@ -120,6 +136,9 @@ fn a_checkbox_answers_a_click_on_its_label_as_well_as_on_its_box() {
 
     harness.click_text("Notify on failure");
     assert!(!harness.state().notify, "and it is a toggle, not a latch");
+
+    harness.assert_accessible();
+    harness.assert_tab_order();
 }
 
 #[test]
@@ -136,6 +155,8 @@ fn a_checkbox_draws_differently_once_it_is_ticked() {
     off.frame();
     on.frame();
     assert_ne!(off.canvas().pixels(), on.canvas().pixels(), "a state nobody can see is not a state");
+
+    on.assert_accessible();
 }
 
 #[test]
@@ -155,6 +176,9 @@ fn a_switch_flips_and_moves_its_knob_when_it_does() {
     assert!(harness.state().dark);
     harness.frame();
     assert_ne!(before, harness.canvas().pixels(), "the knob should have moved");
+
+    harness.assert_accessible();
+    harness.assert_tab_order();
 }
 
 #[test]
@@ -174,6 +198,8 @@ fn a_slider_follows_the_pointer_and_the_arrow_keys_alike() {
     assert!((harness.state().volume - 0.70).abs() < 0.001);
     harness.key(Key::Right).key(Key::Right);
     assert!((harness.state().volume - 0.80).abs() < 0.001);
+
+    harness.assert_accessible();
 }
 
 #[test]
@@ -185,6 +211,9 @@ fn a_slider_can_be_used_from_the_keyboard_without_ever_being_clicked() {
     harness.tab();
     harness.key(Key::Right);
     assert!((harness.state().volume - 0.05).abs() < 0.001, "tab reached it and the arrow moved it");
+
+    harness.assert_accessible();
+    harness.assert_tab_order();
 }
 
 #[test]
@@ -201,6 +230,9 @@ fn a_group_of_choices_takes_exactly_one_of_them() {
 
     harness.click_text("Plain");
     assert_eq!(harness.state().format, 0, "choosing one is unchoosing the others");
+
+    harness.assert_accessible();
+    harness.assert_tab_order();
 }
 
 #[test]
@@ -229,6 +261,8 @@ fn a_note_appears_when_the_pointer_arrives_and_goes_when_it_leaves() {
     harness.hover_text("Elsewhere");
     harness.frame();
     assert!(!harness.shows("How many at once"), "and leaving took it away again");
+
+    harness.assert_accessible();
 }
 
 #[test]

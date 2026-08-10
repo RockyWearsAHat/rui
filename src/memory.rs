@@ -65,6 +65,21 @@ fn fnv1a(seed: u64, bytes: &[u8]) -> u64 {
     hash
 }
 
+/// How the keyboard's attention came to be where it is.
+///
+/// What decides whether a focus ring is drawn. A pointer press puts focus
+/// where the pointer already is, so a ring there tells the person nothing they
+/// did not just do — but focus that arrived from the keyboard is invisible
+/// without one. See [`Memory::focus_visible`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FocusSource {
+    /// A pointer press put focus here.
+    #[default]
+    Pointer,
+    /// Tab, or another key stepping focus, put it here.
+    Keyboard,
+}
+
 /// What an element's interaction amounted to this frame.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Response {
@@ -79,7 +94,12 @@ pub struct Response {
     pub hovered: bool,
     /// It is being pressed right now.
     pub held: bool,
-    /// A press that began on it ended on it, this frame.
+    /// It was activated this frame, by whichever of the three routes.
+    ///
+    /// A press that began on it and ended on it, or Space or Enter while it had
+    /// the keyboard, or an assistive technology naming it — one flag for all
+    /// three, because an interface must not be able to tell them apart. See the
+    /// invariant in [`accessibility`](crate::accessibility).
     pub clicked: bool,
     /// The same, for the secondary button.
     pub secondary_clicked: bool,
@@ -102,11 +122,51 @@ impl Response {
     }
 }
 
-/// Where a caret sits in a field being edited.
+/// Where a caret sits in a field being edited, and what it has selected.
+///
+/// Two offsets rather than a range, because a selection has a direction: the
+/// anchor is where the selection began and does not move, and the offset is the
+/// end being dragged. Extending a selection leftwards and then rightwards has to
+/// come back to where it started, which a sorted pair cannot express.
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct Caret {
-    /// Byte offset within the field's text.
+    /// Byte offset within the field's text: where the caret is drawn.
     pub(crate) offset: usize,
+    /// Byte offset the selection is anchored at; equal to `offset` when there
+    /// is no selection.
+    pub(crate) anchor: usize,
+}
+
+impl Caret {
+    /// What is selected, in byte offsets, low end first.
+    ///
+    /// Empty when nothing is, which is the case a caller can treat as "act on
+    /// the caret" without asking a second question.
+    pub(crate) fn selection(self) -> std::ops::Range<usize> {
+        self.offset.min(self.anchor)..self.offset.max(self.anchor)
+    }
+}
+
+/// What a frame asked the window to do with the system clipboard.
+///
+/// # Why a request and not a call
+///
+/// A handler is `fn(&mut S)` and captures nothing, and drawing a field has no
+/// window in reach either — the whole point of [`crate::shell`] is that nothing
+/// above it knows what a window is. So a field leaves its intention here and the
+/// window loop performs it once the frame is finished, which is exactly the
+/// shape [`Memory::request_frame`] already uses for "do this once I am done".
+///
+/// It also happens to be the only shape X11 can honour. There is no clipboard
+/// buffer to read there: asking for the selection sends a message to whichever
+/// client owns it and the answer arrives later, so a `paste()` that returned a
+/// string on the spot is not a thing that platform has.
+#[derive(Debug, Default)]
+pub(crate) struct ClipboardRequest {
+    /// Text to be placed on the clipboard.
+    pub(crate) copy: Option<String>,
+    /// Whether the clipboard's own text was asked for.
+    pub(crate) paste: bool,
 }
 
 /// How far an eased value has travelled, and when it was last asked for.
@@ -114,6 +174,16 @@ pub(crate) struct Caret {
 struct Eased {
     value: f32,
     /// The frame it was last asked for, so values nothing draws are dropped.
+    seen: u64,
+}
+
+/// How far round its period a looping value has got, and when it was last asked
+/// for.
+#[derive(Debug, Clone, Copy)]
+struct Cycle {
+    /// From zero to one, wrapping.
+    value: f32,
+    /// The frame it was last asked for, so cycles nothing draws are dropped.
     seen: u64,
 }
 
@@ -130,6 +200,8 @@ const SETTLED: f32 = 0.001;
 pub struct Memory {
     active: Option<Id>,
     focus: Option<Id>,
+    /// How focus last moved, which is what decides whether it is ringed.
+    focus_source: FocusSource,
     scroll: HashMap<Id, f32>,
     content_height: HashMap<Id, f32>,
     carets: HashMap<Id, Caret>,
@@ -139,6 +211,8 @@ pub struct Memory {
     pending_focus_step: i32,
     /// Where each animated value has got to.
     eased: HashMap<Id, Eased>,
+    /// How far round its period each looping value has got.
+    cycles: HashMap<Id, Cycle>,
     /// How long the frame being drawn represents, in seconds.
     delta: f32,
     /// Which frame is being drawn, for dropping values nothing draws any more.
@@ -158,6 +232,17 @@ pub struct Memory {
     /// longer drawn drops out by simply not being added again — hover state for
     /// a row that scrolled away is state that could otherwise only grow.
     hovered: HashSet<Id>,
+    /// What the frame being drawn asked of the system clipboard.
+    clipboard: ClipboardRequest,
+    /// What the window last read back from the clipboard, for whoever asked.
+    pasted: Option<String>,
+    /// Where the caret of whatever has the keyboard was last drawn.
+    ///
+    /// Not for drawing — the field draws its own caret. This is what the window
+    /// tells the platform's input method, so that a list of candidate characters
+    /// opens beside the text being composed rather than in the corner of the
+    /// screen.
+    caret_area: Option<Rect>,
 }
 
 impl Memory {
@@ -187,7 +272,19 @@ impl Memory {
     /// Notes that an element is being pressed, and gives it the keyboard.
     pub(crate) fn press(&mut self, id: Id) {
         self.active = Some(id);
+        self.focus_source = FocusSource::Pointer;
         self.set_focus(Some(id));
+    }
+
+    /// Whether what holds the keyboard should wear the focus ring.
+    ///
+    /// True only when focus last moved by key. A ring around what was just
+    /// clicked repeats the click back at the person, while keyboard focus is
+    /// invisible without one — so the ring is drawn for the second and not the
+    /// first. A field is the one exception, and the drawing makes it: a caret
+    /// justifies the ring however focus arrived.
+    pub fn focus_visible(&self) -> bool {
+        self.focus_source == FocusSource::Keyboard
     }
 
     /// Enters an element into this frame's tab order.
@@ -242,6 +339,57 @@ impl Memory {
         self.animating = true;
     }
 
+    /// Asks for `text` to be placed on the system clipboard.
+    ///
+    /// Performed by the window once this frame is finished, by the loop in
+    /// [`shell`](crate::shell) — a field cannot reach a window, so it leaves
+    /// its intention here instead. The last request of a frame wins, because two
+    /// controls both copying on the same frame is a mistake and the alternative
+    /// — concatenating them — would be a stranger one.
+    pub fn copy_to_clipboard(&mut self, text: String) {
+        self.clipboard.copy = Some(text);
+    }
+
+    /// Asks for the system clipboard's text, which arrives on the next frame.
+    ///
+    /// A frame later rather than at once, because reading a clipboard is asking
+    /// another program a question, and on X11 it is literally that. The extra
+    /// frame is asked for here, so the paste appears immediately rather than
+    /// whenever something else next woke the interface up.
+    pub fn request_paste(&mut self) {
+        self.clipboard.paste = true;
+        self.request_frame();
+    }
+
+    /// Takes what this frame asked of the clipboard, for the window to perform.
+    pub(crate) fn take_clipboard_request(&mut self) -> ClipboardRequest {
+        std::mem::take(&mut self.clipboard)
+    }
+
+    /// Hands over what the clipboard answered, for the next frame to read.
+    pub(crate) fn deliver_paste(&mut self, text: String) {
+        self.pasted = Some(text);
+        self.request_frame();
+    }
+
+    /// Takes the clipboard's answer, if one is waiting for this frame.
+    ///
+    /// Consumed rather than read, so it is pasted once and not on every frame
+    /// until the next paste.
+    pub(crate) fn take_pasted(&mut self) -> Option<String> {
+        self.pasted.take()
+    }
+
+    /// Notes where the caret of whatever has the keyboard was drawn.
+    pub(crate) fn set_caret_area(&mut self, area: Rect) {
+        self.caret_area = Some(area);
+    }
+
+    /// Where that caret was, if anything drew one this frame.
+    pub(crate) fn caret_area(&self) -> Option<Rect> {
+        self.caret_area
+    }
+
     /// Whether a following area is still stuck to the end of its content.
     pub(crate) fn is_following(&self, id: Id) -> bool {
         !self.detached.get(&id).copied().unwrap_or(false)
@@ -281,6 +429,10 @@ impl Memory {
         self.delta = elapsed.as_secs_f32().clamp(SHORTEST, LONGEST);
         self.frame = self.frame.wrapping_add(1);
         self.animating = false;
+        // Where the caret is belongs to the frame that draws it. Kept from the
+        // last one, it would go on pointing at a field that has since lost the
+        // keyboard or scrolled off the screen.
+        self.caret_area = None;
     }
 
     /// Whether anything is mid-animation and the frame should be drawn again.
@@ -318,6 +470,46 @@ impl Memory {
             self.animating = true;
         }
         entry.value
+    }
+
+    /// Advances the looping value held under `id`, and answers where it is.
+    ///
+    /// From zero to one and round again every `period` seconds: what a rotating
+    /// sweep, a pulse, or anything else that repeats is driven from. The step is
+    /// the frame's own elapsed time over the period, so a loop takes as long on
+    /// a slow machine as on a quick one, exactly as [`Memory::ease`] does.
+    ///
+    /// # It never settles, so ask for it only while it should be moving
+    ///
+    /// An eased value arrives and the interface goes back to sleep. A cycle has
+    /// nowhere to arrive, so every frame that asks for one asks for another
+    /// frame — which is right when the loop *is* the report (a sweep saying a
+    /// connection is being made, a pulse saying something wants attention) and
+    /// is a window that never idles when it is not. Draw it while the state is
+    /// in flux and stop asking when it is not.
+    ///
+    /// A period of zero or less has no length to divide by and holds at zero,
+    /// without keeping the loop awake.
+    pub fn phase(&mut self, id: Id, period: f32) -> f32 {
+        if period <= 0.0 || !period.is_finite() {
+            return 0.0;
+        }
+        let frame = self.frame;
+        let cycle = self.cycles.entry(id).or_insert(Cycle { value: 0.0, seen: frame });
+        cycle.seen = frame;
+        cycle.value = (cycle.value + self.delta / period).fract();
+        self.animating = true;
+        cycle.value
+    }
+
+    /// Restarts the looping value held under `id` from the top of its turn.
+    ///
+    /// What a caret's blink is reset by on every edit, so the mark holds solid
+    /// while the typing it reports is still happening. Forgetting the entry is
+    /// enough: the next ask starts a fresh turn at zero, exactly as a loop
+    /// being seen for the first time does.
+    pub(crate) fn reset_phase(&mut self, id: Id) {
+        self.cycles.remove(&id);
     }
 
     /// Settles the frame's interaction state.
@@ -358,10 +550,19 @@ impl Memory {
         // where it was when it left.
         let frame = self.frame;
         self.eased.retain(|_, eased| eased.seen == frame);
+        // And for looping ones, which is what stops a sweep resuming half way
+        // round when whatever it belonged to comes back on screen.
+        self.cycles.retain(|_, cycle| cycle.seen == frame);
 
         // What the pointer was over is now what it *was* over. Anything this
         // frame did not draw is simply not in the new set.
         self.was_hovered = std::mem::take(&mut self.hovered);
+
+        // A paste is delivered *after* this, so anything still here was offered
+        // to the frame that asked for it and not taken — the field that wanted
+        // it has since lost the keyboard or gone. Pasting it into whatever holds
+        // the keyboard next would be text arriving in a place nobody aimed it.
+        self.pasted = None;
     }
 
     /// Notes that Tab was pressed, to be resolved at the end of the frame.
@@ -371,6 +572,7 @@ impl Memory {
     /// and only the finished frame knows the full order.
     pub(crate) fn step_focus(&mut self, step: i32) {
         self.pending_focus_step = step;
+        self.focus_source = FocusSource::Keyboard;
     }
 }
 
@@ -391,6 +593,39 @@ mod tests {
         let parent = Id::new("panel");
         assert_ne!(parent, parent.with("button"));
         assert_ne!(parent, parent.index(0));
+    }
+
+    #[test]
+    fn focus_from_a_press_is_not_ringed_and_focus_from_the_keyboard_is() {
+        // The two routes to the keyboard, told apart: a click already showed
+        // the person where they aimed, and Tab showed them nothing.
+        let mut memory = Memory::new();
+        memory.press(Id::new("button"));
+        assert!(!memory.focus_visible(), "a click is its own confirmation");
+
+        memory.offer_focus(Id::new("button"));
+        memory.step_focus(1);
+        memory.end_frame(&Input::new());
+        assert!(memory.focus_visible(), "keyboard focus is invisible without the ring");
+
+        memory.press(Id::new("button"));
+        assert!(!memory.focus_visible(), "the next click takes the ring back off");
+    }
+
+    #[test]
+    fn a_reset_loop_starts_its_turn_again_from_the_top() {
+        let mut memory = Memory::new();
+        let id = Id::new("caret");
+        for _ in 0..30 {
+            stepped(&mut memory, 1.0 / 60.0);
+            memory.phase(id, 1.0);
+        }
+        assert!(memory.phase(id, 1.0) > 0.3, "the loop has travelled");
+
+        memory.reset_phase(id);
+        stepped(&mut memory, 1.0 / 60.0);
+        let restarted = memory.phase(id, 1.0);
+        assert!(restarted < 0.05, "expected a fresh turn, got {restarted}");
     }
 
     #[test]
@@ -543,6 +778,151 @@ mod tests {
         memory.end_frame(&Input::new());
         assert_eq!(memory.eased.len(), 1);
         assert!(memory.eased.contains_key(&Id::new("row-2")));
+    }
+
+    #[test]
+    fn a_looping_value_advances_by_the_time_the_frame_took() {
+        let mut memory = Memory::new();
+        let id = Id::new("sweep");
+
+        // A tenth of a second of a one-second loop is a tenth of the way round.
+        for _ in 0..6 {
+            stepped(&mut memory, 1.0 / 60.0);
+            memory.phase(id, 1.0);
+        }
+        let after = memory.phase(id, 1.0);
+        assert!((after - 0.1).abs() < 0.02, "expected about a tenth round, got {after}");
+    }
+
+    #[test]
+    fn a_looping_value_wraps_rather_than_running_away() {
+        let mut memory = Memory::new();
+        let id = Id::new("sweep");
+        for _ in 0..300 {
+            stepped(&mut memory, 1.0 / 60.0);
+            let phase = memory.phase(id, 0.5);
+            assert!((0.0..1.0).contains(&phase), "a phase left its own turn: {phase}");
+        }
+    }
+
+    #[test]
+    fn a_loop_takes_as_long_on_a_slow_machine_as_on_a_quick_one() {
+        // The same reasoning easing rests on: a machine drawing half as many
+        // frames must turn the sweep at the same speed, only less smoothly.
+        let travelled = |frames: u32, seconds: f32| {
+            let mut memory = Memory::new();
+            let id = Id::new("sweep");
+            for _ in 0..frames {
+                stepped(&mut memory, seconds);
+                memory.phase(id, 2.0);
+            }
+            memory.phase(id, 2.0)
+        };
+
+        let fast = travelled(40, 1.0 / 120.0);
+        let slow = travelled(20, 1.0 / 60.0);
+        assert!((fast - slow).abs() < 0.01, "{fast} and {slow} should agree after equal time");
+    }
+
+    #[test]
+    fn a_loop_keeps_asking_for_frames_because_it_never_arrives() {
+        // The difference from easing, stated: a cycle has nowhere to settle, so
+        // drawing one is asking for the next frame — which is why it is only
+        // drawn while the loop is what the interface is reporting.
+        let mut memory = Memory::new();
+        stepped(&mut memory, 1.0 / 60.0);
+        memory.phase(Id::new("sweep"), 1.2);
+        assert!(memory.is_animating());
+    }
+
+    #[test]
+    fn a_period_of_nothing_holds_still_and_lets_the_window_sleep() {
+        let mut memory = Memory::new();
+        stepped(&mut memory, 1.0 / 60.0);
+        assert_eq!(memory.phase(Id::new("sweep"), 0.0), 0.0);
+        assert!(!memory.is_animating(), "a loop with no period must not spin the loop");
+    }
+
+    #[test]
+    fn two_loops_run_at_their_own_periods() {
+        let mut memory = Memory::new();
+        let (sweep, pulse) = (Id::new("sweep"), Id::new("pulse"));
+        for _ in 0..20 {
+            stepped(&mut memory, 1.0 / 60.0);
+            memory.phase(sweep, 1.0);
+            memory.phase(pulse, 4.0);
+        }
+        assert!(
+            memory.phase(sweep, 1.0) > memory.phase(pulse, 4.0),
+            "the quicker loop should be further round than the slower one"
+        );
+    }
+
+    #[test]
+    fn loops_nothing_draws_any_more_are_forgotten() {
+        // So a sweep that scrolled away starts at its beginning when it comes
+        // back rather than resuming half way round.
+        let mut memory = Memory::new();
+        stepped(&mut memory, 1.0 / 60.0);
+        memory.phase(Id::new("row-1"), 1.0);
+        memory.end_frame(&Input::new());
+        assert_eq!(memory.cycles.len(), 1);
+
+        stepped(&mut memory, 1.0 / 60.0);
+        memory.phase(Id::new("row-2"), 1.0);
+        memory.end_frame(&Input::new());
+        assert_eq!(memory.cycles.len(), 1);
+        assert!(memory.cycles.contains_key(&Id::new("row-2")));
+    }
+
+    #[test]
+    fn a_copy_is_queued_for_the_window_and_handed_over_once() {
+        let mut memory = Memory::new();
+        memory.copy_to_clipboard("selfhost".into());
+
+        let request = memory.take_clipboard_request();
+        assert_eq!(request.copy.as_deref(), Some("selfhost"));
+        assert!(!request.paste, "copying is not also asking to paste");
+        assert_eq!(memory.take_clipboard_request().copy, None, "the copy was performed twice");
+    }
+
+    #[test]
+    fn asking_to_paste_also_asks_for_the_frame_that_will_show_it() {
+        let mut memory = Memory::new();
+        stepped(&mut memory, 1.0 / 60.0);
+        memory.request_paste();
+
+        assert!(memory.take_clipboard_request().paste);
+        assert!(memory.is_animating(), "the paste would not appear until something else woke us");
+    }
+
+    #[test]
+    fn the_clipboards_answer_is_read_by_the_next_frame_exactly_once() {
+        let mut memory = Memory::new();
+        memory.deliver_paste("pasted".into());
+        assert_eq!(memory.take_pasted().as_deref(), Some("pasted"));
+        assert_eq!(memory.take_pasted(), None, "the same paste arrived twice");
+    }
+
+    #[test]
+    fn an_answer_nobody_took_is_dropped_rather_than_kept_for_later() {
+        // The field that asked has lost the keyboard by the time the answer
+        // arrives. Holding it would paste it into whatever is focused next.
+        let mut memory = Memory::new();
+        memory.deliver_paste("pasted".into());
+        memory.end_frame(&Input::new());
+        assert_eq!(memory.take_pasted(), None);
+    }
+
+    #[test]
+    fn where_the_caret_is_belongs_to_one_frame_only() {
+        let mut memory = Memory::new();
+        stepped(&mut memory, 1.0 / 60.0);
+        memory.set_caret_area(Rect::new(4.0, 8.0, 2.0, 16.0));
+        assert!(memory.caret_area().is_some());
+
+        stepped(&mut memory, 1.0 / 60.0);
+        assert_eq!(memory.caret_area(), None, "a frame that drew no caret still reported one");
     }
 
     #[test]
