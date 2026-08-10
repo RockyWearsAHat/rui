@@ -12,7 +12,17 @@
 //! interface ends up with by accident, and naming them is what stops the third
 //! screen someone writes from introducing a sixth that is half a unit from one
 //! that already exists.
+//!
+//! # Every one of them states what it is
+//!
+//! Each constructor here carries its own [`Role`] — the one its kind implies,
+//! or a line stating otherwise — so an interface written from these elements is
+//! meaningful to a screen reader without a word being added at the call site.
+//! A control built instead from [`draw`] states its own with [`El::role`]. See
+//! [`accessibility`](crate::accessibility) for why that decision is worth
+//! holding, and [`audit`](crate::accessibility::audit) for what holds it.
 
+use crate::accessibility::Role;
 use crate::element::{Children, El, Node};
 use crate::geom::{Rect, Size};
 use crate::paint::Painter;
@@ -86,7 +96,7 @@ pub fn text<S>(text: impl Into<String>) -> El<S> {
 
 /// The name of a window, a pane, or the thing a screen is about.
 pub fn title<S>(text: impl Into<String>) -> El<S> {
-    El::of(Node::Text(text.into())).text_size(TITLE_SIZE)
+    El::of(Node::Text(text.into())).text_size(TITLE_SIZE).role(Role::Heading)
 }
 
 /// The label that introduces a block: small, muted, opened up.
@@ -99,6 +109,7 @@ pub fn heading<S>(text: impl Into<String>) -> El<S> {
         .text_size(HEADING_SIZE)
         .tracking(HEADING_TRACKING)
         .color(Tone::Muted)
+        .role(Role::Heading)
 }
 
 /// An aside: a unit, an explanation, a timestamp.
@@ -143,10 +154,18 @@ pub fn panel<S>(children: impl Children<S>) -> El<S> {
 
 /// A hairline across whatever contains it.
 pub fn divider<S>() -> El<S> {
-    El::of(Node::Stack).h(1.0).fill(Tone::Border)
+    El::of(Node::Stack).h(1.0).fill(Tone::Border).role(Role::Separator)
 }
 
 /// A button: an outlined surface that lightens under the pointer.
+///
+/// Its face is a step *above* the surface it sits on — [`Tone::Raised`] shading
+/// down to [`Tone::Surface`] — where a panel's own face shades from surface
+/// downward. A button drawn in the panel's exact gradient disappears into the
+/// panel, leaving a hairline rectangle that reads as a diagram of a button;
+/// raising the face is what says *key mounted on a panel*, and it pairs with
+/// [`field`], which is sunken for the opposite reason: what is pressed sits
+/// proud, what is typed into is a well.
 ///
 /// Ordinary by default. [`El::primary`] fills it with the accent for the one
 /// action a screen is mostly for, [`El::danger`] tints it for something
@@ -156,10 +175,11 @@ pub fn button<S>(label: impl Into<String>) -> El<S> {
     row(text(label).grow().text_align(Align::Center))
         .h(28.0)
         .pad_x(12.0)
-        .gradient(Tone::Surface, Tone::SurfaceDeep)
+        .gradient(Tone::Raised, Tone::Surface)
         .border(1.0, Tone::Border)
         .round(Radius::Control)
         .reactive()
+        .role(Role::Button)
 }
 
 /// An editable line of text.
@@ -178,6 +198,7 @@ pub fn field<S>(value: impl Into<String>) -> El<S> {
         .border(1.0, Tone::Border)
         .round(Radius::Control)
         .focusable()
+        .role(Role::Field)
 }
 
 /// A tag: a status's own word, on a tint of its own colour.
@@ -196,13 +217,16 @@ pub fn tag<S>(status: Status, label: impl Into<String>) -> El<S> {
         .text_size(HEADING_SIZE)
         .tracking(0.4)
         .pill()
+        .role(Role::Status)
 }
 
 /// A dot in a status's own colour.
 ///
 /// What a status looks like where there is no room for its word: down the side
 /// of a list, where the same four words on every row say less than four colours
-/// do.
+/// do. It still carries the word for anything that cannot see the colour —
+/// which is the whole argument for a role being set here rather than left to
+/// the caller, since the caller can see it.
 pub fn dot<S>(status: Status, radius: f32) -> El<S> {
     let tone = Tone::ink(status);
     draw(Size::new(radius * 2.0, radius * 2.0), move |painter, rect| {
@@ -211,6 +235,21 @@ pub fn dot<S>(status: Status, radius: f32) -> El<S> {
         let bounds = Rect::new(center.x - radius, center.y - radius, radius * 2.0, radius * 2.0);
         painter.canvas().fill(bounds, crate::canvas::Corner::Round(radius), color);
     })
+    .role(Role::Status)
+    .label(word_for(status))
+}
+
+/// The word a status is read aloud as.
+///
+/// Lower case, because it is read as part of a sentence — "mongod, running" —
+/// rather than as a heading.
+fn word_for(status: Status) -> &'static str {
+    match status {
+        Status::Ok => "ok",
+        Status::Warn => "warning",
+        Status::Bad => "failed",
+        Status::Idle => "idle",
+    }
 }
 
 /// A bar filled to `fraction` of its width, on a track.
@@ -240,6 +279,11 @@ pub fn meter<S>(fraction: f32, tone: impl Into<Tone>) -> El<S> {
         }
     })
     .h(6.0)
+    .role(Role::Meter)
+    // The scale the track states, stated again for anything that cannot see the
+    // track. A percentage rather than the raw fraction, because "sixty-two
+    // percent" is what a person would say and "zero point six two" is not.
+    .value(format!("{:.0}%", fraction * 100.0))
 }
 
 /// Something drawn directly onto the canvas.
@@ -282,11 +326,15 @@ pub fn tabs<S: 'static>(
             .key(*label)
             .color(if chosen { Tone::Accent } else { Tone::Muted })
             .hover_color(Tone::Text)
+            .role(Role::Tab)
+            .selected(chosen)
             .on_click(move |state: &mut S| choose(state, index))
         })
         .collect();
 
-    col((row(tabs), divider())).h(28.0)
+    // The row is the list, which is what gives each tab its place in a set of
+    // three without anybody counting: the structure already says it.
+    col((row(tabs).role(Role::TabList), divider())).h(28.0)
 }
 
 /// A segmented control: several words, one of them chosen.
@@ -311,6 +359,8 @@ pub fn segmented<S: 'static>(
                 .fill(if chosen { Tone::Surface } else { Tone::Clear })
                 .color(if chosen { Tone::Text } else { Tone::Muted })
                 .hover_color(Tone::Text)
+                .role(Role::Radio)
+                .selected(chosen)
                 .on_click(move |state: &mut S| choose(state, index))
         })
         .collect();
@@ -406,8 +456,39 @@ pub fn section<S>(label: impl Into<String>, note: Option<String>) -> El<S> {
 /// anyone measuring the longest label, but never more than a third of the row —
 /// on a narrow pane a fixed column is width taken from the value, and the value
 /// is the part worth reading.
+///
+/// The heading names the value for anything that cannot see the two side by
+/// side — this is what `<label for>` is on the web — but only when the value
+/// has no words of its own. A field is named "NAME" by the row it sits in; a
+/// button is named "Restart" by what it says, and being put in a row does not
+/// rename it.
 pub fn field_row<S>(label: impl Into<String>, value: El<S>) -> El<S> {
+    let label = label.into();
+    let value = if value.accessible_name().is_empty() {
+        value.label(label.clone())
+    } else {
+        value
+    };
     row((heading(label).w(78.0), value.grow())).gap(8.0).min_h(20.0)
+}
+
+/// A row that names a stack of values rather than one line of them.
+///
+/// [`field_row`] centres its label against the value beside it, which is right
+/// for one line and wrong for a stack: centred against four rows, the label
+/// floats beside the third and names none of them. Here the label keeps the
+/// height of one control and holds the top of the row, so the name sits level
+/// with the first entry — where a reader scanning the labels expects the stack
+/// to begin. The value keeps its own children's names: a stack's entries name
+/// themselves, and renaming the stack after its label would announce every
+/// entry identically.
+pub fn field_group<S>(label: impl Into<String>, value: El<S>) -> El<S> {
+    // The label's box matches a control's height so its word centres on the
+    // first entry's own centre line, exactly as `field_row` centres against a
+    // single control.
+    row((heading(label).w(78.0).h(28.0).align_self(Align::Start), value.grow()))
+        .gap(8.0)
+        .min_h(20.0)
 }
 
 #[cfg(test)]

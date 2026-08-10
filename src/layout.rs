@@ -135,24 +135,67 @@ fn measure_stack<S>(el: &mut El<S>, inner: Size, ctx: &Ctx<'_>) -> Size {
     let axis = el.style.axis;
     let offered = if el.scrolls { Size::new(inner.w, UNBOUNDED) } else { inner };
 
-    let mut main = 0.0_f32;
-    let mut cross = 0.0_f32;
-    let mut counted = 0usize;
     let ink = el.ink;
-    for child in &mut el.children {
+    let mut order = Vec::new();
+    let mut sizes = Vec::new();
+    let mut mains = Vec::new();
+    let mut grows = Vec::new();
+    for (index, child) in el.children.iter_mut().enumerate() {
         child.ink = child.style.ink.over(ink);
         if child.style.layer.is_some() {
             continue;
         }
         let size = measure(child, offered, ctx);
-        main += main_of(size, axis);
-        cross = cross.max(cross_of(size, axis));
-        counted += 1;
+        let length = main_length(child, axis);
+        let grow = child.style.grow.unwrap_or_else(|| length.grow());
+        let main = if grow > 0.0 && !child.style.grow_from_content {
+            0.0
+        } else {
+            main_of(size, axis)
+        };
+        order.push(index);
+        mains.push(clamp_main(child, main, axis));
+        grows.push(grow);
+        sizes.push(size);
     }
-    let gaps = el.style.gap * counted.saturating_sub(1) as f32;
+    let gaps = el.style.gap * order.len().saturating_sub(1) as f32;
+
+    // What the stack asks for along its axis: everything's content, gaps
+    // included — a grower counts its words here even though the place pass
+    // deals it the leftover, because an unconstrained stack should still ask
+    // for what is in it.
+    let asked: f32 = sizes.iter().map(|size| main_of(*size, axis)).sum::<f32>() + gaps;
+
+    // The cross size answers to the room each grower will actually be dealt,
+    // not to the whole offer: a wrapped paragraph in a growing column of a row
+    // is as tall as its share is narrow, and reading its height off a
+    // full-width measurement is how a bank measured one line tall came to be
+    // placed two lines full. Same division, same clamps as [`stack`].
+    let taken: f32 = mains.iter().sum::<f32>() + gaps;
+    let spare = (main_of(inner, axis) - taken).max(0.0);
+    if grows.iter().any(|&grow| grow > 0.0) {
+        distribute(&el.children, &order, &mut mains, &grows, axis, spare);
+    }
+    let mut cross = 0.0_f32;
+    for (position, &index) in order.iter().enumerate() {
+        let dealt = mains[position];
+        let size = if grows[position] > 0.0
+            && (dealt - main_of(sizes[position], axis)).abs() > 0.5
+        {
+            let share = match axis {
+                Axis::Row => Size::new(dealt, offered.h),
+                Axis::Column => Size::new(offered.w, dealt),
+            };
+            measure(&mut el.children[index], share, ctx)
+        } else {
+            sizes[position]
+        };
+        cross = cross.max(cross_of(size, axis));
+    }
+
     match axis {
-        Axis::Row => Size::new(main + gaps, cross),
-        Axis::Column => Size::new(cross, main + gaps),
+        Axis::Row => Size::new(asked, cross),
+        Axis::Column => Size::new(cross, asked),
     }
 }
 
@@ -275,6 +318,12 @@ fn stack<S>(el: &mut El<S>, content: Rect, ctx: &Ctx<'_>, memory: &mut Memory) {
         let length = main_length(child, axis);
         let grow = child.style.grow.unwrap_or_else(|| length.grow());
         let main = match length {
+            // A grower's base is nothing — its share is its size — unless it
+            // said its content comes first, in which case the share is only
+            // ever added on top of what its words already need.
+            _ if grow > 0.0 && child.style.grow_from_content => {
+                main_of(measure(child, offered, ctx), axis)
+            }
             _ if grow > 0.0 => 0.0,
             Length::Fixed(units) => units,
             Length::Fraction(share) => main_of(offered, axis) * share,
@@ -291,13 +340,7 @@ fn stack<S>(el: &mut El<S>, content: Rect, ctx: &Ctx<'_>, memory: &mut Memory) {
     let total_grow: f32 = grows.iter().sum();
 
     if total_grow > 0.0 {
-        for (position, &index) in order.iter().enumerate() {
-            // Clamped again after the share is added, not only before: a child
-            // that both fills and states a maximum has to be held to that
-            // maximum, and the share is exactly what would push it past.
-            let share = mains[position] + spare * grows[position] / total_grow;
-            mains[position] = clamp_main(&el.children[index], share, axis);
-        }
+        distribute(&el.children, &order, &mut mains, &grows, axis, spare);
     }
 
     // A scrolling container is *expected* to hold more than it can show, so it
@@ -421,12 +464,63 @@ fn anchored(placement: Anchor, anchor: Rect, size: Size, window: Rect) -> Rect {
     Rect::new(x, y, size.w, size.h)
 }
 
+/// How many passes dividing room may take before the remainder is let be.
+const PASSES: usize = 4;
+
+/// Below this a remainder is not worth another pass, or another pixel.
+const SETTLED: f32 = 0.5;
+
+/// Deals `spare` out to the children that grow, honouring each one's maximum.
+///
+/// Dealt repeatedly rather than in one round: a grower that hits its stated
+/// maximum leaves the rest of its share unclaimed, and one round would strand
+/// that remainder as dead room in the middle of the row — a gap after a capped
+/// button that the rule beside it was drawn to fill. The siblings that still
+/// have headroom are offered it again, so the only way room goes unspent is
+/// every grower being at its cap, which is the one case where it truly is
+/// spare.
+fn distribute<S>(
+    children: &[El<S>],
+    order: &[usize],
+    mains: &mut [f32],
+    grows: &[f32],
+    axis: Axis,
+    spare: f32,
+) {
+    let mut left = spare;
+    for _ in 0..PASSES {
+        let open: Vec<usize> = (0..order.len())
+            .filter(|&position| {
+                grows[position] > 0.0
+                    && mains[position] < maximum(&children[order[position]], axis)
+            })
+            .collect();
+        let weight: f32 = open.iter().map(|&position| grows[position]).sum();
+        if left <= SETTLED || open.is_empty() || weight <= 0.0 {
+            return;
+        }
+
+        let mut given = 0.0;
+        for &position in &open {
+            let share = left * grows[position] / weight;
+            let headroom = maximum(&children[order[position]], axis) - mains[position];
+            let taken = share.min(headroom);
+            mains[position] += taken;
+            given += taken;
+        }
+        left -= given;
+    }
+}
+
 /// Takes `deficit` back off the children that can afford to give it up.
 ///
-/// Only the ones sized to their content give any back: a control that asked for
-/// a height in units asked for it because that is how tall it has to be, and a
+/// The ones sized to their content give first: a control that asked for a
+/// height in units asked for it because that is how tall it has to be, and a
 /// row of buttons squashed to nineteen units is worse than a list showing one
-/// fewer row. What shrinks is what was going to be scrolled or wrapped anyway.
+/// fewer row. What shrinks first is what was going to be scrolled or wrapped
+/// anyway. Only when they are spent do the growers give back what they were
+/// dealt, down to their own minimums — room they were sharing anyway, taken
+/// back by the same rule it was handed out under.
 ///
 /// Taken proportionally, so a block twice the size of another gives up twice as
 /// much, and repeated: a child that hits its own minimum stops giving, and what
@@ -439,24 +533,57 @@ fn shrink<S>(
     axis: Axis,
     deficit: f32,
 ) {
-    /// How many times to redistribute what a child at its minimum could not give.
-    const PASSES: usize = 4;
-    /// Below this the deficit is not worth another pass, or another pixel.
-    const SETTLED: f32 = 0.5;
+    // The all-or-nothing children go first, and entirely. An element that
+    // said `whole` is never drawn squeezed, so the moment there is a deficit
+    // at all it hands over everything it measured — and if that is more than
+    // the deficit asked for, the surplus is dealt back out to the growers
+    // rather than stranded as a hole where the element stood.
+    let mut left = deficit;
+    for position in 0..order.len() {
+        if left <= SETTLED {
+            break;
+        }
+        if children[order[position]].style.whole && mains[position] > 0.0 {
+            left -= mains[position];
+            mains[position] = 0.0;
+        }
+    }
+    if left < -SETTLED {
+        distribute(children, order, mains, grows, axis, -left);
+        return;
+    }
 
+    let content_sized = |position: usize| {
+        let child = &children[order[position]];
+        grows[position] == 0.0 && matches!(main_length(child, axis), Length::Auto)
+    };
+    let left = reclaim(children, order, mains, axis, left, content_sized);
+    if left > SETTLED {
+        reclaim(children, order, mains, axis, left, |position| grows[position] > 0.0);
+    }
+}
+
+/// Takes up to `deficit` off the `eligible` children, floored at each one's
+/// minimum, and answers what could not be taken.
+fn reclaim<S>(
+    children: &[El<S>],
+    order: &[usize],
+    mains: &mut [f32],
+    axis: Axis,
+    deficit: f32,
+    eligible: impl Fn(usize) -> bool,
+) -> f32 {
     let mut left = deficit;
     for _ in 0..PASSES {
         let flexible: Vec<usize> = (0..order.len())
             .filter(|&position| {
-                let child = &children[order[position]];
-                grows[position] == 0.0
-                    && matches!(main_length(child, axis), Length::Auto)
-                    && mains[position] > minimum(child, axis)
+                eligible(position)
+                    && mains[position] > minimum(&children[order[position]], axis)
             })
             .collect();
         let total: f32 = flexible.iter().map(|&position| mains[position]).sum();
         if left <= SETTLED || flexible.is_empty() || total <= 0.0 {
-            return;
+            return left;
         }
 
         let mut given = 0.0;
@@ -469,6 +596,7 @@ fn shrink<S>(
         }
         left -= given;
     }
+    left
 }
 
 /// The smallest a child may be laid out along `axis`.
@@ -476,6 +604,14 @@ fn minimum<S>(child: &El<S>, axis: Axis) -> f32 {
     match axis {
         Axis::Row => child.style.min_width,
         Axis::Column => child.style.min_height,
+    }
+}
+
+/// The largest it may be.
+fn maximum<S>(child: &El<S>, axis: Axis) -> f32 {
+    match axis {
+        Axis::Row => child.style.max_width,
+        Axis::Column => child.style.max_height,
     }
 }
 
@@ -504,12 +640,39 @@ fn scroll_offset<S>(
     // keep up as lines arrive: the end moves every time the content grows, and
     // an offset the application set a frame ago would already be short of it.
     let offset = if el.follows && memory.is_following(el.id) {
-        overflow
+        whole_child_at_top(mains, el.style.gap, overflow)
     } else {
         memory.scroll_offset(el.id).clamp(0.0, overflow)
     };
     memory.set_scroll_offset(el.id, offset);
     offset
+}
+
+/// Where a tail sits so that the child at the top of the view is a whole one.
+///
+/// The end of the content is a distance in pixels, and it almost never falls on
+/// the join between two children — so an area anchored exactly there puts the
+/// bottom of its content against the bottom of the frame and pays for it at the
+/// top, where whatever is left over is a child sliced through. In a log that is
+/// half a line: the descenders of a message whose own text is above the frame,
+/// which reads as a rendering fault rather than as more output.
+///
+/// So the tail is pulled down to the next join instead. What that costs is a
+/// strip under the newest line, never taller than one child, which is the shape
+/// a terminal has for the same reason — and a gap where the next line will
+/// appear says something true, while half a line says nothing at all.
+///
+/// Falls back to `overflow` when a single child is taller than the frame, where
+/// there is no join to sit on and showing the end of it is the whole point.
+fn whole_child_at_top(mains: &[f32], gap: f32, overflow: f32) -> f32 {
+    let mut start = 0.0;
+    for main in mains {
+        if start >= overflow {
+            return start;
+        }
+        start += main + gap;
+    }
+    overflow
 }
 
 /// How wide, or tall, a child is across the direction it was stacked in.
@@ -762,6 +925,36 @@ mod tests {
         solve(&mut tree, Rect::new(0.0, 0.0, 100.0, 100.0), &ctx, &mut memory);
         assert_eq!(memory.scroll_offset(tree.id), 200.0);
         assert_eq!(tree.children[0].rect.y, -200.0);
+    }
+
+    #[test]
+    fn a_tail_stops_on_a_whole_child_rather_than_slicing_the_one_at_the_top() {
+        let (fonts, theme) = context();
+        let ctx = Ctx { fonts: &fonts, theme: &theme, bounds: Rect::new(0.0, 0.0, 100.0, 100.0) };
+        let mut memory = Memory::new();
+        let mut tree: El<Nothing> =
+            col((0..10).map(|_| spacer().h(30.0)).collect::<Vec<_>>()).follow();
+
+        // Three hundred units of content in a hundred-unit frame. Anchored to
+        // the pixel the tail would sit at 200 and cut the fourth-from-last child
+        // through the middle; the join above it is at 210.
+        solve(&mut tree, Rect::new(0.0, 0.0, 100.0, 100.0), &ctx, &mut memory);
+        assert_eq!(memory.scroll_offset(tree.id), 210.0);
+        assert_eq!(tree.children[7].rect.y, 0.0, "the top of the frame is the top of a child");
+        assert_eq!(tree.children[9].rect.max_y(), 90.0, "and what it costs is under the last");
+    }
+
+    #[test]
+    fn a_tail_whose_content_is_one_tall_child_still_shows_the_end_of_it() {
+        let (fonts, theme) = context();
+        let ctx = Ctx { fonts: &fonts, theme: &theme, bounds: Rect::new(0.0, 0.0, 100.0, 100.0) };
+        let mut memory = Memory::new();
+        let mut tree: El<Nothing> = col(spacer().h(250.0)).follow();
+
+        // No join to sit on. Snapping to the only one there is would put the
+        // start of the child at the top, which is the opposite of following it.
+        solve(&mut tree, Rect::new(0.0, 0.0, 100.0, 100.0), &ctx, &mut memory);
+        assert_eq!(memory.scroll_offset(tree.id), 150.0);
     }
 
     #[test]

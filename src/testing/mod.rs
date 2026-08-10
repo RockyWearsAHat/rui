@@ -57,16 +57,19 @@
 
 pub mod font;
 
+use crate::accessibility::{AccessTree, AccessUpdate, audit};
 use crate::app::App;
 use crate::canvas::Canvas;
 use crate::color::Color;
 use crate::element::El;
 use crate::geom::{Point, Rect};
 use crate::input::{Event, Input, Key, Modifiers, PointerButton};
+use crate::accessibility::Role;
 use crate::memory::{Id, Memory};
 use crate::shell::LoadedFonts;
-use crate::text::Fonts;
+use crate::text::{FontId, Fonts};
 use crate::theme::{Appearance, Theme};
+use std::collections::HashSet;
 use std::time::Duration;
 
 /// How big a harness draws before it is told otherwise, in logical units.
@@ -88,8 +91,17 @@ pub const FRAME: Duration = Duration::from_nanos(16_666_667);
 pub struct Probe {
     /// Its identity, which is what its scroll, focus, and hover are stored under.
     pub id: Id,
+    /// What holds it, or `None` for the root of the frame.
+    pub parent: Option<Id>,
     /// What it was named with [`El::key`](crate::El::key), if anything.
     pub key: Option<String>,
+    /// What it is, for anything that cannot see it.
+    ///
+    /// The computed name and the state that goes with it live on
+    /// [`AccessNode`](crate::accessibility::AccessNode), reached through
+    /// [`Harness::accessibility`], because a name is a property of a subtree
+    /// rather than of one element.
+    pub role: Role,
     /// The text it holds, if it is a run of text or a field.
     pub text: Option<String>,
     /// Where the layout put it, in logical units.
@@ -180,6 +192,21 @@ impl<S: 'static> Harness<S> {
         self
     }
 
+    /// Draws with this theme rather than the library's own.
+    ///
+    /// The same call as [`App::theme`], on an application the harness built.
+    /// One that was built by hand and handed to [`Harness::with_app`] carries
+    /// its own theme in already, which is the point: a test drives the theme the
+    /// program actually runs with, so a window and a test cannot disagree about
+    /// what the interface looks like.
+    pub fn theme(
+        mut self,
+        theme: impl Fn(Appearance, FontId, FontId) -> Theme + 'static,
+    ) -> Self {
+        self.app.set_theme(Box::new(theme));
+        self
+    }
+
     /// Takes every frame to have lasted this long.
     ///
     /// What makes an animation assertable: nothing here reads a clock, so a
@@ -202,8 +229,8 @@ impl<S: 'static> Harness<S> {
         }
 
         self.fonts.fonts.set_scale(self.canvas.scale());
-        let theme = Theme::new(self.appearance, self.fonts.ui_font, self.fonts.mono_font);
-        self.canvas.clear_vertical(theme.palette.background, theme.palette.background_deep);
+        let theme = self.theme_in_force();
+        self.app.paint_ground(&mut self.canvas, &theme);
 
         self.memory.begin_frame(self.elapsed);
         let mut probes = Vec::new();
@@ -213,7 +240,7 @@ impl<S: 'static> Harness<S> {
             &self.input,
             &mut self.memory,
             &theme,
-            &mut |el| probes.push(probe(el)),
+            &mut |el, parent| probes.push(probe(el, parent)),
         );
         self.memory.end_frame(&self.input);
         self.probes = probes;
@@ -342,6 +369,56 @@ impl<S: 'static> Harness<S> {
         self.move_pointer(at)
     }
 
+    /// Activates an element the way an assistive technology does, by identity.
+    ///
+    /// The other route into a handler, with no pointer and no key involved: a
+    /// screen reader holds the [`Id`] of a node and asks for it. It reaches the
+    /// same `on_click` a click reaches, which is the whole point of it and what
+    /// `tests/accessibility.rs` asserts.
+    ///
+    /// An identity that belongs to nothing on screen, or to something that
+    /// answers no press, draws a frame and changes nothing — the same as a
+    /// click on empty space, and for the same reason.
+    pub fn activate(&mut self, id: Id) -> &mut Self {
+        self.event(Event::Activated(id)).frame()
+    }
+
+    /// The same, aimed at whatever an assistive technology would *call* this.
+    ///
+    /// How a test of the accessible route should nearly always aim: at the name
+    /// a screen reader would read out, which is what a person using one has to
+    /// go on. That name is computed from the subtree, so this finds
+    /// `button("Restart")` as "Restart" with nothing written to make it so.
+    ///
+    /// # Panics
+    ///
+    /// If no node is named that, listing the names that are there — a test that
+    /// silently activated nothing would pass for the wrong reason.
+    pub fn activate_named(&mut self, name: &str) -> &mut Self {
+        let found =
+            self.accessibility().nodes().iter().find(|node| node.name == name).map(|node| node.id);
+        match found {
+            Some(id) => self.activate(id),
+            None => panic!(
+                "nothing on screen is named {name:?}; what is named is {:?}",
+                self.accessible_names()
+            ),
+        }
+    }
+
+    /// Every name an assistive technology would have to choose between.
+    ///
+    /// Only the nodes that carry one, because a group that holds other things
+    /// has no name of its own and listing empty strings would bury the answer.
+    pub fn accessible_names(&mut self) -> Vec<String> {
+        self.accessibility()
+            .nodes()
+            .iter()
+            .filter(|node| !node.name.is_empty())
+            .map(|node| node.name.clone())
+            .collect()
+    }
+
     /// Where whatever shows this text was drawn.
     ///
     /// Answers the first match in drawing order, which is the topmost thing a
@@ -381,6 +458,114 @@ impl<S: 'static> Harness<S> {
     pub fn probes(&mut self) -> &[Probe] {
         self.ensure_drawn();
         &self.probes
+    }
+
+    // ----- what it means ------------------------------------------------------
+
+    /// What the last frame amounted to, for anything that cannot see it.
+    ///
+    /// Built on the same walk of the finished frame that produced the probes,
+    /// so it cannot describe an interface other than the one that was drawn.
+    pub fn accessibility(&mut self) -> &AccessTree {
+        self.ensure_drawn();
+        self.app.accessibility()
+    }
+
+    /// How that differed from the frame before it — what a platform would push.
+    pub fn accessibility_update(&mut self) -> &AccessUpdate {
+        self.ensure_drawn();
+        self.app.accessibility_update()
+    }
+
+    /// Fails unless the interface on screen keeps the accessibility
+    /// convention.
+    ///
+    /// One call, added to any test that already drives an interface, and the
+    /// convention is enforced rather than promised: every clickable or
+    /// focusable node has a role of its own, every interactive node has a name,
+    /// a tab sits inside a tab list, and no two siblings share an identity. See
+    /// [`audit`] for what each failure means.
+    ///
+    /// # Panics
+    ///
+    /// Naming every violation, because a test that reported only the first
+    /// would be run once per defect.
+    pub fn assert_accessible(&mut self) {
+        let violations = audit(self.accessibility());
+        assert!(
+            violations.is_empty(),
+            "the interface breaks the accessibility convention in {} place(s):\n{}",
+            violations.len(),
+            violations
+                .iter()
+                .map(|violation| format!("  - {violation}"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
+    }
+
+    /// Fails unless Tab walks forward through the interface.
+    ///
+    /// Every focusable element is reached exactly once before any is reached
+    /// twice, and those in the ordinary flow are reached in the order they are
+    /// written — a person tabbing through an interface should travel the way
+    /// they read it. Anything lifted out of the flow by
+    /// [`El::layer`](crate::El::layer) comes after all of it, because that is
+    /// the order it is drawn in and the two must not disagree.
+    ///
+    /// It drives frames and leaves the keyboard wherever the walk ended, so
+    /// call it at the end of a test rather than in the middle of one.
+    ///
+    /// # Panics
+    ///
+    /// If the walk skips something, repeats something, or runs backwards.
+    pub fn assert_tab_order(&mut self) {
+        let probes = self.probes().to_vec();
+        let layered = layered_subtrees(&probes);
+        let expected: Vec<Id> = probes
+            .iter()
+            .filter(|probe| probe.focusable && !layered.contains(&probe.id))
+            .map(|probe| probe.id)
+            .collect();
+        let out_of_flow: HashSet<Id> = probes
+            .iter()
+            .filter(|probe| probe.focusable && layered.contains(&probe.id))
+            .map(|probe| probe.id)
+            .collect();
+        let total = expected.len() + out_of_flow.len();
+        if total == 0 {
+            return;
+        }
+
+        self.memory.set_focus(None);
+        let mut walked = Vec::new();
+        for _ in 0..total {
+            self.tab();
+            match self.focused() {
+                Some(id) => walked.push(id),
+                None => panic!("Tab reached nothing, with {total} focusable element(s) on screen"),
+            }
+        }
+
+        let seen: HashSet<Id> = walked.iter().copied().collect();
+        assert_eq!(
+            seen.len(),
+            total,
+            "Tab visited {} of {total} focusable elements before repeating itself",
+            seen.len()
+        );
+
+        let in_flow: Vec<Id> = walked.iter().copied().filter(|id| !out_of_flow.contains(id)).collect();
+        assert_eq!(in_flow, expected, "Tab did not travel the order the interface is written in");
+
+        let first_layer = walked.iter().position(|id| out_of_flow.contains(id));
+        if let Some(first_layer) = first_layer {
+            assert_eq!(
+                first_layer,
+                expected.len(),
+                "what is lifted out of the flow is drawn last and must be tabbed to last"
+            );
+        }
     }
 
     // ----- what came of it ----------------------------------------------------
@@ -438,9 +623,9 @@ impl<S: 'static> Harness<S> {
     /// as "nothing was drawn here" comes from the same code that draws nothing
     /// rather than from a guess about what it would have produced.
     fn ground(&self) -> Vec<u32> {
-        let theme = Theme::new(self.appearance, self.fonts.ui_font, self.fonts.mono_font);
+        let theme = self.theme_in_force();
         let mut strip = Canvas::new(1, self.canvas.height(), self.canvas.scale());
-        strip.clear_vertical(theme.palette.background, theme.palette.background_deep);
+        self.app.paint_ground(&mut strip, &theme);
         strip.pixels().to_vec()
     }
 
@@ -484,6 +669,15 @@ impl<S: 'static> Harness<S> {
         self.memory.is_animating()
     }
 
+    /// The theme this harness draws with, at its appearance and faces.
+    ///
+    /// Asked of the application rather than built here, so that what a test
+    /// measures against — the ground [`Harness::marked`] compares to — is the
+    /// same theme the frame was drawn from.
+    fn theme_in_force(&self) -> Theme {
+        self.app.theme_for(self.appearance, self.fonts.ui_font, self.fonts.mono_font)
+    }
+
     /// Draws a frame if nothing has been drawn yet.
     ///
     /// So that a test can ask what is on screen without first remembering to
@@ -506,11 +700,30 @@ impl<S: 'static> Harness<S> {
     }
 }
 
-/// What one element came out as.
-fn probe<S>(el: &El<S>) -> Probe {
+/// Everything drawn out of the ordinary flow, and everything inside it.
+///
+/// A layer is drawn after the whole of the flow, so the keyboard reaches it
+/// after the whole of the flow too. Its children are not marked themselves —
+/// only the layer's own root is — so this walks down from each of them.
+fn layered_subtrees(probes: &[Probe]) -> HashSet<Id> {
+    let mut inside = HashSet::new();
+    // Parents come before their children, so one pass settles the whole tree.
+    for probe in probes {
+        let under_a_layer = probe.parent.is_some_and(|parent| inside.contains(&parent));
+        if probe.layered || under_a_layer {
+            inside.insert(probe.id);
+        }
+    }
+    inside
+}
+
+/// What one element came out as, and what held it.
+fn probe<S>(el: &El<S>, parent: Option<Id>) -> Probe {
     Probe {
         id: el.id,
+        parent,
         key: el.key.clone(),
+        role: el.accessibility_role(),
         text: el.text_content().map(str::to_owned),
         rect: el.rect,
         disabled: el.is_disabled(),
@@ -574,6 +787,112 @@ mod tests {
             harness.click_text("Decrement");
         }));
         assert!(missing.is_err(), "clicking nothing must not quietly pass");
+    }
+
+    /// The strip a focus ring would cross, just above an element's own edge.
+    ///
+    /// The ring is stroked two units outside the rect and two thick, so its
+    /// band lies wholly above the top edge; a short strip over the middle of
+    /// that edge — clear of the corners and of the element's own border — is
+    /// marked exactly when the ring is drawn.
+    fn ring_strip(rect: Rect) -> Rect {
+        Rect::new(rect.x + rect.w / 2.0 - 5.0, rect.y - 4.0, 10.0, 2.0)
+    }
+
+    #[test]
+    fn the_focus_ring_marks_keyboard_focus_and_never_a_click() {
+        let mut harness = Harness::new(Counter::default(), |_: &Counter| {
+            crate::col(crate::button("Start").key("go").on_click(|_: &mut Counter| {}))
+                .pad(20.0)
+        });
+        let rect = harness.find_key("go").expect("the button is on screen").rect;
+
+        harness.click(rect.center());
+        assert_eq!(harness.focused(), Some(harness.find_key("go").unwrap().id));
+        assert!(
+            !harness.marked(ring_strip(rect)),
+            "a click already showed the person where they aimed; no ring"
+        );
+
+        harness.tab();
+        assert!(harness.marked(ring_strip(rect)), "keyboard focus is invisible without the ring");
+
+        harness.click(rect.center());
+        assert!(!harness.marked(ring_strip(rect)), "the next click takes the ring back off");
+    }
+
+    #[test]
+    fn a_field_wears_the_ring_however_focus_arrived() {
+        // The one exception to keyboard-only: a caret justifies the ring, so a
+        // clicked field looks held exactly as a tabbed-to one does.
+        let mut harness = Harness::new(Counter::default(), |_: &Counter| {
+            crate::col(crate::field("").key("name")).pad(20.0)
+        });
+        let rect = harness.find_key("name").expect("the field is on screen").rect;
+
+        harness.click(rect.center());
+        assert!(harness.marked(ring_strip(rect)), "a clicked field is still ringed");
+    }
+
+    /// A line being typed into, for the caret tests.
+    #[derive(Default)]
+    struct Typing {
+        text: String,
+    }
+
+    #[test]
+    fn the_caret_blinks_at_rest_and_holds_solid_under_typing() {
+        let mut harness = Harness::new(Typing::default(), |app: &Typing| {
+            crate::col(
+                crate::field(app.text.clone())
+                    .key("name")
+                    .on_input(|app: &mut Typing, text: String| app.text = text),
+            )
+            .pad(20.0)
+        })
+        .frame_time(Duration::from_millis(66));
+        let rect = harness.find_key("name").expect("the field is on screen").rect;
+
+        // A device pixel inside the caret's column: eight units of the field's
+        // own padding in, at its vertical middle. Its resting colour is the
+        // field's well, read before anything has focus.
+        let (x, y) = ((rect.x + 8.0) as u32, rect.center().y as u32);
+        let well = harness.pixel(x, y).expect("the field is on the canvas");
+
+        harness.click(rect.center());
+        let (mut lit, mut dark) = (false, false);
+        for _ in 0..30 {
+            harness.frame();
+            match harness.pixel(x, y) == Some(well) {
+                true => dark = true,
+                false => lit = true,
+            }
+        }
+        assert!(lit && dark, "two seconds of a focused caret must both show and hide it");
+        assert!(harness.is_animating(), "the blink is a live loop while the field is focused");
+
+        // Step to a frame where the caret is dark, then type: the keystroke
+        // resets the blink, so the caret is solid at its new place from the
+        // frame the character lands, not whenever the old blink comes round.
+        for _ in 0..30 {
+            if harness.pixel(x, y) == Some(well) {
+                break;
+            }
+            harness.frame();
+        }
+        harness.type_text("x");
+        // One glyph along: the test face advances half an em of the field's
+        // code size, so the caret's column now starts 5.75 units in and the
+        // device pixel one unit further sits wholly inside it.
+        let after = (rect.x + 8.0 + 6.0) as u32;
+        for _ in 0..4 {
+            assert_ne!(
+                harness.pixel(after, y),
+                Some(well),
+                "typing must hold the caret solid, not mid-blink"
+            );
+            harness.frame();
+        }
     }
 
     #[test]

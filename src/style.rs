@@ -8,6 +8,14 @@
 //! an interface is right in a light desktop and a dark one without being written
 //! twice.
 //!
+//! The same holds for shape. A [`Radius`] names the size of a corner and leaves
+//! which shape it is to [`Theme::corner`], so an application that hands the
+//! library a theme with a different [`CornerStyle`](crate::CornerStyle) changes
+//! every panel, button, field, and tag without touching one of them. There are
+//! two ways out of that — [`Radius::Cut`] and [`Radius::None`] — for the single
+//! element that is genuinely not what the rest of the interface is, and they
+//! carry the same warning [`Tone::Exact`] does.
+//!
 //! # Inheritance
 //!
 //! Text properties — the size, the ink, the face, the tracking — are inherited
@@ -253,17 +261,32 @@ pub enum Anchor {
 }
 
 /// How the corners of a filled or outlined element are treated.
+///
+/// Four of these name a *size* and take their shape from
+/// [`Theme::corner`](crate::Theme::corner), so that changing the theme's
+/// [`CornerStyle`](crate::CornerStyle) changes the whole interface at once. The
+/// other two — [`Radius::Cut`] and [`Radius::None`] — name a shape outright, for
+/// the one element that genuinely is not what the rest of the interface is.
+/// Reach for them the way you reach for [`Tone::Exact`]: rarely, and knowing
+/// that a theme will no longer be able to move this corner.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Radius {
-    /// The theme's own radius for a panel.
+    /// The theme's own corner for a panel.
     Panel,
-    /// The theme's own radius for a control.
+    /// The theme's own corner for a control.
     Control,
-    /// This many logical units.
+    /// The theme's own shape, this many logical units along each edge.
     Units(f32),
     /// Fully round: a capsule, or a circle if it is square.
     Pill,
-    /// Square corners.
+    /// A forty-five degree chamfer this many units along each edge, whatever
+    /// shape the theme takes.
+    ///
+    /// The one element that is a machined plate in an interface made of cards:
+    /// a nameplate, a readout, a region that reports on hardware. A whole
+    /// interface of them is a costume, and is asked for from the theme instead.
+    Cut(f32),
+    /// Square corners, whatever shape the theme takes.
     None,
 }
 
@@ -352,6 +375,23 @@ pub struct Style {
     /// keeps meaning "take the rest of the room" when a row is later rewritten
     /// as a column, which the axis-specific lengths cannot.
     pub grow: Option<f32>,
+    /// Whether growing starts from what the content needs rather than from
+    /// nothing.
+    ///
+    /// A pane or a spacer grows from zero — its content is whatever fits. A
+    /// control is the other way round: its words come first, and only the room
+    /// past them is up for sharing. See [`El::grow_from_content`](crate::El::grow_from_content).
+    pub grow_from_content: bool,
+    /// Whether it stands whole or is not laid out at all.
+    ///
+    /// A squeezed element normally gives ground gradually — text truncates to
+    /// an ellipsis, a pane loses rows. An element that says `whole` refuses
+    /// the middle state: when a shrinking container would cut into what it
+    /// measured, it collapses to nothing and its room goes to its siblings.
+    /// For a mark whose meaning is carried elsewhere too — a state word beside
+    /// a lamp — half the word is worse than none of it. See
+    /// [`El::whole`](crate::El::whole).
+    pub whole: bool,
     /// The narrowest it may be laid out.
     pub min_width: f32,
     /// The shortest it may be laid out.
@@ -386,6 +426,13 @@ pub struct Style {
     pub radius: Radius,
     /// How far a shadow beneath it is blurred, if it casts one.
     pub shadow: Option<f32>,
+    /// How far a halo around it reaches, and what colour it is.
+    ///
+    /// Held apart from [`Style::shadow`] rather than being a colour on it,
+    /// because the two say opposite things: a shadow is the absence of light,
+    /// is always the theme's own black, and falls downward; a glow is light,
+    /// takes a hue, and is cast evenly. See [`El::glow`](crate::El::glow).
+    pub glow: Option<(f32, Tone)>,
     /// The text properties it sets, and passes to its children.
     pub ink: InkOverride,
     /// Where its own text sits within it.
@@ -439,6 +486,8 @@ impl Default for Style {
             width: Length::Auto,
             height: Length::Auto,
             grow: None,
+            grow_from_content: false,
+            whole: false,
             min_width: 0.0,
             min_height: 0.0,
             max_width: f32::INFINITY,
@@ -454,6 +503,7 @@ impl Default for Style {
             border: None,
             radius: Radius::None,
             shadow: None,
+            glow: None,
             ink: InkOverride::default(),
             text_align: Align::Start,
             wrap: false,
@@ -468,7 +518,10 @@ impl Default for Style {
 impl Style {
     /// Whether anything about this element has to be drawn behind its content.
     pub(crate) fn has_decoration(&self) -> bool {
-        self.fill.is_some() || self.border.is_some() || self.shadow.is_some()
+        self.fill.is_some()
+            || self.border.is_some()
+            || self.shadow.is_some()
+            || self.glow.is_some()
     }
 }
 
