@@ -1,7 +1,7 @@
 //! Draws the application icon at every size macOS asks for.
 //!
 //! `cargo run -p rui --example icon -- --out <directory>` writes an `.iconset`
-//! that `iconutil` turns into an `.icns`. `scripts/macos-app.sh` runs it as part
+//! that `iconutil` turns into an `.icns`. `scripts/macos/macos-app.sh` runs it as part
 //! of building the bundle.
 //!
 //! The icon is *drawn* rather than stored, for the same reason no font is

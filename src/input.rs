@@ -110,15 +110,57 @@ impl Drag {
     /// control reading it can never be handed a value outside its own range or
     /// a NaN from dividing by an empty rectangle.
     pub fn fraction(&self) -> Point {
-        let across = if self.rect.w > 0.0 { self.at.x / self.rect.w } else { 0.0 };
-        let down = if self.rect.h > 0.0 { self.at.y / self.rect.h } else { 0.0 };
-        Point::new(across.clamp(0.0, 1.0), down.clamp(0.0, 1.0))
+        fraction_within(self.at, self.rect)
     }
 
     /// Whether the button came up this frame.
     pub fn ended(&self) -> bool {
         self.phase == Phase::Ended
     }
+}
+
+/// Where the pointer is over an element it has not pressed.
+///
+/// What [`Drag`] is to a gesture, this is to a hand simply moving: the same two
+/// facts — where within the element, and how big the element is — with no press
+/// to be part of. Carried by
+/// [`El::on_pointer_move`](crate::El::on_pointer_move).
+///
+/// The rectangle travels with the position because a position alone cannot be
+/// turned into anything: a viewport forwarding a pointer to a far screen, a map
+/// reading out coordinates and a picture picking a pixel all need to know what
+/// share of the element the pointer is at, and the element is the only thing
+/// that knows its own size. Handing over both is what makes [`Pointing::fraction`]
+/// answerable here rather than something every caller re-derives from a rectangle
+/// it had to store during a draw.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Pointing {
+    /// The pointer, relative to the element's top-left corner.
+    pub at: Point,
+    /// Where the element was drawn, in window coordinates.
+    pub rect: Rect,
+}
+
+impl Pointing {
+    /// How far across and down the element the pointer is, from zero to one.
+    ///
+    /// Clamped and NaN-free, exactly as [`Drag::fraction`] is — the same
+    /// computation, so a control driven by both cannot read two different
+    /// answers for one position.
+    pub fn fraction(&self) -> Point {
+        fraction_within(self.at, self.rect)
+    }
+}
+
+/// Where a point sits within a rectangle, from zero to one on each axis.
+///
+/// One implementation for [`Drag`] and [`Pointing`]. Clamped, and zero on an
+/// axis with no extent, so nothing reading it is handed a value outside its own
+/// range or a NaN from dividing by an empty rectangle.
+fn fraction_within(at: Point, rect: Rect) -> Point {
+    let across = if rect.w > 0.0 { at.x / rect.w } else { 0.0 };
+    let down = if rect.h > 0.0 { at.y / rect.h } else { 0.0 };
+    Point::new(across.clamp(0.0, 1.0), down.clamp(0.0, 1.0))
 }
 
 /// Which modifier keys were held.
@@ -214,6 +256,108 @@ pub enum Key {
     Character(char),
 }
 
+/// Where a key sits on the keyboard, as the platform numbers it.
+///
+/// [`Key`] says what a key *means* here: what the layout, the modifiers, and
+/// any dead key before it made of the press. This says *which key moved*, and
+/// the two are different questions with different right answers.
+///
+/// # What it is for
+///
+/// Two things [`Key`] cannot do.
+///
+/// It names keys this library has no name for — the function row, the keypad,
+/// the left and right halves of a modifier pair — because a number needs no
+/// vocabulary. An interface that wants F5 or the keypad's Enter can have it
+/// without this enum growing a variant per keyboard.
+///
+/// And it survives being sent somewhere else. Forwarding a keystroke to another
+/// machine means telling it which key went down, not which character this
+/// machine's layout produced: a Dvorak typist driving a QWERTY machine by
+/// characters types gibberish, and a shortcut is a *position* on every platform
+/// that defines one. So the physical key is what travels.
+///
+/// # It is the platform's own numbering, and it does not travel by itself
+///
+/// A macOS virtual key code, a Win32 virtual-key code, and an X11 keycode are
+/// three unrelated numbering schemes: 49 is Space on macOS, `VK_1` on Windows,
+/// and `q` under X11. This type carries the number and nothing else, so anything
+/// sending one to another machine must send *which scheme it is* alongside it —
+/// a translation table belongs to whoever spans two platforms, and putting one
+/// here would mean this library deciding what a keyboard is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct KeyCode(u32);
+
+impl KeyCode {
+    /// The code the platform gave, whatever its numbering means.
+    pub const fn new(raw: u32) -> Self {
+        Self(raw)
+    }
+
+    /// That number, for a backend or a forwarder that knows the scheme.
+    pub const fn raw(self) -> u32 {
+        self.0
+    }
+}
+
+/// Which way a key moved.
+///
+/// One enum rather than two handlers, because a key that goes down and is never
+/// reported coming up is a key held forever on whatever is listening — a caret
+/// that repeats, or, once a keystroke is being forwarded, a modifier stuck down
+/// on another person's machine. Making the direction a value the one handler
+/// must match on is what stops half of the pair being written and the other
+/// half forgotten.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum KeyPhase {
+    /// The key went down.
+    Down,
+    /// The key came up.
+    Up,
+}
+
+/// One movement of one key: which key, what it meant, and which way it went.
+///
+/// The whole of what a keyboard did, as opposed to the two questions widgets
+/// usually ask of it ("was I clicked" and "was this shortcut pressed"). What
+/// wants this is anything that has to *reproduce* the keyboard rather than
+/// respond to it: a remote session, a key-remapper, a macro recorder.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KeyStroke {
+    /// Which physical key, when the press came from a keyboard.
+    ///
+    /// `None` for a keystroke nothing physical produced — one synthesized by a
+    /// test, or by an assistive technology. Anything forwarding a keystroke to
+    /// another machine sends only the ones that have a code, because a key with
+    /// no position is not a key another machine can be told about.
+    pub code: Option<KeyCode>,
+    /// What the key means here, when this library has a name for it.
+    ///
+    /// `None` for every key [`Key`] does not name — the function row, the
+    /// keypad, the modifiers themselves.
+    pub key: Option<Key>,
+    /// What was held with it.
+    pub modifiers: Modifiers,
+    /// Which way it moved.
+    pub phase: KeyPhase,
+}
+
+impl KeyStroke {
+    /// Whether this is a key going down.
+    pub fn is_down(&self) -> bool {
+        self.phase == KeyPhase::Down
+    }
+
+    /// Whether it says anything at all.
+    ///
+    /// A stroke with neither a position nor a meaning describes no key, and
+    /// [`Input::apply`] drops it rather than storing something a handler would
+    /// have to check for.
+    fn is_meaningful(&self) -> bool {
+        self.code.is_some() || self.key.is_some()
+    }
+}
+
 /// Text an input method is still assembling, shown but not yet typed.
 ///
 /// The in-progress half of typing: what a Japanese, Chinese, or Korean input
@@ -274,16 +418,29 @@ pub enum Event {
         y: f32,
     },
     /// A key went down.
+    ///
+    /// Both halves are optional because the two questions a key answers are
+    /// independent: F5 has a position and no meaning this library names, and a
+    /// keystroke a test or an assistive technology synthesized has a meaning and
+    /// no position. An event with neither is dropped by [`Input::apply`].
     KeyDown {
-        /// Which key.
-        key: Key,
+        /// What the key means here, if this library names it.
+        key: Option<Key>,
+        /// Which physical key, if it came from a keyboard.
+        code: Option<KeyCode>,
         /// What was held with it.
         modifiers: Modifiers,
     },
     /// A key came up.
+    ///
+    /// Reported for the same keys as [`Event::KeyDown`] and never for fewer: a
+    /// backend that sends the down and swallows the up leaves the key held on
+    /// anything watching. See [`Input::released_keys`].
     KeyUp {
-        /// Which key.
-        key: Key,
+        /// What the key means here, if this library names it.
+        key: Option<Key>,
+        /// Which physical key, if it came from a keyboard.
+        code: Option<KeyCode>,
         /// What was held with it.
         modifiers: Modifiers,
     },
@@ -333,6 +490,14 @@ pub struct Input {
     pointer: Point,
     /// Whether the pointer is over the window at all.
     pointer_inside: bool,
+    /// Whether it arrived somewhere new during this frame.
+    ///
+    /// A thing that *happened*, so it is cleared with the presses and the
+    /// keystrokes rather than persisting like the position itself. It is what
+    /// separates "the pointer is here" from "the pointer just came here": an
+    /// element told the former every frame would forward a position to another
+    /// machine for as long as a hand rested over it.
+    moved: bool,
     /// Where the pointer was when each button was pressed.
     ///
     /// A drag is judged from where it *began*, so that releasing outside a
@@ -342,7 +507,14 @@ pub struct Input {
     pressed: [bool; 3],
     released: [bool; 3],
     scroll: (f32, f32),
-    keys: Vec<(Key, Modifiers)>,
+    /// Every key that moved this frame, in the order the keys moved.
+    ///
+    /// One list for both directions, and the only place keyboard movement is
+    /// kept: "which keys went down" and "which came up" are *views* of it
+    /// ([`Input::keys`], [`Input::released_keys`]) rather than lists of their
+    /// own, so the two can never come to disagree about a press one of them
+    /// recorded and the other missed — which is exactly how a key gets stuck.
+    strokes: Vec<KeyStroke>,
     /// What an assistive technology asked to activate this frame.
     ///
     /// A list rather than one identity, because two presses can arrive between
@@ -373,10 +545,11 @@ impl Input {
     /// held down, what an input method is still composing. What is cleared is
     /// what merely *happened*.
     pub fn begin_frame(&mut self) {
+        self.moved = false;
         self.pressed = [false; 3];
         self.released = [false; 3];
         self.scroll = (0.0, 0.0);
-        self.keys.clear();
+        self.strokes.clear();
         self.activated.clear();
         self.text.clear();
     }
@@ -385,19 +558,19 @@ impl Input {
     pub fn apply(&mut self, event: Event) {
         match event {
             Event::PointerMoved(position) => {
-                self.pointer = position;
+                self.place(position);
                 self.pointer_inside = true;
             }
             Event::PointerLeft => self.pointer_inside = false,
             Event::PointerDown { position, button } => {
-                self.pointer = position;
+                self.place(position);
                 self.pointer_inside = true;
                 self.held[button.index()] = true;
                 self.pressed[button.index()] = true;
                 self.press_origin[button.index()] = Some(position);
             }
             Event::PointerUp { position, button } => {
-                self.pointer = position;
+                self.place(position);
                 self.held[button.index()] = false;
                 self.released[button.index()] = true;
             }
@@ -405,16 +578,30 @@ impl Input {
                 self.scroll.0 += x;
                 self.scroll.1 += y;
             }
-            Event::KeyDown { key, modifiers } => {
+            Event::KeyDown { key, code, modifiers } => {
                 self.modifiers = modifiers;
-                self.keys.push((key, modifiers));
+                self.take_stroke(KeyStroke { code, key, modifiers, phase: KeyPhase::Down });
             }
-            Event::KeyUp { modifiers, .. } => self.modifiers = modifiers,
+            Event::KeyUp { key, code, modifiers } => {
+                self.modifiers = modifiers;
+                self.take_stroke(KeyStroke { code, key, modifiers, phase: KeyPhase::Up });
+            }
             Event::Text(text) => self.text.push_str(&text),
             Event::Composing(composition) => self.composition = within_bounds(composition),
             Event::Activated(id) => self.activated.push(id),
             Event::CloseRequested => self.close_requested = true,
         }
+    }
+
+    /// Puts the pointer somewhere, noting whether that is somewhere new.
+    ///
+    /// One place, because every positioned event moves it and a press that
+    /// forgot to say so would be a movement no element could hear.
+    fn place(&mut self, position: Point) {
+        if position != self.pointer {
+            self.moved = true;
+        }
+        self.pointer = position;
     }
 
     /// Where the pointer is, in logical units.
@@ -425,6 +612,15 @@ impl Input {
     /// Whether the pointer is over the window.
     pub fn pointer_inside(&self) -> bool {
         self.pointer_inside
+    }
+
+    /// Whether the pointer arrived somewhere new during this frame.
+    ///
+    /// False on a frame drawn for any other reason — an animation, a poll, a
+    /// keystroke — which is what lets [`El::on_pointer_move`](crate::El::on_pointer_move)
+    /// report movement rather than presence.
+    pub fn pointer_moved(&self) -> bool {
+        self.moved
     }
 
     /// Whether a button is held down right now.
@@ -457,14 +653,42 @@ impl Input {
         self.scroll
     }
 
-    /// The keys pressed this frame, in the order they arrived.
-    pub fn keys(&self) -> &[(Key, Modifiers)] {
-        &self.keys
+    /// Every key that moved this frame, both directions, in order.
+    ///
+    /// What anything reproducing the keyboard reads, rather than responding to
+    /// it: a remote session forwarding keystrokes, a macro recorder. Widgets
+    /// want [`Input::keys`].
+    pub fn strokes(&self) -> &[KeyStroke] {
+        &self.strokes
+    }
+
+    /// The keys pressed this frame that this library has a name for, in order.
+    ///
+    /// Keys with no name — the function row, the keypad — are in
+    /// [`Input::strokes`] and not here, because a widget asking "was Escape
+    /// pressed" has nothing to do with a key it cannot spell.
+    pub fn keys(&self) -> impl Iterator<Item = (Key, Modifiers)> + '_ {
+        self.named(KeyPhase::Down)
+    }
+
+    /// The keys *released* this frame, in the same shape.
+    ///
+    /// The half that used to be thrown away. A widget that acts while a key is
+    /// held — one driving something continuous, or forwarding the keyboard to
+    /// another machine — has no way to stop without this, and "no way to stop"
+    /// means a key held down forever on whatever was listening.
+    pub fn released_keys(&self) -> impl Iterator<Item = (Key, Modifiers)> + '_ {
+        self.named(KeyPhase::Up)
     }
 
     /// Whether a key was pressed this frame, whatever was held with it.
     pub fn key_pressed(&self, key: Key) -> bool {
-        self.keys.iter().any(|(pressed, _)| *pressed == key)
+        self.keys().any(|(pressed, _)| pressed == key)
+    }
+
+    /// Whether a key came up this frame, whatever was held with it.
+    pub fn key_released(&self, key: Key) -> bool {
+        self.released_keys().any(|(released, _)| released == key)
     }
 
     /// Whether an assistive technology asked to activate this element.
@@ -478,9 +702,25 @@ impl Input {
 
     /// Whether a key was pressed with exactly the platform accelerator held.
     pub fn shortcut(&self, key: Key) -> bool {
-        self.keys
+        self.keys().any(|(pressed, modifiers)| pressed == key && modifiers.command_only())
+    }
+
+    /// The named keys that moved one way this frame.
+    ///
+    /// The one place [`Input::keys`] and [`Input::released_keys`] differ, so
+    /// that the pair cannot be filtered two subtly different ways.
+    fn named(&self, phase: KeyPhase) -> impl Iterator<Item = (Key, Modifiers)> + '_ {
+        self.strokes
             .iter()
-            .any(|(pressed, modifiers)| *pressed == key && modifiers.command_only())
+            .filter(move |stroke| stroke.phase == phase)
+            .filter_map(|stroke| Some((stroke.key?, stroke.modifiers)))
+    }
+
+    /// Records one key's movement, if it describes a key at all.
+    fn take_stroke(&mut self, stroke: KeyStroke) {
+        if stroke.is_meaningful() {
+            self.strokes.push(stroke);
+        }
     }
 
     /// The text typed this frame.
@@ -676,18 +916,28 @@ mod tests {
         assert_eq!(composition.selection, 0..2, "é is one character of two bytes");
     }
 
+    /// A key going down with nothing held, as a platform reports it.
+    fn down(key: Key, modifiers: Modifiers) -> Event {
+        Event::KeyDown { key: Some(key), code: None, modifiers }
+    }
+
+    /// The same key coming up.
+    fn up(key: Key, modifiers: Modifiers) -> Event {
+        Event::KeyUp { key: Some(key), code: None, modifiers }
+    }
+
     #[test]
     fn a_shortcut_needs_the_accelerator_and_nothing_else() {
         let accelerator = Modifiers { command: true, ..Modifiers::NONE };
         let with_shift = Modifiers { command: true, shift: true, ..Modifiers::NONE };
 
         let mut input = Input::new();
-        input.apply(Event::KeyDown { key: Key::Character('r'), modifiers: accelerator });
+        input.apply(down(Key::Character('r'), accelerator));
         assert!(input.shortcut(Key::Character('r')));
         assert!(!input.shortcut(Key::Character('s')));
 
         input.begin_frame();
-        input.apply(Event::KeyDown { key: Key::Character('r'), modifiers: with_shift });
+        input.apply(down(Key::Character('r'), with_shift));
         assert!(!input.shortcut(Key::Character('r')), "shift should not match a bare shortcut");
         assert!(input.key_pressed(Key::Character('r')), "but the key was still pressed");
     }
@@ -728,10 +978,118 @@ mod tests {
     fn releasing_a_modifier_updates_what_is_held() {
         let mut input = Input::new();
         let shifted = Modifiers { shift: true, ..Modifiers::NONE };
-        input.apply(Event::KeyDown { key: Key::Character('a'), modifiers: shifted });
+        input.apply(down(Key::Character('a'), shifted));
         assert!(input.modifiers().shift);
 
-        input.apply(Event::KeyUp { key: Key::Character('a'), modifiers: Modifiers::NONE });
+        input.apply(up(Key::Character('a'), Modifiers::NONE));
         assert!(input.modifiers().is_empty());
+    }
+
+    #[test]
+    fn a_key_that_went_down_is_reported_coming_up_again() {
+        // The half that used to be discarded. Everything that holds state while
+        // a key is held — a repeat, a forwarded keystroke — depends on it.
+        let mut input = Input::new();
+        input.apply(down(Key::Character('a'), Modifiers::NONE));
+        assert!(input.key_pressed(Key::Character('a')));
+        assert!(!input.key_released(Key::Character('a')), "it has not come up yet");
+
+        input.begin_frame();
+        input.apply(up(Key::Character('a'), Modifiers::NONE));
+        assert!(input.key_released(Key::Character('a')));
+        assert!(!input.key_pressed(Key::Character('a')), "a release is not a press");
+    }
+
+    #[test]
+    fn a_release_is_reported_once_and_does_not_carry_into_the_next_frame() {
+        let mut input = Input::new();
+        input.apply(up(Key::Escape, Modifiers::NONE));
+        assert!(input.key_released(Key::Escape));
+
+        input.begin_frame();
+        assert!(!input.key_released(Key::Escape), "the release repeated");
+        assert_eq!(input.strokes().len(), 0);
+    }
+
+    #[test]
+    fn every_key_that_went_down_can_be_matched_with_the_one_that_came_up() {
+        // The stuck-key guarantee, stated as the arithmetic that proves it: over
+        // any run of frames, each code that went down comes up exactly once. A
+        // remote session that forwards `strokes()` verbatim therefore cannot
+        // leave a key held on the far machine unless the far end drops one.
+        let mut input = Input::new();
+        let mut held: Vec<KeyCode> = Vec::new();
+        let codes = [KeyCode::new(0), KeyCode::new(96), KeyCode::new(55)];
+
+        for code in codes {
+            input.begin_frame();
+            input.apply(Event::KeyDown { key: None, code: Some(code), modifiers: Modifiers::NONE });
+            held.extend(down_codes(&input));
+        }
+        for code in codes.into_iter().rev() {
+            input.begin_frame();
+            input.apply(Event::KeyUp { key: None, code: Some(code), modifiers: Modifiers::NONE });
+            for released in input.strokes().iter().filter(|stroke| !stroke.is_down()) {
+                let code = released.code.expect("a physical release carries its code");
+                let at = held
+                    .iter()
+                    .position(|held| *held == code)
+                    .unwrap_or_else(|| panic!("{code:?} came up without having gone down"));
+                held.remove(at);
+            }
+        }
+
+        assert!(held.is_empty(), "left held down: {held:?}");
+    }
+
+    /// The physical keys that went down this frame.
+    fn down_codes(input: &Input) -> Vec<KeyCode> {
+        input
+            .strokes()
+            .iter()
+            .filter(|stroke| stroke.is_down())
+            .filter_map(|stroke| stroke.code)
+            .collect()
+    }
+
+    #[test]
+    fn a_key_this_library_cannot_name_still_reaches_anything_forwarding_it() {
+        // F5, the keypad, the right-hand Shift: no `Key` variant, and no reason
+        // a remote session should not be able to send them.
+        let mut input = Input::new();
+        input.apply(Event::KeyDown {
+            key: None,
+            code: Some(KeyCode::new(96)),
+            modifiers: Modifiers::NONE,
+        });
+
+        assert_eq!(input.keys().count(), 0, "it has no name, so no widget sees it");
+        assert_eq!(input.strokes().len(), 1);
+        assert_eq!(input.strokes()[0].code, Some(KeyCode::new(96)));
+        assert!(input.strokes()[0].is_down());
+    }
+
+    #[test]
+    fn a_keystroke_that_names_no_key_at_all_is_dropped() {
+        // Neither a position nor a meaning describes nothing, and storing it
+        // would make every reader check for it.
+        let mut input = Input::new();
+        input.apply(Event::KeyDown { key: None, code: None, modifiers: Modifiers::NONE });
+        assert_eq!(input.strokes().len(), 0);
+    }
+
+    #[test]
+    fn a_named_key_carries_its_position_as_well() {
+        // Both halves of the same press: the widget reads the meaning, the
+        // remote session reads the key.
+        let mut input = Input::new();
+        input.apply(Event::KeyDown {
+            key: Some(Key::Escape),
+            code: Some(KeyCode::new(53)),
+            modifiers: Modifiers::NONE,
+        });
+
+        assert!(input.key_pressed(Key::Escape));
+        assert_eq!(input.strokes()[0].code.map(KeyCode::raw), Some(53));
     }
 }

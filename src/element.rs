@@ -46,7 +46,7 @@
 
 use crate::accessibility::Role;
 use crate::geom::{Insets, Rect, Size};
-use crate::input::{Drag, Key, Modifiers};
+use crate::input::{Drag, Key, KeyStroke, Modifiers, Pointing};
 use crate::memory::Id;
 use crate::paint::Painter;
 use crate::style::{Align, Anchor, Axis, Face, Hover, Ink, Justify, Length, Radius, Style, Tone};
@@ -63,11 +63,19 @@ pub type DragAction<S> = Box<dyn Fn(&mut S, Drag)>;
 /// What a keypress does, given which key it was and what was held with it.
 pub type KeyAction<S> = Box<dyn Fn(&mut S, Key, Modifiers)>;
 
+/// What one movement of one physical key does.
+///
+/// Both directions through one handler, deliberately — see [`El::on_raw_key`].
+pub type RawKeyAction<S> = Box<dyn Fn(&mut S, KeyStroke)>;
+
 /// What the wheel does, given how far it turned across and down.
 pub type ScrollAction<S> = Box<dyn Fn(&mut S, f32, f32)>;
 
 /// What the pointer arriving or leaving does, given which of the two it was.
 pub type HoverAction<S> = Box<dyn Fn(&mut S, bool)>;
+
+/// What a pointer moving over an element does, given where within it it now is.
+pub type PointerAction<S> = Box<dyn Fn(&mut S, Pointing)>;
 
 /// An application's own drawing, given the painter and the room it was placed in.
 pub type Drawing = Box<dyn Fn(&mut Painter<'_>, Rect)>;
@@ -118,8 +126,11 @@ pub struct El<S> {
     pub(crate) on_submit: Option<Action<S>>,
     pub(crate) on_drag: Option<DragAction<S>>,
     pub(crate) on_key: Option<KeyAction<S>>,
+    pub(crate) on_key_up: Option<KeyAction<S>>,
+    pub(crate) on_raw_key: Option<RawKeyAction<S>>,
     pub(crate) on_scroll: Option<ScrollAction<S>>,
     pub(crate) on_hover: Option<HoverAction<S>>,
+    pub(crate) on_pointer_move: Option<PointerAction<S>>,
     /// Whether it takes the keyboard, and takes a place in the tab order.
     pub(crate) focusable: bool,
     /// Whether it lightens under the pointer and darkens under a press.
@@ -183,8 +194,11 @@ impl<S> El<S> {
             on_submit: None,
             on_drag: None,
             on_key: None,
+            on_key_up: None,
+            on_raw_key: None,
             on_scroll: None,
             on_hover: None,
+            on_pointer_move: None,
             focusable: false,
             reactive: false,
             disabled: false,
@@ -607,6 +621,47 @@ impl<S> El<S> {
         self
     }
 
+    /// Runs `action` for every key *released* while it has the keyboard.
+    ///
+    /// The other half of [`El::on_key`], and the half nothing could see until
+    /// there was one. A control that does something while a key is held — a
+    /// button that repeats, a camera that pans, a viewport forwarding the
+    /// keyboard to another machine — has no way to stop without it, and "no way
+    /// to stop" is a key held down for as long as the program runs.
+    ///
+    /// A widget that only acts on presses does not need it; one that acts on a
+    /// press *and holds something as a result* always does.
+    pub fn on_key_up(mut self, action: impl Fn(&mut S, Key, Modifiers) + 'static) -> Self {
+        self.on_key_up = Some(Box::new(action));
+        self.focusable = true;
+        self
+    }
+
+    /// Runs `action` for every movement of every key while it has the keyboard,
+    /// carrying the physical key as well as its meaning.
+    ///
+    /// What [`El::on_key`] cannot do, and why: that handler is told what a key
+    /// *means* on this machine, which is the layout's answer and is therefore
+    /// the wrong thing to send anywhere else. This one is told which key moved
+    /// and which way, including keys [`Key`] does not name — the
+    /// function row, the keypad, the modifiers themselves.
+    ///
+    /// Both directions arrive at the one handler on purpose. Splitting them
+    /// would let a viewport be written that forwards presses and forgets
+    /// releases, which is not a missing feature but a machine with a key held
+    /// down on it; a handler that must match on [`KeyPhase`](crate::input::KeyPhase)
+    /// cannot be written that way by accident.
+    ///
+    /// ```ignore
+    /// draw(Size::new(960.0, 540.0), viewport)
+    ///     .on_raw_key(|app: &mut App, stroke| app.session.forward(stroke))
+    /// ```
+    pub fn on_raw_key(mut self, action: impl Fn(&mut S, KeyStroke) + 'static) -> Self {
+        self.on_raw_key = Some(Box::new(action));
+        self.focusable = true;
+        self
+    }
+
     /// Runs `action` when the wheel turns over it, told how far across and down.
     ///
     /// For a control that answers the wheel without being a scrolling area — a
@@ -631,6 +686,37 @@ impl<S> El<S> {
     /// something only the application can describe.
     pub fn on_hover(mut self, action: impl Fn(&mut S, bool) + 'static) -> Self {
         self.on_hover = Some(Box::new(action));
+        self
+    }
+
+    /// Runs `action` every time the pointer moves over it, told where within it
+    /// it now is — in the element's own coordinates, the same origin
+    /// [`Drag::at`] uses.
+    ///
+    /// The third of the three pointer handlers, and the one the other two
+    /// cannot stand in for. [`El::on_hover`] answers *whether* the pointer is
+    /// here and deliberately says nothing about where; [`El::on_drag`] answers
+    /// where, continuously, but only while a button is held. Between them sits
+    /// a hand moving over an element it has not pressed, which is a map that
+    /// reads out coordinates, a picture that shows what is under the pointer,
+    /// and a viewport forwarding a pointer to another machine — the case this
+    /// was written for, where a pointer that only moved when pressed is a
+    /// remote desktop that cannot be pointed at.
+    ///
+    /// It fires on movement, never on presence: a frame drawn for an animation
+    /// or for news from another thread runs no handler, and a hand resting
+    /// still runs none either, so an element carrying this does not turn a
+    /// resting pointer into an endless redraw. Buttons make no difference to
+    /// it — an element with this *and* [`El::on_drag`] hears a movement over
+    /// itself through both, which is why the drag handler is the right place
+    /// for the gesture and this one the right place for the position.
+    ///
+    /// ```ignore
+    /// draw(Size::new(960.0, 540.0), viewport)
+    ///     .on_pointer_move(|app: &mut App, at| app.session.point_at(at.fraction()))
+    /// ```
+    pub fn on_pointer_move(mut self, action: impl Fn(&mut S, Pointing) + 'static) -> Self {
+        self.on_pointer_move = Some(Box::new(action));
         self
     }
 
@@ -676,11 +762,16 @@ impl<S> El<S> {
     /// Drawn at all, rather than omitted, because a control that vanishes when
     /// it is unavailable makes the row around it jump and leaves the person
     /// unsure whether it was ever there.
+    ///
+    /// It does not *clear* whether the element takes the keyboard, it overrules
+    /// it — see [`El::takes_focus`]. Clearing was the earlier reading and it made
+    /// the answer depend on the order the builders were written in:
+    /// `.disabled(true).on_click(…)` put the control back in the tab order
+    /// while `.on_click(…).disabled(true)` did not, though the two describe the
+    /// same greyed button. Nothing in an interface should turn on which setter
+    /// came last.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
-        if disabled {
-            self.focusable = false;
-        }
         self
     }
 
@@ -872,6 +963,16 @@ impl<S> El<S> {
         self.on_key.as_ref()
     }
 
+    /// What a key coming up in it does, if anything.
+    pub fn key_up_action(&self) -> Option<&KeyAction<S>> {
+        self.on_key_up.as_ref()
+    }
+
+    /// What one physical key's movement in it does, if anything.
+    pub fn raw_key_action(&self) -> Option<&RawKeyAction<S>> {
+        self.on_raw_key.as_ref()
+    }
+
     /// Where this element is anchored, if it was lifted out of the flow by
     /// [`El::layer`].
     pub fn anchor(&self) -> Option<Anchor> {
@@ -887,12 +988,27 @@ impl<S> El<S> {
                 || self.on_submit.is_some()
                 || self.on_drag.is_some()
                 || self.on_key.is_some()
+                || self.on_key_up.is_some()
+                || self.on_raw_key.is_some()
                 || self.on_scroll.is_some()
                 || self.on_hover.is_some()
+                || self.on_pointer_move.is_some()
                 || self.focusable
                 || self.reactive
                 || self.scrolls
                 || !self.style.hover.is_empty())
+    }
+
+    /// Whether Tab can reach it: it takes the keyboard, and is not disabled.
+    ///
+    /// The one answer to that question, so that the focus walk, the tab-order
+    /// audit and anything else asking cannot come to different conclusions
+    /// about the same element. A greyed control keeps whatever it declared —
+    /// it is a button, and becomes reachable again the moment its reason for
+    /// being greyed passes — but while it is greyed nothing may hand it the
+    /// keyboard.
+    pub fn takes_focus(&self) -> bool {
+        self.focusable && !self.disabled
     }
 
     /// Whether it holds a caret and takes typing.
@@ -1045,6 +1161,19 @@ mod tests {
     fn a_disabled_element_leaves_the_tab_order_and_takes_no_events() {
         let element: El<Counter> = button("Install").on_click(|_| {}).disabled(true);
         assert!(!element.interactive());
-        assert!(!element.focusable);
+        assert!(!element.takes_focus());
+    }
+
+    #[test]
+    fn a_greyed_control_is_out_of_the_tab_order_whichever_order_it_was_written_in() {
+        // The defect this holds shut: `disabled` used to clear `focusable`, so
+        // a handler attached afterwards put the control back in the tab order
+        // while the audit and the focus walk disagreed about whether it was
+        // there. Both readings describe the same greyed button.
+        let after: El<Counter> = button("Install").on_click(|_| {}).disabled(true);
+        let before: El<Counter> = button("Install").disabled(true).on_click(|_| {});
+        assert!(!after.takes_focus());
+        assert!(!before.takes_focus());
+        assert!(!after.interactive() && !before.interactive());
     }
 }
