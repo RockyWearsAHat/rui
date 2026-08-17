@@ -27,7 +27,7 @@ use crate::canvas::{Canvas, Corner};
 use crate::color::Color;
 use crate::element::{El, Node};
 use crate::geom::{Insets, Point, Rect};
-use crate::input::{Drag, Input, Key, Phase, PointerButton};
+use crate::input::{Drag, Input, Key, Phase, Pointing, PointerButton};
 use crate::memory::{Caret, Id, Memory, Response};
 use crate::sdf::{Paint, Sculpt, Shape};
 use crate::style::{Align, Ink, Radius, Tone};
@@ -380,10 +380,23 @@ fn draw<'tree, S>(
     if let (Some(action), Some(drag)) = (&el.on_drag, response.drag) {
         actions.push(Box::new(move |state| action(state, drag)));
     }
-    if let Some(action) = &el.on_key {
-        if response.focused {
-            for &(key, modifiers) in frame.input.keys() {
+    if response.focused {
+        // The three keyboard handlers are dispatched together because they are
+        // three views of one thing that happened, and a frame that ran one of
+        // them and skipped another would be a press without its release.
+        if let Some(action) = &el.on_key {
+            for (key, modifiers) in frame.input.keys() {
                 actions.push(Box::new(move |state| action(state, key, modifiers)));
+            }
+        }
+        if let Some(action) = &el.on_key_up {
+            for (key, modifiers) in frame.input.released_keys() {
+                actions.push(Box::new(move |state| action(state, key, modifiers)));
+            }
+        }
+        if let Some(action) = &el.on_raw_key {
+            for &stroke in frame.input.strokes() {
+                actions.push(Box::new(move |state| action(state, stroke)));
             }
         }
     }
@@ -397,6 +410,19 @@ fn draw<'tree, S>(
         let hovered = response.hovered;
         if frame.memory.note_hover(el.id, hovered) {
             actions.push(Box::new(move |state| action(state, hovered)));
+        }
+    }
+    if let Some(action) = &el.on_pointer_move {
+        // Movement, not presence: the input says whether the pointer arrived
+        // somewhere new during this frame, so a frame drawn for an animation or
+        // for news from another thread runs nothing.
+        if response.hovered && frame.input.pointer_moved() {
+            let pointer = frame.input.pointer();
+            let pointing = Pointing {
+                at: Point::new(pointer.x - el.rect.x, pointer.y - el.rect.y),
+                rect: el.rect,
+            };
+            actions.push(Box::new(move |state| action(state, pointing)));
         }
     }
 
@@ -436,7 +462,7 @@ fn interact<S>(el: &El<S>, frame: &mut Frame<'_>) -> Response {
     // inside; see [`Hit`].
     let hovered = input.pointer_inside() && frame.hit.target == Some(el.id);
 
-    if el.focusable {
+    if el.takes_focus() {
         frame.memory.offer_focus(el.id);
     }
     if hovered && input.pressed(PointerButton::Primary) {
@@ -561,7 +587,7 @@ fn decorate<S>(el: &El<S>, frame: &mut Frame<'_>, response: &Response, lit: f32)
     // clicked repeats the click back at the person. A field is the exception —
     // its caret earns the ring however focus arrived, and a well being typed
     // into should look held either way.
-    if response.focused && el.focusable && (el.is_field() || frame.memory.focus_visible()) {
+    if response.focused && el.takes_focus() && (el.is_field() || frame.memory.focus_visible()) {
         let ring = rect.expand(Insets::uniform(FOCUS_OFFSET));
         let color = Tone::Focus.resolve(theme);
         frame.canvas.stroke(ring, corner.grown(FOCUS_OFFSET), FOCUS_THICKNESS, color);
@@ -955,7 +981,7 @@ fn apply_edits(
 ) -> Edit {
     let mut edit = Edit { changed: false, submitted: false };
 
-    for &(key, modifiers) in input.keys() {
+    for (key, modifiers) in input.keys() {
         // The accelerator with a letter is a command and never typing, so it is
         // decided before anything else looks at the key.
         if modifiers.command_only() {
@@ -1279,14 +1305,15 @@ mod tests {
     /// The key `character` pressed with the platform accelerator held.
     fn shortcut(character: char) -> Event {
         Event::KeyDown {
-            key: Key::Character(character),
+            key: Some(Key::Character(character)),
+            code: None,
             modifiers: Modifiers { command: true, ..Modifiers::NONE },
         }
     }
 
     /// A key pressed with nothing, or with only shift, held.
     fn press(key: Key, shift: bool) -> Event {
-        Event::KeyDown { key, modifiers: Modifiers { shift, ..Modifiers::NONE } }
+        Event::KeyDown { key: Some(key), code: None, modifiers: Modifiers { shift, ..Modifiers::NONE } }
     }
 
     /// A caret at `offset` with nothing selected.

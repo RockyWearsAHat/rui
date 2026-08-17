@@ -122,7 +122,7 @@ use crate::accessibility::{AccessNode, AccessState, AccessUpdate, Role};
 use crate::input::Composition;
 use crate::memory::Id;
 use crate::theme::Appearance;
-use crate::{Canvas, Event, Key, Modifiers, Point, PointerButton, Rect};
+use crate::{Canvas, Event, Key, KeyCode, Modifiers, Point, PointerButton, Rect};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::ffi::{CStr, c_char, c_void};
@@ -472,6 +472,18 @@ const STYLE_TITLED: u64 = 1;
 const STYLE_CLOSABLE: u64 = 1 << 1;
 const STYLE_MINIATURIZABLE: u64 = 1 << 2;
 const STYLE_RESIZABLE: u64 = 1 << 3;
+/// `NSWindowStyleMaskFullScreen`, which AppKit sets on a window it has taken to
+/// a space of its own. It is how the window answers the question rather than
+/// something to open a window with.
+const STYLE_FULLSCREEN: u64 = 1 << 14;
+/// `NSWindowCollectionBehaviorFullScreenPrimary`: this window may become a full
+/// screen on its own space.
+///
+/// Set explicitly rather than left to AppKit's default. Without it the green
+/// button zooms — grows the window to fit the desktop, title bar, menu bar and
+/// all — which is a different thing from the one a person asking for a full
+/// screen wants, and there is no way to ask for the real one afterwards.
+const COLLECTION_FULLSCREEN_PRIMARY: u64 = 1 << 7;
 /// `NSBackingStoreBuffered`.
 const BACKING_BUFFERED: u64 = 2;
 /// `NSApplicationActivationPolicyRegular`: a normal app with a Dock icon.
@@ -689,6 +701,14 @@ impl Backend for Window {
             // Mouse movement is not reported unless it is asked for, and hover
             // states are most of what makes an interface feel alive.
             let _: () = send1(window, sel(c"setAcceptsMouseMovedEvents:"), true);
+            // What makes the green button, the menu item below, and
+            // `Backend::set_fullscreen` all mean the same thing; see the
+            // constant.
+            let _: () = send1(
+                window,
+                sel(c"setCollectionBehavior:"),
+                COLLECTION_FULLSCREEN_PRIMARY,
+            );
 
             // A view of our own, for the one reason given in the module header:
             // typed text arrives through a protocol, and a protocol needs an
@@ -733,6 +753,13 @@ impl Backend for Window {
             let _: () = send1(window, sel(c"setOpaque:"), true);
 
             install_menu(application, &options.title);
+            // Before the window is shown, so a Quit pressed the instant it
+            // appears is already an orderly one. A failure here is not fatal
+            // and is not reported: the window works, Quit simply goes back to
+            // being AppKit's abrupt one.
+            if let Ok(delegate) = application_delegate() {
+                let _: () = send1(application, sel(c"setDelegate:"), delegate);
+            }
 
             let _: () = send(application, sel(c"finishLaunching"));
             let _: () = send1(window, sel(c"makeKeyAndOrderFront:"), std::ptr::null_mut::<c_void>());
@@ -863,6 +890,27 @@ impl Backend for Window {
 
     fn is_open(&self) -> bool {
         self.open.get()
+    }
+
+    fn is_fullscreen(&self) -> bool {
+        // AppKit's own answer, read from the style mask it maintains, rather
+        // than a flag this program keeps: the person can leave a full screen
+        // with the green button or with Escape, and neither goes through here.
+        let mask: u64 = unsafe { send(self.window, sel(c"styleMask")) };
+        mask & STYLE_FULLSCREEN != 0
+    }
+
+    fn set_fullscreen(&self, filling: bool) -> Result<(), Error> {
+        // `toggleFullScreen:` is the only way in, and it is a toggle, so asking
+        // for the state it is already in would leave it in the other one.
+        if self.is_fullscreen() == filling {
+            return Ok(());
+        }
+        unsafe {
+            let _: () =
+                send1(self.window, sel(c"toggleFullScreen:"), std::ptr::null_mut::<c_void>());
+        }
+        Ok(())
     }
 
     fn clipboard_text(&self) -> Result<Option<String>, Error> {
@@ -1143,13 +1191,17 @@ impl Window {
                     })
             });
 
-            if let Some(key) = key {
-                events.push(if kind == EVENT_KEY_DOWN {
-                    Event::KeyDown { key, modifiers }
-                } else {
-                    Event::KeyUp { key, modifiers }
-                });
-            }
+            // Reported whether or not this library has a name for the key: the
+            // virtual key code is what the function row, the keypad, and the
+            // two halves of a modifier pair have instead of a name, and it is
+            // what anything forwarding a keystroke to another machine sends.
+            // `key_for_code` is the meaning; `keyCode` is the key.
+            let code = Some(KeyCode::new(u32::from(code)));
+            events.push(if kind == EVENT_KEY_DOWN {
+                Event::KeyDown { key, code, modifiers }
+            } else {
+                Event::KeyUp { key, code, modifiers }
+            });
 
             // What is left is the case where there is no input method to ask —
             // an older system, or a view that failed to become the first
@@ -2354,6 +2406,94 @@ fn is_function_key(character: char) -> bool {
     ('\u{f700}'..='\u{f8ff}').contains(&character)
 }
 
+/// The name of the application-delegate class this backend builds at run time.
+const DELEGATE_CLASS: &CStr = c"RuiAppDelegate";
+
+/// How that class is named in a failure to build it.
+const DELEGATE_OWNER: &str = "application delegate";
+
+/// `NSTerminateCancel`: the application is not to be torn down after all.
+const TERMINATE_CANCEL: usize = 0;
+
+/// The delegate that turns Quit into an orderly close, built once per process.
+///
+/// # The defect this exists for
+///
+/// AppKit's `terminate:` — which is Command-Q, the Quit item, the Dock's own
+/// Quit and the AppleEvent `osascript` sends — tears the process down from
+/// inside the run loop. [`Backend::run`](crate::shell::Backend) never returns,
+/// so **nothing an application put on the stack is ever dropped**: no
+/// destructor, no flush, no child process reaped. The selfhost console found it
+/// the hard way — quitting left the `ssh -L` it had spawned holding port 9191
+/// for ever, so the next launch reported a tunnel it could not open while
+/// talking happily through the orphan.
+///
+/// Closing the window with the red button has never had this problem, because
+/// that path is a fact the loop reads: the window stops being visible, the loop
+/// ends, `run` returns, and everything unwinds. So the fix is to make Quit take
+/// exactly that path — close the windows, refuse the termination, and let the
+/// loop notice — rather than to invent a second shutdown that would then have
+/// to be kept in step with the first.
+fn application_delegate() -> Result<Object, Error> {
+    let class_object = match class(DELEGATE_CLASS) {
+        existing if !existing.is_null() => existing,
+        _ => {
+            let superclass = class(c"NSObject");
+            if superclass.is_null() {
+                return Err(Error::Platform("the Objective-C runtime has no NSObject".into()));
+            }
+            let built = unsafe { objc_allocateClassPair(superclass, DELEGATE_CLASS.as_ptr(), 0) };
+            if built.is_null() {
+                return Err(Error::Platform("a delegate class could not be created".into()));
+            }
+            // `Q@:@` — returns an unsigned word, takes the receiver, the
+            // selector, and the application asking.
+            add_method(
+                built,
+                DELEGATE_OWNER,
+                c"applicationShouldTerminate:",
+                should_terminate as *const c_void,
+                c"Q@:@",
+            )?;
+            unsafe { objc_registerClassPair(built) };
+            built
+        }
+    };
+
+    let delegate: Object = unsafe { send(send(class_object, sel(c"alloc")), sel(c"init")) };
+    if delegate.is_null() {
+        return Err(Error::Platform("a delegate could not be created".into()));
+    }
+    Ok(delegate)
+}
+
+/// Answers a Quit by closing every window and refusing to terminate.
+///
+/// The loop is watching each window's visibility, so this *is* the shutdown:
+/// the frame after this one finds nothing visible, ends, and lets the
+/// application's own destructors run. See [`application_delegate`].
+///
+/// # Safety
+///
+/// Called by the Objective-C runtime with an `NSApplication` as `application`.
+unsafe extern "C" fn should_terminate(
+    _self: Object,
+    _selector: Sel,
+    application: Object,
+) -> usize {
+    unsafe {
+        let windows: Object = send(application, sel(c"windows"));
+        let count: usize = send(windows, sel(c"count"));
+        for index in 0..count {
+            let window: Object = send1(windows, sel(c"objectAtIndex:"), index);
+            if !window.is_null() {
+                let _: () = send1(window, sel(c"close"), std::ptr::null_mut::<c_void>());
+            }
+        }
+    }
+    TERMINATE_CANCEL
+}
+
 /// Installs the one menu a window needs, so Command-Q works.
 ///
 /// An application with no main menu still shows a menu bar, and the Quit item
@@ -2376,6 +2516,31 @@ fn install_menu(application: Object, title: &str) {
         );
         let _: () = send1(submenu, sel(c"addItem:"), quit);
         let _: () = send1(item, sel(c"setSubmenu:"), submenu);
+
+        // A View menu with one item, for the shortcut it carries. Control-
+        // Command-F is where every Mac application puts this, and a menu is the
+        // only place a Mac keyboard shortcut can live: an application with no
+        // menu item for it has no shortcut for it, however willing its window.
+        // The item has no target, so it travels the responder chain and reaches
+        // whichever window is key — which is how AppKit's own is written.
+        let view_item: Object = send(send(class(c"NSMenuItem"), sel(c"alloc")), sel(c"init"));
+        let _: () = send1(bar, sel(c"addItem:"), view_item);
+        let view_menu: Object =
+            send1(send(class(c"NSMenu"), sel(c"alloc")), sel(c"initWithTitle:"), ns_string(c"View"));
+        let full_screen: Object = send3(
+            send(class(c"NSMenuItem"), sel(c"alloc")),
+            sel(c"initWithTitle:action:keyEquivalent:"),
+            ns_string(c"Enter Full Screen"),
+            sel(c"toggleFullScreen:"),
+            ns_string(c"f"),
+        );
+        let _: () = send1(
+            full_screen,
+            sel(c"setKeyEquivalentModifierMask:"),
+            MODIFIER_CONTROL | MODIFIER_COMMAND,
+        );
+        let _: () = send1(view_menu, sel(c"addItem:"), full_screen);
+        let _: () = send1(view_item, sel(c"setSubmenu:"), view_menu);
         let _: () = send1(application, sel(c"setMainMenu:"), bar);
     }
 }
