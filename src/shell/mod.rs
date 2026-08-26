@@ -38,6 +38,7 @@
 //! not something only this loop can do: `Backend::pump` is handed a way to
 //! draw one, for a backend to call when the platform has taken over.
 
+mod event_mapping;
 pub mod fonts;
 mod platform;
 
@@ -50,7 +51,7 @@ use crate::text::{FontId, Fonts};
 use crate::theme::{Appearance, Theme};
 use std::time::{Duration, Instant};
 
-pub use fonts::{LoadedFonts, load_system_fonts};
+pub use fonts::{load_system_fonts, LoadedFonts};
 
 /// How long the loop waits between frames while something is animating.
 ///
