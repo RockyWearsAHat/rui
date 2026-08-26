@@ -124,6 +124,9 @@ pub mod text;
 pub mod theme;
 pub mod widgets;
 
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
 pub use app::{App, run};
 pub use canvas::{Canvas, Corner, Mask};
 pub use color::Color;

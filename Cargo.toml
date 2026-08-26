@@ -16,6 +16,9 @@ exclude = ["/.github"]
 # in this crate, so there is nothing left to depend on.
 [dependencies]
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+
 [lints.rust]
 # Not `forbid`: opening a window is the one thing that cannot be done without
 # calling the platform. Every `unsafe` in the crate is inside `src/shell/platform/`,
