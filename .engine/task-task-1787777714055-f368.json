@@ -17,72 +17,80 @@
       "title": "Verify Rust toolchain and dependencies availability",
       "body": "Add a test in `tests/setup.rs` that checks `rustc --version` and `cargo --version` are callable and meet minimum requirements (1.85+). Implement by adding version checks. Refactor by documenting required Rust version in CLAUDE.md.",
       "acceptance": "`rustc --version` outputs version \u003e= 1.85 and `cargo --version` succeeds.",
-      "done": false,
-      "attempts": 1,
-      "updatedAt": "2026-08-26T21:03:29Z"
+      "done": true,
+      "attempts": 2,
+      "lastFeedback": "Review inconclusive, advancing: create review session: attempt to write a readonly database (1032)",
+      "updatedAt": "2026-08-26T21:05:13Z"
     },
     {
       "index": 3,
       "title": "Test build from clean state",
       "body": "Add a test in `tests/setup.rs` that runs `rm -rf target \u0026\u0026 cargo build --all-targets`. Implement the build step. Refactor by caching build artifacts between test runs.",
       "acceptance": "`cargo build --all-targets` completes with 0 exit code in under 60 seconds on an empty target directory.",
-      "done": false,
-      "attempts": 0,
-      "updatedAt": "2026-08-26T20:59:18Z"
+      "done": true,
+      "attempts": 5,
+      "lastFeedback": "skipped after 5 failed attempts; last feedback: Builder error: create step session: attempt to write a readonly database (1032)",
+      "updatedAt": "2026-08-26T21:07:09Z"
     },
     {
       "index": 4,
       "title": "Verify all library and integration tests pass",
       "body": "Add a test in `tests/setup.rs` that runs `cargo test --all-targets --lib` and `cargo test --test '*'`. Implement by executing the test commands. Refactor by capturing and displaying test output on failure.",
       "acceptance": "`cargo test --all-targets` exits with 0 and shows \"test result: ok\" with all tests passing.",
-      "done": false,
-      "attempts": 0,
-      "updatedAt": "2026-08-26T20:59:18Z"
+      "done": true,
+      "attempts": 5,
+      "lastFeedback": "skipped after 5 failed attempts; last feedback: Builder error: create step session: attempt to write a readonly database (1032)",
+      "updatedAt": "2026-08-26T21:07:09Z"
     },
     {
       "index": 5,
       "title": "Verify documentation builds without warnings",
       "body": "Add a test in `tests/setup.rs` that runs `cargo doc --no-deps` with `RUSTDOCFLAGS=-D warnings`. Implement by setting the env var and building docs. Refactor by suppressing benign doc warnings.",
       "acceptance": "`cargo doc --no-deps` exits with 0 and produces `target/doc/rui/index.html`.",
-      "done": false,
-      "attempts": 0,
-      "updatedAt": "2026-08-26T20:59:18Z"
+      "done": true,
+      "attempts": 5,
+      "lastFeedback": "skipped after 5 failed attempts; last feedback: Builder error: create step session: attempt to write a readonly database (1032)",
+      "updatedAt": "2026-08-26T21:07:09Z"
     },
     {
       "index": 6,
       "title": "Verify examples compile and identify entry points",
       "body": "Add a test in `tests/setup.rs` that enumerates `examples/*.rs` files and verifies each compiles. Implement by running `cargo build --examples` and checking each binary exists in target/debug/examples/. Refactor by documenting each example's purpose in a comment block in index.dx.",
       "acceptance": "`cargo build --examples` exits with 0 and `ls target/debug/examples/ | grep -E '^(counter|controls|gallery)$'` lists all three binaries.",
-      "done": false,
-      "attempts": 0,
-      "updatedAt": "2026-08-26T20:59:18Z"
+      "done": true,
+      "attempts": 5,
+      "lastFeedback": "skipped after 5 failed attempts; last feedback: Builder error: create step session: attempt to write a readonly database (1032)",
+      "updatedAt": "2026-08-26T21:07:09Z"
     },
     {
       "index": 7,
       "title": "Document project structure and entry points in index.dx",
       "body": "Modify `index.dx` to list the main modules (`element`, `shell`, `paint`, `canvas`), their responsibilities, and the location of the library entry point (`src/lib.rs`). Verify by running `dx_read index.dx` that all sections render correctly. Refactor by ensuring the document cross-links to README.md.",
       "acceptance": "`cat index.dx` shows a dx1 header and `dx read index.dx` displays the structure without errors.",
-      "done": false,
-      "attempts": 0,
-      "updatedAt": "2026-08-26T20:59:18Z"
+      "done": true,
+      "attempts": 5,
+      "lastFeedback": "skipped after 5 failed attempts; last feedback: Builder error: create step session: attempt to write a readonly database (1032)",
+      "updatedAt": "2026-08-26T21:07:09Z"
     },
     {
       "index": 8,
       "title": "End-to-end local verification: build, test, lint, format",
       "body": "Add a test in `tests/setup.rs` that runs the full quality pipeline: `cargo fmt --check \u0026\u0026 cargo clippy --all-targets -- -D warnings \u0026\u0026 cargo test --all-targets \u0026\u0026 cargo build --examples`. Implement as a single assertion that all four commands exit with 0. Refactor by parallelizing independent checks where possible.",
       "acceptance": "Running `cargo test --test setup --lib` passes and reports the pipeline succeeded.",
-      "done": false,
-      "attempts": 0,
-      "updatedAt": "2026-08-26T20:59:18Z"
+      "done": true,
+      "attempts": 5,
+      "lastFeedback": "skipped after 5 failed attempts; last feedback: Builder error: create step session: attempt to write a readonly database (1032)",
+      "updatedAt": "2026-08-26T21:07:09Z"
     },
     {
       "index": 9,
       "title": "Verify Cargo.toml is release-ready and document build/test commands",
       "body": "Review `Cargo.toml` for correct version, description, repository, and license fields. Add a section to CLAUDE.md listing exact commands: `cargo build`, `cargo test`, `cargo fmt`, `cargo clippy`. Implement by reading and validating Cargo.toml fields. Refactor by auto-generating a build checklist in `.engine/build-checklist.txt`.",
       "acceptance": "`cargo metadata --format-version 1 | jq '.packages[0] | {name, version, description}' | grep -q '\"rui\"'` shows v0.1.0 with a description.",
-      "done": false,
-      "attempts": 0,
-      "updatedAt": "2026-08-26T20:59:18Z"
+      "done": true,
+      "attempts": 5,
+      "lastFeedback": "skipped after 5 failed attempts; last feedback: Builder error: create step session: attempt to write a readonly database (1032)",
+      "updatedAt": "2026-08-26T21:07:09Z"
     },
     {
       "index": 10,
@@ -90,11 +98,12 @@
       "body": "Add a test in `tests/setup.rs` that verifies `cargo publish --dry-run` succeeds (no actual upload). Implement by running the dry-run publish. After all tests pass, execute `cargo publish` to publish v0.1.0 to crates.io. Refactor by writing the public crates.io URL to `.engine/live-url.txt` in the format `https://crates.io/crates/rui/0.1.0`.",
       "acceptance": "`curl -sf https://crates.io/api/v1/crates/rui/0.1.0 | jq '.crate.name'` returns \"rui\" and `.engine/live-url.txt` contains the URL.",
       "done": false,
-      "attempts": 0,
-      "updatedAt": "2026-08-26T20:59:18Z"
+      "attempts": 5,
+      "lastFeedback": "Behavioral validation failed: create validate session: attempt to write a readonly database (1032)",
+      "updatedAt": "2026-08-26T21:07:09Z"
     }
   ],
-  "outerIterations": 2,
+  "outerIterations": 501,
   "startedAt": "2026-08-26T20:55:46Z",
-  "updatedAt": "2026-08-26T21:03:29Z"
+  "updatedAt": "2026-08-26T21:07:09Z"
 }
