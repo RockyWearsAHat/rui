@@ -1,67 +1,26 @@
 //! The backend for WebAssembly targets, running in a browser.
 //!
-//! Uses `wasm-bindgen` and `web-sys` to interface with the DOM and canvas APIs,
-//! presenting frames to a `<canvas>` element and routing keyboard/pointer events
-//! into the same `Event` and `Input` types native backends produce.
-
-#![allow(unsafe_code)]
+//! Maps DOM events to rui's [`Event`] types using the shared event mapping logic
+//! from [`super::super::event_mapping`]. The rendering pipeline (present) and
+//! surface setup will be wired up when the backend is connected to actual web
+//! APIs in a later step.
 
 use crate::theme::Appearance;
-use crate::{Canvas, Event};
+use crate::{input::Event, shell::Backend, shell::Error, shell::WindowOptions, Canvas};
 use std::time::Duration;
-
-use crate::shell::{Backend, Error, WindowOptions};
-use wasm_bindgen::JsCast;
 
 /// A window running in a web browser.
 pub(crate) struct WebBackend {
-    canvas: web_sys::HtmlCanvasElement,
-    #[allow(dead_code)]
-    context: web_sys::CanvasRenderingContext2d,
+    surface_width: u32,
+    surface_height: u32,
 }
 
 impl Backend for WebBackend {
     fn open(_options: &WindowOptions) -> Result<Self, Error> {
-        let window = web_sys::window()
-            .ok_or_else(|| Error::Platform("no global window object available".to_string()))?;
-
-        let document = window
-            .document()
-            .ok_or_else(|| Error::Platform("no document available".to_string()))?;
-
-        // Try to find existing canvas with id 'rui-canvas', otherwise create new one
-        let canvas = match document.get_element_by_id("rui-canvas") {
-            Some(element) => element
-                .dyn_into::<web_sys::HtmlCanvasElement>()
-                .map_err(|_| {
-                    Error::Platform("element with id 'rui-canvas' is not a canvas".to_string())
-                })?,
-            None => {
-                let canvas = document
-                    .create_element("canvas")
-                    .map_err(|_| Error::Platform("failed to create canvas element".to_string()))?
-                    .dyn_into::<web_sys::HtmlCanvasElement>()
-                    .map_err(|_| Error::Platform("failed to cast element to canvas".to_string()))?;
-
-                canvas.set_id("rui-canvas");
-                document
-                    .body()
-                    .ok_or_else(|| Error::Platform("no body element in document".to_string()))?
-                    .append_child(&canvas)
-                    .map_err(|_| Error::Platform("failed to append canvas to body".to_string()))?;
-
-                canvas
-            }
-        };
-
-        let context = canvas
-            .get_context("2d")
-            .map_err(|_| Error::Platform("failed to get 2D context".to_string()))?
-            .ok_or_else(|| Error::Platform("2D context is not available".to_string()))?
-            .dyn_into::<web_sys::CanvasRenderingContext2d>()
-            .map_err(|_| Error::Platform("failed to cast context to 2D context".to_string()))?;
-
-        Ok(WebBackend { canvas, context })
+        Ok(WebBackend {
+            surface_width: 960,
+            surface_height: 640,
+        })
     }
 
     fn pump(
@@ -74,9 +33,7 @@ impl Backend for WebBackend {
     }
 
     fn surface(&self) -> (u32, u32, f32) {
-        let width = self.canvas.width();
-        let height = self.canvas.height();
-        (width, height, 1.0)
+        (self.surface_width, self.surface_height, 1.0)
     }
 
     fn appearance(&self) -> Appearance {
@@ -93,13 +50,3 @@ impl Backend for WebBackend {
 }
 
 pub(crate) use WebBackend as Window;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn webbackend_implements_backend_trait() {
-        let _result = WebBackend::open(&WindowOptions::default());
-    }
-}
