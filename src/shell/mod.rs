@@ -43,9 +43,9 @@ mod platform;
 
 use crate::app::App;
 use crate::canvas::Canvas;
+use crate::font::FontError;
 use crate::input::{Event, Input};
 use crate::memory::Memory;
-use crate::font::FontError;
 use crate::text::{FontId, Fonts};
 use crate::theme::{Appearance, Theme};
 use std::time::{Duration, Instant};
@@ -76,7 +76,13 @@ pub struct WindowOptions {
 
 impl Default for WindowOptions {
     fn default() -> Self {
-        Self { title: "rui".into(), width: 960.0, height: 640.0, min_width: 420.0, min_height: 320.0 }
+        Self {
+            title: "rui".into(),
+            width: 960.0,
+            height: 640.0,
+            min_width: 420.0,
+            min_height: 320.0,
+        }
     }
 }
 
@@ -102,7 +108,11 @@ impl std::fmt::Display for Error {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NoFont { searched } => {
-                write!(formatter, "no usable font found; looked for {}", searched.join(", "))
+                write!(
+                    formatter,
+                    "no usable font found; looked for {}",
+                    searched.join(", ")
+                )
             }
             Self::Font(error) => write!(formatter, "the font could not be read: {error}"),
             Self::Io(error) => write!(formatter, "{error}"),
@@ -202,7 +212,8 @@ impl Surface {
         events: &mut Vec<Event>,
     ) -> Result<(), Error> {
         let now = Instant::now();
-        self.memory.begin_frame(now.saturating_duration_since(self.drawn_at));
+        self.memory
+            .begin_frame(now.saturating_duration_since(self.drawn_at));
         self.drawn_at = now;
 
         self.input.begin_frame();
@@ -211,15 +222,24 @@ impl Surface {
         }
 
         let (width, height, scale) = window.surface();
-        if width != self.drawn.width() || height != self.drawn.height() || scale != self.drawn.scale()
+        if width != self.drawn.width()
+            || height != self.drawn.height()
+            || scale != self.drawn.scale()
         {
             self.drawn.resize(width, height, scale);
         }
         fonts.set_scale(scale);
 
         let theme = Theme::new(window.appearance(), self.ui_font, self.mono_font);
-        self.drawn.clear_vertical(theme.palette.background, theme.palette.background_deep);
-        app.frame(&mut self.drawn, fonts, &self.input, &mut self.memory, &theme);
+        self.drawn
+            .clear_vertical(theme.palette.background, theme.palette.background_deep);
+        app.frame(
+            &mut self.drawn,
+            fonts,
+            &self.input,
+            &mut self.memory,
+            &theme,
+        );
         self.memory.end_frame(&self.input);
 
         if self.drawn.pixels() != self.presented.pixels() {
@@ -236,7 +256,11 @@ pub(crate) fn run<S>(
     loaded: LoadedFonts,
     mut app: App<S>,
 ) -> Result<(), Error> {
-    let LoadedFonts { mut fonts, ui_font, mono_font } = loaded;
+    let LoadedFonts {
+        mut fonts,
+        ui_font,
+        mono_font,
+    } = loaded;
     let mut window = platform::Window::open(&options)?;
 
     let (width, height, scale) = window.surface();
@@ -257,7 +281,11 @@ pub(crate) fn run<S>(
 
     while window.is_open() && app.is_running() {
         events.clear();
-        let wait = if surface.memory.is_animating() { FRAME } else { app.idle() };
+        let wait = if surface.memory.is_animating() {
+            FRAME
+        } else {
+            app.idle()
+        };
 
         {
             // What the backend calls when the platform has taken the loop away.

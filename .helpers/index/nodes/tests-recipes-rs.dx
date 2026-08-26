@@ -1,0 +1,85 @@
+---
+id: tests/recipes.rs
+title: recipes.rs
+kind: file-index
+lang: rust
+rank: 0.004961
+links: [[src/element.rs]] [[src/testing/mod.rs]] [[src/widgets.rs]] [[src/paint.rs]] [[src/canvas.rs]] [[src/app.rs]] [[examples/controls.rs]] [[src/geom.rs]] [[src/lib.rs]] [[src/font/raster.rs]] [[src/input.rs]] [[src/text.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# tests/recipes.rs  ·  rust  ·  256 LOC
+
+## Symbols
+
+- `Settings` (class) — L21
+- `checkbox` (function) — L34
+- `switch` (function) — L50
+- `slider` (function) — L62
+- `radio_group` (function) — L79
+- `a_checkbox_answers_a_click_on_its_label_as_well_as_on_its_box` (function) — L110
+- `a_checkbox_draws_differently_once_it_is_ticked` (function) — L126
+- `a_switch_flips_and_moves_its_knob_when_it_does` (function) — L142
+- `a_slider_follows_the_pointer_and_the_arrow_keys_alike` (function) — L161
+- `a_slider_can_be_used_from_the_keyboard_without_ever_being_clicked` (function) — L180
+- `a_group_of_choices_takes_exactly_one_of_them` (function) — L191
+- `a_note_appears_when_the_pointer_arrives_and_goes_when_it_leaves` (function) — L207
+- `a_note_that_is_up_does_not_come_up_again_every_frame` (function) — L235
+- `Counted` (class) — L240
+
+## Graph
+
+```mermaid
+graph LR
+  c["recipes.rs"]
+  x0["element.rs"]
+  c --> x0
+  x1["mod.rs"]
+  c --> x1
+  x2["widgets.rs"]
+  c --> x2
+  x3["paint.rs"]
+  c --> x3
+  x4["canvas.rs"]
+  c --> x4
+  x5["app.rs"]
+  c --> x5
+  x6["controls.rs"]
+  x6 --> c
+  x7["geom.rs"]
+  c --> x7
+  x8["lib.rs"]
+  c --> x8
+  x9["raster.rs"]
+  c --> x9
+  x10["input.rs"]
+  c --> x10
+  x11["text.rs"]
+  c --> x11
+  x12["mod.rs"]
+  c --> x12
+  x13["outline.rs"]
+  c --> x13
+```
+
+### References
+
+- [[src/element.rs]] via `align`, `key`, `on_click`, `on_hover`, `fill`
+- [[src/testing/mod.rs]] via `text`, `key`, `find_key`, `canvas`, `frames`
+- [[src/widgets.rs]] via `text`, `caption`, `draw`, `col`, `panel`
+- [[src/paint.rs]] via `text`, `fill`, `canvas`, `draw`, `stroke`
+- [[src/canvas.rs]] via `fill`, `pixels`, `size`, `stroke`
+- [[src/app.rs]] via `size`, `frame`
+- [[src/geom.rs]] via `max_x`, `center`, `size`
+- [[src/lib.rs]] via `text`, `canvas`
+- [[src/font/raster.rs]] via `fill`
+- [[src/input.rs]] via `text`, `fraction`
+- [[src/text.rs]] via `draw`, `add`
+- [[src/shell/mod.rs]] via `draw`
+- [[src/font/outline.rs]] via `then`
+- [[src/theme.rs]] via `caption`
+
+### Referenced by
+
+- [[examples/controls.rs]] via `radio_group`, `switch`, `checkbox`, `slider`
+

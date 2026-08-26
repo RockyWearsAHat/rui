@@ -1,0 +1,113 @@
+---
+id: src/widgets.rs
+title: widgets.rs
+kind: file-index
+lang: rust
+rank: 0.070218
+links: [[src/element.rs]] [[tests/layout.rs]] [[examples/gallery.rs]] [[src/layout.rs]] [[tests/interaction.rs]] [[src/paint.rs]] [[tests/rendering.rs]] [[src/lib.rs]] [[tests/recipes.rs]] [[examples/controls.rs]] [[src/testing/mod.rs]] [[src/theme.rs]]
+generated_at: 2026-08-08T01:45:22.140Z
+---
+
+# src/widgets.rs  ·  rust  ·  467 LOC
+
+## Symbols
+
+- `col` (function) — L58
+- `row` (function) — L69
+- `spacer` (function) — L78
+- `text` (function) — L83
+- `title` (function) — L88
+- `heading` (function) — L97
+- `caption` (function) — L105
+- `micro` (function) — L110
+- `figure` (function) — L115
+- `code` (function) — L120
+- `paragraph` (function) — L125
+- `panel` (function) — L135
+- `divider` (function) — L145
+- `button` (function) — L155
+- `field` (function) — L171
+- `tag` (function) — L190
+- `dot` (function) — L206
+- `meter` (function) — L222
+- `draw` (function) — L249
+- `tabs` (function) — L266
+- `segmented` (function) — L296
+- `primary` (method) — L335
+- `danger` (method) — L347
+- `ghost` (method) — L355
+- `placeholder` (method) — L364
+- `align_self` (method) — L373
+- `center_text` (method) — L379
+- `section` (function) — L393
+- `field_row` (function) — L409
+- `tests` (module) — L414
+- `Nothing` (class) — L418
+- `a_placeholder_only_attaches_to_a_field` (method) — L421
+- `a_button_answers_the_pointer_and_takes_the_keyboard` (method) — L435
+- `the_emphases_of_a_button_differ_in_their_fill_rather_than_their_shape` (method) — L442
+- `a_tag_takes_both_of_a_status_colours_from_the_same_place` (method) — L454
+- `tabs_key_themselves_by_their_own_words` (method) — L461
+
+## Graph
+
+```mermaid
+graph LR
+  c["widgets.rs"]
+  x0["element.rs"]
+  x0 --> c
+  x1["layout.rs"]
+  x1 --> c
+  x2["gallery.rs"]
+  x2 --> c
+  x3["layout.rs"]
+  x3 --> c
+  x4["interaction.rs"]
+  x4 --> c
+  x5["paint.rs"]
+  x5 --> c
+  x6["rendering.rs"]
+  x6 --> c
+  x7["lib.rs"]
+  c --> x7
+  x8["recipes.rs"]
+  x8 --> c
+  x9["controls.rs"]
+  x9 --> c
+  x10["mod.rs"]
+  x10 --> c
+  x11["theme.rs"]
+  x11 --> c
+  x12["canvas.rs"]
+  c --> x12
+  x13["raster.rs"]
+  c --> x13
+```
+
+### References
+
+- [[src/lib.rs]] via `color`, `text`, `canvas`
+- [[src/canvas.rs]] via `shadow`, `stroke`, `fill`
+- [[src/font/raster.rs]] via `fill`
+- [[src/input.rs]] via `text`
+- [[src/style.rs]] via `grow`
+- [[src/geom.rs]] via `center`
+
+### Referenced by
+
+- [[src/element.rs]] via `col`, `text`, `button`, `border`, `text_align`
+- [[tests/layout.rs]] via `panel`, `col`, `text`, `row`, `spacer`
+- [[examples/gallery.rs]] via `ghost`, `spacer`, `micro`, `figure`, `dot`
+- [[src/layout.rs]] via `text`, `row`, `col`, `spacer`
+- [[tests/interaction.rs]] via `col`, `text`, `row`, `draw`, `field`
+- [[src/paint.rs]] via `field`, `text`, `draw`, `color`, `stroke`
+- [[tests/rendering.rs]] via `col`, `row`, `spacer`, `draw`, `button`
+- [[tests/recipes.rs]] via `text`, `caption`, `draw`, `col`, `panel`
+- [[examples/controls.rs]] via `panel`, `heading`, `caption`, `row`, `col`
+- [[src/testing/mod.rs]] via `button`, `text`, `col`, `key`, `canvas`
+- [[src/theme.rs]] via `figure`, `title`, `caption`, `heading`, `micro`
+- [[src/text.rs]] via `draw`, `add`, `wrap`
+- [[examples/counter.rs]] via `center_text`, `col`, `primary`, `row`, `button`
+- [[src/shell/mod.rs]] via `draw`
+- [[src/font/mod.rs]] via `field`
+

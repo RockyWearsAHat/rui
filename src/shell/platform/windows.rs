@@ -351,7 +351,12 @@ impl Backend for Window {
             ShowWindow(handle, SW_SHOW);
             UpdateWindow(handle);
 
-            let mut window = Self { handle, open: true, size: (1, 1), scale: 1.0 };
+            let mut window = Self {
+                handle,
+                open: true,
+                size: (1, 1),
+                scale: 1.0,
+            };
             window.refresh_geometry();
             Ok(window)
         }
@@ -413,7 +418,11 @@ impl Backend for Window {
                 &mut size,
             )
         };
-        if result == 0 && data == 0 { Appearance::Dark } else { Appearance::Light }
+        if result == 0 && data == 0 {
+            Appearance::Dark
+        } else {
+            Appearance::Light
+        }
     }
 
     fn present(&self, canvas: &Canvas) -> Result<(), Error> {
@@ -507,28 +516,38 @@ impl Window {
                     events.push(Event::PointerMoved(at));
                 }
             }
-            WM_LBUTTONDOWN => {
-                events.push(Event::PointerDown { position: position(), button: PointerButton::Primary })
-            }
-            WM_LBUTTONUP => {
-                events.push(Event::PointerUp { position: position(), button: PointerButton::Primary })
-            }
-            WM_RBUTTONDOWN => events
-                .push(Event::PointerDown { position: position(), button: PointerButton::Secondary }),
-            WM_RBUTTONUP => events
-                .push(Event::PointerUp { position: position(), button: PointerButton::Secondary }),
-            WM_MBUTTONDOWN => {
-                events.push(Event::PointerDown { position: position(), button: PointerButton::Middle })
-            }
-            WM_MBUTTONUP => {
-                events.push(Event::PointerUp { position: position(), button: PointerButton::Middle })
-            }
-            WM_MOUSEWHEEL => {
-                events.push(Event::Scrolled { x: 0.0, y: wheel_amount(message.word) })
-            }
-            WM_MOUSEHWHEEL => {
-                events.push(Event::Scrolled { x: wheel_amount(message.word), y: 0.0 })
-            }
+            WM_LBUTTONDOWN => events.push(Event::PointerDown {
+                position: position(),
+                button: PointerButton::Primary,
+            }),
+            WM_LBUTTONUP => events.push(Event::PointerUp {
+                position: position(),
+                button: PointerButton::Primary,
+            }),
+            WM_RBUTTONDOWN => events.push(Event::PointerDown {
+                position: position(),
+                button: PointerButton::Secondary,
+            }),
+            WM_RBUTTONUP => events.push(Event::PointerUp {
+                position: position(),
+                button: PointerButton::Secondary,
+            }),
+            WM_MBUTTONDOWN => events.push(Event::PointerDown {
+                position: position(),
+                button: PointerButton::Middle,
+            }),
+            WM_MBUTTONUP => events.push(Event::PointerUp {
+                position: position(),
+                button: PointerButton::Middle,
+            }),
+            WM_MOUSEWHEEL => events.push(Event::Scrolled {
+                x: 0.0,
+                y: wheel_amount(message.word),
+            }),
+            WM_MOUSEHWHEEL => events.push(Event::Scrolled {
+                x: wheel_amount(message.word),
+                y: 0.0,
+            }),
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 if let Some(key) = key_for_code(message.word as i32) {
                     events.push(Event::KeyDown { key, modifiers });
@@ -556,7 +575,10 @@ impl Window {
 
     /// The client size in logical units.
     fn logical_size(&self) -> (f32, f32) {
-        (self.size.0 as f32 / self.scale, self.size.1 as f32 / self.scale)
+        (
+            self.size.0 as f32 / self.scale,
+            self.size.1 as f32 / self.scale,
+        )
     }
 
     /// The pointer position a mouse message carries, in logical units.
@@ -666,7 +688,11 @@ mod tests {
     fn named_keys_come_from_their_virtual_codes() {
         assert_eq!(key_for_code(VK_ESCAPE), Some(Key::Escape));
         assert_eq!(key_for_code(VK_UP), Some(Key::Up));
-        assert_eq!(key_for_code(0x41), Some(Key::Character('a')), "letters arrive uppercase");
+        assert_eq!(
+            key_for_code(0x41),
+            Some(Key::Character('a')),
+            "letters arrive uppercase"
+        );
         assert_eq!(key_for_code(0x35), Some(Key::Character('5')));
         assert_eq!(key_for_code(0xFF), None);
     }
@@ -679,14 +705,24 @@ mod tests {
 
     #[test]
     fn a_pointer_left_of_the_window_reads_as_negative_not_as_sixty_five_thousand() {
-        let window = Window { handle: std::ptr::null_mut(), open: true, size: (100, 100), scale: 1.0 };
+        let window = Window {
+            handle: std::ptr::null_mut(),
+            open: true,
+            size: (100, 100),
+            scale: 1.0,
+        };
         let packed = (-4i16 as u16 as isize) | ((-9i16 as u16 as isize) << 16);
         assert_eq!(window.position_of(packed), Point::new(-4.0, -9.0));
     }
 
     #[test]
     fn pointer_positions_are_divided_by_the_display_scale() {
-        let window = Window { handle: std::ptr::null_mut(), open: true, size: (200, 200), scale: 2.0 };
+        let window = Window {
+            handle: std::ptr::null_mut(),
+            open: true,
+            size: (200, 200),
+            scale: 2.0,
+        };
         let packed = 40isize | (60isize << 16);
         assert_eq!(window.position_of(packed), Point::new(20.0, 30.0));
     }

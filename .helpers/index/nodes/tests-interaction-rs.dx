@@ -1,0 +1,87 @@
+---
+id: tests/interaction.rs
+title: interaction.rs
+kind: file-index
+lang: rust
+rank: 0.004736
+links: [[src/testing/mod.rs]] [[src/element.rs]] [[src/widgets.rs]] [[src/input.rs]] [[src/lib.rs]] [[src/paint.rs]] [[src/geom.rs]] [[src/memory.rs]] [[src/font/sfnt.rs]] [[src/text.rs]] [[src/app.rs]] [[src/canvas.rs]]
+generated_at: 2026-08-08T01:45:22.143Z
+---
+
+# tests/interaction.rs  ·  rust  ·  358 LOC
+
+## Symbols
+
+- `App` (class) — L16
+- `a_click_runs_the_handler_it_was_attached_to` (function) — L27
+- `holding_the_button_down_does_not_repeat_the_click` (function) — L40
+- `a_press_that_wanders_off_the_control_does_not_activate_it` (function) — L56
+- `a_disabled_control_ignores_the_pointer_entirely` (function) — L67
+- `only_the_topmost_thing_under_the_pointer_answers_it` (function) — L80
+- `a_drag_reports_where_the_pointer_is_for_as_long_as_it_is_held` (function) — L94
+- `a_drag_ends_where_it_is_released_and_not_before` (function) — L129
+- `a_focused_control_takes_keys_of_its_own` (function) — L149
+- `keys_reach_only_what_holds_the_keyboard` (function) — L162
+- `the_keyboard_can_reach_and_activate_a_control_with_no_pointer_at_all` (function) — L181
+- `the_wheel_reaches_a_control_that_asked_for_it` (function) — L203
+- `the_wheel_goes_to_the_innermost_list_rather_than_the_page_around_it` (function) — L217
+- `typing_into_a_field_reports_the_text_it_now_holds` (function) — L236
+- `an_unfocused_field_takes_no_typing` (function) — L254
+- `a_layer_is_drawn_over_what_it_was_opened_from_and_answers_the_pointer_first` (function) — L264
+- `a_row_scrolled_out_of_its_list_cannot_be_clicked` (function) — L307
+- `what_a_view_offers_can_be_asserted_without_drawing_anything_at_all` (function) — L340
+- `actions` (function) — L344
+
+## Graph
+
+```mermaid
+graph LR
+  c["interaction.rs"]
+  x0["mod.rs"]
+  c --> x0
+  x1["element.rs"]
+  c --> x1
+  x2["widgets.rs"]
+  c --> x2
+  x3["input.rs"]
+  c --> x3
+  x4["lib.rs"]
+  c --> x4
+  x5["paint.rs"]
+  c --> x5
+  x6["geom.rs"]
+  c --> x6
+  x7["memory.rs"]
+  c --> x7
+  x8["sfnt.rs"]
+  c --> x8
+  x9["text.rs"]
+  c --> x9
+  x10["app.rs"]
+  c --> x10
+  x11["canvas.rs"]
+  c --> x11
+  x12["raster.rs"]
+  c --> x12
+  x13["mod.rs"]
+  c --> x13
+```
+
+### References
+
+- [[src/testing/mod.rs]] via `click`, `frames`, `text`, `key`, `find`
+- [[src/element.rs]] via `on_scroll`, `key`, `on_input`, `add`, `disabled`
+- [[src/widgets.rs]] via `col`, `text`, `row`, `draw`, `field`
+- [[src/input.rs]] via `text`, `ended`, `fraction`, `scroll`
+- [[src/lib.rs]] via `text`
+- [[src/paint.rs]] via `text`, `draw`, `field`, `fill`
+- [[src/geom.rs]] via `center`
+- [[src/memory.rs]] via `press`
+- [[src/font/sfnt.rs]] via `find`
+- [[src/text.rs]] via `add`, `draw`
+- [[src/app.rs]] via `frame`
+- [[src/canvas.rs]] via `fill`
+- [[src/font/raster.rs]] via `fill`
+- [[src/shell/mod.rs]] via `draw`
+- [[src/font/outline.rs]] via `then`
+

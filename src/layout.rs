@@ -51,7 +51,10 @@ const UNBOUNDED: f32 = 1.0e6;
 /// are decided by the same walk — an element's identity is its path through the
 /// tree, and its rectangle is what its parent gave it.
 pub(crate) fn solve<S>(root: &mut El<S>, bounds: Rect, ctx: &Ctx<'_>, memory: &mut Memory) {
-    debug_assert_eq!(ctx.bounds, bounds, "layers are held inside the bounds laid out in");
+    debug_assert_eq!(
+        ctx.bounds, bounds,
+        "layers are held inside the bounds laid out in"
+    );
     root.id = Id::ROOT;
     root.ink = root.style.ink.over(Ink::default());
     place(root, bounds, ctx, memory);
@@ -67,10 +70,12 @@ fn measure<S>(el: &mut El<S>, avail: Size, ctx: &Ctx<'_>) -> Size {
     // against the offer and then shrinking to the stated width is how a
     // paragraph comes out one line tall and three lines long.
     let stated = Size::new(
-        stated_length(el.style.width, avail.w)
-            .map_or(avail.w, |width| width.clamp(el.style.min_width, el.style.max_width)),
-        stated_length(el.style.height, avail.h)
-            .map_or(avail.h, |height| height.clamp(el.style.min_height, el.style.max_height)),
+        stated_length(el.style.width, avail.w).map_or(avail.w, |width| {
+            width.clamp(el.style.min_width, el.style.max_width)
+        }),
+        stated_length(el.style.height, avail.h).map_or(avail.h, |height| {
+            height.clamp(el.style.min_height, el.style.max_height)
+        }),
     );
     let inner = Size::new(
         (stated.w - padding.horizontal()).max(0.0),
@@ -79,9 +84,7 @@ fn measure<S>(el: &mut El<S>, avail: Size, ctx: &Ctx<'_>) -> Size {
 
     let content = match &el.node {
         Node::Text(text) => measure_text(text, el, inner, ctx),
-        Node::Field { .. } => {
-            Size::new(inner.w.min(FIELD_WIDTH), ctx.theme.metrics.control_height)
-        }
+        Node::Field { .. } => Size::new(inner.w.min(FIELD_WIDTH), ctx.theme.metrics.control_height),
         Node::Draw { intrinsic, .. } => *intrinsic,
         Node::Stack => measure_stack(el, inner, ctx),
     };
@@ -105,7 +108,10 @@ fn measure_text<S>(text: &str, el: &El<S>, inner: Size, ctx: &Ctx<'_>) -> Size {
     }
     let width = wrap_width(el, inner);
     let lines = ctx.fonts.wrap(&style, text, width).len().max(1);
-    Size::new(width.min(ctx.fonts.measure(&style, text)), lines as f32 * line_height)
+    Size::new(
+        width.min(ctx.fonts.measure(&style, text)),
+        lines as f32 * line_height,
+    )
 }
 
 /// The width wrapped text is measured against.
@@ -133,7 +139,11 @@ fn measure_stack<S>(el: &mut El<S>, inner: Size, ctx: &Ctx<'_>) -> Size {
         return measure_flow(el, inner, ctx);
     }
     let axis = el.style.axis;
-    let offered = if el.scrolls { Size::new(inner.w, UNBOUNDED) } else { inner };
+    let offered = if el.scrolls {
+        Size::new(inner.w, UNBOUNDED)
+    } else {
+        inner
+    };
 
     let mut main = 0.0_f32;
     let mut cross = 0.0_f32;
@@ -179,7 +189,10 @@ fn measure_flow<S>(el: &mut El<S>, inner: Size, ctx: &Ctx<'_>) -> Size {
         .iter()
         .map(|line| line_width(&sizes[line.clone()], gap))
         .fold(0.0_f32, f32::max);
-    let height: f32 = lines.iter().map(|line| line_height(&sizes[line.clone()])).sum();
+    let height: f32 = lines
+        .iter()
+        .map(|line| line_height(&sizes[line.clone()]))
+        .sum();
     let gaps = gap * lines.len().saturating_sub(1) as f32;
     Size::new(widest, height + gaps)
 }
@@ -252,12 +265,19 @@ fn place<S>(el: &mut El<S>, rect: Rect, ctx: &Ctx<'_>, memory: &mut Memory) {
 /// Everything except the layers, which are placed against the parent's edge
 /// afterwards and take no room from it.
 fn in_flow<S>(el: &El<S>) -> Vec<usize> {
-    (0..el.children.len()).filter(|&index| el.children[index].style.layer.is_none()).collect()
+    (0..el.children.len())
+        .filter(|&index| el.children[index].style.layer.is_none())
+        .collect()
 }
 
 /// Divides `content` between the children along the container's own axis.
 fn stack<S>(el: &mut El<S>, content: Rect, ctx: &Ctx<'_>, memory: &mut Memory) {
-    let (axis, gap, justify, align) = (el.style.axis, el.style.gap, el.style.justify, el.style.align);
+    let (axis, gap, justify, align) = (
+        el.style.axis,
+        el.style.gap,
+        el.style.justify,
+        el.style.align,
+    );
     let offered = if el.scrolls {
         Size::new(content.w, UNBOUNDED)
     } else {
@@ -395,7 +415,12 @@ fn layers<S>(el: &mut El<S>, anchor: Rect, ctx: &Ctx<'_>, memory: &mut Memory) {
             Anchor::Over => anchor.size(),
             _ => measure(child, window.size(), ctx),
         };
-        place(child, anchored(placement, anchor, size, window), ctx, memory);
+        place(
+            child,
+            anchored(placement, anchor, size, window),
+            ctx,
+            memory,
+        );
     }
 }
 
@@ -637,14 +662,21 @@ mod tests {
     /// which font the machine running the test happens to have is not a property
     /// worth asserting.
     fn context() -> (Fonts, Theme) {
-        (Fonts::new(), Theme::new(crate::theme::Appearance::Dark, FontId::FIRST, FontId::FIRST))
+        (
+            Fonts::new(),
+            Theme::new(crate::theme::Appearance::Dark, FontId::FIRST, FontId::FIRST),
+        )
     }
 
     /// Lays a tree out in a rectangle and answers it, ready to be inspected.
     fn laid_out(mut tree: El<Nothing>, width: f32, height: f32) -> El<Nothing> {
         let (fonts, theme) = context();
         let bounds = Rect::new(0.0, 0.0, width, height);
-        let ctx = Ctx { fonts: &fonts, theme: &theme, bounds };
+        let ctx = Ctx {
+            fonts: &fonts,
+            theme: &theme,
+            bounds,
+        };
         let mut memory = Memory::new();
         solve(&mut tree, bounds, &ctx, &mut memory);
         tree
@@ -671,7 +703,11 @@ mod tests {
         // 200 spare, split one part to three.
         assert_eq!(tree.children[1].rect.w, 50.0);
         assert_eq!(tree.children[2].rect.w, 150.0);
-        assert_eq!(tree.children[2].rect.max_x(), 240.0, "the row should be filled exactly");
+        assert_eq!(
+            tree.children[2].rect.max_x(),
+            240.0,
+            "the row should be filled exactly"
+        );
     }
 
     #[test]
@@ -682,11 +718,22 @@ mod tests {
 
     #[test]
     fn a_child_that_grows_leaves_nothing_for_justification_to_move() {
-        let packed = laid_out(row((spacer().w(20.0), spacer().w(20.0))).justify(Justify::End), 100.0, 10.0);
+        let packed = laid_out(
+            row((spacer().w(20.0), spacer().w(20.0))).justify(Justify::End),
+            100.0,
+            10.0,
+        );
         assert_eq!(packed.children[0].rect.x, 60.0);
 
-        let filled = laid_out(row((spacer().grow(), spacer().w(20.0))).justify(Justify::End), 100.0, 10.0);
-        assert_eq!(filled.children[0].rect.x, 0.0, "a filler already took the spare room");
+        let filled = laid_out(
+            row((spacer().grow(), spacer().w(20.0))).justify(Justify::End),
+            100.0,
+            10.0,
+        );
+        assert_eq!(
+            filled.children[0].rect.x, 0.0,
+            "a filler already took the spare room"
+        );
     }
 
     #[test]
@@ -712,10 +759,18 @@ mod tests {
 
     #[test]
     fn alignment_places_a_child_across_the_stacking_axis() {
-        let tree = laid_out(col(spacer().size(20.0, 10.0)).align(Align::Center), 100.0, 100.0);
+        let tree = laid_out(
+            col(spacer().size(20.0, 10.0)).align(Align::Center),
+            100.0,
+            100.0,
+        );
         assert_eq!(tree.children[0].rect.x, 40.0);
 
-        let tree = laid_out(col(spacer().size(20.0, 10.0)).align(Align::End), 100.0, 100.0);
+        let tree = laid_out(
+            col(spacer().size(20.0, 10.0)).align(Align::End),
+            100.0,
+            100.0,
+        );
         assert_eq!(tree.children[0].rect.x, 80.0);
     }
 
@@ -733,9 +788,20 @@ mod tests {
 
     #[test]
     fn identity_follows_the_key_rather_than_the_position() {
-        let first = laid_out(col((text("a").key("alpha"), text("b").key("beta"))), 100.0, 100.0);
-        let swapped = laid_out(col((text("b").key("beta"), text("a").key("alpha"))), 100.0, 100.0);
-        assert_eq!(first.children[0].id, swapped.children[1].id, "the keyed row kept its identity");
+        let first = laid_out(
+            col((text("a").key("alpha"), text("b").key("beta"))),
+            100.0,
+            100.0,
+        );
+        let swapped = laid_out(
+            col((text("b").key("beta"), text("a").key("alpha"))),
+            100.0,
+            100.0,
+        );
+        assert_eq!(
+            first.children[0].id, swapped.children[1].id,
+            "the keyed row kept its identity"
+        );
     }
 
     #[test]
@@ -748,18 +814,32 @@ mod tests {
     #[test]
     fn a_scrolling_area_remembers_how_tall_its_contents_came_out() {
         let (fonts, theme) = context();
-        let ctx = Ctx { fonts: &fonts, theme: &theme, bounds: Rect::new(0.0, 0.0, 100.0, 100.0) };
+        let ctx = Ctx {
+            fonts: &fonts,
+            theme: &theme,
+            bounds: Rect::new(0.0, 0.0, 100.0, 100.0),
+        };
         let mut memory = Memory::new();
         let mut tree: El<Nothing> =
             col((0..10).map(|_| spacer().h(30.0)).collect::<Vec<_>>()).scroll();
 
-        solve(&mut tree, Rect::new(0.0, 0.0, 100.0, 100.0), &ctx, &mut memory);
+        solve(
+            &mut tree,
+            Rect::new(0.0, 0.0, 100.0, 100.0),
+            &ctx,
+            &mut memory,
+        );
         assert_eq!(memory.content_height(tree.id), 300.0);
 
         // Scrolled further than there is content: the offset is held at the end
         // rather than letting the list be dragged off the top of its own frame.
         memory.set_scroll_offset(tree.id, 900.0);
-        solve(&mut tree, Rect::new(0.0, 0.0, 100.0, 100.0), &ctx, &mut memory);
+        solve(
+            &mut tree,
+            Rect::new(0.0, 0.0, 100.0, 100.0),
+            &ctx,
+            &mut memory,
+        );
         assert_eq!(memory.scroll_offset(tree.id), 200.0);
         assert_eq!(tree.children[0].rect.y, -200.0);
     }
@@ -769,10 +849,17 @@ mod tests {
         // Without a face loaded every glyph is nothing wide, so a wrapped run is
         // one line; what this pins is that the height comes from the line count
         // and the tree still lays out rather than producing a NaN.
-        let tree = laid_out(col(text("a paragraph of prose").wrap()).pad(8.0), 120.0, 200.0);
+        let tree = laid_out(
+            col(text("a paragraph of prose").wrap()).pad(8.0),
+            120.0,
+            200.0,
+        );
         let paragraph = &tree.children[0];
         assert!(paragraph.rect.h >= 0.0);
-        assert_eq!(paragraph.rect.w, 104.0, "a wrapping run fills the width it was offered");
+        assert_eq!(
+            paragraph.rect.w, 104.0,
+            "a wrapping run fills the width it was offered"
+        );
     }
 
     #[test]

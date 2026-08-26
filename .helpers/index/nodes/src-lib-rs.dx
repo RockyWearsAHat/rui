@@ -1,0 +1,86 @@
+---
+id: src/lib.rs
+title: lib.rs
+kind: file-index
+lang: rust
+rank: 0.02355
+links: [[tests/layout.rs]] [[src/widgets.rs]] [[tests/rendering.rs]] [[src/element.rs]] [[src/layout.rs]] [[tests/interaction.rs]] [[src/theme.rs]] [[tests/recipes.rs]] [[examples/gallery.rs]] [[src/paint.rs]] [[examples/icon.rs]] [[examples/controls.rs]]
+generated_at: 2026-08-08T01:45:22.141Z
+---
+
+# src/lib.rs  ·  rust  ·  164 LOC
+
+## Symbols
+
+- `app` (module) — L109
+- `canvas` (module) — L110
+- `color` (module) — L111
+- `element` (module) — L112
+- `font` (module) — L113
+- `geom` (module) — L114
+- `image` (module) — L115
+- `input` (module) — L116
+- `layout` (module) — L117
+- `memory` (module) — L118
+- `paint` (module) — L119
+- `shell` (module) — L120
+- `style` (module) — L121
+- `testing` (module) — L122
+- `text` (module) — L123
+- `theme` (module) — L124
+- `widgets` (module) — L125
+- `text` (macro) — L152
+- `code` (macro) — L160
+
+## Graph
+
+```mermaid
+graph LR
+  c["lib.rs"]
+  x0["layout.rs"]
+  x0 --> c
+  x1["widgets.rs"]
+  x1 --> c
+  x2["rendering.rs"]
+  x2 --> c
+  x3["element.rs"]
+  x3 --> c
+  x4["layout.rs"]
+  x4 --> c
+  x5["interaction.rs"]
+  x5 --> c
+  x6["theme.rs"]
+  x6 --> c
+  x7["recipes.rs"]
+  x7 --> c
+  x8["gallery.rs"]
+  x8 --> c
+  x9["paint.rs"]
+  x9 --> c
+  x10["icon.rs"]
+  x10 --> c
+  x11["controls.rs"]
+  x11 --> c
+  x12["mod.rs"]
+  x12 --> c
+  x13["fonts.rs"]
+  x13 --> c
+```
+
+### Referenced by
+
+- [[tests/layout.rs]] via `text`
+- [[src/widgets.rs]] via `color`, `text`, `canvas`
+- [[tests/rendering.rs]] via `canvas`, `text`
+- [[src/element.rs]] via `text`
+- [[src/layout.rs]] via `color`, `text`, `style`
+- [[tests/interaction.rs]] via `text`
+- [[src/theme.rs]] via `theme`
+- [[tests/recipes.rs]] via `text`, `canvas`
+- [[examples/gallery.rs]] via `canvas`, `color`, `code`
+- [[src/paint.rs]] via `color`, `paint`, `text`, `style`
+- [[examples/icon.rs]] via `canvas`, `color`
+- [[examples/controls.rs]] via `code`, `text`
+- [[src/testing/mod.rs]] via `text`
+- [[src/shell/fonts.rs]] via `font`
+

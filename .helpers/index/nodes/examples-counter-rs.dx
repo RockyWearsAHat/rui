@@ -1,0 +1,40 @@
+---
+id: examples/counter.rs
+title: counter.rs
+kind: file-index
+lang: rust
+rank: 0.004736
+links: [[src/element.rs]] [[src/widgets.rs]] [[src/geom.rs]] [[src/theme.rs]]
+generated_at: 2026-08-08T01:45:22.143Z
+---
+
+# examples/counter.rs  ·  rust  ·  30 LOC
+
+## Symbols
+
+- `Counter` (class) — L8
+- `view` (function) — L13
+- `main` (function) — L28
+
+## Graph
+
+```mermaid
+graph LR
+  c["counter.rs"]
+  x0["element.rs"]
+  c --> x0
+  x1["widgets.rs"]
+  c --> x1
+  x2["geom.rs"]
+  c --> x2
+  x3["theme.rs"]
+  c --> x3
+```
+
+### References
+
+- [[src/element.rs]] via `pad`, `gap`, `bold`, `on_click`, `text_size`
+- [[src/widgets.rs]] via `center_text`, `col`, `primary`, `row`, `button`
+- [[src/geom.rs]] via `center`
+- [[src/theme.rs]] via `title`
+

@@ -297,7 +297,13 @@ pub struct Ink {
 
 impl Default for Ink {
     fn default() -> Self {
-        Self { size: crate::widgets::BODY_SIZE, tone: Tone::Text, face: Face::Ui, tracking: 0.0, bold: false }
+        Self {
+            size: crate::widgets::BODY_SIZE,
+            tone: Tone::Text,
+            face: Face::Ui,
+            tracking: 0.0,
+            bold: false,
+        }
     }
 }
 
@@ -308,8 +314,7 @@ impl Ink {
             Face::Ui => theme.ui_font,
             Face::Mono => theme.mono_font,
         };
-        TextStyle::new(font, self.size, self.tone.resolve(theme))
-            .tracked(self.tracking)
+        TextStyle::new(font, self.size, self.tone.resolve(theme)).tracked(self.tracking)
     }
 }
 
@@ -490,7 +495,10 @@ mod tests {
         use crate::text::FontId;
         let font = FontId::FIRST;
         let brand = Color::rgb(0x7c, 0x3a, 0xed);
-        for appearance in [crate::theme::Appearance::Light, crate::theme::Appearance::Dark] {
+        for appearance in [
+            crate::theme::Appearance::Light,
+            crate::theme::Appearance::Dark,
+        ] {
             let theme = Theme::new(appearance, font, font);
             assert_eq!(Tone::Exact(brand).resolve(&theme), brand);
         }
@@ -498,10 +506,20 @@ mod tests {
 
     #[test]
     fn unset_text_properties_come_from_the_parent() {
-        let inherited = Ink { size: 20.0, tone: Tone::Muted, ..Ink::default() };
-        let child = InkOverride { tone: Some(Tone::Accent), ..InkOverride::default() };
+        let inherited = Ink {
+            size: 20.0,
+            tone: Tone::Muted,
+            ..Ink::default()
+        };
+        let child = InkOverride {
+            tone: Some(Tone::Accent),
+            ..InkOverride::default()
+        };
         let resolved = child.over(inherited);
-        assert_eq!(resolved.size, 20.0, "the size was not overridden, so it should carry down");
+        assert_eq!(
+            resolved.size, 20.0,
+            "the size was not overridden, so it should carry down"
+        );
         assert_eq!(resolved.tone, Tone::Accent);
     }
 

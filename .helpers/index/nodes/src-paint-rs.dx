@@ -1,0 +1,127 @@
+---
+id: src/paint.rs
+title: paint.rs
+kind: file-index
+lang: rust
+rank: 0.031623
+links: [[src/canvas.rs]] [[src/text.rs]] [[src/widgets.rs]] [[src/layout.rs]] [[src/input.rs]] [[src/style.rs]] [[src/element.rs]] [[examples/controls.rs]] [[tests/layout.rs]] [[src/geom.rs]] [[src/memory.rs]] [[tests/rendering.rs]]
+generated_at: 2026-08-08T01:45:22.141Z
+---
+
+# src/paint.rs  ·  rust  ·  862 LOC
+
+## Symbols
+
+- `Deferred` (class) — L31
+- `Visual` (class) — L42
+- `Painter` (class) — L62
+- `new` (method) — L76
+- `visual` (method) — L81
+- `canvas` (method) — L86
+- `fonts` (method) — L91
+- `theme` (method) — L96
+- `color` (method) — L101
+- `fill` (method) — L106
+- `stroke` (method) — L113
+- `text` (method) — L120
+- `Frame` (class) — L127
+- `Hit` (class) — L145
+- `render` (function) — L167
+- `resolve_hit` (function) — L199
+- `probe` (function) — L212
+- `draw` (function) — L242
+- `interact` (function) — L322
+- `decorate` (function) — L401
+- `surface` (function) — L446
+- `content` (function) — L475
+- `field` (function) — L533
+- `Edit` (class) — L599
+- `apply_edits` (function) — L607
+- `scrollbar` (function) — L648
+- `draw_line` (function) — L683
+- `draw_wrapped` (function) — L708
+- `corner_of` (function) — L736
+- `lift` (function) — L751
+- `clamp_to_boundary` (function) — L761
+- `previous_boundary` (function) — L770
+- `next_boundary` (function) — L776
+- `end_of` (function) — L786
+- `tests` (module) — L791
+- `lifting_moves_a_light_colour_darker_and_a_dark_one_lighter` (method) — L795
+- `a_press_lifts_further_than_a_hover` (method) — L803
+- `an_untouched_colour_is_left_exactly_alone` (method) — L809
+- `caret_movement_lands_on_character_boundaries_in_multibyte_text` (method) — L815
+- `an_offset_inside_a_character_is_pulled_back_to_its_start` (method) — L828
+- `typing_inserts_at_the_caret_and_moves_it_along` (method) — L834
+- `backspace_at_the_start_of_a_field_changes_nothing` (method) — L849
+
+## Graph
+
+```mermaid
+graph LR
+  c["paint.rs"]
+  x0["canvas.rs"]
+  x0 --> c
+  x1["text.rs"]
+  c --> x1
+  x2["widgets.rs"]
+  c --> x2
+  x3["layout.rs"]
+  x3 --> c
+  x4["input.rs"]
+  c --> x4
+  x5["style.rs"]
+  c --> x5
+  x6["element.rs"]
+  x6 --> c
+  x7["controls.rs"]
+  x7 --> c
+  x8["layout.rs"]
+  x8 --> c
+  x9["geom.rs"]
+  c --> x9
+  x10["memory.rs"]
+  c --> x10
+  x11["rendering.rs"]
+  x11 --> c
+  x12["theme.rs"]
+  c --> x12
+  x13["recipes.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/text.rs]] via `resolve`, `len`, `is_empty`, `colored`, `measure`
+- [[src/widgets.rs]] via `field`, `text`, `draw`, `color`, `stroke`
+- [[src/input.rs]] via `begin_frame`, `is_empty`, `key_pressed`, `pressed`, `released`
+- [[src/style.rs]] via `resolve`, `has_decoration`, `is_empty`, `style`, `offset`
+- [[src/geom.rs]] via `max_y`, `is_empty`, `max_x`, `contains`, `inset`
+- [[src/memory.rs]] via `press`, `set_following`, `begin_frame`, `set_scroll_offset`, `active`
+- [[src/theme.rs]] via `corner`, `corner_small`, `theme`
+- [[src/testing/mod.rs]] via `press`, `scroll_offset`, `probe`, `focused`, `text`
+- [[src/color.rs]] via `fade`, `mix`, `is_visible`, `luminance`
+- [[src/shell/mod.rs]] via `draw`, `surface`
+- [[src/lib.rs]] via `color`, `paint`, `text`, `style`
+- [[src/font/outline.rs]] via `bounds`, `then`, `apply`
+- [[src/shell/platform/macos.rs]] via `surface`, `translate`
+- [[src/shell/platform/windows.rs]] via `surface`, `translate`
+- [[src/shell/platform/x11.rs]] via `surface`, `translate`
+- [[src/shell/platform/unsupported.rs]] via `surface`
+
+### Referenced by
+
+- [[src/canvas.rs]] via `stroke`, `fill`, `fill_rect`, `is_empty`, `shadow`
+- [[src/layout.rs]] via `color`, `text`, `resolve`, `line_height`, `scroll_offset`
+- [[src/element.rs]] via `text`, `color`, `interactive`, `fill`, `shadow`
+- [[examples/controls.rs]] via `render`, `fill`, `visual`, `stroke`, `draw`
+- [[tests/layout.rs]] via `text`
+- [[tests/rendering.rs]] via `draw`, `fill`, `visual`, `canvas`, `text`
+- [[tests/recipes.rs]] via `text`, `fill`, `canvas`, `draw`, `stroke`
+- [[examples/gallery.rs]] via `fill`, `render`, `canvas`, `field`, `draw`
+- [[tests/interaction.rs]] via `text`, `draw`, `field`, `fill`
+- [[src/font/mod.rs]] via `field`, `line_height`, `metrics`
+- [[src/font/raster.rs]] via `fill`
+- [[examples/icon.rs]] via `canvas`, `color`, `fill`
+- [[src/testing/font.rs]] via `render`
+

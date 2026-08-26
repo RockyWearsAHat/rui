@@ -1,0 +1,39 @@
+{
+  "projectPath": "/Users/alexwaldmann/Desktop/rui",
+  "type": "web-app",
+  "doneDefinition": [
+    "UBIQUITOUS LANGUAGE (the project's shared vocabulary — use these exact terms):",
+    "=== PROJECT DOCUMENTS (dx, searched for this step) ===",
+    "dx#now-worklist]",
+    "- [ ] Add a `wasm32-unknown-unknown` backend under `src/shell/platform/` (a new `wasm",
+    "rs`, gated in `platform/mod",
+    "rs` next to `macos"
+  ],
+  "deployTarget": "local",
+  "verification": {
+    "usesPlaywright": true,
+    "startCmd": "pnpm dev",
+    "checkURL": "http://localhost:3000",
+    "port": 3000,
+    "checkCmds": null
+  },
+  "liveCheckCmd": "curl -sf http://localhost:3000",
+  "executionIntent": {
+    "publishIntent": "explicit",
+    "publishEvidence": [
+      {
+        "source": "request",
+        "excerpt": "2. GREEN: write the minimum production code that makes the test pass. Run the test again — confirm it now passes.",
+        "capturedAt": "2026-08-26T21:03:29Z"
+      }
+    ]
+  },
+  "workingBehaviors": [
+    "User can ubiquitous language (the project's shared vocabulary — use these exact terms):",
+    "User can === project documents (dx, searched for this step) ===",
+    "User can dx#now-worklist]",
+    "User can - [ ] add a `wasm32-unknown-unknown` backend under `src/shell/platform/` (a new `wasm",
+    "User can rs`, gated in `platform/mod",
+    "User can rs` next to `macos"
+  ]
+}

@@ -159,7 +159,8 @@ impl<S: 'static> Harness<S> {
     /// Draws at this size, in logical units.
     pub fn size(mut self, width: f32, height: f32) -> Self {
         let scale = self.canvas.scale();
-        self.canvas.resize((width * scale) as u32, (height * scale) as u32, scale);
+        self.canvas
+            .resize((width * scale) as u32, (height * scale) as u32, scale);
         self
     }
 
@@ -170,7 +171,8 @@ impl<S: 'static> Harness<S> {
     /// only stay in step because exactly one place multiplies.
     pub fn scale(mut self, scale: f32) -> Self {
         let bounds = self.canvas.bounds();
-        self.canvas.resize((bounds.w * scale) as u32, (bounds.h * scale) as u32, scale);
+        self.canvas
+            .resize((bounds.w * scale) as u32, (bounds.h * scale) as u32, scale);
         self
     }
 
@@ -203,7 +205,8 @@ impl<S: 'static> Harness<S> {
 
         self.fonts.fonts.set_scale(self.canvas.scale());
         let theme = Theme::new(self.appearance, self.fonts.ui_font, self.fonts.mono_font);
-        self.canvas.clear_vertical(theme.palette.background, theme.palette.background_deep);
+        self.canvas
+            .clear_vertical(theme.palette.background, theme.palette.background_deep);
 
         self.memory.begin_frame(self.elapsed);
         let mut probes = Vec::new();
@@ -249,21 +252,37 @@ impl<S: 'static> Harness<S> {
 
     /// Presses and releases at a point, and draws the frame that answers.
     pub fn click(&mut self, at: Point) -> &mut Self {
-        self.event(Event::PointerDown { position: at, button: PointerButton::Primary })
-            .event(Event::PointerUp { position: at, button: PointerButton::Primary })
-            .frame()
+        self.event(Event::PointerDown {
+            position: at,
+            button: PointerButton::Primary,
+        })
+        .event(Event::PointerUp {
+            position: at,
+            button: PointerButton::Primary,
+        })
+        .frame()
     }
 
     /// The same with the secondary button.
     pub fn secondary_click(&mut self, at: Point) -> &mut Self {
-        self.event(Event::PointerDown { position: at, button: PointerButton::Secondary })
-            .event(Event::PointerUp { position: at, button: PointerButton::Secondary })
-            .frame()
+        self.event(Event::PointerDown {
+            position: at,
+            button: PointerButton::Secondary,
+        })
+        .event(Event::PointerUp {
+            position: at,
+            button: PointerButton::Secondary,
+        })
+        .frame()
     }
 
     /// Presses the pointer down and holds it, without releasing.
     pub fn press(&mut self, at: Point) -> &mut Self {
-        self.event(Event::PointerDown { position: at, button: PointerButton::Primary }).frame()
+        self.event(Event::PointerDown {
+            position: at,
+            button: PointerButton::Primary,
+        })
+        .frame()
     }
 
     /// Moves the pointer while it is held down: one frame of a drag.
@@ -274,7 +293,11 @@ impl<S: 'static> Harness<S> {
     /// Lets go where the pointer now is.
     pub fn release(&mut self) -> &mut Self {
         let at = self.input.pointer();
-        self.event(Event::PointerUp { position: at, button: PointerButton::Primary }).frame()
+        self.event(Event::PointerUp {
+            position: at,
+            button: PointerButton::Primary,
+        })
+        .frame()
     }
 
     /// A whole drag: press at `from`, move to `to`, and let go.
@@ -353,13 +376,19 @@ impl<S: 'static> Harness<S> {
     /// The whole record of whatever shows this text.
     pub fn find(&mut self, text: &str) -> Option<Probe> {
         self.ensure_drawn();
-        self.probes.iter().find(|probe| probe.text.as_deref() == Some(text)).cloned()
+        self.probes
+            .iter()
+            .find(|probe| probe.text.as_deref() == Some(text))
+            .cloned()
     }
 
     /// The record of whatever was named with this key.
     pub fn find_key(&mut self, key: &str) -> Option<Probe> {
         self.ensure_drawn();
-        self.probes.iter().find(|probe| probe.key.as_deref() == Some(key)).cloned()
+        self.probes
+            .iter()
+            .find(|probe| probe.key.as_deref() == Some(key))
+            .cloned()
     }
 
     /// Whether anything on screen shows this text.
@@ -374,7 +403,10 @@ impl<S: 'static> Harness<S> {
     /// which should not be there is not.
     pub fn text(&mut self) -> Vec<String> {
         self.ensure_drawn();
-        self.probes.iter().filter_map(|probe| probe.text.clone()).collect()
+        self.probes
+            .iter()
+            .filter_map(|probe| probe.text.clone())
+            .collect()
     }
 
     /// Every element the last frame drew, in the order it drew them.
@@ -404,7 +436,10 @@ impl<S: 'static> Harness<S> {
             return None;
         }
         let index = (y * self.canvas.width() + x) as usize;
-        self.canvas.pixels().get(index).map(|&word| Color::from_argb(word))
+        self.canvas
+            .pixels()
+            .get(index)
+            .map(|&word| Color::from_argb(word))
     }
 
     /// Whether anything was drawn inside a rectangle, over the window's own
@@ -418,7 +453,12 @@ impl<S: 'static> Harness<S> {
     pub fn marked(&self, rect: Rect) -> bool {
         let ground = self.ground();
         let scale = self.canvas.scale();
-        let device = Rect::new(rect.x * scale, rect.y * scale, rect.w * scale, rect.h * scale);
+        let device = Rect::new(
+            rect.x * scale,
+            rect.y * scale,
+            rect.w * scale,
+            rect.h * scale,
+        );
 
         for y in device.y.max(0.0) as u32..(device.max_y() as u32).min(self.canvas.height()) {
             for x in device.x.max(0.0) as u32..(device.max_x() as u32).min(self.canvas.width()) {
@@ -460,7 +500,10 @@ impl<S: 'static> Harness<S> {
             &crate::image::rgba(&self.canvas),
         )
         .ok_or_else(|| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, "the frame could not be encoded")
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "the frame could not be encoded",
+            )
         })?;
         std::fs::write(path, bytes)
     }
@@ -531,7 +574,11 @@ pub fn test_fonts() -> LoadedFonts {
     let mut fonts = Fonts::new();
     let ui_font = fonts.add(font::test_font());
     let mono_font = fonts.add(font::test_font());
-    LoadedFonts { fonts, ui_font, mono_font }
+    LoadedFonts {
+        fonts,
+        ui_font,
+        mono_font,
+    }
 }
 
 #[cfg(test)]
@@ -563,8 +610,15 @@ mod tests {
     fn clicking_by_name_runs_the_handler_and_the_next_frame_shows_it() {
         let mut harness = Harness::new(Counter::default(), counter);
         harness.click_text("Increment");
-        assert_eq!(harness.state().count, 1, "the handler runs within the frame that delivered it");
-        assert!(harness.frame().shows("1"), "and the next frame draws what it changed");
+        assert_eq!(
+            harness.state().count,
+            1,
+            "the handler runs within the frame that delivered it"
+        );
+        assert!(
+            harness.frame().shows("1"),
+            "and the next frame draws what it changed"
+        );
     }
 
     #[test]

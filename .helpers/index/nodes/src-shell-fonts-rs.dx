@@ -1,0 +1,56 @@
+---
+id: src/shell/fonts.rs
+title: fonts.rs
+kind: file-index
+lang: rust
+rank: 0.004736
+links: [[src/text.rs]] [[src/element.rs]] [[src/layout.rs]] [[examples/gallery.rs]] [[src/lib.rs]] [[src/testing/mod.rs]]
+generated_at: 2026-08-08T01:45:22.143Z
+---
+
+# src/shell/fonts.rs  ·  rust  ·  292 LOC
+
+## Symbols
+
+- `LoadedFonts` (class) — L22
+- `from_files` (method) — L103
+- `load_system_fonts` (function) — L116
+- `first_usable` (function) — L136
+- `locate` (function) — L146
+- `locate` (function) — L153
+- `find_named` (function) — L161
+- `tests` (module) — L189
+- `every_candidate_list_offers_a_fallback` (method) — L193
+- `a_missing_file_is_simply_not_located` (method) — L199
+- `nothing_usable_in_a_list_answers_nothing` (method) — L204
+- `this_machine_has_the_faces_the_console_needs` (method) — L234
+- `tracking_opens_a_run_up_by_one_step_for_every_letter` (method) — L265
+
+## Graph
+
+```mermaid
+graph LR
+  c["fonts.rs"]
+  x0["text.rs"]
+  c --> x0
+  x1["element.rs"]
+  c --> x1
+  x2["layout.rs"]
+  c --> x2
+  x3["gallery.rs"]
+  c --> x3
+  x4["lib.rs"]
+  c --> x4
+  x5["mod.rs"]
+  c --> x5
+```
+
+### References
+
+- [[src/text.rs]] via `measure`, `add`, `font`, `tracked`
+- [[src/element.rs]] via `add`
+- [[src/layout.rs]] via `measure`
+- [[examples/gallery.rs]] via `count`
+- [[src/lib.rs]] via `font`
+- [[src/testing/mod.rs]] via `font`
+

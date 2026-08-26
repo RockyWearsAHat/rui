@@ -305,10 +305,17 @@ impl Memory {
     /// row scrolled into view would fade in as though it had just changed.
     pub fn ease(&mut self, id: Id, target: f32, seconds: f32) -> f32 {
         let frame = self.frame;
-        let entry = self.eased.entry(id).or_insert(Eased { value: target, seen: frame });
+        let entry = self.eased.entry(id).or_insert(Eased {
+            value: target,
+            seen: frame,
+        });
         entry.seen = frame;
 
-        let step = if seconds > 0.0 { 1.0 - (-self.delta / seconds).exp() } else { 1.0 };
+        let step = if seconds > 0.0 {
+            1.0 - (-self.delta / seconds).exp()
+        } else {
+            1.0
+        };
         let value = entry.value + (target - entry.value) * step;
 
         if (target - value).abs() <= SETTLED {
@@ -331,7 +338,9 @@ impl Memory {
         }
 
         if self.pending_focus_step != 0 && !self.focus_order.is_empty() {
-            let position = self.focus.and_then(|id| self.focus_order.iter().position(|&f| f == id));
+            let position = self
+                .focus
+                .and_then(|id| self.focus_order.iter().position(|&f| f == id));
             let count = self.focus_order.len() as i32;
             let next = match position {
                 Some(current) => (current as i32 + self.pending_focus_step).rem_euclid(count),
@@ -411,7 +420,11 @@ mod tests {
             memory.offer_focus(second);
             memory.step_focus(1);
             memory.end_frame(&Input::new());
-            assert_eq!(memory.focused(), Some(expected), "focus should advance and wrap");
+            assert_eq!(
+                memory.focused(),
+                Some(expected),
+                "focus should advance and wrap"
+            );
         }
     }
 
@@ -457,7 +470,10 @@ mod tests {
         let mut memory = Memory::new();
         stepped(&mut memory, 1.0 / 60.0);
         assert_eq!(memory.ease(Id::new("hover"), 1.0, 0.1), 1.0);
-        assert!(!memory.is_animating(), "nothing should animate on first sight");
+        assert!(
+            !memory.is_animating(),
+            "nothing should animate on first sight"
+        );
     }
 
     #[test]
@@ -469,11 +485,17 @@ mod tests {
 
         stepped(&mut memory, 1.0 / 60.0);
         let first = memory.ease(id, 1.0, 0.1);
-        assert!(first > 0.0 && first < 1.0, "expected a step along the way, got {first}");
+        assert!(
+            first > 0.0 && first < 1.0,
+            "expected a step along the way, got {first}"
+        );
         assert!(memory.is_animating());
 
         stepped(&mut memory, 1.0 / 60.0);
-        assert!(memory.ease(id, 1.0, 0.1) > first, "it should keep closing on its target");
+        assert!(
+            memory.ease(id, 1.0, 0.1) > first,
+            "it should keep closing on its target"
+        );
     }
 
     #[test]
@@ -490,7 +512,10 @@ mod tests {
             memory.ease(id, 1.0, 0.05);
         }
         assert_eq!(memory.ease(id, 1.0, 0.05), 1.0);
-        assert!(!memory.is_animating(), "a settled animation must not keep the loop awake");
+        assert!(
+            !memory.is_animating(),
+            "a settled animation must not keep the loop awake"
+        );
     }
 
     #[test]
@@ -511,7 +536,10 @@ mod tests {
 
         let fast = travel(20, 1.0 / 120.0);
         let slow = travel(10, 1.0 / 60.0);
-        assert!((fast - slow).abs() < 0.02, "{fast} and {slow} should agree after equal time");
+        assert!(
+            (fast - slow).abs() < 0.02,
+            "{fast} and {slow} should agree after equal time"
+        );
     }
 
     #[test]

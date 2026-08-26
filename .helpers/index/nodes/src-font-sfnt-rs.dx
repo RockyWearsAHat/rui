@@ -1,0 +1,91 @@
+---
+id: src/font/sfnt.rs
+title: sfnt.rs
+kind: file-index
+lang: rust
+rank: 0.053352
+links: [[src/font/outline.rs]] [[src/font/mod.rs]] [[src/shell/platform/windows.rs]] [[src/text.rs]] [[src/testing/mod.rs]] [[src/shell/platform/x11.rs]] [[tests/interaction.rs]] [[src/canvas.rs]] [[examples/icon.rs]] [[src/memory.rs]]
+generated_at: 2026-08-08T01:45:22.141Z
+---
+
+# src/font/sfnt.rs  ·  rust  ·  412 LOC
+
+## Symbols
+
+- `Reader` (class) — L9
+- `at` (method) — L16
+- `position` (method) — L21
+- `skip` (method) — L26
+- `bytes` (method) — L32
+- `u8` (method) — L40
+- `u16` (method) — L47
+- `i16` (method) — L53
+- `u32` (method) — L58
+- `f2dot14` (method) — L64
+- `Table` (class) — L71
+- `Directory` (class) — L79
+- `read` (method) — L90
+- `find` (method) — L119
+- `face_offsets` (function) — L128
+- `Segment` (class) — L155
+- `start` (method) — L163
+- `end` (method) — L169
+- `lookup` (method) — L175
+- `CharMap` (class) — L186
+- `glyph` (method) — L192
+- `read` (method) — L216
+- `read_format_4` (function) — L257
+- `read_format_12` (function) — L306
+- `tests` (module) — L334
+- `a_reader_refuses_to_run_off_the_end` (method) — L338
+- `seeking_past_the_end_lands_at_the_end_rather_than_out_of_range` (method) — L346
+- `skipping_past_the_end_fails_instead_of_wrapping` (method) — L353
+- `a_plain_font_has_one_face_and_a_collection_has_several` (method) — L360
+- `a_collection_claiming_more_faces_than_could_fit_is_refused` (method) — L373
+- `a_delta_segment_maps_by_addition` (method) — L381
+- `an_explicit_segment_maps_by_lookup` (method) — L389
+- `lookup_finds_the_right_segment_among_many` (method) — L399
+
+## Graph
+
+```mermaid
+graph LR
+  c["sfnt.rs"]
+  x0["outline.rs"]
+  x0 --> c
+  x1["mod.rs"]
+  x1 --> c
+  x2["windows.rs"]
+  x2 --> c
+  x3["text.rs"]
+  c --> x3
+  x4["mod.rs"]
+  c --> x4
+  x5["x11.rs"]
+  c --> x5
+  x6["interaction.rs"]
+  x6 --> c
+  x7["canvas.rs"]
+  x7 --> c
+  x8["icon.rs"]
+  x8 --> c
+  x9["memory.rs"]
+  x9 --> c
+```
+
+### References
+
+- [[src/text.rs]] via `len`
+- [[src/testing/mod.rs]] via `find`
+- [[src/shell/platform/x11.rs]] via `position`
+
+### Referenced by
+
+- [[src/font/outline.rs]] via `skip`, `position`, `u32`, `u16`, `i16`
+- [[src/font/mod.rs]] via `i16`, `glyph`, `u16`, `find`
+- [[src/shell/platform/windows.rs]] via `position`
+- [[tests/interaction.rs]] via `find`
+- [[src/canvas.rs]] via `find`, `resize`
+- [[examples/icon.rs]] via `skip`
+- [[src/memory.rs]] via `position`
+

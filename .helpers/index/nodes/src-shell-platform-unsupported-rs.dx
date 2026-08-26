@@ -1,0 +1,50 @@
+---
+id: src/shell/platform/unsupported.rs
+title: unsupported.rs
+kind: file-index
+lang: rust
+rank: 0.006588
+links: [[src/shell/mod.rs]] [[src/paint.rs]] [[tests/rendering.rs]] [[src/shell/platform/macos.rs]] [[src/shell/platform/windows.rs]] [[src/shell/platform/x11.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# src/shell/platform/unsupported.rs  ·  rust  ·  46 LOC
+
+## Symbols
+
+- `Window` (class) — L15
+- `open` (method) — L18
+- `pump` (method) — L22
+- `surface` (method) — L31
+- `appearance` (method) — L35
+- `present` (method) — L39
+- `is_open` (method) — L43
+
+## Graph
+
+```mermaid
+graph LR
+  c["unsupported.rs"]
+  x0["mod.rs"]
+  x0 --> c
+  x1["paint.rs"]
+  x1 --> c
+  x2["rendering.rs"]
+  x2 --> c
+  x3["macos.rs"]
+  x3 --> c
+  x4["windows.rs"]
+  x4 --> c
+  x5["x11.rs"]
+  x5 --> c
+```
+
+### Referenced by
+
+- [[src/shell/mod.rs]] via `surface`, `present`, `is_open`, `pump`, `appearance`
+- [[src/paint.rs]] via `surface`
+- [[tests/rendering.rs]] via `appearance`
+- [[src/shell/platform/macos.rs]] via `Window`
+- [[src/shell/platform/windows.rs]] via `Window`
+- [[src/shell/platform/x11.rs]] via `Window`
+

@@ -1,0 +1,92 @@
+---
+id: src/shell/platform/windows.rs
+title: windows.rs
+kind: file-index
+lang: rust
+rank: 0.008947
+links: [[src/shell/platform/x11.rs]] [[src/shell/platform/macos.rs]] [[src/font/sfnt.rs]] [[src/shell/mod.rs]] [[src/canvas.rs]] [[src/input.rs]] [[src/paint.rs]] [[tests/rendering.rs]] [[src/geom.rs]] [[src/shell/platform/unsupported.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# src/shell/platform/windows.rs  ·  rust  ·  698 LOC
+
+## Symbols
+
+- `Handle` (class) — L31
+- `WordParameter` (class) — L32
+- `LongParameter` (class) — L33
+- `WindowClass` (class) — L127
+- `WindowPoint` (class) — L146
+- `WindowRect` (class) — L153
+- `Message` (class) — L162
+- `default` (method) — L176
+- `PaintStruct` (class) — L189
+- `BitmapHeader` (class) — L199
+- `BitmapInfo` (class) — L214
+- `Window` (class) — L292
+- `open` (method) — L301
+- `pump` (method) — L360
+- `surface` (method) — L394
+- `appearance` (method) — L398
+- `present` (method) — L419
+- `is_open` (method) — L470
+- `refresh_geometry` (method) — L477
+- `translate` (method) — L495
+- `logical_size` (method) — L558
+- `position_of` (method) — L563
+- `drop` (method) — L573
+- `wheel_amount` (function) — L583
+- `current_modifiers` (function) — L592
+- `key_for_code` (function) — L606
+- `wide` (function) — L631
+- `window_procedure` (function) — L639
+- `tests` (module) — L662
+- `named_keys_come_from_their_virtual_codes` (method) — L666
+- `a_wheel_notch_scrolls_one_step_in_the_direction_it_turned` (method) — L675
+- `a_pointer_left_of_the_window_reads_as_negative_not_as_sixty_five_thousand` (method) — L681
+- `pointer_positions_are_divided_by_the_display_scale` (method) — L688
+- `wide_strings_are_terminated` (method) — L695
+
+## Graph
+
+```mermaid
+graph LR
+  c["windows.rs"]
+  x0["x11.rs"]
+  c --> x0
+  x1["macos.rs"]
+  x1 --> c
+  x2["sfnt.rs"]
+  c --> x2
+  x3["mod.rs"]
+  x3 --> c
+  x4["canvas.rs"]
+  c --> x4
+  x5["input.rs"]
+  c --> x5
+  x6["paint.rs"]
+  x6 --> c
+  x7["rendering.rs"]
+  x7 --> c
+  x8["geom.rs"]
+  c --> x8
+  x9["unsupported.rs"]
+  c --> x9
+```
+
+### References
+
+- [[src/shell/platform/x11.rs]] via `refresh_geometry`, `translate`, `Window`, `position`
+- [[src/font/sfnt.rs]] via `position`
+- [[src/canvas.rs]] via `pixels`, `height`, `width`
+- [[src/input.rs]] via `held`
+- [[src/geom.rs]] via `translate`
+- [[src/shell/platform/unsupported.rs]] via `Window`
+
+### Referenced by
+
+- [[src/shell/platform/macos.rs]] via `key_for_code`, `translate`, `refresh_geometry`, `Window`
+- [[src/shell/mod.rs]] via `surface`, `present`, `is_open`, `pump`, `appearance`
+- [[src/paint.rs]] via `surface`, `translate`
+- [[tests/rendering.rs]] via `appearance`
+

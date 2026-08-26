@@ -1,0 +1,119 @@
+---
+id: src/layout.rs
+title: layout.rs
+kind: file-index
+lang: rust
+rank: 0.012073
+links: [[src/widgets.rs]] [[src/paint.rs]] [[src/text.rs]] [[src/element.rs]] [[src/testing/mod.rs]] [[src/geom.rs]] [[src/lib.rs]] [[src/style.rs]] [[src/input.rs]] [[src/canvas.rs]] [[src/memory.rs]] [[src/app.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# src/layout.rs  ·  rust  ·  783 LOC
+
+## Symbols
+
+- `Ctx` (class) — L32
+- `solve` (function) — L53
+- `measure` (function) — L61
+- `measure_text` (function) — L100
+- `wrap_width` (function) — L117
+- `measure_stack` (function) — L131
+- `measure_flow` (function) — L165
+- `break_into_lines` (function) — L192
+- `line_width` (function) — L213
+- `line_height` (function) — L218
+- `place` (function) — L223
+- `in_flow` (function) — L254
+- `stack` (function) — L259
+- `flow` (function) — L342
+- `layers` (function) — L384
+- `anchored` (function) — L407
+- `shrink` (function) — L434
+- `minimum` (function) — L475
+- `scroll_offset` (function) — L488
+- `cross_size` (function) — L516
+- `child_align` (function) — L543
+- `main_length` (function) — L548
+- `cross_length` (function) — L556
+- `clamp_main` (function) — L564
+- `clamp_cross` (function) — L572
+- `main_of` (function) — L580
+- `cross_of` (function) — L588
+- `cross_of_rect` (function) — L596
+- `stated_length` (function) — L605
+- `resolve` (function) — L614
+- `tests` (module) — L624
+- `Nothing` (class) — L631
+- `context` (method) — L639
+- `laid_out` (method) — L644
+- `fixed_children_take_exactly_what_they_asked_for` (method) — L654
+- `what_is_left_over_is_divided_between_the_fillers_in_proportion` (method) — L665
+- `padding_is_taken_off_before_children_are_placed` (method) — L678
+- `a_child_that_grows_leaves_nothing_for_justification_to_move` (method) — L684
+- `spare_room_is_spread_between_children_rather_than_around_them` (method) — L693
+- `a_child_is_stretched_across_the_axis_unless_it_says_otherwise` (method) — L705
+- `alignment_places_a_child_across_the_stacking_axis` (method) — L714
+- `a_minimum_is_honoured_even_when_the_room_is_not_there` (method) — L723
+- `a_maximum_stops_a_filler_from_taking_everything` (method) — L729
+- `identity_follows_the_key_rather_than_the_position` (method) — L735
+- `identity_without_a_key_is_the_path_through_the_tree` (method) — L742
+- `a_scrolling_area_remembers_how_tall_its_contents_came_out` (method) — L749
+- `text_that_wraps_is_as_tall_as_the_lines_it_takes` (method) — L768
+- `a_tone_set_on_a_container_reaches_the_text_inside_it` (method) — L779
+
+## Graph
+
+```mermaid
+graph LR
+  c["layout.rs"]
+  x0["widgets.rs"]
+  c --> x0
+  x1["paint.rs"]
+  c --> x1
+  x2["text.rs"]
+  c --> x2
+  x3["element.rs"]
+  c --> x3
+  x4["mod.rs"]
+  c --> x4
+  x5["geom.rs"]
+  c --> x5
+  x6["lib.rs"]
+  c --> x6
+  x7["style.rs"]
+  c --> x7
+  x8["input.rs"]
+  c --> x8
+  x9["canvas.rs"]
+  c --> x9
+  x10["memory.rs"]
+  c --> x10
+  x11["app.rs"]
+  c --> x11
+  x12["mod.rs"]
+  c --> x12
+  x13["fonts.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/widgets.rs]] via `text`, `row`, `col`, `spacer`
+- [[src/paint.rs]] via `color`, `text`, `resolve`, `line_height`, `scroll_offset`
+- [[src/text.rs]] via `measure`, `wrap`, `is_empty`, `metrics`, `resolve`
+- [[src/element.rs]] via `color`, `min_w`, `key`, `max_w`, `grow_by`
+- [[src/testing/mod.rs]] via `text`, `key`, `scroll_offset`, `scroll`, `size`
+- [[src/geom.rs]] via `max_y`, `inset`, `is_empty`, `max_x`, `origin`
+- [[src/lib.rs]] via `color`, `text`, `style`
+- [[src/style.rs]] via `over`, `style`, `grow`, `is_empty`, `resolve`
+- [[src/input.rs]] via `text`, `scroll`, `is_empty`, `index`
+- [[src/canvas.rs]] via `is_empty`, `vertical`, `size`
+- [[src/memory.rs]] via `set_scroll_offset`, `scroll_offset`, `is_following`, `set_content_height`, `with`
+- [[src/app.rs]] via `size`
+- [[src/font/mod.rs]] via `line_height`, `metrics`
+
+### Referenced by
+
+- [[src/shell/fonts.rs]] via `measure`
+- [[tests/layout.rs]] via `flow`
+
