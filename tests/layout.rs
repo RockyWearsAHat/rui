@@ -6,7 +6,7 @@
 //! is arithmetic and not a measurement pasted back from a run.
 
 use rui::testing::Harness;
-use rui::{Align, Anchor, El, Justify, Length, col, panel, row, spacer, text};
+use rui::{col, panel, row, spacer, text, Align, Anchor, El, Justify, Length};
 
 /// Nothing to hold: these are about rectangles, not behaviour.
 #[derive(Default)]

@@ -6,7 +6,7 @@
 //! same picture, and that an animation both moves and then stops.
 
 use rui::testing::Harness;
-use rui::{Align, Appearance, El, Radius, Size, Tone, button, col, draw, row, spacer, text};
+use rui::{button, col, draw, row, spacer, text, Align, Appearance, El, Radius, Size, Tone};
 
 /// Nothing to hold: these are about pixels.
 #[derive(Default)]

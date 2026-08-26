@@ -10,7 +10,7 @@
 //! change to code that can be reviewed.
 
 use rui::style::Radius;
-use rui::{Appearance, Canvas, Color, Corner, Painter, Rect, Theme, Tone, image};
+use rui::{image, Appearance, Canvas, Color, Corner, Painter, Rect, Theme, Tone};
 
 /// The sizes an `.iconset` holds, and the name each must be filed under.
 ///

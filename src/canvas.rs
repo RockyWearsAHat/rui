@@ -59,7 +59,7 @@
 //!
 //! [`scale`]: Canvas::scale
 
-use crate::color::{Color, blend_over};
+use crate::color::{blend_over, Color};
 use crate::geom::Rect;
 
 /// What shape a rectangle's four corners are.
@@ -1122,12 +1122,10 @@ mod tests {
     fn drawing_outside_the_surface_is_clipped_not_wrapped() {
         let mut canvas = blank(8, 8, 1.0);
         canvas.fill_rect(Rect::new(-100.0, -100.0, 1000.0, 1000.0), Color::WHITE);
-        assert!(
-            canvas
-                .pixels()
-                .iter()
-                .all(|&word| Color::from_argb(word) == Color::WHITE)
-        );
+        assert!(canvas
+            .pixels()
+            .iter()
+            .all(|&word| Color::from_argb(word) == Color::WHITE));
     }
 
     #[test]
@@ -1399,12 +1397,10 @@ mod tests {
             Color::WHITE,
             Color::WHITE,
         );
-        assert!(
-            canvas
-                .pixels()
-                .iter()
-                .all(|&word| Color::from_argb(word) == Color::WHITE)
-        );
+        assert!(canvas
+            .pixels()
+            .iter()
+            .all(|&word| Color::from_argb(word) == Color::WHITE));
     }
 
     #[test]
