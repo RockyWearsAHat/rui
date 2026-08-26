@@ -65,15 +65,14 @@ const DEFAULT_IDLE: Duration = Duration::from_millis(250);
 
 impl<S> App<S> {
     /// An application showing `state`, described by `view`.
-    pub fn new(
-        title: impl Into<String>,
-        state: S,
-        view: impl Fn(&S) -> El<S> + 'static,
-    ) -> Self {
+    pub fn new(title: impl Into<String>, state: S, view: impl Fn(&S) -> El<S> + 'static) -> Self {
         Self {
             state,
             view: Box::new(view),
-            options: WindowOptions { title: title.into(), ..WindowOptions::default() },
+            options: WindowOptions {
+                title: title.into(),
+                ..WindowOptions::default()
+            },
             idle: DEFAULT_IDLE,
             running: Box::new(|_| true),
         }
@@ -147,8 +146,11 @@ impl<S> App<S> {
         appearance: Appearance,
         fonts: &mut LoadedFonts,
     ) -> Canvas {
-        let mut canvas =
-            Canvas::new((width as f32 * scale) as u32, (height as f32 * scale) as u32, scale);
+        let mut canvas = Canvas::new(
+            (width as f32 * scale) as u32,
+            (height as f32 * scale) as u32,
+            scale,
+        );
         let mut memory = Memory::new();
         self.draw_into(&mut canvas, fonts, appearance, &mut memory);
         canvas
@@ -209,10 +211,21 @@ impl<S> App<S> {
         observe: &mut dyn FnMut(&El<S>),
     ) {
         let mut tree = (self.view)(&self.state);
-        let ctx = Ctx { fonts, theme, bounds: canvas.bounds() };
+        let ctx = Ctx {
+            fonts,
+            theme,
+            bounds: canvas.bounds(),
+        };
         layout::solve(&mut tree, canvas.bounds(), &ctx, memory);
 
-        let mut frame = Frame { canvas, fonts, theme, input, memory, hit: paint::Hit::default() };
+        let mut frame = Frame {
+            canvas,
+            fonts,
+            theme,
+            input,
+            memory,
+            hit: paint::Hit::default(),
+        };
         let actions = paint::render(&tree, &mut frame);
         visit(&tree, observe);
 

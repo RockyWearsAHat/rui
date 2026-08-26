@@ -1,0 +1,110 @@
+---
+id: src/shell/platform/macos.rs
+title: macos.rs
+kind: file-index
+lang: rust
+rank: 0.011355
+links: [[src/shell/platform/x11.rs]] [[src/shell/platform/windows.rs]] [[src/shell/mod.rs]] [[src/canvas.rs]] [[src/geom.rs]] [[src/paint.rs]] [[src/text.rs]] [[tests/rendering.rs]] [[examples/controls.rs]] [[src/input.rs]] [[src/shell/platform/unsupported.rs]] [[src/style.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# src/shell/platform/macos.rs  ·  rust  ·  1041 LOC
+
+## Symbols
+
+- `Object` (class) — L31
+- `Sel` (class) — L33
+- `ObserverContext` (class) — L104
+- `CgPoint` (class) — L156
+- `CgSize` (class) — L164
+- `CgRect` (class) — L172
+- `class` (function) — L178
+- `sel` (function) — L183
+- `send` (function) — L188
+- `send1` (function) — L195
+- `send3` (function) — L202
+- `send4` (function) — L209
+- `send_rect` (function) — L220
+- `ns_string` (function) — L236
+- `from_ns_string` (function) — L241
+- `Window` (class) — L307
+- `LiveResize` (class) — L348
+- `draw_during_live_resize` (function) — L371
+- `open` (method) — L400
+- `pump` (method) — L495
+- `surface` (method) — L513
+- `appearance` (method) — L519
+- `present` (method) — L534
+- `is_open` (method) — L597
+- `observe_live_resize` (method) — L609
+- `in_live_resize` (method) — L641
+- `pump_events` (method) — L646
+- `refresh_geometry` (method) — L703
+- `translate` (method) — L717
+- `translate_key` (method) — L762
+- `pointer_position` (method) — L805
+- `button_of` (function) — L814
+- `modifiers_of` (function) — L830
+- `key_for_code` (function) — L843
+- `is_function_key` (function) — L868
+- `install_menu` (function) — L876
+- `tests` (module) — L899
+- `named_keys_come_from_positions_not_characters` (method) — L903
+- `command_is_reported_as_the_accelerator` (method) — L911
+- `every_modifier_is_recognised_separately` (method) — L918
+- `function_key_code_points_are_not_treated_as_text` (method) — L925
+- `tick` (method) — L958
+- `count_a_turn` (method) — L963
+- `an_observer_registered_the_way_the_window_registers_one_actually_fires` (method) — L969
+- `nothing_is_drawn_for_an_observer_that_has_no_window_or_no_frame` (method) — L1024
+- `the_bitmap_format_matches_what_the_canvas_stores` (method) — L1036
+
+## Graph
+
+```mermaid
+graph LR
+  c["macos.rs"]
+  x0["x11.rs"]
+  c --> x0
+  x1["windows.rs"]
+  c --> x1
+  x2["mod.rs"]
+  x2 --> c
+  x3["canvas.rs"]
+  c --> x3
+  x4["geom.rs"]
+  c --> x4
+  x5["paint.rs"]
+  x5 --> c
+  x6["text.rs"]
+  c --> x6
+  x7["rendering.rs"]
+  x7 --> c
+  x8["controls.rs"]
+  x8 --> c
+  x9["input.rs"]
+  c --> x9
+  x10["unsupported.rs"]
+  c --> x10
+  x11["style.rs"]
+  c --> x11
+```
+
+### References
+
+- [[src/shell/platform/x11.rs]] via `translate_key`, `translate`, `refresh_geometry`, `Window`, `modifiers_of`
+- [[src/shell/platform/windows.rs]] via `key_for_code`, `translate`, `refresh_geometry`, `Window`
+- [[src/canvas.rs]] via `height`, `width`, `pixels`, `is_empty`
+- [[src/geom.rs]] via `contains`, `translate`, `is_empty`
+- [[src/text.rs]] via `len`, `is_empty`
+- [[src/input.rs]] via `is_empty`
+- [[src/shell/platform/unsupported.rs]] via `Window`
+- [[src/style.rs]] via `is_empty`
+
+### Referenced by
+
+- [[src/shell/mod.rs]] via `surface`, `present`, `is_open`, `pump`, `appearance`
+- [[src/paint.rs]] via `surface`, `translate`
+- [[tests/rendering.rs]] via `appearance`
+- [[examples/controls.rs]] via `tick`
+

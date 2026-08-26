@@ -1,0 +1,78 @@
+---
+id: src/font/raster.rs
+title: raster.rs
+kind: file-index
+lang: rust
+rank: 0.012077
+links: [[src/canvas.rs]] [[src/widgets.rs]] [[examples/controls.rs]] [[src/paint.rs]] [[src/element.rs]] [[tests/recipes.rs]] [[tests/rendering.rs]] [[src/font/mod.rs]] [[examples/gallery.rs]] [[examples/icon.rs]] [[tests/interaction.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# src/font/raster.rs  ·  rust  ·  256 LOC
+
+## Symbols
+
+- `Rasteriser` (class) — L30
+- `new` (method) — L40
+- `edge` (method) — L49
+- `deposit` (method) — L101
+- `finish` (method) — L142
+- `tests` (module) — L160
+- `fill` (method) — L164
+- `at` (method) — L175
+- `a_pixel_aligned_square_is_solid_inside_and_empty_outside` (method) — L180
+- `a_half_covered_column_comes_out_half_covered` (method) — L190
+- `total_coverage_matches_the_area_of_the_shape` (method) — L198
+- `a_triangles_diagonal_is_antialiased` (method) — L206
+- `a_reversed_inner_contour_cuts_a_hole` (method) — L215
+- `an_outline_reaching_the_last_column_does_not_bleed_onto_the_next_row` (method) — L232
+- `geometry_outside_the_mask_is_clipped_rather_than_panicking` (method) — L239
+- `horizontal_edges_contribute_nothing` (method) — L245
+- `a_degenerate_outline_produces_an_empty_mask` (method) — L252
+
+## Graph
+
+```mermaid
+graph LR
+  c["raster.rs"]
+  x0["canvas.rs"]
+  x0 --> c
+  x1["widgets.rs"]
+  x1 --> c
+  x2["controls.rs"]
+  x2 --> c
+  x3["paint.rs"]
+  c --> x3
+  x4["element.rs"]
+  c --> x4
+  x5["recipes.rs"]
+  x5 --> c
+  x6["rendering.rs"]
+  x6 --> c
+  x7["mod.rs"]
+  x7 --> c
+  x8["gallery.rs"]
+  x8 --> c
+  x9["icon.rs"]
+  x9 --> c
+  x10["interaction.rs"]
+  x10 --> c
+```
+
+### References
+
+- [[src/paint.rs]] via `fill`
+- [[src/element.rs]] via `fill`
+
+### Referenced by
+
+- [[src/canvas.rs]] via `fill`
+- [[src/widgets.rs]] via `fill`
+- [[examples/controls.rs]] via `fill`
+- [[tests/recipes.rs]] via `fill`
+- [[tests/rendering.rs]] via `fill`
+- [[src/font/mod.rs]] via `finish`, `edge`
+- [[examples/gallery.rs]] via `fill`
+- [[examples/icon.rs]] via `fill`
+- [[tests/interaction.rs]] via `fill`
+

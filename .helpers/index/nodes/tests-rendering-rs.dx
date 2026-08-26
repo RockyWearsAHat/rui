@@ -1,0 +1,87 @@
+---
+id: tests/rendering.rs
+title: rendering.rs
+kind: file-index
+lang: rust
+rank: 0.004999
+links: [[src/testing/mod.rs]] [[src/element.rs]] [[tests/layout.rs]] [[src/widgets.rs]] [[src/app.rs]] [[src/lib.rs]] [[src/paint.rs]] [[src/canvas.rs]] [[src/geom.rs]] [[src/input.rs]] [[src/font/raster.rs]] [[src/shell/platform/macos.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# tests/rendering.rs  ·  rust  ·  191 LOC
+
+## Symbols
+
+- `Nothing` (class) — L13
+- `Watched` (class) — L17
+- `showing` (function) — L22
+- `a_window_is_drawn_in_the_ground_of_whichever_appearance_is_in_force` (function) — L27
+- `text_makes_marks_where_the_layout_put_it` (function) — L40
+- `an_empty_window_is_marked_nowhere` (function) — L53
+- `the_same_description_twice_is_the_same_picture` (function) — L60
+- `two_different_words_are_two_different_pictures` (function) — L75
+- `a_hover_eases_in_over_several_frames_and_then_settles` (function) — L84
+- `a_disabled_control_is_drawn_differently_from_an_available_one` (function) — L111
+- `an_applications_own_drawing_sees_what_a_button_sees` (function) — L125
+- `a_higher_pixel_density_draws_more_pixels_of_the_same_picture` (function) — L149
+- `a_layer_is_drawn_over_what_it_covers` (function) — L161
+- `a_frame_can_be_written_out_as_a_png` (function) — L179
+
+## Graph
+
+```mermaid
+graph LR
+  c["rendering.rs"]
+  x0["mod.rs"]
+  c --> x0
+  x1["element.rs"]
+  c --> x1
+  x2["layout.rs"]
+  x2 --> c
+  x3["widgets.rs"]
+  c --> x3
+  x4["app.rs"]
+  c --> x4
+  x5["lib.rs"]
+  c --> x5
+  x6["paint.rs"]
+  c --> x6
+  x7["canvas.rs"]
+  c --> x7
+  x8["geom.rs"]
+  c --> x8
+  x9["input.rs"]
+  c --> x9
+  x10["raster.rs"]
+  c --> x10
+  x11["macos.rs"]
+  c --> x11
+  x12["unsupported.rs"]
+  c --> x12
+  x13["windows.rs"]
+  c --> x13
+```
+
+### References
+
+- [[src/testing/mod.rs]] via `frames`, `frame`, `find_key`, `save_png`, `size`
+- [[src/element.rs]] via `disabled`, `pad`, `align`, `fill`, `size`
+- [[src/widgets.rs]] via `col`, `row`, `spacer`, `draw`, `button`
+- [[src/app.rs]] via `frame`, `size`
+- [[src/lib.rs]] via `canvas`, `text`
+- [[src/paint.rs]] via `draw`, `fill`, `visual`, `canvas`, `text`
+- [[src/canvas.rs]] via `pixels`, `fill`, `size`, `scale`
+- [[src/geom.rs]] via `size`, `center`
+- [[src/input.rs]] via `text`
+- [[src/font/raster.rs]] via `fill`
+- [[src/shell/platform/macos.rs]] via `appearance`
+- [[src/shell/platform/unsupported.rs]] via `appearance`
+- [[src/shell/platform/windows.rs]] via `appearance`
+- [[src/shell/platform/x11.rs]] via `appearance`
+- [[src/text.rs]] via `draw`, `add`
+- [[src/shell/mod.rs]] via `draw`
+
+### Referenced by
+
+- [[tests/layout.rs]] via `showing`
+

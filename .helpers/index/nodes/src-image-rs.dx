@@ -1,0 +1,55 @@
+---
+id: src/image.rs
+title: image.rs
+kind: file-index
+lang: rust
+rank: 0.004736
+links: [[src/text.rs]] [[src/canvas.rs]] [[src/font/outline.rs]] [[src/geom.rs]] [[src/input.rs]] [[src/style.rs]]
+generated_at: 2026-08-08T01:45:22.143Z
+---
+
+# src/image.rs  ·  rust  ·  218 LOC
+
+## Symbols
+
+- `png` (function) — L32
+- `rgba` (function) — L69
+- `write_chunk` (function) — L87
+- `zlib` (function) — L98
+- `crc32` (function) — L124
+- `adler32` (function) — L137
+- `tests` (module) — L150
+- `the_checksums_match_the_values_their_specifications_publish` (method) — L154
+- `a_png_declares_the_size_and_format_it_was_asked_for` (method) — L165
+- `pixels_that_do_not_fill_the_stated_size_are_refused` (method) — L178
+- `the_stored_blocks_cover_every_byte_and_only_the_last_is_final` (method) — L187
+- `a_canvas_comes_out_opaque_with_its_channels_in_pngs_order` (method) — L213
+
+## Graph
+
+```mermaid
+graph LR
+  c["image.rs"]
+  x0["text.rs"]
+  c --> x0
+  x1["canvas.rs"]
+  c --> x1
+  x2["outline.rs"]
+  c --> x2
+  x3["geom.rs"]
+  c --> x3
+  x4["input.rs"]
+  c --> x4
+  x5["style.rs"]
+  c --> x5
+```
+
+### References
+
+- [[src/text.rs]] via `len`, `is_empty`
+- [[src/canvas.rs]] via `pixels`, `is_empty`, `fill_rect`, `bounds`
+- [[src/font/outline.rs]] via `bounds`
+- [[src/geom.rs]] via `is_empty`
+- [[src/input.rs]] via `is_empty`
+- [[src/style.rs]] via `is_empty`
+

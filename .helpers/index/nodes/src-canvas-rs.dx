@@ -1,0 +1,145 @@
+---
+id: src/canvas.rs
+title: canvas.rs
+kind: file-index
+lang: rust
+rank: 0.11186
+links: [[src/geom.rs]] [[src/paint.rs]] [[src/testing/mod.rs]] [[src/element.rs]] [[examples/controls.rs]] [[src/text.rs]] [[src/font/raster.rs]] [[src/color.rs]] [[tests/recipes.rs]] [[src/app.rs]] [[src/input.rs]] [[src/widgets.rs]]
+generated_at: 2026-08-08T01:45:22.140Z
+---
+
+# src/canvas.rs  ·  rust  ·  1268 LOC
+
+## Symbols
+
+- `Corner` (class) — L80
+- `size` (method) — L94
+- `grown` (method) — L106
+- `resized` (method) — L115
+- `Mask` (class) — L130
+- `empty` (method) — L141
+- `is_empty` (method) — L146
+- `PixelBounds` (class) — L157
+- `intersect` (method) — L165
+- `is_empty` (method) — L174
+- `Canvas` (class) — L192
+- `new` (method) — L208
+- `resize` (method) — L232
+- `width` (method) — L243
+- `height` (method) — L248
+- `scale` (method) — L253
+- `bounds` (method) — L258
+- `pixels` (method) — L263
+- `clip` (method) — L268
+- `push_clip` (method) — L282
+- `pop_clip` (method) — L289
+- `is_visible` (method) — L298
+- `clear` (method) — L303
+- `clear_vertical` (method) — L313
+- `fill_rect` (method) — L326
+- `fill` (method) — L335
+- `fill_vertical` (method) — L355
+- `shadow` (method) — L375
+- `stroke` (method) — L397
+- `device_corner` (method) — L411
+- `fill_mask` (method) — L420
+- `device_rect` (method) — L449
+- `device_bounds` (method) — L462
+- `fill_aligned_opaque` (method) — L476
+- `fill_shape` (method) — L507
+- `glow_shape` (method) — L565
+- `stroke_shape` (method) — L601
+- `blend_span` (method) — L637
+- `glow_span` (method) — L664
+- `stroke_span` (method) — L689
+- `Paint` (class) — L721
+- `solid` (method) — L735
+- `vertical` (method) — L740
+- `at` (method) — L750
+- `DistanceField` (class) — L778
+- `new` (method) — L801
+- `at` (method) — L824
+- `is_pixel_aligned` (function) — L851
+- `tests` (module) — L857
+- `pixel_at` (method) — L861
+- `blank` (method) — L865
+- `a_new_canvas_is_opaque_everywhere` (method) — L872
+- `an_absurd_scale_is_clamped_rather_than_collapsing_the_layout` (method) — L878
+- `logical_bounds_account_for_the_scale` (method) — L884
+- `a_filled_rectangle_covers_exactly_its_pixels` (method) — L890
+- `a_cut_corner_removes_the_corner_and_keeps_the_edges` (method) — L901
+- `a_cut_corner_is_a_straight_diagonal_rather_than_an_arc` (method) — L917
+- `a_cut_and_a_rounded_corner_of_the_same_size_differ_where_it_matters` (method) — L935
+- `a_corner_larger_than_the_shape_is_clamped_rather_than_inverted` (method) — L951
+- `growing_a_corner_keeps_the_shape_it_already_was` (method) — L965
+
+## Graph
+
+```mermaid
+graph LR
+  c["canvas.rs"]
+  x0["geom.rs"]
+  c --> x0
+  x1["paint.rs"]
+  c --> x1
+  x2["mod.rs"]
+  c --> x2
+  x3["element.rs"]
+  c --> x3
+  x4["controls.rs"]
+  x4 --> c
+  x5["text.rs"]
+  c --> x5
+  x6["raster.rs"]
+  c --> x6
+  x7["color.rs"]
+  c --> x7
+  x8["recipes.rs"]
+  x8 --> c
+  x9["app.rs"]
+  x9 --> c
+  x10["input.rs"]
+  c --> x10
+  x11["widgets.rs"]
+  x11 --> c
+  x12["rendering.rs"]
+  x12 --> c
+  x13["layout.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/geom.rs]] via `max_x`, `expand`, `min_y`, `min_x`, `intersect`
+- [[src/paint.rs]] via `stroke`, `fill`, `fill_rect`, `is_empty`, `shadow`
+- [[src/testing/mod.rs]] via `size`, `find`, `bounds`, `clear_vertical`, `is_empty`
+- [[src/element.rs]] via `shadow`, `clip`, `size`, `fill`, `round`
+- [[src/text.rs]] via `is_empty`, `fill_mask`, `clear`
+- [[src/font/raster.rs]] via `fill`
+- [[src/color.rs]] via `mix`, `is_visible`, `blend_over`, `to_argb`
+- [[src/input.rs]] via `is_empty`, `clear`
+- [[src/style.rs]] via `is_empty`
+- [[src/font/outline.rs]] via `then`, `bounds`
+- [[src/font/sfnt.rs]] via `find`, `resize`
+
+### Referenced by
+
+- [[examples/controls.rs]] via `width`, `fill`, `size`, `stroke`, `height`
+- [[tests/recipes.rs]] via `fill`, `pixels`, `size`, `stroke`
+- [[src/app.rs]] via `bounds`, `clear_vertical`, `is_empty`, `scale`, `size`
+- [[src/widgets.rs]] via `shadow`, `stroke`, `fill`
+- [[tests/rendering.rs]] via `pixels`, `fill`, `size`, `scale`
+- [[src/layout.rs]] via `is_empty`, `vertical`, `size`
+- [[src/shell/mod.rs]] via `height`, `resize`, `clear_vertical`, `scale`, `clear`
+- [[tests/layout.rs]] via `scale`, `size`
+- [[examples/gallery.rs]] via `fill`, `fill_rect`, `height`, `width`, `fill_vertical`
+- [[src/image.rs]] via `pixels`, `is_empty`, `fill_rect`, `bounds`
+- [[src/shell/platform/macos.rs]] via `height`, `width`, `pixels`, `is_empty`
+- [[src/shell/platform/x11.rs]] via `height`, `is_empty`, `pixels`, `width`
+- [[examples/icon.rs]] via `clear`, `fill_vertical`, `fill`
+- [[src/memory.rs]] via `is_empty`, `clear`
+- [[src/shell/platform/windows.rs]] via `pixels`, `height`, `width`
+- [[tests/interaction.rs]] via `fill`
+- [[src/font/mod.rs]] via `bounds`
+- [[src/testing/font.rs]] via `resize`
+

@@ -1,0 +1,72 @@
+---
+id: src/color.rs
+title: color.rs
+kind: file-index
+lang: rust
+rank: 0.038416
+links: [[src/canvas.rs]] [[src/theme.rs]] [[src/paint.rs]] [[src/element.rs]] [[examples/gallery.rs]] [[examples/icon.rs]] [[src/style.rs]]
+generated_at: 2026-08-08T01:45:22.141Z
+---
+
+# src/color.rs  ·  rust  ·  211 LOC
+
+## Symbols
+
+- `Color` (class) — L19
+- `rgb` (method) — L32
+- `rgba` (method) — L37
+- `with_alpha` (method) — L49
+- `fade` (method) — L57
+- `mix` (method) — L66
+- `is_visible` (method) — L78
+- `to_argb` (method) — L83
+- `from_argb` (method) — L88
+- `luminance` (method) — L102
+- `blend_over` (function) — L117
+- `mul_255` (function) — L138
+- `tests` (module) — L144
+- `full_coverage_of_an_opaque_colour_replaces_the_pixel` (method) — L148
+- `zero_coverage_leaves_the_pixel_alone` (method) — L154
+- `a_transparent_colour_never_draws_however_covered` (method) — L160
+- `half_coverage_lands_halfway_between_the_two_colours` (method) — L165
+- `blending_always_produces_an_opaque_pixel` (method) — L172
+- `coverage_and_alpha_multiply_rather_than_blending_twice` (method) — L178
+- `packing_round_trips` (method) — L186
+- `mixing_is_clamped_at_both_ends` (method) — L192
+- `mul_255_reaches_both_extremes_exactly` (method) — L200
+- `luminance_orders_black_below_white` (method) — L207
+
+## Graph
+
+```mermaid
+graph LR
+  c["color.rs"]
+  x0["canvas.rs"]
+  x0 --> c
+  x1["theme.rs"]
+  x1 --> c
+  x2["paint.rs"]
+  x2 --> c
+  x3["element.rs"]
+  c --> x3
+  x4["gallery.rs"]
+  x4 --> c
+  x5["icon.rs"]
+  x5 --> c
+  x6["style.rs"]
+  x6 --> c
+```
+
+### References
+
+- [[src/element.rs]] via `round`
+
+### Referenced by
+
+- [[src/canvas.rs]] via `mix`, `is_visible`, `blend_over`, `to_argb`
+- [[src/theme.rs]] via `luminance`
+- [[src/paint.rs]] via `fade`, `mix`, `is_visible`, `luminance`
+- [[examples/gallery.rs]] via `fade`
+- [[examples/icon.rs]] via `fade`
+- [[src/style.rs]] via `mix`
+

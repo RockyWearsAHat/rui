@@ -39,7 +39,12 @@ impl Rasteriser {
     /// A rasteriser for a mask of `width` by `height` pixels.
     pub(super) fn new(width: usize, height: usize) -> Self {
         let stride = width + 2;
-        Self { width, height, stride, area: vec![0.0; stride * height] }
+        Self {
+            width,
+            height,
+            stride,
+            area: vec![0.0; stride * height],
+        }
     }
 
     /// Accumulates one straight edge of the outline.
@@ -57,7 +62,11 @@ impl Rasteriser {
         // Edges are walked downward, and the direction they were given in is
         // kept as the sign — that is what makes a contour going back up cancel
         // the one that came down, and so what hollows out a counter.
-        let (winding, top, bottom) = if from.1 < to.1 { (1.0, from, to) } else { (-1.0, to, from) };
+        let (winding, top, bottom) = if from.1 < to.1 {
+            (1.0, from, to)
+        } else {
+            (-1.0, to, from)
+        };
         let slope = (bottom.0 - top.0) / (bottom.1 - top.1);
         if !slope.is_finite() {
             return;
@@ -190,23 +199,36 @@ mod tests {
     fn a_half_covered_column_comes_out_half_covered() {
         let mask = fill(8, 4, &[(2.5, 0.0), (6.0, 0.0), (6.0, 4.0), (2.5, 4.0)]);
         let edge = at(&mask, 8, 2, 1);
-        assert!((125..=130).contains(&edge), "expected about half, got {edge}");
+        assert!(
+            (125..=130).contains(&edge),
+            "expected about half, got {edge}"
+        );
         assert_eq!(at(&mask, 8, 3, 1), 255);
     }
 
     #[test]
     fn total_coverage_matches_the_area_of_the_shape() {
-        let mask = fill(16, 16, &[(1.25, 2.5), (12.75, 2.5), (12.75, 11.5), (1.25, 11.5)]);
+        let mask = fill(
+            16,
+            16,
+            &[(1.25, 2.5), (12.75, 2.5), (12.75, 11.5), (1.25, 11.5)],
+        );
         let painted: f32 = mask.iter().map(|&value| value as f32 / 255.0).sum();
         let area = (12.75 - 1.25) * (11.5 - 2.5);
-        assert!((painted - area).abs() < 0.5, "painted {painted}, expected {area}");
+        assert!(
+            (painted - area).abs() < 0.5,
+            "painted {painted}, expected {area}"
+        );
     }
 
     #[test]
     fn a_triangles_diagonal_is_antialiased() {
         let mask = fill(16, 16, &[(0.0, 0.0), (16.0, 16.0), (0.0, 16.0)]);
         let on_diagonal = at(&mask, 16, 8, 8);
-        assert!(on_diagonal > 0 && on_diagonal < 255, "diagonal not antialiased: {on_diagonal}");
+        assert!(
+            on_diagonal > 0 && on_diagonal < 255,
+            "diagonal not antialiased: {on_diagonal}"
+        );
         assert_eq!(at(&mask, 16, 1, 15), 255, "well inside");
         assert_eq!(at(&mask, 16, 15, 1), 0, "well outside");
     }
@@ -214,7 +236,13 @@ mod tests {
     #[test]
     fn a_reversed_inner_contour_cuts_a_hole() {
         let mut rasteriser = Rasteriser::new(12, 12);
-        let outer = [(1.0, 1.0), (11.0, 1.0), (11.0, 11.0), (1.0, 11.0), (1.0, 1.0)];
+        let outer = [
+            (1.0, 1.0),
+            (11.0, 1.0),
+            (11.0, 11.0),
+            (1.0, 11.0),
+            (1.0, 1.0),
+        ];
         // Wound the other way, so its contribution cancels the outer contour's.
         let inner = [(4.0, 4.0), (4.0, 8.0), (8.0, 8.0), (8.0, 4.0), (4.0, 4.0)];
         for contour in [outer.as_slice(), inner.as_slice()] {
@@ -232,12 +260,25 @@ mod tests {
     fn an_outline_reaching_the_last_column_does_not_bleed_onto_the_next_row() {
         let mask = fill(8, 4, &[(4.0, 0.0), (8.0, 0.0), (8.0, 4.0), (4.0, 4.0)]);
         assert_eq!(at(&mask, 8, 7, 1), 255);
-        assert_eq!(at(&mask, 8, 0, 2), 0, "the right edge wrapped onto the next row");
+        assert_eq!(
+            at(&mask, 8, 0, 2),
+            0,
+            "the right edge wrapped onto the next row"
+        );
     }
 
     #[test]
     fn geometry_outside_the_mask_is_clipped_rather_than_panicking() {
-        let mask = fill(8, 8, &[(-100.0, -100.0), (100.0, -100.0), (100.0, 100.0), (-100.0, 100.0)]);
+        let mask = fill(
+            8,
+            8,
+            &[
+                (-100.0, -100.0),
+                (100.0, -100.0),
+                (100.0, 100.0),
+                (-100.0, 100.0),
+            ],
+        );
         assert!(mask.iter().all(|&value| value == 255));
     }
 

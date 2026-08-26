@@ -74,7 +74,12 @@ impl<'a> Painter<'a> {
     /// the caller owns. Nothing is being pointed at, so [`Painter::visual`]
     /// reports an element at rest.
     pub fn new(canvas: &'a mut Canvas, fonts: &'a Fonts, theme: &'a Theme) -> Self {
-        Self { canvas, fonts, theme, visual: Visual::default() }
+        Self {
+            canvas,
+            fonts,
+            theme,
+            visual: Visual::default(),
+        }
     }
 
     /// What the pointer and keyboard are doing to the element being drawn.
@@ -172,7 +177,9 @@ pub(crate) fn render<'tree, S>(
     // happens to be focused: focus has to move even when what holds it does not
     // handle keys, and only the finished frame knows the full order.
     if frame.input.key_pressed(Key::Tab) {
-        frame.memory.step_focus(if frame.input.modifiers().shift { -1 } else { 1 });
+        frame
+            .memory
+            .step_focus(if frame.input.modifiers().shift { -1 } else { 1 });
     }
     frame.hit = resolve_hit(root, frame.input.pointer(), frame.canvas.bounds());
 
@@ -229,7 +236,11 @@ fn probe<'tree, S>(
         }
     }
 
-    let inner = if el.style.clip { clip.intersect(el.rect) } else { clip };
+    let inner = if el.style.clip {
+        clip.intersect(el.rect)
+    } else {
+        clip
+    };
     for child in &el.children {
         match child.style.layer {
             Some(_) => layers.push(child),
@@ -246,12 +257,16 @@ fn draw<'tree, S>(
     layers: &mut Vec<&'tree El<S>>,
 ) {
     let rect = el.rect;
-    let visible = frame.canvas.is_visible(rect.expand(Insets::uniform(FOCUS_OFFSET * 2.0)));
+    let visible = frame
+        .canvas
+        .is_visible(rect.expand(Insets::uniform(FOCUS_OFFSET * 2.0)));
 
     let response = interact(el, frame);
     let lit = if el.reactive || !el.hover().is_empty() {
         let target = f32::from(u8::from(response.hovered));
-        frame.memory.ease(el.id.with("hover"), target, frame.theme.metrics.motion)
+        frame
+            .memory
+            .ease(el.id.with("hover"), target, frame.theme.metrics.motion)
     } else {
         0.0
     };
@@ -438,18 +453,14 @@ fn decorate<S>(el: &El<S>, frame: &mut Frame<'_>, response: &Response, lit: f32)
     if response.focused && el.focusable {
         let ring = rect.expand(Insets::uniform(FOCUS_OFFSET));
         let color = Tone::Focus.resolve(theme);
-        frame.canvas.stroke(ring, corner.grown(FOCUS_OFFSET), FOCUS_THICKNESS, color);
+        frame
+            .canvas
+            .stroke(ring, corner.grown(FOCUS_OFFSET), FOCUS_THICKNESS, color);
     }
 }
 
 /// What an element is actually filled with, once it has answered the pointer.
-fn surface<S>(
-    base: Color,
-    el: &El<S>,
-    response: &Response,
-    lit: f32,
-    theme: &Theme,
-) -> Color {
+fn surface<S>(base: Color, el: &El<S>, response: &Response, lit: f32, theme: &Theme) -> Color {
     if el.disabled {
         // Tinted only faintly toward what it would be. A disabled control that
         // keeps most of its colour reads as an enabled one that is merely a bit
@@ -468,7 +479,11 @@ fn surface<S>(
     // different: a hover is the interface noticing the pointer, which should
     // feel smooth, and a press is the person acting, which must land on the
     // frame they pressed.
-    if response.held { lift(hovered, 0.0, true) } else { hovered }
+    if response.held {
+        lift(hovered, 0.0, true)
+    } else {
+        hovered
+    }
 }
 
 /// Draws an element's own content: its text, its field, or its own drawing.
@@ -521,8 +536,12 @@ fn content<'tree, S>(
                 lit,
                 disabled: el.disabled,
             };
-            let mut painter =
-                Painter { canvas: frame.canvas, fonts: frame.fonts, theme: frame.theme, visual };
+            let mut painter = Painter {
+                canvas: frame.canvas,
+                fonts: frame.fonts,
+                theme: frame.theme,
+                visual,
+            };
             paint(&mut painter, el.rect);
         }
     }
@@ -568,7 +587,15 @@ fn field<'tree, S>(
 
     if text.is_empty() && !response.focused {
         let hint = style.colored(Tone::Muted.resolve(frame.theme));
-        draw_line(frame.canvas, frame.fonts, &hint, inner, Align::Start, placeholder, false);
+        draw_line(
+            frame.canvas,
+            frame.fonts,
+            &hint,
+            inner,
+            Align::Start,
+            placeholder,
+            false,
+        );
         return;
     }
 
@@ -581,7 +608,9 @@ fn field<'tree, S>(
 
     let previous = frame.canvas.push_clip(inner);
     let origin = Point::new(inner.x - shift, baseline);
-    frame.fonts.draw(frame.canvas, &style, origin, &text, style.color);
+    frame
+        .fonts
+        .draw(frame.canvas, &style, origin, &text, style.color);
     frame.canvas.pop_clip(previous);
 
     if response.focused {
@@ -591,7 +620,9 @@ fn field<'tree, S>(
             1.5,
             metrics.line_height(),
         );
-        frame.canvas.fill_rect(caret_rect, Tone::Accent.resolve(frame.theme));
+        frame
+            .canvas
+            .fill_rect(caret_rect, Tone::Accent.resolve(frame.theme));
     }
 }
 
@@ -605,7 +636,10 @@ struct Edit {
 
 /// Applies this frame's typing to a focused field's text and caret.
 fn apply_edits(input: &Input, text: &mut String, caret: &mut Caret) -> Edit {
-    let mut edit = Edit { changed: false, submitted: false };
+    let mut edit = Edit {
+        changed: false,
+        submitted: false,
+    };
 
     for (key, _) in input.keys() {
         match key {
@@ -635,7 +669,11 @@ fn apply_edits(input: &Input, text: &mut String, caret: &mut Caret) -> Edit {
     // is inserted whole rather than key by key. Control characters are dropped:
     // a newline pasted into a single-line field would otherwise be stored and
     // then silently not drawn.
-    let typed: String = input.text().chars().filter(|character| !character.is_control()).collect();
+    let typed: String = input
+        .text()
+        .chars()
+        .filter(|character| !character.is_control())
+        .collect();
     if !typed.is_empty() {
         text.insert_str(caret.offset, &typed);
         caret.offset += typed.len();
@@ -670,10 +708,16 @@ fn scrollbar<S>(el: &El<S>, frame: &mut Frame<'_>) {
 
     // Grey, dim, and thin. A scroll bar reports where you are in something you
     // are reading; it is never the thing being read.
-    let thumb =
-        Rect::new(track.x + width * 0.25, track.y + travel * position, width * 0.5, thumb_height);
+    let thumb = Rect::new(
+        track.x + width * 0.25,
+        track.y + travel * position,
+        width * 0.5,
+        thumb_height,
+    );
     let color = Tone::Muted.resolve(theme).fade(0.55);
-    frame.canvas.fill(thumb, Corner::Round(thumb.w / 2.0), color);
+    frame
+        .canvas
+        .fill(thumb, Corner::Round(thumb.w / 2.0), color);
 }
 
 /// Draws one line of text in `rect`, cut short if it does not fit.
@@ -723,10 +767,14 @@ fn draw_wrapped(
         let line = &text[start..end];
         let width = frame.fonts.measure(style, line);
         let origin = Point::new(rect.x + align.offset(rect.w, width), y + metrics.ascent);
-        frame.fonts.draw(frame.canvas, style, origin, line, style.color);
+        frame
+            .fonts
+            .draw(frame.canvas, style, origin, line, style.color);
         if bold {
             let doubled = Point::new(origin.x + BOLD_OFFSET, origin.y);
-            frame.fonts.draw(frame.canvas, style, doubled, line, style.color);
+            frame
+                .fonts
+                .draw(frame.canvas, style, doubled, line, style.color);
         }
         y += line_height;
     }
@@ -749,7 +797,11 @@ fn corner_of(radius: Radius, rect: Rect, theme: &Theme) -> Corner {
 /// nothing visible, so the shift is always *away* from the colour's own
 /// lightness and therefore always visible.
 fn lift(base: Color, lit: f32, held: bool) -> Color {
-    let toward = if base.luminance() > 0.5 { Color::BLACK } else { Color::WHITE };
+    let toward = if base.luminance() > 0.5 {
+        Color::BLACK
+    } else {
+        Color::WHITE
+    };
     let amount = 0.12 * lit.clamp(0.0, 1.0) + if held { 0.16 } else { 0.0 };
     if amount <= 0.0 {
         return base;
@@ -769,13 +821,19 @@ fn clamp_to_boundary(text: &str, offset: usize) -> usize {
 /// The character boundary before `offset`, or `None` at the start.
 fn previous_boundary(text: &str, offset: usize) -> Option<usize> {
     let offset = clamp_to_boundary(text, offset);
-    text[..offset].chars().next_back().map(|character| offset - character.len_utf8())
+    text[..offset]
+        .chars()
+        .next_back()
+        .map(|character| offset - character.len_utf8())
 }
 
 /// The character boundary after `offset`, or `None` at the end.
 fn next_boundary(text: &str, offset: usize) -> Option<usize> {
     let offset = clamp_to_boundary(text, offset);
-    text[offset..].chars().next().map(|character| offset + character.len_utf8())
+    text[offset..]
+        .chars()
+        .next()
+        .map(|character| offset + character.len_utf8())
 }
 
 /// Where a scrolling area identified by `id` should sit to show its end.

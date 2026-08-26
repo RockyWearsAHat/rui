@@ -1,0 +1,140 @@
+---
+id: src/element.rs
+title: element.rs
+kind: file-index
+lang: rust
+rank: 0.125675
+links: [[src/widgets.rs]] [[tests/layout.rs]] [[tests/interaction.rs]] [[examples/gallery.rs]] [[examples/controls.rs]] [[tests/recipes.rs]] [[tests/rendering.rs]] [[src/layout.rs]] [[src/canvas.rs]] [[src/paint.rs]] [[src/testing/mod.rs]] [[src/lib.rs]]
+generated_at: 2026-08-08T01:45:22.140Z
+---
+
+# src/element.rs  ·  rust  ·  854 LOC
+
+## Symbols
+
+- `Action` (class) — L46
+- `TextAction` (class) — L49
+- `DragAction` (class) — L52
+- `KeyAction` (class) — L55
+- `ScrollAction` (class) — L58
+- `HoverAction` (class) — L61
+- `Drawing` (class) — L64
+- `Node` (class) — L72
+- `El` (class) — L99
+- `of` (method) — L142
+- `style` (method) — L168
+- `with_style` (method) — L176
+- `add` (method) — L190
+- `w` (method) — L198
+- `h` (method) — L204
+- `size` (method) — L210
+- `grow` (method) — L219
+- `grow_by` (method) — L225
+- `min_w` (method) — L231
+- `min_h` (method) — L237
+- `max_w` (method) — L243
+- `max_h` (method) — L249
+- `pad` (method) — L255
+- `pad_x` (method) — L261
+- `pad_y` (method) — L268
+- `pad_each` (method) — L275
+- `gap` (method) — L281
+- `axis` (method) — L287
+- `align` (method) — L293
+- `justify` (method) — L299
+- `center` (method) — L305
+- `fill` (method) — L317
+- `gradient` (method) — L328
+- `border` (method) — L335
+- `round` (method) — L341
+- `pill` (method) — L347
+- `shadow` (method) — L353
+- `clip` (method) — L359
+- `flow` (method) — L375
+- `scroll` (method) — L386
+- `follow` (method) — L400
+- `text_size` (method) — L408
+- `color` (method) — L414
+- `mono` (method) — L420
+- `tracking` (method) — L428
+- `bold` (method) — L440
+- `text_align` (method) — L446
+- `wrap` (method) — L453
+- `on_click` (method) — L461
+- `on_secondary_click` (method) — L469
+- `on_input` (method) — L475
+- `on_submit` (method) — L482
+- `on_drag` (method) — L505
+- `on_key` (method) — L518
+- `on_scroll` (method) — L530
+- `on_hover` (method) — L546
+- `layer` (method) — L570
+- `focusable` (method) — L576
+- `reactive` (method) — L583
+- `disabled` (method) — L593
+
+## Graph
+
+```mermaid
+graph LR
+  c["element.rs"]
+  x0["widgets.rs"]
+  c --> x0
+  x1["layout.rs"]
+  x1 --> c
+  x2["interaction.rs"]
+  x2 --> c
+  x3["gallery.rs"]
+  x3 --> c
+  x4["controls.rs"]
+  x4 --> c
+  x5["recipes.rs"]
+  x5 --> c
+  x6["rendering.rs"]
+  x6 --> c
+  x7["layout.rs"]
+  x7 --> c
+  x8["canvas.rs"]
+  x8 --> c
+  x9["paint.rs"]
+  c --> x9
+  x10["mod.rs"]
+  c --> x10
+  x11["lib.rs"]
+  c --> x11
+  x12["input.rs"]
+  c --> x12
+  x13["counter.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/widgets.rs]] via `col`, `text`, `button`, `border`, `text_align`
+- [[src/paint.rs]] via `text`, `color`, `interactive`, `fill`, `shadow`
+- [[src/testing/mod.rs]] via `scroll`, `text`, `click_action`, `anchor`, `on_click`
+- [[src/lib.rs]] via `text`
+- [[src/input.rs]] via `scroll`, `text`, `is_empty`
+- [[src/text.rs]] via `is_empty`, `round`
+- [[src/geom.rs]] via `is_empty`
+- [[src/style.rs]] via `is_empty`
+
+### Referenced by
+
+- [[tests/layout.rs]] via `key`, `pad`, `wrap`, `grow_by`, `layer`
+- [[tests/interaction.rs]] via `on_scroll`, `key`, `on_input`, `add`, `disabled`
+- [[examples/gallery.rs]] via `fill`, `bold`, `gap`, `round`, `on_input`
+- [[examples/controls.rs]] via `on_key`, `on_scroll`, `pad_x`, `on_drag`, `add`
+- [[tests/recipes.rs]] via `align`, `key`, `on_click`, `on_hover`, `fill`
+- [[tests/rendering.rs]] via `disabled`, `pad`, `align`, `fill`, `size`
+- [[src/layout.rs]] via `color`, `min_w`, `key`, `max_w`, `grow_by`
+- [[src/canvas.rs]] via `shadow`, `clip`, `size`, `fill`, `round`
+- [[examples/counter.rs]] via `pad`, `gap`, `bold`, `on_click`, `text_size`
+- [[src/font/raster.rs]] via `fill`
+- [[examples/icon.rs]] via `color`, `fill`
+- [[src/shell/fonts.rs]] via `add`
+- [[src/color.rs]] via `round`
+- [[src/theme.rs]] via `mono`
+- [[src/app.rs]] via `children`
+- [[src/shell/platform/x11.rs]] via `round`
+

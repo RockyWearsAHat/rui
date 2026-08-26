@@ -1,0 +1,86 @@
+---
+id: src/shell/mod.rs
+title: mod.rs
+kind: file-index
+lang: rust
+rank: 0.015374
+links: [[src/paint.rs]] [[src/canvas.rs]] [[src/shell/platform/macos.rs]] [[src/shell/platform/unsupported.rs]] [[src/shell/platform/windows.rs]] [[src/shell/platform/x11.rs]] [[src/text.rs]] [[examples/controls.rs]] [[src/app.rs]] [[src/input.rs]] [[src/memory.rs]] [[src/testing/mod.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# src/shell/mod.rs  ·  rust  ·  284 LOC
+
+## Symbols
+
+- `fonts` (module) — L41
+- `platform` (module) — L42
+- `WindowOptions` (class) — L64
+- `default` (method) — L78
+- `Error` (class) — L85
+- `fmt` (method) — L102
+- `from` (method) — L121
+- `from` (method) — L127
+- `Backend` (interface) — L137
+- `Surface` (class) — L171
+- `draw` (method) — L197
+- `run` (function) — L234
+
+## Graph
+
+```mermaid
+graph LR
+  c["mod.rs"]
+  x0["paint.rs"]
+  x0 --> c
+  x1["canvas.rs"]
+  c --> x1
+  x2["macos.rs"]
+  c --> x2
+  x3["unsupported.rs"]
+  c --> x3
+  x4["windows.rs"]
+  c --> x4
+  x5["x11.rs"]
+  c --> x5
+  x6["text.rs"]
+  c --> x6
+  x7["controls.rs"]
+  x7 --> c
+  x8["app.rs"]
+  x8 --> c
+  x9["input.rs"]
+  c --> x9
+  x10["memory.rs"]
+  c --> x10
+  x11["mod.rs"]
+  c --> x11
+  x12["widgets.rs"]
+  c --> x12
+  x13["recipes.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/canvas.rs]] via `height`, `resize`, `clear_vertical`, `scale`, `clear`
+- [[src/shell/platform/macos.rs]] via `surface`, `present`, `is_open`, `pump`, `appearance`
+- [[src/shell/platform/unsupported.rs]] via `surface`, `present`, `is_open`, `pump`, `appearance`
+- [[src/shell/platform/windows.rs]] via `surface`, `present`, `is_open`, `pump`, `appearance`
+- [[src/shell/platform/x11.rs]] via `surface`, `present`, `is_open`, `pump`, `appearance`
+- [[src/text.rs]] via `set_scale`, `draw`
+- [[src/input.rs]] via `apply`, `close_requested`, `begin_frame`
+- [[src/memory.rs]] via `end_frame`, `begin_frame`, `is_animating`
+- [[src/testing/mod.rs]] via `frame`, `scale`, `is_animating`, `appearance`
+- [[src/widgets.rs]] via `draw`
+- [[src/font/outline.rs]] via `apply`
+
+### Referenced by
+
+- [[src/paint.rs]] via `draw`, `surface`
+- [[examples/controls.rs]] via `run`, `draw`
+- [[src/app.rs]] via `run`, `idle`, `is_running`, `frame`
+- [[tests/recipes.rs]] via `draw`
+- [[tests/interaction.rs]] via `draw`
+- [[examples/gallery.rs]] via `draw`
+- [[tests/rendering.rs]] via `draw`
+

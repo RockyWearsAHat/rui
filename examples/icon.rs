@@ -76,7 +76,10 @@ fn draw_icon(canvas: &mut Canvas, size: f32) {
     let margin = size * MARGIN;
     let tile = Rect::new(margin, margin, size - margin * 2.0, size - margin * 2.0);
     let corner = Corner::Round(tile.w * 0.22);
-    let (light, deep) = (painter.color(Tone::AccentLight), painter.color(Tone::AccentDeep));
+    let (light, deep) = (
+        painter.color(Tone::AccentLight),
+        painter.color(Tone::AccentDeep),
+    );
     painter.canvas().fill_vertical(tile, corner, light, deep);
 
     let inset = tile.w * 0.20;
@@ -95,7 +98,14 @@ fn draw_icon(canvas: &mut Canvas, size: f32) {
         painter.fill(unit, Radius::Units(height * 0.2), Tone::Exact(ink));
 
         let lamp = height * 0.34;
-        let socket = Rect::new(unit.x + lamp, unit.y + unit.h / 2.0 - lamp / 2.0, lamp, lamp);
-        painter.canvas().fill(socket, Corner::Round(lamp / 2.0), lamp_color);
+        let socket = Rect::new(
+            unit.x + lamp,
+            unit.y + unit.h / 2.0 - lamp / 2.0,
+            lamp,
+            lamp,
+        );
+        painter
+            .canvas()
+            .fill(socket, Corner::Round(lamp / 2.0), lamp_color);
     }
 }

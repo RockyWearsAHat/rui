@@ -1,0 +1,94 @@
+---
+id: src/app.rs
+title: app.rs
+kind: file-index
+lang: rust
+rank: 0.012962
+links: [[tests/rendering.rs]] [[src/testing/mod.rs]] [[src/canvas.rs]] [[tests/recipes.rs]] [[examples/controls.rs]] [[tests/layout.rs]] [[src/layout.rs]] [[src/shell/mod.rs]] [[src/testing/font.rs]] [[src/memory.rs]] [[src/text.rs]] [[src/font/outline.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# src/app.rs  ·  rust  ·  265 LOC
+
+## Symbols
+
+- `App` (class) — L44
+- `View` (class) — L53
+- `Condition` (class) — L56
+- `new` (method) — L68
+- `size` (method) — L83
+- `min_size` (method) — L93
+- `idle_timeout` (method) — L104
+- `while_running` (method) — L113
+- `state` (method) — L119
+- `run` (method) — L127
+- `run_with_fonts` (method) — L133
+- `render` (method) — L142
+- `draw_into` (method) — L164
+- `frame` (method) — L183
+- `frame_observed` (method) — L202
+- `idle` (method) — L234
+- `is_running` (method) — L239
+- `visit` (function) — L246
+- `run` (function) — L259
+
+## Graph
+
+```mermaid
+graph LR
+  c["app.rs"]
+  x0["rendering.rs"]
+  x0 --> c
+  x1["mod.rs"]
+  c --> x1
+  x2["canvas.rs"]
+  c --> x2
+  x3["recipes.rs"]
+  x3 --> c
+  x4["controls.rs"]
+  x4 --> c
+  x5["layout.rs"]
+  x5 --> c
+  x6["layout.rs"]
+  x6 --> c
+  x7["mod.rs"]
+  c --> x7
+  x8["font.rs"]
+  x8 --> c
+  x9["memory.rs"]
+  c --> x9
+  x10["text.rs"]
+  c --> x10
+  x11["outline.rs"]
+  c --> x11
+  x12["input.rs"]
+  c --> x12
+  x13["theme.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/testing/mod.rs]] via `frame`, `scale`, `state`, `frame_observed`
+- [[src/canvas.rs]] via `bounds`, `clear_vertical`, `is_empty`, `scale`, `size`
+- [[src/shell/mod.rs]] via `run`, `idle`, `is_running`, `frame`
+- [[src/memory.rs]] via `request_frame`, `end_frame`, `begin_frame`
+- [[src/text.rs]] via `set_scale`, `is_empty`, `render`
+- [[src/font/outline.rs]] via `bounds`
+- [[src/input.rs]] via `is_empty`, `begin_frame`
+- [[src/element.rs]] via `children`
+- [[src/geom.rs]] via `is_empty`
+- [[src/style.rs]] via `is_empty`
+
+### Referenced by
+
+- [[tests/rendering.rs]] via `frame`, `size`
+- [[tests/recipes.rs]] via `size`, `frame`
+- [[examples/controls.rs]] via `run`, `render`, `size`
+- [[tests/layout.rs]] via `size`
+- [[src/layout.rs]] via `size`
+- [[src/testing/font.rs]] via `render`
+- [[src/theme.rs]] via `state`
+- [[tests/interaction.rs]] via `frame`
+- [[examples/gallery.rs]] via `render`
+

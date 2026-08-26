@@ -78,7 +78,12 @@ pub struct TextStyle {
 impl TextStyle {
     /// A style, in the given face, size, and colour, set solid.
     pub const fn new(font: FontId, size: f32, color: Color) -> Self {
-        Self { font, size, color, tracking: 0.0 }
+        Self {
+            font,
+            size,
+            color,
+            tracking: 0.0,
+        }
     }
 
     /// The same style in a different colour.
@@ -135,12 +140,18 @@ pub struct Fonts {
 impl Fonts {
     /// A set of fonts with nothing loaded, at a scale of one.
     pub fn new() -> Self {
-        Self { faces: Vec::new(), scale: 1.0 }
+        Self {
+            faces: Vec::new(),
+            scale: 1.0,
+        }
     }
 
     /// Adds a face and answers the handle that selects it.
     pub fn add(&mut self, font: Font) -> FontId {
-        self.faces.push(Face { font, rendered: RefCell::new(HashMap::new()) });
+        self.faces.push(Face {
+            font,
+            rendered: RefCell::new(HashMap::new()),
+        });
         FontId(self.faces.len() - 1)
     }
 
@@ -177,7 +188,11 @@ impl Fonts {
     pub fn metrics(&self, style: &TextStyle) -> LineMetrics {
         match self.faces.get(style.font.0) {
             Some(face) => face.font.metrics(quantise(style.size)),
-            None => LineMetrics { ascent: 0.0, descent: 0.0, line_gap: 0.0 },
+            None => LineMetrics {
+                ascent: 0.0,
+                descent: 0.0,
+                line_gap: 0.0,
+            },
         }
     }
 
@@ -275,7 +290,13 @@ impl Fonts {
         let kept = self.fit(style, text, (max_width - ellipsis).max(0.0));
         let advance = self.draw(canvas, style, origin, &text[..kept], color);
         advance
-            + self.draw(canvas, style, origin.offset(advance, 0.0), &ELLIPSIS.to_string(), color)
+            + self.draw(
+                canvas,
+                style,
+                origin.offset(advance, 0.0),
+                &ELLIPSIS.to_string(),
+                color,
+            )
     }
 
     /// The size glyphs are rendered at, in quantised device pixels.
@@ -292,7 +313,9 @@ impl Fonts {
             return 0.0;
         };
         if character == '\t' {
-            let stop = self.faces[face].font.advance(glyph_of(&self.faces[face].font, ' '), device_size)
+            let stop = self.faces[face]
+                .font
+                .advance(glyph_of(&self.faces[face].font, ' '), device_size)
                 * TAB_WIDTH as f32;
             if stop > 0.0 {
                 return stop - pen.rem_euclid(stop);
@@ -328,11 +351,10 @@ impl Fonts {
             cache.clear();
         }
         let rendered = cache.entry(key).or_insert_with(|| {
-            Rc::new(face.font.render(
-                glyph,
-                device_size,
-                phase as f32 / SUBPIXEL_PHASES as f32,
-            ))
+            Rc::new(
+                face.font
+                    .render(glyph, device_size, phase as f32 / SUBPIXEL_PHASES as f32),
+            )
         });
         (!rendered.mask.is_empty()).then(|| Rc::clone(rendered))
     }
@@ -431,7 +453,11 @@ fn split_lines(text: &str) -> Vec<(usize, usize)> {
     let mut start = 0;
     for (offset, character) in text.char_indices() {
         if character == '\n' {
-            let end = if text[..offset].ends_with('\r') { offset - 1 } else { offset };
+            let end = if text[..offset].ends_with('\r') {
+                offset - 1
+            } else {
+                offset
+            };
             lines.push((start, end));
             start = offset + 1;
         }
@@ -463,7 +489,11 @@ mod tests {
         let style = TextStyle::new(FontId::FIRST, 10.0, Color::WHITE);
         assert_eq!(style.tracking, 0.0);
         assert_eq!(style.tracked(0.8).tracking, 0.8);
-        assert_eq!(style.tracked(0.8).size, 10.0, "tracking must not disturb the size");
+        assert_eq!(
+            style.tracked(0.8).size,
+            10.0,
+            "tracking must not disturb the size"
+        );
     }
 
     #[test]
@@ -512,7 +542,13 @@ mod tests {
         let mut canvas = Canvas::new(20, 20, 1.0);
         canvas.clear(Color::BLACK);
         let style = TextStyle::new(FontId(0), 13.0, Color::WHITE);
-        fonts.draw(&mut canvas, &style, Point::new(0.0, 10.0), "hello", Color::WHITE);
+        fonts.draw(
+            &mut canvas,
+            &style,
+            Point::new(0.0, 10.0),
+            "hello",
+            Color::WHITE,
+        );
         assert!(canvas.pixels().iter().all(|&word| word == 0xff00_0000));
     }
 

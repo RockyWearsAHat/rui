@@ -126,7 +126,8 @@ pub fn blend_over(destination: u32, source: Color, coverage: u8) -> u32 {
     }
 
     let inverse = 255 - alpha;
-    let channel = |src: u8, dst: u32| mul_255(src, alpha) as u32 + mul_255(dst as u8, inverse) as u32;
+    let channel =
+        |src: u8, dst: u32| mul_255(src, alpha) as u32 + mul_255(dst as u8, inverse) as u32;
 
     let r = channel(source.r, (destination >> 16) & 0xff);
     let g = channel(source.g, (destination >> 8) & 0xff);
@@ -158,7 +159,10 @@ mod tests {
 
     #[test]
     fn a_transparent_colour_never_draws_however_covered() {
-        assert_eq!(blend_over(0xff12_3456, Color::TRANSPARENT, 255), 0xff12_3456);
+        assert_eq!(
+            blend_over(0xff12_3456, Color::TRANSPARENT, 255),
+            0xff12_3456
+        );
     }
 
     #[test]
@@ -179,7 +183,10 @@ mod tests {
         // Half-transparent paint at half coverage is a quarter of a pixel.
         let half = Color::rgba(255, 255, 255, 128);
         let quarter = blend_over(0xff00_0000, half, 128) & 0xff;
-        assert!((62..=66).contains(&quarter), "expected about a quarter, got {quarter}");
+        assert!(
+            (62..=66).contains(&quarter),
+            "expected about a quarter, got {quarter}"
+        );
     }
 
     #[test]

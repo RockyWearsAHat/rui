@@ -1,0 +1,8587 @@
+{
+  "version": 1,
+  "built_at": "2026-08-08T01:45:22.133Z",
+  "root": "/Users/alexwaldmann/Desktop/rui",
+  "commit": "0cd12bd",
+  "file_count": 41,
+  "symbol_count": 1059,
+  "files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "lang": "yaml",
+      "loc": 66,
+      "rank": 0.004736,
+      "defs": []
+    },
+    {
+      "path": ".gitignore",
+      "lang": "text",
+      "loc": 6,
+      "rank": 0.004736,
+      "defs": []
+    },
+    {
+      "path": "Cargo.toml",
+      "lang": "toml",
+      "loc": 31,
+      "rank": 0.004736,
+      "defs": []
+    },
+    {
+      "path": "LICENSE",
+      "lang": "text",
+      "loc": 21,
+      "rank": 0.004736,
+      "defs": []
+    },
+    {
+      "path": "README.md",
+      "lang": "markdown",
+      "loc": 298,
+      "rank": 0.004736,
+      "defs": [],
+      "headings": [
+        "rui",
+        "The model",
+        "Foundations, not a catalogue",
+        "Structure",
+        "Layout",
+        "Style, and what inherits",
+        "Identity, and the state that outlives a frame",
+        "Testing an interface",
+        "What is underneath",
+        "The loop",
+        "Using it",
+        "Licence"
+      ]
+    },
+    {
+      "path": "examples/controls.rs",
+      "lang": "rust",
+      "loc": 287,
+      "rank": 0.005033,
+      "defs": [
+        {
+          "name": "checkbox",
+          "kind": "function",
+          "line": 45
+        },
+        {
+          "name": "tick",
+          "kind": "function",
+          "line": 75
+        },
+        {
+          "name": "switch",
+          "kind": "function",
+          "line": 86
+        },
+        {
+          "name": "slider",
+          "kind": "function",
+          "line": 104
+        },
+        {
+          "name": "radio_group",
+          "kind": "function",
+          "line": 133
+        },
+        {
+          "name": "stepper",
+          "kind": "function",
+          "line": 167
+        },
+        {
+          "name": "with_tip",
+          "kind": "function",
+          "line": 188
+        },
+        {
+          "name": "Panel",
+          "kind": "class",
+          "line": 204
+        },
+        {
+          "name": "view",
+          "kind": "function",
+          "line": 214
+        },
+        {
+          "name": "labelled",
+          "kind": "function",
+          "line": 263
+        },
+        {
+          "name": "main",
+          "kind": "function",
+          "line": 267
+        }
+      ]
+    },
+    {
+      "path": "examples/counter.rs",
+      "lang": "rust",
+      "loc": 30,
+      "rank": 0.004736,
+      "defs": [
+        {
+          "name": "Counter",
+          "kind": "class",
+          "line": 8
+        },
+        {
+          "name": "view",
+          "kind": "function",
+          "line": 13
+        },
+        {
+          "name": "main",
+          "kind": "function",
+          "line": 28
+        }
+      ]
+    },
+    {
+      "path": "examples/gallery.rs",
+      "lang": "rust",
+      "loc": 205,
+      "rank": 0.005455,
+      "defs": [
+        {
+          "name": "Gallery",
+          "kind": "class",
+          "line": 16
+        },
+        {
+          "name": "view",
+          "kind": "function",
+          "line": 23
+        },
+        {
+          "name": "masthead",
+          "kind": "function",
+          "line": 37
+        },
+        {
+          "name": "counts",
+          "kind": "function",
+          "line": 80
+        },
+        {
+          "name": "count",
+          "kind": "function",
+          "line": 94
+        },
+        {
+          "name": "states",
+          "kind": "function",
+          "line": 102
+        },
+        {
+          "name": "controls",
+          "kind": "function",
+          "line": 120
+        },
+        {
+          "name": "form",
+          "kind": "function",
+          "line": 148
+        },
+        {
+          "name": "main",
+          "kind": "function",
+          "line": 184
+        }
+      ]
+    },
+    {
+      "path": "examples/icon.rs",
+      "lang": "rust",
+      "loc": 101,
+      "rank": 0.004736,
+      "defs": [
+        {
+          "name": "main",
+          "kind": "function",
+          "line": 40
+        },
+        {
+          "name": "draw_icon",
+          "kind": "function",
+          "line": 71
+        }
+      ]
+    },
+    {
+      "path": "src/app.rs",
+      "lang": "rust",
+      "loc": 265,
+      "rank": 0.012962,
+      "defs": [
+        {
+          "name": "App",
+          "kind": "class",
+          "line": 44
+        },
+        {
+          "name": "View",
+          "kind": "class",
+          "line": 53
+        },
+        {
+          "name": "Condition",
+          "kind": "class",
+          "line": 56
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 68
+        },
+        {
+          "name": "size",
+          "kind": "method",
+          "line": 83
+        },
+        {
+          "name": "min_size",
+          "kind": "method",
+          "line": 93
+        },
+        {
+          "name": "idle_timeout",
+          "kind": "method",
+          "line": 104
+        },
+        {
+          "name": "while_running",
+          "kind": "method",
+          "line": 113
+        },
+        {
+          "name": "state",
+          "kind": "method",
+          "line": 119
+        },
+        {
+          "name": "run",
+          "kind": "method",
+          "line": 127
+        },
+        {
+          "name": "run_with_fonts",
+          "kind": "method",
+          "line": 133
+        },
+        {
+          "name": "render",
+          "kind": "method",
+          "line": 142
+        },
+        {
+          "name": "draw_into",
+          "kind": "method",
+          "line": 164
+        },
+        {
+          "name": "frame",
+          "kind": "method",
+          "line": 183
+        },
+        {
+          "name": "frame_observed",
+          "kind": "method",
+          "line": 202
+        },
+        {
+          "name": "idle",
+          "kind": "method",
+          "line": 234
+        },
+        {
+          "name": "is_running",
+          "kind": "method",
+          "line": 239
+        },
+        {
+          "name": "visit",
+          "kind": "function",
+          "line": 246
+        },
+        {
+          "name": "run",
+          "kind": "function",
+          "line": 259
+        }
+      ]
+    },
+    {
+      "path": "src/canvas.rs",
+      "lang": "rust",
+      "loc": 1268,
+      "rank": 0.11186,
+      "defs": [
+        {
+          "name": "Corner",
+          "kind": "class",
+          "line": 80
+        },
+        {
+          "name": "size",
+          "kind": "method",
+          "line": 94
+        },
+        {
+          "name": "grown",
+          "kind": "method",
+          "line": 106
+        },
+        {
+          "name": "resized",
+          "kind": "method",
+          "line": 115
+        },
+        {
+          "name": "Mask",
+          "kind": "class",
+          "line": 130
+        },
+        {
+          "name": "empty",
+          "kind": "method",
+          "line": 141
+        },
+        {
+          "name": "is_empty",
+          "kind": "method",
+          "line": 146
+        },
+        {
+          "name": "PixelBounds",
+          "kind": "class",
+          "line": 157
+        },
+        {
+          "name": "intersect",
+          "kind": "method",
+          "line": 165
+        },
+        {
+          "name": "is_empty",
+          "kind": "method",
+          "line": 174
+        },
+        {
+          "name": "Canvas",
+          "kind": "class",
+          "line": 192
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 208
+        },
+        {
+          "name": "resize",
+          "kind": "method",
+          "line": 232
+        },
+        {
+          "name": "width",
+          "kind": "method",
+          "line": 243
+        },
+        {
+          "name": "height",
+          "kind": "method",
+          "line": 248
+        },
+        {
+          "name": "scale",
+          "kind": "method",
+          "line": 253
+        },
+        {
+          "name": "bounds",
+          "kind": "method",
+          "line": 258
+        },
+        {
+          "name": "pixels",
+          "kind": "method",
+          "line": 263
+        },
+        {
+          "name": "clip",
+          "kind": "method",
+          "line": 268
+        },
+        {
+          "name": "push_clip",
+          "kind": "method",
+          "line": 282
+        },
+        {
+          "name": "pop_clip",
+          "kind": "method",
+          "line": 289
+        },
+        {
+          "name": "is_visible",
+          "kind": "method",
+          "line": 298
+        },
+        {
+          "name": "clear",
+          "kind": "method",
+          "line": 303
+        },
+        {
+          "name": "clear_vertical",
+          "kind": "method",
+          "line": 313
+        },
+        {
+          "name": "fill_rect",
+          "kind": "method",
+          "line": 326
+        },
+        {
+          "name": "fill",
+          "kind": "method",
+          "line": 335
+        },
+        {
+          "name": "fill_vertical",
+          "kind": "method",
+          "line": 355
+        },
+        {
+          "name": "shadow",
+          "kind": "method",
+          "line": 375
+        },
+        {
+          "name": "stroke",
+          "kind": "method",
+          "line": 397
+        },
+        {
+          "name": "device_corner",
+          "kind": "method",
+          "line": 411
+        },
+        {
+          "name": "fill_mask",
+          "kind": "method",
+          "line": 420
+        },
+        {
+          "name": "device_rect",
+          "kind": "method",
+          "line": 449
+        },
+        {
+          "name": "device_bounds",
+          "kind": "method",
+          "line": 462
+        },
+        {
+          "name": "fill_aligned_opaque",
+          "kind": "method",
+          "line": 476
+        },
+        {
+          "name": "fill_shape",
+          "kind": "method",
+          "line": 507
+        },
+        {
+          "name": "glow_shape",
+          "kind": "method",
+          "line": 565
+        },
+        {
+          "name": "stroke_shape",
+          "kind": "method",
+          "line": 601
+        },
+        {
+          "name": "blend_span",
+          "kind": "method",
+          "line": 637
+        },
+        {
+          "name": "glow_span",
+          "kind": "method",
+          "line": 664
+        },
+        {
+          "name": "stroke_span",
+          "kind": "method",
+          "line": 689
+        },
+        {
+          "name": "Paint",
+          "kind": "class",
+          "line": 721
+        },
+        {
+          "name": "solid",
+          "kind": "method",
+          "line": 735
+        },
+        {
+          "name": "vertical",
+          "kind": "method",
+          "line": 740
+        },
+        {
+          "name": "at",
+          "kind": "method",
+          "line": 750
+        },
+        {
+          "name": "DistanceField",
+          "kind": "class",
+          "line": 778
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 801
+        },
+        {
+          "name": "at",
+          "kind": "method",
+          "line": 824
+        },
+        {
+          "name": "is_pixel_aligned",
+          "kind": "function",
+          "line": 851
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 857
+        },
+        {
+          "name": "pixel_at",
+          "kind": "method",
+          "line": 861
+        },
+        {
+          "name": "blank",
+          "kind": "method",
+          "line": 865
+        },
+        {
+          "name": "a_new_canvas_is_opaque_everywhere",
+          "kind": "method",
+          "line": 872
+        },
+        {
+          "name": "an_absurd_scale_is_clamped_rather_than_collapsing_the_layout",
+          "kind": "method",
+          "line": 878
+        },
+        {
+          "name": "logical_bounds_account_for_the_scale",
+          "kind": "method",
+          "line": 884
+        },
+        {
+          "name": "a_filled_rectangle_covers_exactly_its_pixels",
+          "kind": "method",
+          "line": 890
+        },
+        {
+          "name": "a_cut_corner_removes_the_corner_and_keeps_the_edges",
+          "kind": "method",
+          "line": 901
+        },
+        {
+          "name": "a_cut_corner_is_a_straight_diagonal_rather_than_an_arc",
+          "kind": "method",
+          "line": 917
+        },
+        {
+          "name": "a_cut_and_a_rounded_corner_of_the_same_size_differ_where_it_matters",
+          "kind": "method",
+          "line": 935
+        },
+        {
+          "name": "a_corner_larger_than_the_shape_is_clamped_rather_than_inverted",
+          "kind": "method",
+          "line": 951
+        },
+        {
+          "name": "growing_a_corner_keeps_the_shape_it_already_was",
+          "kind": "method",
+          "line": 965
+        },
+        {
+          "name": "logical_coordinates_are_multiplied_by_the_scale",
+          "kind": "method",
+          "line": 977
+        },
+        {
+          "name": "a_fractional_edge_is_antialiased_rather_than_snapped",
+          "kind": "method",
+          "line": 988
+        },
+        {
+          "name": "drawing_outside_the_surface_is_clipped_not_wrapped",
+          "kind": "method",
+          "line": 997
+        },
+        {
+          "name": "a_clip_confines_drawing",
+          "kind": "method",
+          "line": 1004
+        },
+        {
+          "name": "a_nested_clip_cannot_widen_its_parent",
+          "kind": "method",
+          "line": 1015
+        },
+        {
+          "name": "popping_a_clip_restores_the_earlier_one",
+          "kind": "method",
+          "line": 1028
+        },
+        {
+          "name": "visibility_follows_the_clip",
+          "kind": "method",
+          "line": 1037
+        },
+        {
+          "name": "a_rounded_corner_is_lighter_than_the_middle",
+          "kind": "method",
+          "line": 1046
+        },
+        {
+          "name": "a_large_rounded_rectangle_has_no_seam_where_the_fast_path_begins",
+          "kind": "method",
+          "line": 1055
+        },
+        {
+          "name": "a_translucent_fill_covers_its_interior_evenly",
+          "kind": "method",
+          "line": 1075
+        },
+        {
+          "name": "a_stroke_on_a_tall_shape_marks_both_edges_and_nothing_between",
+          "kind": "method",
+          "line": 1090
+        },
+        {
+          "name": "a_stroked_corner_joins_the_edges_that_meet_there",
+          "kind": "method",
+          "line": 1106
+        },
+        {
+          "name": "an_oversized_radius_becomes_a_capsule_not_an_inverted_corner",
+          "kind": "method",
+          "line": 1119
+        },
+        {
+          "name": "a_stroke_marks_the_edge_and_leaves_the_middle_alone",
+          "kind": "method",
+          "line": 1129
+        },
+        {
+          "name": "a_vertical_gradient_runs_from_its_top_colour_to_its_bottom_one",
+          "kind": "method",
+          "line": 1138
+        },
+        {
+          "name": "a_gradient_row_is_one_even_colour_across_its_width",
+          "kind": "method",
+          "line": 1156
+        },
+        {
+          "name": "a_gradient_between_two_equal_colours_is_a_flat_fill",
+          "kind": "method",
+          "line": 1175
+        },
+        {
+          "name": "a_glow_surrounds_a_shape_without_touching_its_inside",
+          "kind": "method",
+          "line": 1187
+        },
+        {
+          "name": "a_glow_fades_with_distance_from_the_edge",
+          "kind": "method",
+          "line": 1197
+        },
+        {
+          "name": "a_glow_with_spread_starts_further_out_than_one_without",
+          "kind": "method",
+          "line": 1208
+        },
+        {
+          "name": "an_invisible_colour_draws_nothing",
+          "kind": "method",
+          "line": 1225
+        },
+        {
+          "name": "an_empty_rectangle_draws_nothing",
+          "kind": "method",
+          "line": 1232
+        },
+        {
+          "name": "a_mask_paints_its_coverage",
+          "kind": "method",
+          "line": 1239
+        },
+        {
+          "name": "a_mask_hanging_off_the_edge_is_clipped_not_wrapped",
+          "kind": "method",
+          "line": 1249
+        },
+        {
+          "name": "resizing_keeps_the_canvas_consistent",
+          "kind": "method",
+          "line": 1260
+        }
+      ]
+    },
+    {
+      "path": "src/color.rs",
+      "lang": "rust",
+      "loc": 211,
+      "rank": 0.038416,
+      "defs": [
+        {
+          "name": "Color",
+          "kind": "class",
+          "line": 19
+        },
+        {
+          "name": "rgb",
+          "kind": "method",
+          "line": 32
+        },
+        {
+          "name": "rgba",
+          "kind": "method",
+          "line": 37
+        },
+        {
+          "name": "with_alpha",
+          "kind": "method",
+          "line": 49
+        },
+        {
+          "name": "fade",
+          "kind": "method",
+          "line": 57
+        },
+        {
+          "name": "mix",
+          "kind": "method",
+          "line": 66
+        },
+        {
+          "name": "is_visible",
+          "kind": "method",
+          "line": 78
+        },
+        {
+          "name": "to_argb",
+          "kind": "method",
+          "line": 83
+        },
+        {
+          "name": "from_argb",
+          "kind": "method",
+          "line": 88
+        },
+        {
+          "name": "luminance",
+          "kind": "method",
+          "line": 102
+        },
+        {
+          "name": "blend_over",
+          "kind": "function",
+          "line": 117
+        },
+        {
+          "name": "mul_255",
+          "kind": "function",
+          "line": 138
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 144
+        },
+        {
+          "name": "full_coverage_of_an_opaque_colour_replaces_the_pixel",
+          "kind": "method",
+          "line": 148
+        },
+        {
+          "name": "zero_coverage_leaves_the_pixel_alone",
+          "kind": "method",
+          "line": 154
+        },
+        {
+          "name": "a_transparent_colour_never_draws_however_covered",
+          "kind": "method",
+          "line": 160
+        },
+        {
+          "name": "half_coverage_lands_halfway_between_the_two_colours",
+          "kind": "method",
+          "line": 165
+        },
+        {
+          "name": "blending_always_produces_an_opaque_pixel",
+          "kind": "method",
+          "line": 172
+        },
+        {
+          "name": "coverage_and_alpha_multiply_rather_than_blending_twice",
+          "kind": "method",
+          "line": 178
+        },
+        {
+          "name": "packing_round_trips",
+          "kind": "method",
+          "line": 186
+        },
+        {
+          "name": "mixing_is_clamped_at_both_ends",
+          "kind": "method",
+          "line": 192
+        },
+        {
+          "name": "mul_255_reaches_both_extremes_exactly",
+          "kind": "method",
+          "line": 200
+        },
+        {
+          "name": "luminance_orders_black_below_white",
+          "kind": "method",
+          "line": 207
+        }
+      ]
+    },
+    {
+      "path": "src/element.rs",
+      "lang": "rust",
+      "loc": 854,
+      "rank": 0.125675,
+      "defs": [
+        {
+          "name": "Action",
+          "kind": "class",
+          "line": 46
+        },
+        {
+          "name": "TextAction",
+          "kind": "class",
+          "line": 49
+        },
+        {
+          "name": "DragAction",
+          "kind": "class",
+          "line": 52
+        },
+        {
+          "name": "KeyAction",
+          "kind": "class",
+          "line": 55
+        },
+        {
+          "name": "ScrollAction",
+          "kind": "class",
+          "line": 58
+        },
+        {
+          "name": "HoverAction",
+          "kind": "class",
+          "line": 61
+        },
+        {
+          "name": "Drawing",
+          "kind": "class",
+          "line": 64
+        },
+        {
+          "name": "Node",
+          "kind": "class",
+          "line": 72
+        },
+        {
+          "name": "El",
+          "kind": "class",
+          "line": 99
+        },
+        {
+          "name": "of",
+          "kind": "method",
+          "line": 142
+        },
+        {
+          "name": "style",
+          "kind": "method",
+          "line": 168
+        },
+        {
+          "name": "with_style",
+          "kind": "method",
+          "line": 176
+        },
+        {
+          "name": "add",
+          "kind": "method",
+          "line": 190
+        },
+        {
+          "name": "w",
+          "kind": "method",
+          "line": 198
+        },
+        {
+          "name": "h",
+          "kind": "method",
+          "line": 204
+        },
+        {
+          "name": "size",
+          "kind": "method",
+          "line": 210
+        },
+        {
+          "name": "grow",
+          "kind": "method",
+          "line": 219
+        },
+        {
+          "name": "grow_by",
+          "kind": "method",
+          "line": 225
+        },
+        {
+          "name": "min_w",
+          "kind": "method",
+          "line": 231
+        },
+        {
+          "name": "min_h",
+          "kind": "method",
+          "line": 237
+        },
+        {
+          "name": "max_w",
+          "kind": "method",
+          "line": 243
+        },
+        {
+          "name": "max_h",
+          "kind": "method",
+          "line": 249
+        },
+        {
+          "name": "pad",
+          "kind": "method",
+          "line": 255
+        },
+        {
+          "name": "pad_x",
+          "kind": "method",
+          "line": 261
+        },
+        {
+          "name": "pad_y",
+          "kind": "method",
+          "line": 268
+        },
+        {
+          "name": "pad_each",
+          "kind": "method",
+          "line": 275
+        },
+        {
+          "name": "gap",
+          "kind": "method",
+          "line": 281
+        },
+        {
+          "name": "axis",
+          "kind": "method",
+          "line": 287
+        },
+        {
+          "name": "align",
+          "kind": "method",
+          "line": 293
+        },
+        {
+          "name": "justify",
+          "kind": "method",
+          "line": 299
+        },
+        {
+          "name": "center",
+          "kind": "method",
+          "line": 305
+        },
+        {
+          "name": "fill",
+          "kind": "method",
+          "line": 317
+        },
+        {
+          "name": "gradient",
+          "kind": "method",
+          "line": 328
+        },
+        {
+          "name": "border",
+          "kind": "method",
+          "line": 335
+        },
+        {
+          "name": "round",
+          "kind": "method",
+          "line": 341
+        },
+        {
+          "name": "pill",
+          "kind": "method",
+          "line": 347
+        },
+        {
+          "name": "shadow",
+          "kind": "method",
+          "line": 353
+        },
+        {
+          "name": "clip",
+          "kind": "method",
+          "line": 359
+        },
+        {
+          "name": "flow",
+          "kind": "method",
+          "line": 375
+        },
+        {
+          "name": "scroll",
+          "kind": "method",
+          "line": 386
+        },
+        {
+          "name": "follow",
+          "kind": "method",
+          "line": 400
+        },
+        {
+          "name": "text_size",
+          "kind": "method",
+          "line": 408
+        },
+        {
+          "name": "color",
+          "kind": "method",
+          "line": 414
+        },
+        {
+          "name": "mono",
+          "kind": "method",
+          "line": 420
+        },
+        {
+          "name": "tracking",
+          "kind": "method",
+          "line": 428
+        },
+        {
+          "name": "bold",
+          "kind": "method",
+          "line": 440
+        },
+        {
+          "name": "text_align",
+          "kind": "method",
+          "line": 446
+        },
+        {
+          "name": "wrap",
+          "kind": "method",
+          "line": 453
+        },
+        {
+          "name": "on_click",
+          "kind": "method",
+          "line": 461
+        },
+        {
+          "name": "on_secondary_click",
+          "kind": "method",
+          "line": 469
+        },
+        {
+          "name": "on_input",
+          "kind": "method",
+          "line": 475
+        },
+        {
+          "name": "on_submit",
+          "kind": "method",
+          "line": 482
+        },
+        {
+          "name": "on_drag",
+          "kind": "method",
+          "line": 505
+        },
+        {
+          "name": "on_key",
+          "kind": "method",
+          "line": 518
+        },
+        {
+          "name": "on_scroll",
+          "kind": "method",
+          "line": 530
+        },
+        {
+          "name": "on_hover",
+          "kind": "method",
+          "line": 546
+        },
+        {
+          "name": "layer",
+          "kind": "method",
+          "line": 570
+        },
+        {
+          "name": "focusable",
+          "kind": "method",
+          "line": 576
+        },
+        {
+          "name": "reactive",
+          "kind": "method",
+          "line": 583
+        },
+        {
+          "name": "disabled",
+          "kind": "method",
+          "line": 593
+        },
+        {
+          "name": "hover_fill",
+          "kind": "method",
+          "line": 602
+        },
+        {
+          "name": "hover_color",
+          "kind": "method",
+          "line": 608
+        },
+        {
+          "name": "hover_border",
+          "kind": "method",
+          "line": 614
+        },
+        {
+          "name": "key",
+          "kind": "method",
+          "line": 621
+        },
+        {
+          "name": "children",
+          "kind": "method",
+          "line": 631
+        },
+        {
+          "name": "child",
+          "kind": "method",
+          "line": 636
+        },
+        {
+          "name": "text_content",
+          "kind": "method",
+          "line": 641
+        },
+        {
+          "name": "is_disabled",
+          "kind": "method",
+          "line": 650
+        },
+        {
+          "name": "click_action",
+          "kind": "method",
+          "line": 660
+        },
+        {
+          "name": "input_action",
+          "kind": "method",
+          "line": 665
+        },
+        {
+          "name": "drag_action",
+          "kind": "method",
+          "line": 670
+        },
+        {
+          "name": "key_action",
+          "kind": "method",
+          "line": 675
+        },
+        {
+          "name": "anchor",
+          "kind": "method",
+          "line": 681
+        },
+        {
+          "name": "interactive",
+          "kind": "method",
+          "line": 686
+        },
+        {
+          "name": "is_field",
+          "kind": "method",
+          "line": 703
+        },
+        {
+          "name": "hover",
+          "kind": "method",
+          "line": 708
+        },
+        {
+          "name": "from",
+          "kind": "method",
+          "line": 714
+        },
+        {
+          "name": "from",
+          "kind": "method",
+          "line": 720
+        },
+        {
+          "name": "Children",
+          "kind": "interface",
+          "line": 732
+        },
+        {
+          "name": "extend_into",
+          "kind": "method",
+          "line": 738
+        },
+        {
+          "name": "extend_into",
+          "kind": "method",
+          "line": 744
+        },
+        {
+          "name": "extend_into",
+          "kind": "method",
+          "line": 750
+        },
+        {
+          "name": "extend_into",
+          "kind": "method",
+          "line": 758
+        },
+        {
+          "name": "children_tuple",
+          "kind": "macro",
+          "line": 762
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 788
+        },
+        {
+          "name": "Counter",
+          "kind": "class",
+          "line": 794
+        },
+        {
+          "name": "a_tuple_of_children_keeps_its_order",
+          "kind": "method",
+          "line": 799
+        },
+        {
+          "name": "a_none_child_contributes_nothing",
+          "kind": "method",
+          "line": 814
+        },
+        {
+          "name": "a_list_built_from_data_is_a_child_like_any_other",
+          "kind": "method",
+          "line": 821
+        },
+        {
+          "name": "a_handler_changes_the_state_it_is_given",
+          "kind": "method",
+          "line": 828
+        },
+        {
+          "name": "attaching_a_handler_makes_an_element_focusable_and_reactive",
+          "kind": "method",
+          "line": 839
+        },
+        {
+          "name": "a_disabled_element_leaves_the_tab_order_and_takes_no_events",
+          "kind": "method",
+          "line": 849
+        }
+      ]
+    },
+    {
+      "path": "src/font/mod.rs",
+      "lang": "rust",
+      "loc": 378,
+      "rank": 0.029498,
+      "defs": [
+        {
+          "name": "outline",
+          "kind": "module",
+          "line": 30
+        },
+        {
+          "name": "raster",
+          "kind": "module",
+          "line": 31
+        },
+        {
+          "name": "sfnt",
+          "kind": "module",
+          "line": 32
+        },
+        {
+          "name": "FontError",
+          "kind": "class",
+          "line": 47
+        },
+        {
+          "name": "fmt",
+          "kind": "method",
+          "line": 66
+        },
+        {
+          "name": "GlyphId",
+          "kind": "class",
+          "line": 91
+        },
+        {
+          "name": "LineMetrics",
+          "kind": "class",
+          "line": 99
+        },
+        {
+          "name": "line_height",
+          "kind": "method",
+          "line": 110
+        },
+        {
+          "name": "RenderedGlyph",
+          "kind": "class",
+          "line": 117
+        },
+        {
+          "name": "Font",
+          "kind": "class",
+          "line": 128
+        },
+        {
+          "name": "face_count",
+          "kind": "method",
+          "line": 145
+        },
+        {
+          "name": "parse",
+          "kind": "method",
+          "line": 150
+        },
+        {
+          "name": "parse_face",
+          "kind": "method",
+          "line": 159
+        },
+        {
+          "name": "glyph_for",
+          "kind": "method",
+          "line": 233
+        },
+        {
+          "name": "has_glyph",
+          "kind": "method",
+          "line": 242
+        },
+        {
+          "name": "metrics",
+          "kind": "method",
+          "line": 247
+        },
+        {
+          "name": "advance",
+          "kind": "method",
+          "line": 260
+        },
+        {
+          "name": "render",
+          "kind": "method",
+          "line": 276
+        },
+        {
+          "name": "scale_for",
+          "kind": "method",
+          "line": 328
+        },
+        {
+          "name": "fmt",
+          "kind": "method",
+          "line": 335
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 346
+        },
+        {
+          "name": "nonsense_bytes_are_not_a_font",
+          "kind": "method",
+          "line": 350
+        },
+        {
+          "name": "a_truncated_font_is_refused_rather_than_panicking",
+          "kind": "method",
+          "line": 356
+        },
+        {
+          "name": "errors_explain_themselves",
+          "kind": "method",
+          "line": 364
+        },
+        {
+          "name": "line_height_is_the_sum_of_the_three_measurements",
+          "kind": "method",
+          "line": 374
+        }
+      ]
+    },
+    {
+      "path": "src/font/outline.rs",
+      "lang": "rust",
+      "loc": 596,
+      "rank": 0.044828,
+      "defs": [
+        {
+          "name": "Transform",
+          "kind": "class",
+          "line": 39
+        },
+        {
+          "name": "for_glyph",
+          "kind": "method",
+          "line": 54
+        },
+        {
+          "name": "component",
+          "kind": "method",
+          "line": 59
+        },
+        {
+          "name": "apply",
+          "kind": "method",
+          "line": 64
+        },
+        {
+          "name": "then",
+          "kind": "method",
+          "line": 69
+        },
+        {
+          "name": "GlyphSource",
+          "kind": "class",
+          "line": 88
+        },
+        {
+          "name": "Edges",
+          "kind": "class",
+          "line": 102
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 111
+        },
+        {
+          "name": "bounds",
+          "kind": "method",
+          "line": 116
+        },
+        {
+          "name": "move_to",
+          "kind": "method",
+          "line": 128
+        },
+        {
+          "name": "line_to",
+          "kind": "method",
+          "line": 134
+        },
+        {
+          "name": "quadratic_to",
+          "kind": "method",
+          "line": 146
+        },
+        {
+          "name": "close",
+          "kind": "method",
+          "line": 174
+        },
+        {
+          "name": "glyph_range",
+          "kind": "function",
+          "line": 187
+        },
+        {
+          "name": "append_glyph",
+          "kind": "function",
+          "line": 208
+        },
+        {
+          "name": "append_simple",
+          "kind": "function",
+          "line": 238
+        },
+        {
+          "name": "append_composite",
+          "kind": "function",
+          "line": 285
+        },
+        {
+          "name": "Point",
+          "kind": "class",
+          "line": 340
+        },
+        {
+          "name": "append_contour",
+          "kind": "function",
+          "line": 350
+        },
+        {
+          "name": "midpoint",
+          "kind": "function",
+          "line": 393
+        },
+        {
+          "name": "read_flags",
+          "kind": "function",
+          "line": 398
+        },
+        {
+          "name": "read_coordinates",
+          "kind": "function",
+          "line": 425
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 446
+        },
+        {
+          "name": "identity",
+          "kind": "method",
+          "line": 449
+        },
+        {
+          "name": "on",
+          "kind": "method",
+          "line": 453
+        },
+        {
+          "name": "off",
+          "kind": "method",
+          "line": 457
+        },
+        {
+          "name": "transforms_compose_in_application_order",
+          "kind": "method",
+          "line": 462
+        },
+        {
+          "name": "the_glyph_transform_flips_the_y_axis",
+          "kind": "method",
+          "line": 472
+        },
+        {
+          "name": "a_square_contour_becomes_four_edges",
+          "kind": "method",
+          "line": 479
+        },
+        {
+          "name": "a_contour_is_closed_even_when_the_font_does_not_repeat_its_first_point",
+          "kind": "method",
+          "line": 487
+        },
+        {
+          "name": "consecutive_off_curve_points_imply_an_on_curve_point_between_them",
+          "kind": "method",
+          "line": 495
+        },
+        {
+          "name": "a_contour_with_no_on_curve_point_still_produces_a_closed_shape",
+          "kind": "method",
+          "line": 506
+        },
+        {
+          "name": "a_flatter_curve_needs_fewer_segments_than_a_sharper_one",
+          "kind": "method",
+          "line": 515
+        },
+        {
+          "name": "flags_expand_their_run_length_encoding",
+          "kind": "method",
+          "line": 533
+        },
+        {
+          "name": "a_repeat_count_overrunning_the_contour_is_refused",
+          "kind": "method",
+          "line": 541
+        },
+        {
+          "name": "short_coordinates_take_their_sign_from_the_same_bit",
+          "kind": "method",
+          "line": 548
+        },
+        {
+          "name": "an_unchanged_coordinate_repeats_the_previous_one",
+          "kind": "method",
+          "line": 557
+        },
+        {
+          "name": "long_coordinates_accumulate_as_signed_deltas",
+          "kind": "method",
+          "line": 566
+        },
+        {
+          "name": "an_empty_collection_has_no_bounds",
+          "kind": "method",
+          "line": 576
+        },
+        {
+          "name": "points_are_transformed_before_being_emitted",
+          "kind": "method",
+          "line": 581
+        },
+        {
+          "name": "identity_leaves_a_point_alone",
+          "kind": "method",
+          "line": 593
+        }
+      ]
+    },
+    {
+      "path": "src/font/raster.rs",
+      "lang": "rust",
+      "loc": 256,
+      "rank": 0.012077,
+      "defs": [
+        {
+          "name": "Rasteriser",
+          "kind": "class",
+          "line": 30
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 40
+        },
+        {
+          "name": "edge",
+          "kind": "method",
+          "line": 49
+        },
+        {
+          "name": "deposit",
+          "kind": "method",
+          "line": 101
+        },
+        {
+          "name": "finish",
+          "kind": "method",
+          "line": 142
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 160
+        },
+        {
+          "name": "fill",
+          "kind": "method",
+          "line": 164
+        },
+        {
+          "name": "at",
+          "kind": "method",
+          "line": 175
+        },
+        {
+          "name": "a_pixel_aligned_square_is_solid_inside_and_empty_outside",
+          "kind": "method",
+          "line": 180
+        },
+        {
+          "name": "a_half_covered_column_comes_out_half_covered",
+          "kind": "method",
+          "line": 190
+        },
+        {
+          "name": "total_coverage_matches_the_area_of_the_shape",
+          "kind": "method",
+          "line": 198
+        },
+        {
+          "name": "a_triangles_diagonal_is_antialiased",
+          "kind": "method",
+          "line": 206
+        },
+        {
+          "name": "a_reversed_inner_contour_cuts_a_hole",
+          "kind": "method",
+          "line": 215
+        },
+        {
+          "name": "an_outline_reaching_the_last_column_does_not_bleed_onto_the_next_row",
+          "kind": "method",
+          "line": 232
+        },
+        {
+          "name": "geometry_outside_the_mask_is_clipped_rather_than_panicking",
+          "kind": "method",
+          "line": 239
+        },
+        {
+          "name": "horizontal_edges_contribute_nothing",
+          "kind": "method",
+          "line": 245
+        },
+        {
+          "name": "a_degenerate_outline_produces_an_empty_mask",
+          "kind": "method",
+          "line": 252
+        }
+      ]
+    },
+    {
+      "path": "src/font/sfnt.rs",
+      "lang": "rust",
+      "loc": 412,
+      "rank": 0.053352,
+      "defs": [
+        {
+          "name": "Reader",
+          "kind": "class",
+          "line": 9
+        },
+        {
+          "name": "at",
+          "kind": "method",
+          "line": 16
+        },
+        {
+          "name": "position",
+          "kind": "method",
+          "line": 21
+        },
+        {
+          "name": "skip",
+          "kind": "method",
+          "line": 26
+        },
+        {
+          "name": "bytes",
+          "kind": "method",
+          "line": 32
+        },
+        {
+          "name": "u8",
+          "kind": "method",
+          "line": 40
+        },
+        {
+          "name": "u16",
+          "kind": "method",
+          "line": 47
+        },
+        {
+          "name": "i16",
+          "kind": "method",
+          "line": 53
+        },
+        {
+          "name": "u32",
+          "kind": "method",
+          "line": 58
+        },
+        {
+          "name": "f2dot14",
+          "kind": "method",
+          "line": 64
+        },
+        {
+          "name": "Table",
+          "kind": "class",
+          "line": 71
+        },
+        {
+          "name": "Directory",
+          "kind": "class",
+          "line": 79
+        },
+        {
+          "name": "read",
+          "kind": "method",
+          "line": 90
+        },
+        {
+          "name": "find",
+          "kind": "method",
+          "line": 119
+        },
+        {
+          "name": "face_offsets",
+          "kind": "function",
+          "line": 128
+        },
+        {
+          "name": "Segment",
+          "kind": "class",
+          "line": 155
+        },
+        {
+          "name": "start",
+          "kind": "method",
+          "line": 163
+        },
+        {
+          "name": "end",
+          "kind": "method",
+          "line": 169
+        },
+        {
+          "name": "lookup",
+          "kind": "method",
+          "line": 175
+        },
+        {
+          "name": "CharMap",
+          "kind": "class",
+          "line": 186
+        },
+        {
+          "name": "glyph",
+          "kind": "method",
+          "line": 192
+        },
+        {
+          "name": "read",
+          "kind": "method",
+          "line": 216
+        },
+        {
+          "name": "read_format_4",
+          "kind": "function",
+          "line": 257
+        },
+        {
+          "name": "read_format_12",
+          "kind": "function",
+          "line": 306
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 334
+        },
+        {
+          "name": "a_reader_refuses_to_run_off_the_end",
+          "kind": "method",
+          "line": 338
+        },
+        {
+          "name": "seeking_past_the_end_lands_at_the_end_rather_than_out_of_range",
+          "kind": "method",
+          "line": 346
+        },
+        {
+          "name": "skipping_past_the_end_fails_instead_of_wrapping",
+          "kind": "method",
+          "line": 353
+        },
+        {
+          "name": "a_plain_font_has_one_face_and_a_collection_has_several",
+          "kind": "method",
+          "line": 360
+        },
+        {
+          "name": "a_collection_claiming_more_faces_than_could_fit_is_refused",
+          "kind": "method",
+          "line": 373
+        },
+        {
+          "name": "a_delta_segment_maps_by_addition",
+          "kind": "method",
+          "line": 381
+        },
+        {
+          "name": "an_explicit_segment_maps_by_lookup",
+          "kind": "method",
+          "line": 389
+        },
+        {
+          "name": "lookup_finds_the_right_segment_among_many",
+          "kind": "method",
+          "line": 399
+        }
+      ]
+    },
+    {
+      "path": "src/geom.rs",
+      "lang": "rust",
+      "loc": 403,
+      "rank": 0.07172,
+      "defs": [
+        {
+          "name": "Point",
+          "kind": "class",
+          "line": 14
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 23
+        },
+        {
+          "name": "offset",
+          "kind": "method",
+          "line": 31
+        },
+        {
+          "name": "Size",
+          "kind": "class",
+          "line": 38
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 47
+        },
+        {
+          "name": "Insets",
+          "kind": "class",
+          "line": 57
+        },
+        {
+          "name": "uniform",
+          "kind": "method",
+          "line": 70
+        },
+        {
+          "name": "symmetric",
+          "kind": "method",
+          "line": 75
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 80
+        },
+        {
+          "name": "horizontal",
+          "kind": "method",
+          "line": 88
+        },
+        {
+          "name": "vertical",
+          "kind": "method",
+          "line": 93
+        },
+        {
+          "name": "Rect",
+          "kind": "class",
+          "line": 106
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 122
+        },
+        {
+          "name": "from_origin",
+          "kind": "method",
+          "line": 127
+        },
+        {
+          "name": "from_corners",
+          "kind": "method",
+          "line": 132
+        },
+        {
+          "name": "min_x",
+          "kind": "method",
+          "line": 145
+        },
+        {
+          "name": "min_y",
+          "kind": "method",
+          "line": 150
+        },
+        {
+          "name": "max_x",
+          "kind": "method",
+          "line": 155
+        },
+        {
+          "name": "max_y",
+          "kind": "method",
+          "line": 160
+        },
+        {
+          "name": "origin",
+          "kind": "method",
+          "line": 165
+        },
+        {
+          "name": "size",
+          "kind": "method",
+          "line": 170
+        },
+        {
+          "name": "center",
+          "kind": "method",
+          "line": 175
+        },
+        {
+          "name": "is_empty",
+          "kind": "method",
+          "line": 180
+        },
+        {
+          "name": "contains",
+          "kind": "method",
+          "line": 189
+        },
+        {
+          "name": "inset",
+          "kind": "method",
+          "line": 194
+        },
+        {
+          "name": "expand",
+          "kind": "method",
+          "line": 204
+        },
+        {
+          "name": "translate",
+          "kind": "method",
+          "line": 214
+        },
+        {
+          "name": "intersect",
+          "kind": "method",
+          "line": 219
+        },
+        {
+          "name": "union",
+          "kind": "method",
+          "line": 228
+        },
+        {
+          "name": "split_top",
+          "kind": "method",
+          "line": 256
+        },
+        {
+          "name": "split_bottom",
+          "kind": "method",
+          "line": 265
+        },
+        {
+          "name": "split_left",
+          "kind": "method",
+          "line": 274
+        },
+        {
+          "name": "split_right",
+          "kind": "method",
+          "line": 283
+        },
+        {
+          "name": "centered",
+          "kind": "method",
+          "line": 292
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 303
+        },
+        {
+          "name": "negative_extents_become_empty_rather_than_inside_out",
+          "kind": "method",
+          "line": 307
+        },
+        {
+          "name": "containment_is_half_open_so_neighbours_do_not_both_claim_a_point",
+          "kind": "method",
+          "line": 314
+        },
+        {
+          "name": "disjoint_rectangles_intersect_to_empty",
+          "kind": "method",
+          "line": 323
+        },
+        {
+          "name": "intersection_keeps_the_overlap",
+          "kind": "method",
+          "line": 330
+        },
+        {
+          "name": "union_ignores_an_empty_operand",
+          "kind": "method",
+          "line": 337
+        },
+        {
+          "name": "splitting_more_than_there_is_takes_everything_and_leaves_nothing",
+          "kind": "method",
+          "line": 344
+        },
+        {
+          "name": "splits_partition_the_rectangle",
+          "kind": "method",
+          "line": 352
+        },
+        {
+          "name": "every_split_answers_its_pieces_in_reading_order",
+          "kind": "method",
+          "line": 364
+        },
+        {
+          "name": "the_name_says_which_piece_is_the_fixed_one",
+          "kind": "method",
+          "line": 381
+        },
+        {
+          "name": "inset_then_expand_returns_the_original",
+          "kind": "method",
+          "line": 390
+        },
+        {
+          "name": "centering_leaves_equal_margins",
+          "kind": "method",
+          "line": 397
+        }
+      ]
+    },
+    {
+      "path": "src/image.rs",
+      "lang": "rust",
+      "loc": 218,
+      "rank": 0.004736,
+      "defs": [
+        {
+          "name": "png",
+          "kind": "function",
+          "line": 32
+        },
+        {
+          "name": "rgba",
+          "kind": "function",
+          "line": 69
+        },
+        {
+          "name": "write_chunk",
+          "kind": "function",
+          "line": 87
+        },
+        {
+          "name": "zlib",
+          "kind": "function",
+          "line": 98
+        },
+        {
+          "name": "crc32",
+          "kind": "function",
+          "line": 124
+        },
+        {
+          "name": "adler32",
+          "kind": "function",
+          "line": 137
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 150
+        },
+        {
+          "name": "the_checksums_match_the_values_their_specifications_publish",
+          "kind": "method",
+          "line": 154
+        },
+        {
+          "name": "a_png_declares_the_size_and_format_it_was_asked_for",
+          "kind": "method",
+          "line": 165
+        },
+        {
+          "name": "pixels_that_do_not_fill_the_stated_size_are_refused",
+          "kind": "method",
+          "line": 178
+        },
+        {
+          "name": "the_stored_blocks_cover_every_byte_and_only_the_last_is_final",
+          "kind": "method",
+          "line": 187
+        },
+        {
+          "name": "a_canvas_comes_out_opaque_with_its_channels_in_pngs_order",
+          "kind": "method",
+          "line": 213
+        }
+      ]
+    },
+    {
+      "path": "src/input.rs",
+      "lang": "rust",
+      "loc": 539,
+      "rank": 0.047475,
+      "defs": [
+        {
+          "name": "PointerButton",
+          "kind": "class",
+          "line": 17
+        },
+        {
+          "name": "index",
+          "kind": "method",
+          "line": 30
+        },
+        {
+          "name": "Phase",
+          "kind": "class",
+          "line": 41
+        },
+        {
+          "name": "Drag",
+          "kind": "class",
+          "line": 64
+        },
+        {
+          "name": "fraction",
+          "kind": "method",
+          "line": 83
+        },
+        {
+          "name": "ended",
+          "kind": "method",
+          "line": 90
+        },
+        {
+          "name": "Modifiers",
+          "kind": "class",
+          "line": 101
+        },
+        {
+          "name": "is_empty",
+          "kind": "method",
+          "line": 133
+        },
+        {
+          "name": "command_only",
+          "kind": "method",
+          "line": 143
+        },
+        {
+          "name": "Key",
+          "kind": "class",
+          "line": 151
+        },
+        {
+          "name": "Event",
+          "kind": "class",
+          "line": 190
+        },
+        {
+          "name": "Input",
+          "kind": "class",
+          "line": 243
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 265
+        },
+        {
+          "name": "begin_frame",
+          "kind": "method",
+          "line": 273
+        },
+        {
+          "name": "apply",
+          "kind": "method",
+          "line": 282
+        },
+        {
+          "name": "pointer",
+          "kind": "method",
+          "line": 316
+        },
+        {
+          "name": "pointer_inside",
+          "kind": "method",
+          "line": 321
+        },
+        {
+          "name": "held",
+          "kind": "method",
+          "line": 326
+        },
+        {
+          "name": "pressed",
+          "kind": "method",
+          "line": 331
+        },
+        {
+          "name": "released",
+          "kind": "method",
+          "line": 336
+        },
+        {
+          "name": "press_origin",
+          "kind": "method",
+          "line": 341
+        },
+        {
+          "name": "any_held",
+          "kind": "method",
+          "line": 346
+        },
+        {
+          "name": "scroll",
+          "kind": "method",
+          "line": 351
+        },
+        {
+          "name": "keys",
+          "kind": "method",
+          "line": 356
+        },
+        {
+          "name": "key_pressed",
+          "kind": "method",
+          "line": 361
+        },
+        {
+          "name": "shortcut",
+          "kind": "method",
+          "line": 366
+        },
+        {
+          "name": "text",
+          "kind": "method",
+          "line": 373
+        },
+        {
+          "name": "modifiers",
+          "kind": "method",
+          "line": 378
+        },
+        {
+          "name": "close_requested",
+          "kind": "method",
+          "line": 383
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 389
+        },
+        {
+          "name": "at",
+          "kind": "method",
+          "line": 392
+        },
+        {
+          "name": "a_press_is_reported_once_however_long_the_button_is_held",
+          "kind": "method",
+          "line": 397
+        },
+        {
+          "name": "a_release_clears_the_hold_but_is_itself_reported_once",
+          "kind": "method",
+          "line": 409
+        },
+        {
+          "name": "buttons_are_tracked_apart_from_one_another",
+          "kind": "method",
+          "line": 423
+        },
+        {
+          "name": "where_a_press_began_is_remembered_for_judging_a_drag",
+          "kind": "method",
+          "line": 432
+        },
+        {
+          "name": "scrolling_within_one_frame_accumulates",
+          "kind": "method",
+          "line": 442
+        },
+        {
+          "name": "the_pointer_position_survives_the_frame_boundary",
+          "kind": "method",
+          "line": 453
+        },
+        {
+          "name": "the_pointer_leaving_is_remembered_without_moving_it",
+          "kind": "method",
+          "line": 462
+        },
+        {
+          "name": "typed_text_accumulates_within_a_frame_and_clears_after_it",
+          "kind": "method",
+          "line": 471
+        },
+        {
+          "name": "a_shortcut_needs_the_accelerator_and_nothing_else",
+          "kind": "method",
+          "line": 482
+        },
+        {
+          "name": "a_close_request_persists_until_it_is_acted_on",
+          "kind": "method",
+          "line": 498
+        },
+        {
+          "name": "a_backend_that_reports_control_as_the_accelerator_is_understood",
+          "kind": "method",
+          "line": 506
+        },
+        {
+          "name": "a_second_modifier_still_stops_it_being_a_bare_accelerator",
+          "kind": "method",
+          "line": 519
+        },
+        {
+          "name": "releasing_a_modifier_updates_what_is_held",
+          "kind": "method",
+          "line": 530
+        }
+      ]
+    },
+    {
+      "path": "src/layout.rs",
+      "lang": "rust",
+      "loc": 783,
+      "rank": 0.012073,
+      "defs": [
+        {
+          "name": "Ctx",
+          "kind": "class",
+          "line": 32
+        },
+        {
+          "name": "solve",
+          "kind": "function",
+          "line": 53
+        },
+        {
+          "name": "measure",
+          "kind": "function",
+          "line": 61
+        },
+        {
+          "name": "measure_text",
+          "kind": "function",
+          "line": 100
+        },
+        {
+          "name": "wrap_width",
+          "kind": "function",
+          "line": 117
+        },
+        {
+          "name": "measure_stack",
+          "kind": "function",
+          "line": 131
+        },
+        {
+          "name": "measure_flow",
+          "kind": "function",
+          "line": 165
+        },
+        {
+          "name": "break_into_lines",
+          "kind": "function",
+          "line": 192
+        },
+        {
+          "name": "line_width",
+          "kind": "function",
+          "line": 213
+        },
+        {
+          "name": "line_height",
+          "kind": "function",
+          "line": 218
+        },
+        {
+          "name": "place",
+          "kind": "function",
+          "line": 223
+        },
+        {
+          "name": "in_flow",
+          "kind": "function",
+          "line": 254
+        },
+        {
+          "name": "stack",
+          "kind": "function",
+          "line": 259
+        },
+        {
+          "name": "flow",
+          "kind": "function",
+          "line": 342
+        },
+        {
+          "name": "layers",
+          "kind": "function",
+          "line": 384
+        },
+        {
+          "name": "anchored",
+          "kind": "function",
+          "line": 407
+        },
+        {
+          "name": "shrink",
+          "kind": "function",
+          "line": 434
+        },
+        {
+          "name": "minimum",
+          "kind": "function",
+          "line": 475
+        },
+        {
+          "name": "scroll_offset",
+          "kind": "function",
+          "line": 488
+        },
+        {
+          "name": "cross_size",
+          "kind": "function",
+          "line": 516
+        },
+        {
+          "name": "child_align",
+          "kind": "function",
+          "line": 543
+        },
+        {
+          "name": "main_length",
+          "kind": "function",
+          "line": 548
+        },
+        {
+          "name": "cross_length",
+          "kind": "function",
+          "line": 556
+        },
+        {
+          "name": "clamp_main",
+          "kind": "function",
+          "line": 564
+        },
+        {
+          "name": "clamp_cross",
+          "kind": "function",
+          "line": 572
+        },
+        {
+          "name": "main_of",
+          "kind": "function",
+          "line": 580
+        },
+        {
+          "name": "cross_of",
+          "kind": "function",
+          "line": 588
+        },
+        {
+          "name": "cross_of_rect",
+          "kind": "function",
+          "line": 596
+        },
+        {
+          "name": "stated_length",
+          "kind": "function",
+          "line": 605
+        },
+        {
+          "name": "resolve",
+          "kind": "function",
+          "line": 614
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 624
+        },
+        {
+          "name": "Nothing",
+          "kind": "class",
+          "line": 631
+        },
+        {
+          "name": "context",
+          "kind": "method",
+          "line": 639
+        },
+        {
+          "name": "laid_out",
+          "kind": "method",
+          "line": 644
+        },
+        {
+          "name": "fixed_children_take_exactly_what_they_asked_for",
+          "kind": "method",
+          "line": 654
+        },
+        {
+          "name": "what_is_left_over_is_divided_between_the_fillers_in_proportion",
+          "kind": "method",
+          "line": 665
+        },
+        {
+          "name": "padding_is_taken_off_before_children_are_placed",
+          "kind": "method",
+          "line": 678
+        },
+        {
+          "name": "a_child_that_grows_leaves_nothing_for_justification_to_move",
+          "kind": "method",
+          "line": 684
+        },
+        {
+          "name": "spare_room_is_spread_between_children_rather_than_around_them",
+          "kind": "method",
+          "line": 693
+        },
+        {
+          "name": "a_child_is_stretched_across_the_axis_unless_it_says_otherwise",
+          "kind": "method",
+          "line": 705
+        },
+        {
+          "name": "alignment_places_a_child_across_the_stacking_axis",
+          "kind": "method",
+          "line": 714
+        },
+        {
+          "name": "a_minimum_is_honoured_even_when_the_room_is_not_there",
+          "kind": "method",
+          "line": 723
+        },
+        {
+          "name": "a_maximum_stops_a_filler_from_taking_everything",
+          "kind": "method",
+          "line": 729
+        },
+        {
+          "name": "identity_follows_the_key_rather_than_the_position",
+          "kind": "method",
+          "line": 735
+        },
+        {
+          "name": "identity_without_a_key_is_the_path_through_the_tree",
+          "kind": "method",
+          "line": 742
+        },
+        {
+          "name": "a_scrolling_area_remembers_how_tall_its_contents_came_out",
+          "kind": "method",
+          "line": 749
+        },
+        {
+          "name": "text_that_wraps_is_as_tall_as_the_lines_it_takes",
+          "kind": "method",
+          "line": 768
+        },
+        {
+          "name": "a_tone_set_on_a_container_reaches_the_text_inside_it",
+          "kind": "method",
+          "line": 779
+        }
+      ]
+    },
+    {
+      "path": "src/lib.rs",
+      "lang": "rust",
+      "loc": 164,
+      "rank": 0.02355,
+      "defs": [
+        {
+          "name": "app",
+          "kind": "module",
+          "line": 109
+        },
+        {
+          "name": "canvas",
+          "kind": "module",
+          "line": 110
+        },
+        {
+          "name": "color",
+          "kind": "module",
+          "line": 111
+        },
+        {
+          "name": "element",
+          "kind": "module",
+          "line": 112
+        },
+        {
+          "name": "font",
+          "kind": "module",
+          "line": 113
+        },
+        {
+          "name": "geom",
+          "kind": "module",
+          "line": 114
+        },
+        {
+          "name": "image",
+          "kind": "module",
+          "line": 115
+        },
+        {
+          "name": "input",
+          "kind": "module",
+          "line": 116
+        },
+        {
+          "name": "layout",
+          "kind": "module",
+          "line": 117
+        },
+        {
+          "name": "memory",
+          "kind": "module",
+          "line": 118
+        },
+        {
+          "name": "paint",
+          "kind": "module",
+          "line": 119
+        },
+        {
+          "name": "shell",
+          "kind": "module",
+          "line": 120
+        },
+        {
+          "name": "style",
+          "kind": "module",
+          "line": 121
+        },
+        {
+          "name": "testing",
+          "kind": "module",
+          "line": 122
+        },
+        {
+          "name": "text",
+          "kind": "module",
+          "line": 123
+        },
+        {
+          "name": "theme",
+          "kind": "module",
+          "line": 124
+        },
+        {
+          "name": "widgets",
+          "kind": "module",
+          "line": 125
+        },
+        {
+          "name": "text",
+          "kind": "macro",
+          "line": 152
+        },
+        {
+          "name": "code",
+          "kind": "macro",
+          "line": 160
+        }
+      ]
+    },
+    {
+      "path": "src/memory.rs",
+      "lang": "rust",
+      "loc": 556,
+      "rank": 0.038175,
+      "defs": [
+        {
+          "name": "Id",
+          "kind": "class",
+          "line": 33
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 40
+        },
+        {
+          "name": "with",
+          "kind": "method",
+          "line": 45
+        },
+        {
+          "name": "index",
+          "kind": "method",
+          "line": 50
+        },
+        {
+          "name": "fnv1a",
+          "kind": "function",
+          "line": 59
+        },
+        {
+          "name": "Response",
+          "kind": "class",
+          "line": 70
+        },
+        {
+          "name": "none",
+          "kind": "method",
+          "line": 92
+        },
+        {
+          "name": "Caret",
+          "kind": "class",
+          "line": 107
+        },
+        {
+          "name": "Eased",
+          "kind": "class",
+          "line": 114
+        },
+        {
+          "name": "Memory",
+          "kind": "class",
+          "line": 130
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 165
+        },
+        {
+          "name": "focused",
+          "kind": "method",
+          "line": 170
+        },
+        {
+          "name": "set_focus",
+          "kind": "method",
+          "line": 175
+        },
+        {
+          "name": "active",
+          "kind": "method",
+          "line": 183
+        },
+        {
+          "name": "press",
+          "kind": "method",
+          "line": 188
+        },
+        {
+          "name": "offer_focus",
+          "kind": "method",
+          "line": 194
+        },
+        {
+          "name": "caret",
+          "kind": "method",
+          "line": 199
+        },
+        {
+          "name": "set_caret",
+          "kind": "method",
+          "line": 204
+        },
+        {
+          "name": "scroll_offset",
+          "kind": "method",
+          "line": 209
+        },
+        {
+          "name": "set_scroll_offset",
+          "kind": "method",
+          "line": 214
+        },
+        {
+          "name": "content_height",
+          "kind": "method",
+          "line": 226
+        },
+        {
+          "name": "set_content_height",
+          "kind": "method",
+          "line": 231
+        },
+        {
+          "name": "request_frame",
+          "kind": "method",
+          "line": 241
+        },
+        {
+          "name": "is_following",
+          "kind": "method",
+          "line": 246
+        },
+        {
+          "name": "set_following",
+          "kind": "method",
+          "line": 251
+        },
+        {
+          "name": "note_hover",
+          "kind": "method",
+          "line": 262
+        },
+        {
+          "name": "begin_frame",
+          "kind": "method",
+          "line": 275
+        },
+        {
+          "name": "is_animating",
+          "kind": "method",
+          "line": 290
+        },
+        {
+          "name": "ease",
+          "kind": "method",
+          "line": 306
+        },
+        {
+          "name": "end_frame",
+          "kind": "method",
+          "line": 328
+        },
+        {
+          "name": "step_focus",
+          "kind": "method",
+          "line": 372
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 378
+        },
+        {
+          "name": "identifiers_are_stable_and_distinct",
+          "kind": "method",
+          "line": 382
+        },
+        {
+          "name": "a_child_identifier_differs_from_its_parent",
+          "kind": "method",
+          "line": 390
+        },
+        {
+          "name": "a_press_is_forgotten_when_nothing_is_held_any_more",
+          "kind": "method",
+          "line": 397
+        },
+        {
+          "name": "tab_moves_focus_through_the_order_the_frame_drew",
+          "kind": "method",
+          "line": 405
+        },
+        {
+          "name": "shift_tab_moves_backwards_and_wraps",
+          "kind": "method",
+          "line": 419
+        },
+        {
+          "name": "tab_with_nothing_focusable_on_screen_changes_nothing",
+          "kind": "method",
+          "line": 433
+        },
+        {
+          "name": "carets_of_fields_that_are_gone_do_not_accumulate",
+          "kind": "method",
+          "line": 441
+        },
+        {
+          "name": "stepped",
+          "kind": "method",
+          "line": 451
+        },
+        {
+          "name": "a_value_seen_for_the_first_time_starts_at_its_target",
+          "kind": "method",
+          "line": 456
+        },
+        {
+          "name": "a_changed_target_is_approached_rather_than_jumped_to",
+          "kind": "method",
+          "line": 464
+        },
+        {
+          "name": "an_animation_settles_exactly_and_then_stops_asking_for_frames",
+          "kind": "method",
+          "line": 480
+        },
+        {
+          "name": "the_same_elapsed_time_moves_a_value_the_same_distance_at_any_frame_rate",
+          "kind": "method",
+          "line": 497
+        },
+        {
+          "name": "a_stalled_frame_is_treated_as_a_slow_one_rather_than_a_leap",
+          "kind": "method",
+          "line": 518
+        },
+        {
+          "name": "eased_values_nothing_draws_any_more_are_forgotten",
+          "kind": "method",
+          "line": 532
+        },
+        {
+          "name": "scroll_offsets_are_remembered_per_area",
+          "kind": "method",
+          "line": 549
+        }
+      ]
+    },
+    {
+      "path": "src/paint.rs",
+      "lang": "rust",
+      "loc": 862,
+      "rank": 0.031623,
+      "defs": [
+        {
+          "name": "Deferred",
+          "kind": "class",
+          "line": 31
+        },
+        {
+          "name": "Visual",
+          "kind": "class",
+          "line": 42
+        },
+        {
+          "name": "Painter",
+          "kind": "class",
+          "line": 62
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 76
+        },
+        {
+          "name": "visual",
+          "kind": "method",
+          "line": 81
+        },
+        {
+          "name": "canvas",
+          "kind": "method",
+          "line": 86
+        },
+        {
+          "name": "fonts",
+          "kind": "method",
+          "line": 91
+        },
+        {
+          "name": "theme",
+          "kind": "method",
+          "line": 96
+        },
+        {
+          "name": "color",
+          "kind": "method",
+          "line": 101
+        },
+        {
+          "name": "fill",
+          "kind": "method",
+          "line": 106
+        },
+        {
+          "name": "stroke",
+          "kind": "method",
+          "line": 113
+        },
+        {
+          "name": "text",
+          "kind": "method",
+          "line": 120
+        },
+        {
+          "name": "Frame",
+          "kind": "class",
+          "line": 127
+        },
+        {
+          "name": "Hit",
+          "kind": "class",
+          "line": 145
+        },
+        {
+          "name": "render",
+          "kind": "function",
+          "line": 167
+        },
+        {
+          "name": "resolve_hit",
+          "kind": "function",
+          "line": 199
+        },
+        {
+          "name": "probe",
+          "kind": "function",
+          "line": 212
+        },
+        {
+          "name": "draw",
+          "kind": "function",
+          "line": 242
+        },
+        {
+          "name": "interact",
+          "kind": "function",
+          "line": 322
+        },
+        {
+          "name": "decorate",
+          "kind": "function",
+          "line": 401
+        },
+        {
+          "name": "surface",
+          "kind": "function",
+          "line": 446
+        },
+        {
+          "name": "content",
+          "kind": "function",
+          "line": 475
+        },
+        {
+          "name": "field",
+          "kind": "function",
+          "line": 533
+        },
+        {
+          "name": "Edit",
+          "kind": "class",
+          "line": 599
+        },
+        {
+          "name": "apply_edits",
+          "kind": "function",
+          "line": 607
+        },
+        {
+          "name": "scrollbar",
+          "kind": "function",
+          "line": 648
+        },
+        {
+          "name": "draw_line",
+          "kind": "function",
+          "line": 683
+        },
+        {
+          "name": "draw_wrapped",
+          "kind": "function",
+          "line": 708
+        },
+        {
+          "name": "corner_of",
+          "kind": "function",
+          "line": 736
+        },
+        {
+          "name": "lift",
+          "kind": "function",
+          "line": 751
+        },
+        {
+          "name": "clamp_to_boundary",
+          "kind": "function",
+          "line": 761
+        },
+        {
+          "name": "previous_boundary",
+          "kind": "function",
+          "line": 770
+        },
+        {
+          "name": "next_boundary",
+          "kind": "function",
+          "line": 776
+        },
+        {
+          "name": "end_of",
+          "kind": "function",
+          "line": 786
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 791
+        },
+        {
+          "name": "lifting_moves_a_light_colour_darker_and_a_dark_one_lighter",
+          "kind": "method",
+          "line": 795
+        },
+        {
+          "name": "a_press_lifts_further_than_a_hover",
+          "kind": "method",
+          "line": 803
+        },
+        {
+          "name": "an_untouched_colour_is_left_exactly_alone",
+          "kind": "method",
+          "line": 809
+        },
+        {
+          "name": "caret_movement_lands_on_character_boundaries_in_multibyte_text",
+          "kind": "method",
+          "line": 815
+        },
+        {
+          "name": "an_offset_inside_a_character_is_pulled_back_to_its_start",
+          "kind": "method",
+          "line": 828
+        },
+        {
+          "name": "typing_inserts_at_the_caret_and_moves_it_along",
+          "kind": "method",
+          "line": 834
+        },
+        {
+          "name": "backspace_at_the_start_of_a_field_changes_nothing",
+          "kind": "method",
+          "line": 849
+        }
+      ]
+    },
+    {
+      "path": "src/shell/fonts.rs",
+      "lang": "rust",
+      "loc": 292,
+      "rank": 0.004736,
+      "defs": [
+        {
+          "name": "LoadedFonts",
+          "kind": "class",
+          "line": 22
+        },
+        {
+          "name": "from_files",
+          "kind": "method",
+          "line": 103
+        },
+        {
+          "name": "load_system_fonts",
+          "kind": "function",
+          "line": 116
+        },
+        {
+          "name": "first_usable",
+          "kind": "function",
+          "line": 136
+        },
+        {
+          "name": "locate",
+          "kind": "function",
+          "line": 146
+        },
+        {
+          "name": "locate",
+          "kind": "function",
+          "line": 153
+        },
+        {
+          "name": "find_named",
+          "kind": "function",
+          "line": 161
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 189
+        },
+        {
+          "name": "every_candidate_list_offers_a_fallback",
+          "kind": "method",
+          "line": 193
+        },
+        {
+          "name": "a_missing_file_is_simply_not_located",
+          "kind": "method",
+          "line": 199
+        },
+        {
+          "name": "nothing_usable_in_a_list_answers_nothing",
+          "kind": "method",
+          "line": 204
+        },
+        {
+          "name": "this_machine_has_the_faces_the_console_needs",
+          "kind": "method",
+          "line": 234
+        },
+        {
+          "name": "tracking_opens_a_run_up_by_one_step_for_every_letter",
+          "kind": "method",
+          "line": 265
+        }
+      ]
+    },
+    {
+      "path": "src/shell/mod.rs",
+      "lang": "rust",
+      "loc": 284,
+      "rank": 0.015374,
+      "defs": [
+        {
+          "name": "fonts",
+          "kind": "module",
+          "line": 41
+        },
+        {
+          "name": "platform",
+          "kind": "module",
+          "line": 42
+        },
+        {
+          "name": "WindowOptions",
+          "kind": "class",
+          "line": 64
+        },
+        {
+          "name": "default",
+          "kind": "method",
+          "line": 78
+        },
+        {
+          "name": "Error",
+          "kind": "class",
+          "line": 85
+        },
+        {
+          "name": "fmt",
+          "kind": "method",
+          "line": 102
+        },
+        {
+          "name": "from",
+          "kind": "method",
+          "line": 121
+        },
+        {
+          "name": "from",
+          "kind": "method",
+          "line": 127
+        },
+        {
+          "name": "Backend",
+          "kind": "interface",
+          "line": 137
+        },
+        {
+          "name": "Surface",
+          "kind": "class",
+          "line": 171
+        },
+        {
+          "name": "draw",
+          "kind": "method",
+          "line": 197
+        },
+        {
+          "name": "run",
+          "kind": "function",
+          "line": 234
+        }
+      ]
+    },
+    {
+      "path": "src/shell/platform/macos.rs",
+      "lang": "rust",
+      "loc": 1041,
+      "rank": 0.011355,
+      "defs": [
+        {
+          "name": "Object",
+          "kind": "class",
+          "line": 31
+        },
+        {
+          "name": "Sel",
+          "kind": "class",
+          "line": 33
+        },
+        {
+          "name": "ObserverContext",
+          "kind": "class",
+          "line": 104
+        },
+        {
+          "name": "CgPoint",
+          "kind": "class",
+          "line": 156
+        },
+        {
+          "name": "CgSize",
+          "kind": "class",
+          "line": 164
+        },
+        {
+          "name": "CgRect",
+          "kind": "class",
+          "line": 172
+        },
+        {
+          "name": "class",
+          "kind": "function",
+          "line": 178
+        },
+        {
+          "name": "sel",
+          "kind": "function",
+          "line": 183
+        },
+        {
+          "name": "send",
+          "kind": "function",
+          "line": 188
+        },
+        {
+          "name": "send1",
+          "kind": "function",
+          "line": 195
+        },
+        {
+          "name": "send3",
+          "kind": "function",
+          "line": 202
+        },
+        {
+          "name": "send4",
+          "kind": "function",
+          "line": 209
+        },
+        {
+          "name": "send_rect",
+          "kind": "function",
+          "line": 220
+        },
+        {
+          "name": "ns_string",
+          "kind": "function",
+          "line": 236
+        },
+        {
+          "name": "from_ns_string",
+          "kind": "function",
+          "line": 241
+        },
+        {
+          "name": "Window",
+          "kind": "class",
+          "line": 307
+        },
+        {
+          "name": "LiveResize",
+          "kind": "class",
+          "line": 348
+        },
+        {
+          "name": "draw_during_live_resize",
+          "kind": "function",
+          "line": 371
+        },
+        {
+          "name": "open",
+          "kind": "method",
+          "line": 400
+        },
+        {
+          "name": "pump",
+          "kind": "method",
+          "line": 495
+        },
+        {
+          "name": "surface",
+          "kind": "method",
+          "line": 513
+        },
+        {
+          "name": "appearance",
+          "kind": "method",
+          "line": 519
+        },
+        {
+          "name": "present",
+          "kind": "method",
+          "line": 534
+        },
+        {
+          "name": "is_open",
+          "kind": "method",
+          "line": 597
+        },
+        {
+          "name": "observe_live_resize",
+          "kind": "method",
+          "line": 609
+        },
+        {
+          "name": "in_live_resize",
+          "kind": "method",
+          "line": 641
+        },
+        {
+          "name": "pump_events",
+          "kind": "method",
+          "line": 646
+        },
+        {
+          "name": "refresh_geometry",
+          "kind": "method",
+          "line": 703
+        },
+        {
+          "name": "translate",
+          "kind": "method",
+          "line": 717
+        },
+        {
+          "name": "translate_key",
+          "kind": "method",
+          "line": 762
+        },
+        {
+          "name": "pointer_position",
+          "kind": "method",
+          "line": 805
+        },
+        {
+          "name": "button_of",
+          "kind": "function",
+          "line": 814
+        },
+        {
+          "name": "modifiers_of",
+          "kind": "function",
+          "line": 830
+        },
+        {
+          "name": "key_for_code",
+          "kind": "function",
+          "line": 843
+        },
+        {
+          "name": "is_function_key",
+          "kind": "function",
+          "line": 868
+        },
+        {
+          "name": "install_menu",
+          "kind": "function",
+          "line": 876
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 899
+        },
+        {
+          "name": "named_keys_come_from_positions_not_characters",
+          "kind": "method",
+          "line": 903
+        },
+        {
+          "name": "command_is_reported_as_the_accelerator",
+          "kind": "method",
+          "line": 911
+        },
+        {
+          "name": "every_modifier_is_recognised_separately",
+          "kind": "method",
+          "line": 918
+        },
+        {
+          "name": "function_key_code_points_are_not_treated_as_text",
+          "kind": "method",
+          "line": 925
+        },
+        {
+          "name": "tick",
+          "kind": "method",
+          "line": 958
+        },
+        {
+          "name": "count_a_turn",
+          "kind": "method",
+          "line": 963
+        },
+        {
+          "name": "an_observer_registered_the_way_the_window_registers_one_actually_fires",
+          "kind": "method",
+          "line": 969
+        },
+        {
+          "name": "nothing_is_drawn_for_an_observer_that_has_no_window_or_no_frame",
+          "kind": "method",
+          "line": 1024
+        },
+        {
+          "name": "the_bitmap_format_matches_what_the_canvas_stores",
+          "kind": "method",
+          "line": 1036
+        }
+      ]
+    },
+    {
+      "path": "src/shell/platform/mod.rs",
+      "lang": "rust",
+      "loc": 26,
+      "rank": 0.004736,
+      "defs": [
+        {
+          "name": "backend",
+          "kind": "module",
+          "line": 10
+        },
+        {
+          "name": "backend",
+          "kind": "module",
+          "line": 15
+        },
+        {
+          "name": "backend",
+          "kind": "module",
+          "line": 20
+        },
+        {
+          "name": "backend",
+          "kind": "module",
+          "line": 24
+        }
+      ]
+    },
+    {
+      "path": "src/shell/platform/unsupported.rs",
+      "lang": "rust",
+      "loc": 46,
+      "rank": 0.006588,
+      "defs": [
+        {
+          "name": "Window",
+          "kind": "class",
+          "line": 15
+        },
+        {
+          "name": "open",
+          "kind": "method",
+          "line": 18
+        },
+        {
+          "name": "pump",
+          "kind": "method",
+          "line": 22
+        },
+        {
+          "name": "surface",
+          "kind": "method",
+          "line": 31
+        },
+        {
+          "name": "appearance",
+          "kind": "method",
+          "line": 35
+        },
+        {
+          "name": "present",
+          "kind": "method",
+          "line": 39
+        },
+        {
+          "name": "is_open",
+          "kind": "method",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "path": "src/shell/platform/windows.rs",
+      "lang": "rust",
+      "loc": 698,
+      "rank": 0.008947,
+      "defs": [
+        {
+          "name": "Handle",
+          "kind": "class",
+          "line": 31
+        },
+        {
+          "name": "WordParameter",
+          "kind": "class",
+          "line": 32
+        },
+        {
+          "name": "LongParameter",
+          "kind": "class",
+          "line": 33
+        },
+        {
+          "name": "WindowClass",
+          "kind": "class",
+          "line": 127
+        },
+        {
+          "name": "WindowPoint",
+          "kind": "class",
+          "line": 146
+        },
+        {
+          "name": "WindowRect",
+          "kind": "class",
+          "line": 153
+        },
+        {
+          "name": "Message",
+          "kind": "class",
+          "line": 162
+        },
+        {
+          "name": "default",
+          "kind": "method",
+          "line": 176
+        },
+        {
+          "name": "PaintStruct",
+          "kind": "class",
+          "line": 189
+        },
+        {
+          "name": "BitmapHeader",
+          "kind": "class",
+          "line": 199
+        },
+        {
+          "name": "BitmapInfo",
+          "kind": "class",
+          "line": 214
+        },
+        {
+          "name": "Window",
+          "kind": "class",
+          "line": 292
+        },
+        {
+          "name": "open",
+          "kind": "method",
+          "line": 301
+        },
+        {
+          "name": "pump",
+          "kind": "method",
+          "line": 360
+        },
+        {
+          "name": "surface",
+          "kind": "method",
+          "line": 394
+        },
+        {
+          "name": "appearance",
+          "kind": "method",
+          "line": 398
+        },
+        {
+          "name": "present",
+          "kind": "method",
+          "line": 419
+        },
+        {
+          "name": "is_open",
+          "kind": "method",
+          "line": 470
+        },
+        {
+          "name": "refresh_geometry",
+          "kind": "method",
+          "line": 477
+        },
+        {
+          "name": "translate",
+          "kind": "method",
+          "line": 495
+        },
+        {
+          "name": "logical_size",
+          "kind": "method",
+          "line": 558
+        },
+        {
+          "name": "position_of",
+          "kind": "method",
+          "line": 563
+        },
+        {
+          "name": "drop",
+          "kind": "method",
+          "line": 573
+        },
+        {
+          "name": "wheel_amount",
+          "kind": "function",
+          "line": 583
+        },
+        {
+          "name": "current_modifiers",
+          "kind": "function",
+          "line": 592
+        },
+        {
+          "name": "key_for_code",
+          "kind": "function",
+          "line": 606
+        },
+        {
+          "name": "wide",
+          "kind": "function",
+          "line": 631
+        },
+        {
+          "name": "window_procedure",
+          "kind": "function",
+          "line": 639
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 662
+        },
+        {
+          "name": "named_keys_come_from_their_virtual_codes",
+          "kind": "method",
+          "line": 666
+        },
+        {
+          "name": "a_wheel_notch_scrolls_one_step_in_the_direction_it_turned",
+          "kind": "method",
+          "line": 675
+        },
+        {
+          "name": "a_pointer_left_of_the_window_reads_as_negative_not_as_sixty_five_thousand",
+          "kind": "method",
+          "line": 681
+        },
+        {
+          "name": "pointer_positions_are_divided_by_the_display_scale",
+          "kind": "method",
+          "line": 688
+        },
+        {
+          "name": "wide_strings_are_terminated",
+          "kind": "method",
+          "line": 695
+        }
+      ]
+    },
+    {
+      "path": "src/shell/platform/x11.rs",
+      "lang": "rust",
+      "loc": 748,
+      "rank": 0.019535,
+      "defs": [
+        {
+          "name": "Display",
+          "kind": "class",
+          "line": 26
+        },
+        {
+          "name": "XWindow",
+          "kind": "class",
+          "line": 27
+        },
+        {
+          "name": "Atom",
+          "kind": "class",
+          "line": 28
+        },
+        {
+          "name": "Visual",
+          "kind": "class",
+          "line": 29
+        },
+        {
+          "name": "GraphicsContext",
+          "kind": "class",
+          "line": 30
+        },
+        {
+          "name": "PollDescriptor",
+          "kind": "class",
+          "line": 119
+        },
+        {
+          "name": "XEvent",
+          "kind": "class",
+          "line": 134
+        },
+        {
+          "name": "XKeyEvent",
+          "kind": "class",
+          "line": 141
+        },
+        {
+          "name": "XButtonEvent",
+          "kind": "class",
+          "line": 161
+        },
+        {
+          "name": "XMotionEvent",
+          "kind": "class",
+          "line": 181
+        },
+        {
+          "name": "XClientMessageEvent",
+          "kind": "class",
+          "line": 201
+        },
+        {
+          "name": "WindowAttributes",
+          "kind": "class",
+          "line": 213
+        },
+        {
+          "name": "XImage",
+          "kind": "class",
+          "line": 240
+        },
+        {
+          "name": "Aspect",
+          "kind": "class",
+          "line": 265
+        },
+        {
+          "name": "SizeHints",
+          "kind": "class",
+          "line": 271
+        },
+        {
+          "name": "Window",
+          "kind": "class",
+          "line": 330
+        },
+        {
+          "name": "open",
+          "kind": "method",
+          "line": 343
+        },
+        {
+          "name": "pump",
+          "kind": "method",
+          "line": 423
+        },
+        {
+          "name": "surface",
+          "kind": "method",
+          "line": 453
+        },
+        {
+          "name": "appearance",
+          "kind": "method",
+          "line": 457
+        },
+        {
+          "name": "present",
+          "kind": "method",
+          "line": 471
+        },
+        {
+          "name": "is_open",
+          "kind": "method",
+          "line": 518
+        },
+        {
+          "name": "refresh_geometry",
+          "kind": "method",
+          "line": 525
+        },
+        {
+          "name": "translate",
+          "kind": "method",
+          "line": 538
+        },
+        {
+          "name": "translate_key",
+          "kind": "method",
+          "line": 601
+        },
+        {
+          "name": "position",
+          "kind": "method",
+          "line": 639
+        },
+        {
+          "name": "drop",
+          "kind": "method",
+          "line": 645
+        },
+        {
+          "name": "density_scale",
+          "kind": "function",
+          "line": 661
+        },
+        {
+          "name": "modifiers_of",
+          "kind": "function",
+          "line": 674
+        },
+        {
+          "name": "key_for_symbol",
+          "kind": "function",
+          "line": 686
+        },
+        {
+          "name": "from_c",
+          "kind": "function",
+          "line": 714
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 722
+        },
+        {
+          "name": "named_keys_come_from_their_keysyms",
+          "kind": "method",
+          "line": 726
+        },
+        {
+          "name": "control_is_reported_as_the_accelerator",
+          "kind": "method",
+          "line": 736
+        },
+        {
+          "name": "every_modifier_is_recognised_separately",
+          "kind": "method",
+          "line": 743
+        }
+      ]
+    },
+    {
+      "path": "src/style.rs",
+      "lang": "rust",
+      "loc": 514,
+      "rank": 0.018938,
+      "defs": [
+        {
+          "name": "Tone",
+          "kind": "class",
+          "line": 33
+        },
+        {
+          "name": "resolve",
+          "kind": "method",
+          "line": 100
+        },
+        {
+          "name": "ink",
+          "kind": "method",
+          "line": 132
+        },
+        {
+          "name": "tint",
+          "kind": "method",
+          "line": 142
+        },
+        {
+          "name": "from",
+          "kind": "method",
+          "line": 153
+        },
+        {
+          "name": "Length",
+          "kind": "class",
+          "line": 160
+        },
+        {
+          "name": "grow",
+          "kind": "method",
+          "line": 174
+        },
+        {
+          "name": "Axis",
+          "kind": "class",
+          "line": 184
+        },
+        {
+          "name": "Align",
+          "kind": "class",
+          "line": 193
+        },
+        {
+          "name": "offset",
+          "kind": "method",
+          "line": 206
+        },
+        {
+          "name": "Justify",
+          "kind": "class",
+          "line": 218
+        },
+        {
+          "name": "Anchor",
+          "kind": "class",
+          "line": 237
+        },
+        {
+          "name": "Radius",
+          "kind": "class",
+          "line": 257
+        },
+        {
+          "name": "Face",
+          "kind": "class",
+          "line": 272
+        },
+        {
+          "name": "Ink",
+          "kind": "class",
+          "line": 285
+        },
+        {
+          "name": "default",
+          "kind": "method",
+          "line": 299
+        },
+        {
+          "name": "style",
+          "kind": "method",
+          "line": 306
+        },
+        {
+          "name": "Hover",
+          "kind": "class",
+          "line": 322
+        },
+        {
+          "name": "is_empty",
+          "kind": "method",
+          "line": 333
+        },
+        {
+          "name": "Style",
+          "kind": "class",
+          "line": 343
+        },
+        {
+          "name": "InkOverride",
+          "kind": "class",
+          "line": 410
+        },
+        {
+          "name": "over",
+          "kind": "method",
+          "line": 425
+        },
+        {
+          "name": "default",
+          "kind": "method",
+          "line": 437
+        },
+        {
+          "name": "has_decoration",
+          "kind": "method",
+          "line": 470
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 476
+        },
+        {
+          "name": "a_role_resolves_differently_in_the_two_appearances",
+          "kind": "method",
+          "line": 480
+        },
+        {
+          "name": "an_exact_colour_ignores_the_theme",
+          "kind": "method",
+          "line": 489
+        },
+        {
+          "name": "unset_text_properties_come_from_the_parent",
+          "kind": "method",
+          "line": 500
+        },
+        {
+          "name": "only_a_filling_length_asks_for_leftover_space",
+          "kind": "method",
+          "line": 509
+        }
+      ]
+    },
+    {
+      "path": "src/testing/font.rs",
+      "lang": "rust",
+      "loc": 406,
+      "rank": 0.004736,
+      "defs": [
+        {
+          "name": "test_font",
+          "kind": "function",
+          "line": 86
+        },
+        {
+          "name": "test_font_bytes",
+          "kind": "function",
+          "line": 94
+        },
+        {
+          "name": "coverage",
+          "kind": "function",
+          "line": 113
+        },
+        {
+          "name": "outlines",
+          "kind": "function",
+          "line": 124
+        },
+        {
+          "name": "box_height",
+          "kind": "function",
+          "line": 144
+        },
+        {
+          "name": "box_glyph",
+          "kind": "function",
+          "line": 149
+        },
+        {
+          "name": "character_map",
+          "kind": "function",
+          "line": 174
+        },
+        {
+          "name": "contiguous_runs",
+          "kind": "function",
+          "line": 205
+        },
+        {
+          "name": "head",
+          "kind": "function",
+          "line": 217
+        },
+        {
+          "name": "horizontal_header",
+          "kind": "function",
+          "line": 239
+        },
+        {
+          "name": "horizontal_metrics",
+          "kind": "function",
+          "line": 263
+        },
+        {
+          "name": "maximum_profile",
+          "kind": "function",
+          "line": 274
+        },
+        {
+          "name": "assemble",
+          "kind": "function",
+          "line": 282
+        },
+        {
+          "name": "aligned",
+          "kind": "function",
+          "line": 311
+        },
+        {
+          "name": "push_short_offset",
+          "kind": "function",
+          "line": 321
+        },
+        {
+          "name": "push_u16",
+          "kind": "function",
+          "line": 326
+        },
+        {
+          "name": "push_i16",
+          "kind": "function",
+          "line": 330
+        },
+        {
+          "name": "push_u32",
+          "kind": "function",
+          "line": 334
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 339
+        },
+        {
+          "name": "the_face_assembled_here_is_a_font_this_crate_can_read",
+          "kind": "method",
+          "line": 344
+        },
+        {
+          "name": "every_character_is_half_the_text_size_wide",
+          "kind": "method",
+          "line": 354
+        },
+        {
+          "name": "a_line_is_exactly_the_text_size_tall",
+          "kind": "method",
+          "line": 363
+        },
+        {
+          "name": "a_letter_marks_pixels_and_a_space_marks_none",
+          "kind": "method",
+          "line": 371
+        },
+        {
+          "name": "different_characters_are_different_pictures",
+          "kind": "method",
+          "line": 382
+        },
+        {
+          "name": "glyphs_are_numbered_from_one_with_notdef_at_zero",
+          "kind": "method",
+          "line": 392
+        },
+        {
+          "name": "every_table_starts_on_a_four_byte_boundary",
+          "kind": "method",
+          "line": 400
+        }
+      ]
+    },
+    {
+      "path": "src/testing/mod.rs",
+      "lang": "rust",
+      "loc": 590,
+      "rank": 0.040792,
+      "defs": [
+        {
+          "name": "font",
+          "kind": "module",
+          "line": 58
+        },
+        {
+          "name": "Probe",
+          "kind": "class",
+          "line": 88
+        },
+        {
+          "name": "Harness",
+          "kind": "class",
+          "line": 116
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 133
+        },
+        {
+          "name": "with_app",
+          "kind": "method",
+          "line": 142
+        },
+        {
+          "name": "size",
+          "kind": "method",
+          "line": 160
+        },
+        {
+          "name": "scale",
+          "kind": "method",
+          "line": 171
+        },
+        {
+          "name": "appearance",
+          "kind": "method",
+          "line": 178
+        },
+        {
+          "name": "frame_time",
+          "kind": "method",
+          "line": 187
+        },
+        {
+          "name": "frame",
+          "kind": "method",
+          "line": 198
+        },
+        {
+          "name": "frames",
+          "kind": "method",
+          "line": 224
+        },
+        {
+          "name": "event",
+          "kind": "method",
+          "line": 235
+        },
+        {
+          "name": "move_pointer",
+          "kind": "method",
+          "line": 241
+        },
+        {
+          "name": "leave",
+          "kind": "method",
+          "line": 246
+        },
+        {
+          "name": "click",
+          "kind": "method",
+          "line": 251
+        },
+        {
+          "name": "secondary_click",
+          "kind": "method",
+          "line": 258
+        },
+        {
+          "name": "press",
+          "kind": "method",
+          "line": 265
+        },
+        {
+          "name": "drag_to",
+          "kind": "method",
+          "line": 270
+        },
+        {
+          "name": "release",
+          "kind": "method",
+          "line": 275
+        },
+        {
+          "name": "drag",
+          "kind": "method",
+          "line": 285
+        },
+        {
+          "name": "scroll",
+          "kind": "method",
+          "line": 290
+        },
+        {
+          "name": "key",
+          "kind": "method",
+          "line": 295
+        },
+        {
+          "name": "key_with",
+          "kind": "method",
+          "line": 300
+        },
+        {
+          "name": "tab",
+          "kind": "method",
+          "line": 305
+        },
+        {
+          "name": "type_text",
+          "kind": "method",
+          "line": 315
+        },
+        {
+          "name": "click_text",
+          "kind": "method",
+          "line": 330
+        },
+        {
+          "name": "hover_text",
+          "kind": "method",
+          "line": 340
+        },
+        {
+          "name": "rect_of",
+          "kind": "method",
+          "line": 349
+        },
+        {
+          "name": "find",
+          "kind": "method",
+          "line": 354
+        },
+        {
+          "name": "find_key",
+          "kind": "method",
+          "line": 360
+        },
+        {
+          "name": "shows",
+          "kind": "method",
+          "line": 366
+        },
+        {
+          "name": "text",
+          "kind": "method",
+          "line": 375
+        },
+        {
+          "name": "probes",
+          "kind": "method",
+          "line": 381
+        },
+        {
+          "name": "state",
+          "kind": "method",
+          "line": 389
+        },
+        {
+          "name": "canvas",
+          "kind": "method",
+          "line": 394
+        },
+        {
+          "name": "pixel",
+          "kind": "method",
+          "line": 402
+        },
+        {
+          "name": "marked",
+          "kind": "method",
+          "line": 418
+        },
+        {
+          "name": "ground",
+          "kind": "method",
+          "line": 440
+        },
+        {
+          "name": "save_png",
+          "kind": "method",
+          "line": 456
+        },
+        {
+          "name": "focused",
+          "kind": "method",
+          "line": 469
+        },
+        {
+          "name": "scroll_offset",
+          "kind": "method",
+          "line": 474
+        },
+        {
+          "name": "is_animating",
+          "kind": "method",
+          "line": 483
+        },
+        {
+          "name": "ensure_drawn",
+          "kind": "method",
+          "line": 491
+        },
+        {
+          "name": "require",
+          "kind": "method",
+          "line": 498
+        },
+        {
+          "name": "probe",
+          "kind": "function",
+          "line": 510
+        },
+        {
+          "name": "test_fonts",
+          "kind": "function",
+          "line": 530
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 538
+        },
+        {
+          "name": "Counter",
+          "kind": "class",
+          "line": 544
+        },
+        {
+          "name": "counter",
+          "kind": "method",
+          "line": 548
+        },
+        {
+          "name": "a_harness_draws_without_a_window_and_answers_what_it_drew",
+          "kind": "method",
+          "line": 556
+        },
+        {
+          "name": "clicking_by_name_runs_the_handler_and_the_next_frame_shows_it",
+          "kind": "method",
+          "line": 563
+        },
+        {
+          "name": "aiming_at_something_that_is_not_there_fails_loudly",
+          "kind": "method",
+          "line": 571
+        },
+        {
+          "name": "the_face_it_draws_with_measures_in_round_numbers",
+          "kind": "method",
+          "line": 580
+        }
+      ]
+    },
+    {
+      "path": "src/text.rs",
+      "lang": "rust",
+      "loc": 524,
+      "rank": 0.063436,
+      "defs": [
+        {
+          "name": "FontId",
+          "kind": "class",
+          "line": 55
+        },
+        {
+          "name": "TextStyle",
+          "kind": "class",
+          "line": 67
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 80
+        },
+        {
+          "name": "colored",
+          "kind": "method",
+          "line": 85
+        },
+        {
+          "name": "sized",
+          "kind": "method",
+          "line": 90
+        },
+        {
+          "name": "tracked",
+          "kind": "method",
+          "line": 108
+        },
+        {
+          "name": "GlyphKey",
+          "kind": "class",
+          "line": 115
+        },
+        {
+          "name": "Face",
+          "kind": "class",
+          "line": 124
+        },
+        {
+          "name": "Fonts",
+          "kind": "class",
+          "line": 130
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 137
+        },
+        {
+          "name": "add",
+          "kind": "method",
+          "line": 142
+        },
+        {
+          "name": "len",
+          "kind": "method",
+          "line": 148
+        },
+        {
+          "name": "is_empty",
+          "kind": "method",
+          "line": 153
+        },
+        {
+          "name": "set_scale",
+          "kind": "method",
+          "line": 162
+        },
+        {
+          "name": "font",
+          "kind": "method",
+          "line": 172
+        },
+        {
+          "name": "metrics",
+          "kind": "method",
+          "line": 177
+        },
+        {
+          "name": "measure",
+          "kind": "method",
+          "line": 188
+        },
+        {
+          "name": "fit",
+          "kind": "method",
+          "line": 201
+        },
+        {
+          "name": "wrap",
+          "kind": "method",
+          "line": 221
+        },
+        {
+          "name": "draw",
+          "kind": "method",
+          "line": 232
+        },
+        {
+          "name": "draw_truncated",
+          "kind": "method",
+          "line": 259
+        },
+        {
+          "name": "device_size",
+          "kind": "method",
+          "line": 282
+        },
+        {
+          "name": "advance_of",
+          "kind": "method",
+          "line": 290
+        },
+        {
+          "name": "rendered_glyph",
+          "kind": "method",
+          "line": 309
+        },
+        {
+          "name": "resolve",
+          "kind": "method",
+          "line": 346
+        },
+        {
+          "name": "wrap_paragraph",
+          "kind": "method",
+          "line": 363
+        },
+        {
+          "name": "default",
+          "kind": "method",
+          "line": 408
+        },
+        {
+          "name": "quantise",
+          "kind": "function",
+          "line": 414
+        },
+        {
+          "name": "glyph_of",
+          "kind": "function",
+          "line": 419
+        },
+        {
+          "name": "next_boundary",
+          "kind": "function",
+          "line": 424
+        },
+        {
+          "name": "split_lines",
+          "kind": "function",
+          "line": 429
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 444
+        },
+        {
+          "name": "sizes_round_to_the_quantum",
+          "kind": "method",
+          "line": 448
+        },
+        {
+          "name": "a_style_can_be_recoloured_and_resized_without_losing_its_face",
+          "kind": "method",
+          "line": 455
+        },
+        {
+          "name": "a_style_is_set_solid_until_it_is_tracked",
+          "kind": "method",
+          "line": 462
+        },
+        {
+          "name": "tracking_reaches_every_path_by_going_through_the_one_advance",
+          "kind": "method",
+          "line": 470
+        },
+        {
+          "name": "hard_line_breaks_are_found_without_their_terminators",
+          "kind": "method",
+          "line": 483
+        },
+        {
+          "name": "carriage_returns_are_not_part_of_the_line",
+          "kind": "method",
+          "line": 488
+        },
+        {
+          "name": "a_trailing_newline_leaves_an_empty_last_line",
+          "kind": "method",
+          "line": 496
+        },
+        {
+          "name": "text_with_no_fonts_loaded_measures_to_nothing_rather_than_panicking",
+          "kind": "method",
+          "line": 501
+        },
+        {
+          "name": "drawing_with_no_fonts_loaded_marks_nothing",
+          "kind": "method",
+          "line": 510
+        },
+        {
+          "name": "the_first_character_of_an_empty_string_still_advances_the_wrap",
+          "kind": "method",
+          "line": 520
+        }
+      ]
+    },
+    {
+      "path": "src/theme.rs",
+      "lang": "rust",
+      "loc": 643,
+      "rank": 0.009308,
+      "defs": [
+        {
+          "name": "Appearance",
+          "kind": "class",
+          "line": 18
+        },
+        {
+          "name": "Palette",
+          "kind": "class",
+          "line": 42
+        },
+        {
+          "name": "Metrics",
+          "kind": "class",
+          "line": 183
+        },
+        {
+          "name": "Theme",
+          "kind": "class",
+          "line": 258
+        },
+        {
+          "name": "new",
+          "kind": "method",
+          "line": 271
+        },
+        {
+          "name": "is_dark",
+          "kind": "method",
+          "line": 287
+        },
+        {
+          "name": "corner",
+          "kind": "method",
+          "line": 306
+        },
+        {
+          "name": "corner_small",
+          "kind": "method",
+          "line": 314
+        },
+        {
+          "name": "title",
+          "kind": "method",
+          "line": 332
+        },
+        {
+          "name": "heading",
+          "kind": "method",
+          "line": 347
+        },
+        {
+          "name": "body",
+          "kind": "method",
+          "line": 352
+        },
+        {
+          "name": "body_strong",
+          "kind": "method",
+          "line": 357
+        },
+        {
+          "name": "caption",
+          "kind": "method",
+          "line": 362
+        },
+        {
+          "name": "figure",
+          "kind": "method",
+          "line": 373
+        },
+        {
+          "name": "mono",
+          "kind": "method",
+          "line": 378
+        },
+        {
+          "name": "state",
+          "kind": "method",
+          "line": 395
+        },
+        {
+          "name": "micro",
+          "kind": "method",
+          "line": 405
+        },
+        {
+          "name": "status",
+          "kind": "method",
+          "line": 410
+        },
+        {
+          "name": "Status",
+          "kind": "class",
+          "line": 422
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 434
+        },
+        {
+          "name": "theme",
+          "kind": "method",
+          "line": 439
+        },
+        {
+          "name": "the_dark_theme_knows_it_is_dark",
+          "kind": "method",
+          "line": 444
+        },
+        {
+          "name": "text_is_legible_against_its_own_background_in_both_appearances",
+          "kind": "method",
+          "line": 450
+        },
+        {
+          "name": "every_status_hue_stands_out_from_its_own_tint",
+          "kind": "method",
+          "line": 460
+        },
+        {
+          "name": "accent_text_is_legible_on_the_accent",
+          "kind": "method",
+          "line": 472
+        },
+        {
+          "name": "a_surface_shades_away_from_the_light_in_both_appearances",
+          "kind": "method",
+          "line": 482
+        },
+        {
+          "name": "a_surface_is_shaded_subtly_rather_than_visibly_striped",
+          "kind": "method",
+          "line": 501
+        },
+        {
+          "name": "the_accent_shades_from_light_to_deep",
+          "kind": "method",
+          "line": 511
+        },
+        {
+          "name": "a_shadow_is_black_and_barely_there",
+          "kind": "method",
+          "line": 528
+        },
+        {
+          "name": "the_accent_is_not_near_any_status_colour",
+          "kind": "method",
+          "line": 543
+        },
+        {
+          "name": "motion_is_quick_enough_to_feel_attached_to_the_pointer",
+          "kind": "method",
+          "line": 560
+        },
+        {
+          "name": "the_type_scale_ascends",
+          "kind": "method",
+          "line": 567
+        },
+        {
+          "name": "the_fixed_width_face_is_reserved_for_what_the_machine_produced",
+          "kind": "method",
+          "line": 577
+        },
+        {
+          "name": "only_small_capitals_are_opened_up",
+          "kind": "method",
+          "line": 594
+        },
+        {
+          "name": "every_framed_thing_takes_the_same_corner_shape",
+          "kind": "method",
+          "line": 616
+        },
+        {
+          "name": "a_panel_is_separated_from_the_window_by_value_as_well_as_by_its_outline",
+          "kind": "method",
+          "line": 630
+        }
+      ]
+    },
+    {
+      "path": "src/widgets.rs",
+      "lang": "rust",
+      "loc": 467,
+      "rank": 0.070218,
+      "defs": [
+        {
+          "name": "col",
+          "kind": "function",
+          "line": 58
+        },
+        {
+          "name": "row",
+          "kind": "function",
+          "line": 69
+        },
+        {
+          "name": "spacer",
+          "kind": "function",
+          "line": 78
+        },
+        {
+          "name": "text",
+          "kind": "function",
+          "line": 83
+        },
+        {
+          "name": "title",
+          "kind": "function",
+          "line": 88
+        },
+        {
+          "name": "heading",
+          "kind": "function",
+          "line": 97
+        },
+        {
+          "name": "caption",
+          "kind": "function",
+          "line": 105
+        },
+        {
+          "name": "micro",
+          "kind": "function",
+          "line": 110
+        },
+        {
+          "name": "figure",
+          "kind": "function",
+          "line": 115
+        },
+        {
+          "name": "code",
+          "kind": "function",
+          "line": 120
+        },
+        {
+          "name": "paragraph",
+          "kind": "function",
+          "line": 125
+        },
+        {
+          "name": "panel",
+          "kind": "function",
+          "line": 135
+        },
+        {
+          "name": "divider",
+          "kind": "function",
+          "line": 145
+        },
+        {
+          "name": "button",
+          "kind": "function",
+          "line": 155
+        },
+        {
+          "name": "field",
+          "kind": "function",
+          "line": 171
+        },
+        {
+          "name": "tag",
+          "kind": "function",
+          "line": 190
+        },
+        {
+          "name": "dot",
+          "kind": "function",
+          "line": 206
+        },
+        {
+          "name": "meter",
+          "kind": "function",
+          "line": 222
+        },
+        {
+          "name": "draw",
+          "kind": "function",
+          "line": 249
+        },
+        {
+          "name": "tabs",
+          "kind": "function",
+          "line": 266
+        },
+        {
+          "name": "segmented",
+          "kind": "function",
+          "line": 296
+        },
+        {
+          "name": "primary",
+          "kind": "method",
+          "line": 335
+        },
+        {
+          "name": "danger",
+          "kind": "method",
+          "line": 347
+        },
+        {
+          "name": "ghost",
+          "kind": "method",
+          "line": 355
+        },
+        {
+          "name": "placeholder",
+          "kind": "method",
+          "line": 364
+        },
+        {
+          "name": "align_self",
+          "kind": "method",
+          "line": 373
+        },
+        {
+          "name": "center_text",
+          "kind": "method",
+          "line": 379
+        },
+        {
+          "name": "section",
+          "kind": "function",
+          "line": 393
+        },
+        {
+          "name": "field_row",
+          "kind": "function",
+          "line": 409
+        },
+        {
+          "name": "tests",
+          "kind": "module",
+          "line": 414
+        },
+        {
+          "name": "Nothing",
+          "kind": "class",
+          "line": 418
+        },
+        {
+          "name": "a_placeholder_only_attaches_to_a_field",
+          "kind": "method",
+          "line": 421
+        },
+        {
+          "name": "a_button_answers_the_pointer_and_takes_the_keyboard",
+          "kind": "method",
+          "line": 435
+        },
+        {
+          "name": "the_emphases_of_a_button_differ_in_their_fill_rather_than_their_shape",
+          "kind": "method",
+          "line": 442
+        },
+        {
+          "name": "a_tag_takes_both_of_a_status_colours_from_the_same_place",
+          "kind": "method",
+          "line": 454
+        },
+        {
+          "name": "tabs_key_themselves_by_their_own_words",
+          "kind": "method",
+          "line": 461
+        }
+      ]
+    },
+    {
+      "path": "tests/interaction.rs",
+      "lang": "rust",
+      "loc": 358,
+      "rank": 0.004736,
+      "defs": [
+        {
+          "name": "App",
+          "kind": "class",
+          "line": 16
+        },
+        {
+          "name": "a_click_runs_the_handler_it_was_attached_to",
+          "kind": "function",
+          "line": 27
+        },
+        {
+          "name": "holding_the_button_down_does_not_repeat_the_click",
+          "kind": "function",
+          "line": 40
+        },
+        {
+          "name": "a_press_that_wanders_off_the_control_does_not_activate_it",
+          "kind": "function",
+          "line": 56
+        },
+        {
+          "name": "a_disabled_control_ignores_the_pointer_entirely",
+          "kind": "function",
+          "line": 67
+        },
+        {
+          "name": "only_the_topmost_thing_under_the_pointer_answers_it",
+          "kind": "function",
+          "line": 80
+        },
+        {
+          "name": "a_drag_reports_where_the_pointer_is_for_as_long_as_it_is_held",
+          "kind": "function",
+          "line": 94
+        },
+        {
+          "name": "a_drag_ends_where_it_is_released_and_not_before",
+          "kind": "function",
+          "line": 129
+        },
+        {
+          "name": "a_focused_control_takes_keys_of_its_own",
+          "kind": "function",
+          "line": 149
+        },
+        {
+          "name": "keys_reach_only_what_holds_the_keyboard",
+          "kind": "function",
+          "line": 162
+        },
+        {
+          "name": "the_keyboard_can_reach_and_activate_a_control_with_no_pointer_at_all",
+          "kind": "function",
+          "line": 181
+        },
+        {
+          "name": "the_wheel_reaches_a_control_that_asked_for_it",
+          "kind": "function",
+          "line": 203
+        },
+        {
+          "name": "the_wheel_goes_to_the_innermost_list_rather_than_the_page_around_it",
+          "kind": "function",
+          "line": 217
+        },
+        {
+          "name": "typing_into_a_field_reports_the_text_it_now_holds",
+          "kind": "function",
+          "line": 236
+        },
+        {
+          "name": "an_unfocused_field_takes_no_typing",
+          "kind": "function",
+          "line": 254
+        },
+        {
+          "name": "a_layer_is_drawn_over_what_it_was_opened_from_and_answers_the_pointer_first",
+          "kind": "function",
+          "line": 264
+        },
+        {
+          "name": "a_row_scrolled_out_of_its_list_cannot_be_clicked",
+          "kind": "function",
+          "line": 307
+        },
+        {
+          "name": "what_a_view_offers_can_be_asserted_without_drawing_anything_at_all",
+          "kind": "function",
+          "line": 340
+        },
+        {
+          "name": "actions",
+          "kind": "function",
+          "line": 344
+        }
+      ]
+    },
+    {
+      "path": "tests/layout.rs",
+      "lang": "rust",
+      "loc": 296,
+      "rank": 0.004946,
+      "defs": [
+        {
+          "name": "Nothing",
+          "kind": "class",
+          "line": 13
+        },
+        {
+          "name": "showing",
+          "kind": "function",
+          "line": 19
+        },
+        {
+          "name": "a_run_of_text_is_as_wide_as_its_characters",
+          "kind": "function",
+          "line": 28
+        },
+        {
+          "name": "text_at_a_larger_size_is_larger_in_both_directions",
+          "kind": "function",
+          "line": 38
+        },
+        {
+          "name": "a_size_set_on_a_container_reaches_the_text_inside_it",
+          "kind": "function",
+          "line": 50
+        },
+        {
+          "name": "a_paragraph_wraps_to_the_width_it_was_given",
+          "kind": "function",
+          "line": 62
+        },
+        {
+          "name": "a_run_too_long_for_its_box_is_cut_short_rather_than_overrunning_it",
+          "kind": "function",
+          "line": 77
+        },
+        {
+          "name": "the_room_left_over_is_divided_between_the_things_that_asked_for_it",
+          "kind": "function",
+          "line": 87
+        },
+        {
+          "name": "a_fraction_is_a_share_of_what_the_parent_offered",
+          "kind": "function",
+          "line": 101
+        },
+        {
+          "name": "room_that_runs_short_is_taken_off_what_was_sized_to_its_content",
+          "kind": "function",
+          "line": 109
+        },
+        {
+          "name": "a_flow_runs_onto_further_lines_when_its_children_do_not_fit",
+          "kind": "function",
+          "line": 127
+        },
+        {
+          "name": "a_flow_that_fits_on_one_line_is_one_line",
+          "kind": "function",
+          "line": 149
+        },
+        {
+          "name": "a_flow_makes_every_line_as_tall_as_the_tallest_thing_on_it",
+          "kind": "function",
+          "line": 167
+        },
+        {
+          "name": "a_layer_hangs_off_its_anchor_and_takes_no_room_from_it",
+          "kind": "function",
+          "line": 186
+        },
+        {
+          "name": "a_layer_is_held_inside_the_window_rather_than_opening_off_the_edge",
+          "kind": "function",
+          "line": 207
+        },
+        {
+          "name": "a_layer_anchored_over_its_parent_covers_it_exactly",
+          "kind": "function",
+          "line": 224
+        },
+        {
+          "name": "a_dialog_is_centred_on_the_window_and_not_on_whatever_opened_it",
+          "kind": "function",
+          "line": 235
+        },
+        {
+          "name": "padding_is_taken_off_before_anything_is_placed_inside",
+          "kind": "function",
+          "line": 247
+        },
+        {
+          "name": "spare_room_is_spread_between_children_rather_than_around_them",
+          "kind": "function",
+          "line": 254
+        },
+        {
+          "name": "identity_follows_a_key_rather_than_a_position",
+          "kind": "function",
+          "line": 269
+        },
+        {
+          "name": "a_layout_holds_up_at_a_higher_pixel_density",
+          "kind": "function",
+          "line": 285
+        }
+      ]
+    },
+    {
+      "path": "tests/recipes.rs",
+      "lang": "rust",
+      "loc": 256,
+      "rank": 0.004961,
+      "defs": [
+        {
+          "name": "Settings",
+          "kind": "class",
+          "line": 21
+        },
+        {
+          "name": "checkbox",
+          "kind": "function",
+          "line": 34
+        },
+        {
+          "name": "switch",
+          "kind": "function",
+          "line": 50
+        },
+        {
+          "name": "slider",
+          "kind": "function",
+          "line": 62
+        },
+        {
+          "name": "radio_group",
+          "kind": "function",
+          "line": 79
+        },
+        {
+          "name": "a_checkbox_answers_a_click_on_its_label_as_well_as_on_its_box",
+          "kind": "function",
+          "line": 110
+        },
+        {
+          "name": "a_checkbox_draws_differently_once_it_is_ticked",
+          "kind": "function",
+          "line": 126
+        },
+        {
+          "name": "a_switch_flips_and_moves_its_knob_when_it_does",
+          "kind": "function",
+          "line": 142
+        },
+        {
+          "name": "a_slider_follows_the_pointer_and_the_arrow_keys_alike",
+          "kind": "function",
+          "line": 161
+        },
+        {
+          "name": "a_slider_can_be_used_from_the_keyboard_without_ever_being_clicked",
+          "kind": "function",
+          "line": 180
+        },
+        {
+          "name": "a_group_of_choices_takes_exactly_one_of_them",
+          "kind": "function",
+          "line": 191
+        },
+        {
+          "name": "a_note_appears_when_the_pointer_arrives_and_goes_when_it_leaves",
+          "kind": "function",
+          "line": 207
+        },
+        {
+          "name": "a_note_that_is_up_does_not_come_up_again_every_frame",
+          "kind": "function",
+          "line": 235
+        },
+        {
+          "name": "Counted",
+          "kind": "class",
+          "line": 240
+        }
+      ]
+    },
+    {
+      "path": "tests/rendering.rs",
+      "lang": "rust",
+      "loc": 191,
+      "rank": 0.004999,
+      "defs": [
+        {
+          "name": "Nothing",
+          "kind": "class",
+          "line": 13
+        },
+        {
+          "name": "Watched",
+          "kind": "class",
+          "line": 17
+        },
+        {
+          "name": "showing",
+          "kind": "function",
+          "line": 22
+        },
+        {
+          "name": "a_window_is_drawn_in_the_ground_of_whichever_appearance_is_in_force",
+          "kind": "function",
+          "line": 27
+        },
+        {
+          "name": "text_makes_marks_where_the_layout_put_it",
+          "kind": "function",
+          "line": 40
+        },
+        {
+          "name": "an_empty_window_is_marked_nowhere",
+          "kind": "function",
+          "line": 53
+        },
+        {
+          "name": "the_same_description_twice_is_the_same_picture",
+          "kind": "function",
+          "line": 60
+        },
+        {
+          "name": "two_different_words_are_two_different_pictures",
+          "kind": "function",
+          "line": 75
+        },
+        {
+          "name": "a_hover_eases_in_over_several_frames_and_then_settles",
+          "kind": "function",
+          "line": 84
+        },
+        {
+          "name": "a_disabled_control_is_drawn_differently_from_an_available_one",
+          "kind": "function",
+          "line": 111
+        },
+        {
+          "name": "an_applications_own_drawing_sees_what_a_button_sees",
+          "kind": "function",
+          "line": 125
+        },
+        {
+          "name": "a_higher_pixel_density_draws_more_pixels_of_the_same_picture",
+          "kind": "function",
+          "line": 149
+        },
+        {
+          "name": "a_layer_is_drawn_over_what_it_covers",
+          "kind": "function",
+          "line": 161
+        },
+        {
+          "name": "a_frame_can_be_written_out_as_a_png",
+          "kind": "function",
+          "line": 179
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": 5,
+      "to": 9,
+      "weight": 8,
+      "via": [
+        "run",
+        "render",
+        "size"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 10,
+      "weight": 22,
+      "via": [
+        "width",
+        "fill",
+        "size",
+        "stroke",
+        "height"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 12,
+      "weight": 45,
+      "via": [
+        "on_key",
+        "on_scroll",
+        "pad_x",
+        "on_drag",
+        "add"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 13,
+      "weight": 1,
+      "via": [
+        "render"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 14,
+      "weight": 1,
+      "via": [
+        "then"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 15,
+      "weight": 10,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 17,
+      "weight": 8,
+      "via": [
+        "inset",
+        "center",
+        "size",
+        "max_x"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 19,
+      "weight": 3,
+      "via": [
+        "fraction",
+        "text"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 21,
+      "weight": 5,
+      "via": [
+        "code",
+        "text"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 23,
+      "weight": 24,
+      "via": [
+        "render",
+        "fill",
+        "visual",
+        "stroke",
+        "draw"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 25,
+      "weight": 5,
+      "via": [
+        "run",
+        "draw"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 26,
+      "weight": 1,
+      "via": [
+        "tick"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 33,
+      "weight": 8,
+      "via": [
+        "size",
+        "key",
+        "text"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 34,
+      "weight": 5,
+      "via": [
+        "add",
+        "draw"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 35,
+      "weight": 5,
+      "via": [
+        "heading",
+        "caption"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 36,
+      "weight": 22,
+      "via": [
+        "panel",
+        "heading",
+        "caption",
+        "row",
+        "col"
+      ]
+    },
+    {
+      "from": 5,
+      "to": 39,
+      "weight": 4,
+      "via": [
+        "radio_group",
+        "switch",
+        "checkbox",
+        "slider"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 12,
+      "weight": 9,
+      "via": [
+        "pad",
+        "gap",
+        "bold",
+        "on_click",
+        "text_size"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 17,
+      "weight": 1,
+      "via": [
+        "center"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 35,
+      "weight": 1,
+      "via": [
+        "title"
+      ]
+    },
+    {
+      "from": 6,
+      "to": 36,
+      "weight": 8,
+      "via": [
+        "center_text",
+        "col",
+        "primary",
+        "row",
+        "button"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 9,
+      "weight": 1,
+      "via": [
+        "render"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 10,
+      "weight": 6,
+      "via": [
+        "fill",
+        "fill_rect",
+        "height",
+        "width",
+        "fill_vertical"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 11,
+      "weight": 1,
+      "via": [
+        "fade"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 12,
+      "weight": 54,
+      "via": [
+        "fill",
+        "bold",
+        "gap",
+        "round",
+        "on_input"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 13,
+      "weight": 1,
+      "via": [
+        "render"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 15,
+      "weight": 2,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 19,
+      "weight": 1,
+      "via": [
+        "scroll"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 21,
+      "weight": 10,
+      "via": [
+        "canvas",
+        "color",
+        "code"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 23,
+      "weight": 15,
+      "via": [
+        "fill",
+        "render",
+        "canvas",
+        "field",
+        "draw"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 25,
+      "weight": 1,
+      "via": [
+        "draw"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 31,
+      "weight": 11,
+      "via": [
+        "grow"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 33,
+      "weight": 4,
+      "via": [
+        "scroll",
+        "canvas"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 34,
+      "weight": 1,
+      "via": [
+        "draw"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 35,
+      "weight": 8,
+      "via": [
+        "micro",
+        "figure",
+        "heading",
+        "caption",
+        "title"
+      ]
+    },
+    {
+      "from": 7,
+      "to": 36,
+      "weight": 70,
+      "via": [
+        "ghost",
+        "spacer",
+        "micro",
+        "figure",
+        "dot"
+      ]
+    },
+    {
+      "from": 8,
+      "to": 10,
+      "weight": 4,
+      "via": [
+        "clear",
+        "fill_vertical",
+        "fill"
+      ]
+    },
+    {
+      "from": 8,
+      "to": 11,
+      "weight": 1,
+      "via": [
+        "fade"
+      ]
+    },
+    {
+      "from": 8,
+      "to": 12,
+      "weight": 6,
+      "via": [
+        "color",
+        "fill"
+      ]
+    },
+    {
+      "from": 8,
+      "to": 15,
+      "weight": 2,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 8,
+      "to": 16,
+      "weight": 1,
+      "via": [
+        "skip"
+      ]
+    },
+    {
+      "from": 8,
+      "to": 21,
+      "weight": 6,
+      "via": [
+        "canvas",
+        "color"
+      ]
+    },
+    {
+      "from": 8,
+      "to": 23,
+      "weight": 8,
+      "via": [
+        "canvas",
+        "color",
+        "fill"
+      ]
+    },
+    {
+      "from": 8,
+      "to": 33,
+      "weight": 2,
+      "via": [
+        "canvas"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 10,
+      "weight": 6,
+      "via": [
+        "bounds",
+        "clear_vertical",
+        "is_empty",
+        "scale"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 12,
+      "weight": 1,
+      "via": [
+        "children"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 14,
+      "weight": 2,
+      "via": [
+        "bounds"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 17,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 19,
+      "weight": 2,
+      "via": [
+        "is_empty",
+        "begin_frame"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 22,
+      "weight": 3,
+      "via": [
+        "request_frame",
+        "end_frame",
+        "begin_frame"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 25,
+      "weight": 1,
+      "via": [
+        "run"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 31,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 33,
+      "weight": 2,
+      "via": [
+        "frame",
+        "scale"
+      ]
+    },
+    {
+      "from": 9,
+      "to": 34,
+      "weight": 2,
+      "via": [
+        "set_scale",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 9,
+      "weight": 8,
+      "via": [
+        "size"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 11,
+      "weight": 17,
+      "via": [
+        "mix",
+        "is_visible",
+        "blend_over",
+        "to_argb"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 12,
+      "weight": 28,
+      "via": [
+        "shadow",
+        "clip",
+        "size",
+        "fill",
+        "round"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 14,
+      "weight": 1,
+      "via": [
+        "then"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 15,
+      "weight": 13,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 16,
+      "weight": 1,
+      "via": [
+        "find"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 17,
+      "weight": 60,
+      "via": [
+        "max_x",
+        "expand",
+        "min_y",
+        "min_x",
+        "intersect"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 19,
+      "weight": 11,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 23,
+      "weight": 16,
+      "via": [
+        "stroke",
+        "fill"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 31,
+      "weight": 11,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 33,
+      "weight": 9,
+      "via": [
+        "size",
+        "find"
+      ]
+    },
+    {
+      "from": 10,
+      "to": 34,
+      "weight": 11,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 11,
+      "to": 12,
+      "weight": 2,
+      "via": [
+        "round"
+      ]
+    },
+    {
+      "from": 12,
+      "to": 10,
+      "weight": 2,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 12,
+      "to": 17,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 12,
+      "to": 19,
+      "weight": 11,
+      "via": [
+        "scroll",
+        "text",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 12,
+      "to": 21,
+      "weight": 18,
+      "via": [
+        "text"
+      ]
+    },
+    {
+      "from": 12,
+      "to": 23,
+      "weight": 9,
+      "via": [
+        "text"
+      ]
+    },
+    {
+      "from": 12,
+      "to": 31,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 12,
+      "to": 33,
+      "weight": 10,
+      "via": [
+        "scroll",
+        "text"
+      ]
+    },
+    {
+      "from": 12,
+      "to": 34,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 12,
+      "to": 36,
+      "weight": 14,
+      "via": [
+        "col",
+        "text",
+        "button"
+      ]
+    },
+    {
+      "from": 13,
+      "to": 10,
+      "weight": 1,
+      "via": [
+        "bounds"
+      ]
+    },
+    {
+      "from": 13,
+      "to": 14,
+      "weight": 1,
+      "via": [
+        "bounds"
+      ]
+    },
+    {
+      "from": 13,
+      "to": 15,
+      "weight": 3,
+      "via": [
+        "finish",
+        "edge"
+      ]
+    },
+    {
+      "from": 13,
+      "to": 16,
+      "weight": 13,
+      "via": [
+        "i16",
+        "glyph",
+        "u16",
+        "find"
+      ]
+    },
+    {
+      "from": 13,
+      "to": 17,
+      "weight": 1,
+      "via": [
+        "contains"
+      ]
+    },
+    {
+      "from": 13,
+      "to": 23,
+      "weight": 3,
+      "via": [
+        "field"
+      ]
+    },
+    {
+      "from": 13,
+      "to": 33,
+      "weight": 3,
+      "via": [
+        "find"
+      ]
+    },
+    {
+      "from": 13,
+      "to": 34,
+      "weight": 3,
+      "via": [
+        "len"
+      ]
+    },
+    {
+      "from": 13,
+      "to": 36,
+      "weight": 3,
+      "via": [
+        "field"
+      ]
+    },
+    {
+      "from": 14,
+      "to": 10,
+      "weight": 2,
+      "via": [
+        "bounds"
+      ]
+    },
+    {
+      "from": 14,
+      "to": 16,
+      "weight": 22,
+      "via": [
+        "skip",
+        "position",
+        "u32",
+        "u16",
+        "i16"
+      ]
+    },
+    {
+      "from": 14,
+      "to": 19,
+      "weight": 2,
+      "via": [
+        "apply"
+      ]
+    },
+    {
+      "from": 14,
+      "to": 30,
+      "weight": 1,
+      "via": [
+        "position"
+      ]
+    },
+    {
+      "from": 14,
+      "to": 34,
+      "weight": 8,
+      "via": [
+        "len"
+      ]
+    },
+    {
+      "from": 15,
+      "to": 10,
+      "weight": 7,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 15,
+      "to": 12,
+      "weight": 7,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 15,
+      "to": 23,
+      "weight": 7,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 16,
+      "to": 10,
+      "weight": 1,
+      "via": [
+        "resize"
+      ]
+    },
+    {
+      "from": 16,
+      "to": 30,
+      "weight": 1,
+      "via": [
+        "position"
+      ]
+    },
+    {
+      "from": 16,
+      "to": 33,
+      "weight": 1,
+      "via": [
+        "find"
+      ]
+    },
+    {
+      "from": 16,
+      "to": 34,
+      "weight": 6,
+      "via": [
+        "len"
+      ]
+    },
+    {
+      "from": 17,
+      "to": 10,
+      "weight": 6,
+      "via": [
+        "is_empty",
+        "vertical"
+      ]
+    },
+    {
+      "from": 17,
+      "to": 14,
+      "weight": 1,
+      "via": [
+        "Point"
+      ]
+    },
+    {
+      "from": 17,
+      "to": 19,
+      "weight": 2,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 17,
+      "to": 31,
+      "weight": 2,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 17,
+      "to": 34,
+      "weight": 2,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 18,
+      "to": 10,
+      "weight": 6,
+      "via": [
+        "pixels",
+        "is_empty",
+        "fill_rect",
+        "bounds"
+      ]
+    },
+    {
+      "from": 18,
+      "to": 14,
+      "weight": 1,
+      "via": [
+        "bounds"
+      ]
+    },
+    {
+      "from": 18,
+      "to": 17,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 18,
+      "to": 19,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 18,
+      "to": 31,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 18,
+      "to": 34,
+      "weight": 10,
+      "via": [
+        "len",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 19,
+      "to": 10,
+      "weight": 2,
+      "via": [
+        "clear"
+      ]
+    },
+    {
+      "from": 19,
+      "to": 14,
+      "weight": 18,
+      "via": [
+        "apply"
+      ]
+    },
+    {
+      "from": 19,
+      "to": 22,
+      "weight": 17,
+      "via": [
+        "begin_frame",
+        "index"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 9,
+      "weight": 5,
+      "via": [
+        "size"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 10,
+      "weight": 11,
+      "via": [
+        "is_empty",
+        "vertical",
+        "size"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 12,
+      "weight": 32,
+      "via": [
+        "color",
+        "min_w",
+        "key",
+        "max_w",
+        "grow_by"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 13,
+      "weight": 4,
+      "via": [
+        "line_height",
+        "metrics"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 17,
+      "weight": 20,
+      "via": [
+        "max_y",
+        "inset",
+        "is_empty",
+        "max_x",
+        "origin"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 19,
+      "weight": 12,
+      "via": [
+        "text",
+        "scroll",
+        "is_empty",
+        "index"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 21,
+      "weight": 18,
+      "via": [
+        "color",
+        "text",
+        "style"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 22,
+      "weight": 8,
+      "via": [
+        "set_scroll_offset",
+        "scroll_offset",
+        "is_following",
+        "set_content_height",
+        "with"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 23,
+      "weight": 9,
+      "via": [
+        "color",
+        "text"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 31,
+      "weight": 17,
+      "via": [
+        "over",
+        "style",
+        "grow",
+        "is_empty",
+        "resolve"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 33,
+      "weight": 20,
+      "via": [
+        "text",
+        "key",
+        "scroll_offset",
+        "scroll",
+        "size"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 34,
+      "weight": 31,
+      "via": [
+        "measure",
+        "wrap",
+        "is_empty",
+        "metrics",
+        "resolve"
+      ]
+    },
+    {
+      "from": 20,
+      "to": 36,
+      "weight": 48,
+      "via": [
+        "text",
+        "row",
+        "col",
+        "spacer"
+      ]
+    },
+    {
+      "from": 22,
+      "to": 10,
+      "weight": 4,
+      "via": [
+        "is_empty",
+        "clear"
+      ]
+    },
+    {
+      "from": 22,
+      "to": 16,
+      "weight": 1,
+      "via": [
+        "position"
+      ]
+    },
+    {
+      "from": 22,
+      "to": 17,
+      "weight": 2,
+      "via": [
+        "contains",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 22,
+      "to": 19,
+      "weight": 4,
+      "via": [
+        "is_empty",
+        "any_held",
+        "begin_frame"
+      ]
+    },
+    {
+      "from": 22,
+      "to": 30,
+      "weight": 1,
+      "via": [
+        "position"
+      ]
+    },
+    {
+      "from": 22,
+      "to": 31,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 22,
+      "to": 33,
+      "weight": 1,
+      "via": [
+        "press"
+      ]
+    },
+    {
+      "from": 22,
+      "to": 34,
+      "weight": 2,
+      "via": [
+        "len",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 10,
+      "weight": 36,
+      "via": [
+        "fill_rect",
+        "is_empty",
+        "fill",
+        "shadow",
+        "stroke"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 11,
+      "weight": 10,
+      "via": [
+        "fade",
+        "mix",
+        "is_visible",
+        "luminance"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 12,
+      "weight": 19,
+      "via": [
+        "color",
+        "interactive",
+        "fill",
+        "shadow",
+        "hover"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 13,
+      "weight": 8,
+      "via": [
+        "line_height",
+        "metrics"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 14,
+      "weight": 5,
+      "via": [
+        "bounds",
+        "then",
+        "apply"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 15,
+      "weight": 3,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 17,
+      "weight": 20,
+      "via": [
+        "max_y",
+        "is_empty",
+        "max_x",
+        "contains",
+        "inset"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 19,
+      "weight": 31,
+      "via": [
+        "begin_frame",
+        "is_empty",
+        "key_pressed",
+        "pressed",
+        "released"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 20,
+      "weight": 26,
+      "via": [
+        "resolve",
+        "line_height",
+        "scroll_offset",
+        "measure"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 21,
+      "weight": 8,
+      "via": [
+        "color",
+        "paint",
+        "text",
+        "style"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 22,
+      "weight": 20,
+      "via": [
+        "press",
+        "set_following",
+        "begin_frame",
+        "set_scroll_offset",
+        "active"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 25,
+      "weight": 6,
+      "via": [
+        "draw"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 26,
+      "weight": 3,
+      "via": [
+        "surface",
+        "translate"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 28,
+      "weight": 2,
+      "via": [
+        "surface"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 29,
+      "weight": 3,
+      "via": [
+        "surface",
+        "translate"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 30,
+      "weight": 3,
+      "via": [
+        "surface",
+        "translate"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 31,
+      "weight": 30,
+      "via": [
+        "resolve",
+        "has_decoration",
+        "is_empty",
+        "style",
+        "offset"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 33,
+      "weight": 10,
+      "via": [
+        "press",
+        "scroll_offset",
+        "probe",
+        "focused",
+        "text"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 34,
+      "weight": 46,
+      "via": [
+        "resolve",
+        "len",
+        "is_empty",
+        "colored",
+        "measure"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 35,
+      "weight": 4,
+      "via": [
+        "corner",
+        "corner_small"
+      ]
+    },
+    {
+      "from": 23,
+      "to": 36,
+      "weight": 8,
+      "via": [
+        "field",
+        "text",
+        "draw"
+      ]
+    },
+    {
+      "from": 24,
+      "to": 7,
+      "weight": 1,
+      "via": [
+        "count"
+      ]
+    },
+    {
+      "from": 24,
+      "to": 12,
+      "weight": 4,
+      "via": [
+        "add"
+      ]
+    },
+    {
+      "from": 24,
+      "to": 20,
+      "weight": 3,
+      "via": [
+        "measure"
+      ]
+    },
+    {
+      "from": 24,
+      "to": 21,
+      "weight": 1,
+      "via": [
+        "font"
+      ]
+    },
+    {
+      "from": 24,
+      "to": 33,
+      "weight": 1,
+      "via": [
+        "font"
+      ]
+    },
+    {
+      "from": 24,
+      "to": 34,
+      "weight": 9,
+      "via": [
+        "measure",
+        "add",
+        "font",
+        "tracked"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 9,
+      "weight": 3,
+      "via": [
+        "idle",
+        "is_running",
+        "frame"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 10,
+      "weight": 8,
+      "via": [
+        "height",
+        "resize",
+        "clear_vertical",
+        "scale",
+        "clear"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 14,
+      "weight": 1,
+      "via": [
+        "apply"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 19,
+      "weight": 4,
+      "via": [
+        "apply",
+        "close_requested",
+        "begin_frame"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 22,
+      "weight": 4,
+      "via": [
+        "end_frame",
+        "begin_frame",
+        "is_animating"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 23,
+      "weight": 4,
+      "via": [
+        "surface",
+        "draw"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 26,
+      "weight": 6,
+      "via": [
+        "surface",
+        "present",
+        "is_open",
+        "pump",
+        "appearance"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 28,
+      "weight": 6,
+      "via": [
+        "surface",
+        "present",
+        "is_open",
+        "pump",
+        "appearance"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 29,
+      "weight": 6,
+      "via": [
+        "surface",
+        "present",
+        "is_open",
+        "pump",
+        "appearance"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 30,
+      "weight": 6,
+      "via": [
+        "surface",
+        "present",
+        "is_open",
+        "pump",
+        "appearance"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 33,
+      "weight": 4,
+      "via": [
+        "frame",
+        "scale",
+        "is_animating",
+        "appearance"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 34,
+      "weight": 3,
+      "via": [
+        "set_scale",
+        "draw"
+      ]
+    },
+    {
+      "from": 25,
+      "to": 36,
+      "weight": 2,
+      "via": [
+        "draw"
+      ]
+    },
+    {
+      "from": 26,
+      "to": 10,
+      "weight": 6,
+      "via": [
+        "height",
+        "width",
+        "pixels",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 26,
+      "to": 17,
+      "weight": 4,
+      "via": [
+        "contains",
+        "translate",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 26,
+      "to": 19,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 26,
+      "to": 25,
+      "weight": 1,
+      "via": [
+        "Backend"
+      ]
+    },
+    {
+      "from": 26,
+      "to": 28,
+      "weight": 1,
+      "via": [
+        "Window"
+      ]
+    },
+    {
+      "from": 26,
+      "to": 29,
+      "weight": 6,
+      "via": [
+        "key_for_code",
+        "translate",
+        "refresh_geometry",
+        "Window"
+      ]
+    },
+    {
+      "from": 26,
+      "to": 30,
+      "weight": 9,
+      "via": [
+        "translate_key",
+        "translate",
+        "refresh_geometry",
+        "Window",
+        "modifiers_of"
+      ]
+    },
+    {
+      "from": 26,
+      "to": 31,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 26,
+      "to": 34,
+      "weight": 2,
+      "via": [
+        "len",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 28,
+      "to": 25,
+      "weight": 1,
+      "via": [
+        "Backend"
+      ]
+    },
+    {
+      "from": 29,
+      "to": 10,
+      "weight": 3,
+      "via": [
+        "pixels",
+        "height",
+        "width"
+      ]
+    },
+    {
+      "from": 29,
+      "to": 16,
+      "weight": 7,
+      "via": [
+        "position"
+      ]
+    },
+    {
+      "from": 29,
+      "to": 17,
+      "weight": 1,
+      "via": [
+        "translate"
+      ]
+    },
+    {
+      "from": 29,
+      "to": 19,
+      "weight": 3,
+      "via": [
+        "held"
+      ]
+    },
+    {
+      "from": 29,
+      "to": 25,
+      "weight": 1,
+      "via": [
+        "Backend"
+      ]
+    },
+    {
+      "from": 29,
+      "to": 26,
+      "weight": 6,
+      "via": [
+        "refresh_geometry",
+        "key_for_code",
+        "translate",
+        "Window"
+      ]
+    },
+    {
+      "from": 29,
+      "to": 28,
+      "weight": 1,
+      "via": [
+        "Window"
+      ]
+    },
+    {
+      "from": 29,
+      "to": 30,
+      "weight": 11,
+      "via": [
+        "refresh_geometry",
+        "translate",
+        "Window",
+        "position"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 10,
+      "weight": 5,
+      "via": [
+        "height",
+        "is_empty",
+        "pixels",
+        "width"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 12,
+      "weight": 1,
+      "via": [
+        "round"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 16,
+      "weight": 2,
+      "via": [
+        "position"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 17,
+      "weight": 3,
+      "via": [
+        "contains",
+        "is_empty",
+        "translate"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 19,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 25,
+      "weight": 1,
+      "via": [
+        "Backend"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 26,
+      "weight": 8,
+      "via": [
+        "refresh_geometry",
+        "modifiers_of",
+        "translate",
+        "Window",
+        "translate_key"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 28,
+      "weight": 1,
+      "via": [
+        "Window"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 29,
+      "weight": 4,
+      "via": [
+        "refresh_geometry",
+        "translate",
+        "Window"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 31,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 30,
+      "to": 34,
+      "weight": 2,
+      "via": [
+        "len",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 31,
+      "to": 11,
+      "weight": 1,
+      "via": [
+        "mix"
+      ]
+    },
+    {
+      "from": 31,
+      "to": 20,
+      "weight": 1,
+      "via": [
+        "resolve"
+      ]
+    },
+    {
+      "from": 31,
+      "to": 34,
+      "weight": 2,
+      "via": [
+        "resolve",
+        "tracked"
+      ]
+    },
+    {
+      "from": 32,
+      "to": 9,
+      "weight": 4,
+      "via": [
+        "render"
+      ]
+    },
+    {
+      "from": 32,
+      "to": 10,
+      "weight": 1,
+      "via": [
+        "resize"
+      ]
+    },
+    {
+      "from": 32,
+      "to": 13,
+      "weight": 10,
+      "via": [
+        "metrics",
+        "glyph_for",
+        "render"
+      ]
+    },
+    {
+      "from": 32,
+      "to": 23,
+      "weight": 4,
+      "via": [
+        "render"
+      ]
+    },
+    {
+      "from": 32,
+      "to": 34,
+      "weight": 13,
+      "via": [
+        "metrics",
+        "len"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 9,
+      "weight": 14,
+      "via": [
+        "state",
+        "frame",
+        "frame_observed"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 10,
+      "weight": 23,
+      "via": [
+        "bounds",
+        "clear_vertical",
+        "is_empty",
+        "scale",
+        "width"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 12,
+      "weight": 12,
+      "via": [
+        "click_action",
+        "anchor",
+        "on_click",
+        "text_content",
+        "center"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 14,
+      "weight": 2,
+      "via": [
+        "bounds",
+        "apply"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 16,
+      "weight": 4,
+      "via": [
+        "find"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 17,
+      "weight": 5,
+      "via": [
+        "max_x",
+        "is_empty",
+        "center",
+        "max_y"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 19,
+      "weight": 7,
+      "via": [
+        "is_empty",
+        "begin_frame",
+        "apply",
+        "pointer",
+        "text"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 20,
+      "weight": 1,
+      "via": [
+        "scroll_offset"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 21,
+      "weight": 4,
+      "via": [
+        "text"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 22,
+      "weight": 7,
+      "via": [
+        "scroll_offset",
+        "is_animating",
+        "end_frame",
+        "begin_frame",
+        "press"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 23,
+      "weight": 3,
+      "via": [
+        "text",
+        "probe"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 31,
+      "weight": 1,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 34,
+      "weight": 4,
+      "via": [
+        "is_empty",
+        "set_scale",
+        "add"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 35,
+      "weight": 1,
+      "via": [
+        "state"
+      ]
+    },
+    {
+      "from": 33,
+      "to": 36,
+      "weight": 5,
+      "via": [
+        "button",
+        "text",
+        "col"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 9,
+      "weight": 1,
+      "via": [
+        "render"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 10,
+      "weight": 10,
+      "via": [
+        "fill_mask",
+        "clear",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 12,
+      "weight": 3,
+      "via": [
+        "round"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 13,
+      "weight": 10,
+      "via": [
+        "metrics",
+        "render",
+        "has_glyph",
+        "glyph_for",
+        "advance"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 14,
+      "weight": 1,
+      "via": [
+        "then"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 17,
+      "weight": 4,
+      "via": [
+        "offset",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 19,
+      "weight": 3,
+      "via": [
+        "is_empty"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 20,
+      "weight": 4,
+      "via": [
+        "measure",
+        "resolve"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 23,
+      "weight": 6,
+      "via": [
+        "render",
+        "next_boundary",
+        "draw"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 25,
+      "weight": 4,
+      "via": [
+        "draw"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 31,
+      "weight": 6,
+      "via": [
+        "resolve",
+        "offset",
+        "is_empty"
+      ]
+    },
+    {
+      "from": 34,
+      "to": 36,
+      "weight": 4,
+      "via": [
+        "draw"
+      ]
+    },
+    {
+      "from": 35,
+      "to": 9,
+      "weight": 2,
+      "via": [
+        "state"
+      ]
+    },
+    {
+      "from": 35,
+      "to": 11,
+      "weight": 13,
+      "via": [
+        "luminance"
+      ]
+    },
+    {
+      "from": 35,
+      "to": 12,
+      "weight": 2,
+      "via": [
+        "mono"
+      ]
+    },
+    {
+      "from": 35,
+      "to": 21,
+      "weight": 13,
+      "via": [
+        "theme"
+      ]
+    },
+    {
+      "from": 35,
+      "to": 23,
+      "weight": 13,
+      "via": [
+        "theme"
+      ]
+    },
+    {
+      "from": 35,
+      "to": 33,
+      "weight": 2,
+      "via": [
+        "state"
+      ]
+    },
+    {
+      "from": 35,
+      "to": 34,
+      "weight": 2,
+      "via": [
+        "tracked"
+      ]
+    },
+    {
+      "from": 35,
+      "to": 36,
+      "weight": 8,
+      "via": [
+        "figure",
+        "title",
+        "caption",
+        "heading",
+        "micro"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 10,
+      "weight": 13,
+      "via": [
+        "shadow",
+        "stroke",
+        "fill"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 12,
+      "weight": 90,
+      "via": [
+        "border",
+        "text_align",
+        "add",
+        "pad",
+        "grow"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 15,
+      "weight": 11,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 17,
+      "weight": 1,
+      "via": [
+        "center"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 19,
+      "weight": 5,
+      "via": [
+        "text"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 21,
+      "weight": 26,
+      "via": [
+        "color",
+        "text",
+        "canvas"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 23,
+      "weight": 36,
+      "via": [
+        "field",
+        "draw",
+        "color",
+        "text",
+        "stroke"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 25,
+      "weight": 2,
+      "via": [
+        "draw"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 31,
+      "weight": 5,
+      "via": [
+        "grow"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 33,
+      "weight": 11,
+      "via": [
+        "text",
+        "key",
+        "canvas"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 34,
+      "weight": 5,
+      "via": [
+        "add",
+        "draw",
+        "wrap"
+      ]
+    },
+    {
+      "from": 36,
+      "to": 35,
+      "weight": 6,
+      "via": [
+        "heading",
+        "micro",
+        "mono"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 9,
+      "weight": 2,
+      "via": [
+        "frame"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 10,
+      "weight": 2,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 12,
+      "weight": 66,
+      "via": [
+        "on_scroll",
+        "key",
+        "on_input",
+        "add",
+        "disabled"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 14,
+      "weight": 1,
+      "via": [
+        "then"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 15,
+      "weight": 2,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 16,
+      "weight": 3,
+      "via": [
+        "find"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 17,
+      "weight": 10,
+      "via": [
+        "center"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 19,
+      "weight": 17,
+      "via": [
+        "text",
+        "ended",
+        "fraction",
+        "scroll"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 21,
+      "weight": 16,
+      "via": [
+        "text"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 22,
+      "weight": 4,
+      "via": [
+        "press"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 23,
+      "weight": 14,
+      "via": [
+        "text",
+        "draw",
+        "field",
+        "fill"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 25,
+      "weight": 2,
+      "via": [
+        "draw"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 33,
+      "weight": 73,
+      "via": [
+        "click",
+        "frames",
+        "text",
+        "key",
+        "find"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 34,
+      "weight": 3,
+      "via": [
+        "add",
+        "draw"
+      ]
+    },
+    {
+      "from": 37,
+      "to": 36,
+      "weight": 48,
+      "via": [
+        "col",
+        "text",
+        "row",
+        "draw",
+        "field"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 9,
+      "weight": 7,
+      "via": [
+        "size"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 10,
+      "weight": 8,
+      "via": [
+        "scale",
+        "size"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 12,
+      "weight": 77,
+      "via": [
+        "key",
+        "pad",
+        "wrap",
+        "grow_by",
+        "layer"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 17,
+      "weight": 7,
+      "via": [
+        "size"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 19,
+      "weight": 22,
+      "via": [
+        "text"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 20,
+      "weight": 3,
+      "via": [
+        "flow"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 21,
+      "weight": 44,
+      "via": [
+        "text"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 23,
+      "weight": 22,
+      "via": [
+        "text"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 31,
+      "weight": 3,
+      "via": [
+        "grow"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 33,
+      "weight": 80,
+      "via": [
+        "key",
+        "rect_of",
+        "scale",
+        "text",
+        "size"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 34,
+      "weight": 5,
+      "via": [
+        "wrap",
+        "add"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 36,
+      "weight": 73,
+      "via": [
+        "panel",
+        "col",
+        "text",
+        "row",
+        "spacer"
+      ]
+    },
+    {
+      "from": 38,
+      "to": 40,
+      "weight": 21,
+      "via": [
+        "showing"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 5,
+      "weight": 7,
+      "via": [
+        "radio_group",
+        "checkbox",
+        "slider",
+        "switch"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 9,
+      "weight": 13,
+      "via": [
+        "size",
+        "frame"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 10,
+      "weight": 15,
+      "via": [
+        "fill",
+        "pixels",
+        "size",
+        "stroke"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 12,
+      "weight": 45,
+      "via": [
+        "align",
+        "key",
+        "on_click",
+        "on_hover",
+        "fill"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 14,
+      "weight": 1,
+      "via": [
+        "then"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 15,
+      "weight": 6,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 17,
+      "weight": 11,
+      "via": [
+        "max_x",
+        "center",
+        "size"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 19,
+      "weight": 6,
+      "via": [
+        "text",
+        "fraction"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 21,
+      "weight": 11,
+      "via": [
+        "text",
+        "canvas"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 23,
+      "weight": 17,
+      "via": [
+        "text",
+        "fill",
+        "canvas",
+        "draw",
+        "stroke"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 25,
+      "weight": 4,
+      "via": [
+        "draw"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 33,
+      "weight": 40,
+      "via": [
+        "text",
+        "key",
+        "find_key",
+        "canvas",
+        "frames"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 34,
+      "weight": 5,
+      "via": [
+        "draw",
+        "add"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 35,
+      "weight": 1,
+      "via": [
+        "caption"
+      ]
+    },
+    {
+      "from": 39,
+      "to": 36,
+      "weight": 23,
+      "via": [
+        "text",
+        "caption",
+        "draw",
+        "col",
+        "panel"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 9,
+      "weight": 22,
+      "via": [
+        "frame",
+        "size"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 10,
+      "weight": 13,
+      "via": [
+        "pixels",
+        "fill",
+        "size",
+        "scale"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 12,
+      "weight": 39,
+      "via": [
+        "disabled",
+        "pad",
+        "align",
+        "fill",
+        "size"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 15,
+      "weight": 4,
+      "via": [
+        "fill"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 17,
+      "weight": 13,
+      "via": [
+        "size",
+        "center"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 19,
+      "weight": 8,
+      "via": [
+        "text"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 21,
+      "weight": 20,
+      "via": [
+        "canvas",
+        "text"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 23,
+      "weight": 18,
+      "via": [
+        "draw",
+        "fill",
+        "visual",
+        "canvas",
+        "text"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 25,
+      "weight": 1,
+      "via": [
+        "draw"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 26,
+      "weight": 2,
+      "via": [
+        "appearance"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 28,
+      "weight": 2,
+      "via": [
+        "appearance"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 29,
+      "weight": 2,
+      "via": [
+        "appearance"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 30,
+      "weight": 2,
+      "via": [
+        "appearance"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 33,
+      "weight": 53,
+      "via": [
+        "frames",
+        "frame",
+        "find_key",
+        "save_png",
+        "size"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 34,
+      "weight": 2,
+      "via": [
+        "draw",
+        "add"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 36,
+      "weight": 33,
+      "via": [
+        "col",
+        "row",
+        "spacer",
+        "draw",
+        "button"
+      ]
+    },
+    {
+      "from": 40,
+      "to": 38,
+      "weight": 14,
+      "via": [
+        "showing"
+      ]
+    }
+  ]
+}

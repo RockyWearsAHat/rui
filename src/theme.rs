@@ -450,9 +450,11 @@ mod tests {
     fn text_is_legible_against_its_own_background_in_both_appearances() {
         for appearance in [Appearance::Light, Appearance::Dark] {
             let palette = theme(appearance).palette;
-            let contrast =
-                (palette.text.luminance() - palette.background.luminance()).abs();
-            assert!(contrast > 0.5, "{appearance:?} text is too close to its background");
+            let contrast = (palette.text.luminance() - palette.background.luminance()).abs();
+            assert!(
+                contrast > 0.5,
+                "{appearance:?} text is too close to its background"
+            );
         }
     }
 
@@ -463,7 +465,10 @@ mod tests {
             for status in [Status::Ok, Status::Warn, Status::Bad, Status::Idle] {
                 let (ink, fill) = theme.status(status);
                 let contrast = (ink.luminance() - fill.luminance()).abs();
-                assert!(contrast > 0.25, "{appearance:?} {status:?} is illegible on its tint");
+                assert!(
+                    contrast > 0.25,
+                    "{appearance:?} {status:?} is illegible on its tint"
+                );
             }
         }
     }
@@ -472,8 +477,7 @@ mod tests {
     fn accent_text_is_legible_on_the_accent() {
         for appearance in [Appearance::Light, Appearance::Dark] {
             let palette = theme(appearance).palette;
-            let contrast =
-                (palette.text_on_accent.luminance() - palette.accent.luminance()).abs();
+            let contrast = (palette.text_on_accent.luminance() - palette.accent.luminance()).abs();
             assert!(contrast > 0.3, "{appearance:?} accent text is illegible");
         }
     }
@@ -535,7 +539,10 @@ mod tests {
                 shadow.luminance() < 0.1,
                 "{appearance:?} casts a shadow that is not a black"
             );
-            assert!(shadow.a < 0x60, "{appearance:?} casts a shadow hard enough to be seen as one");
+            assert!(
+                shadow.a < 0x60,
+                "{appearance:?} casts a shadow hard enough to be seen as one"
+            );
         }
     }
 
@@ -559,8 +566,14 @@ mod tests {
     #[test]
     fn motion_is_quick_enough_to_feel_attached_to_the_pointer() {
         let metrics = Metrics::DEFAULT;
-        assert!(metrics.motion > 0.0, "a zero would make every animation a jump");
-        assert!(metrics.motion < 0.2, "past a fifth of a second a hover reads as lag");
+        assert!(
+            metrics.motion > 0.0,
+            "a zero would make every animation a jump"
+        );
+        assert!(
+            metrics.motion < 0.2,
+            "past a fifth of a second a hover reads as lag"
+        );
     }
 
     #[test]
@@ -584,8 +597,16 @@ mod tests {
         for style in [theme.mono(), theme.micro()] {
             assert_eq!(style.font, theme.mono_font);
         }
-        for style in [theme.title(), theme.heading(), theme.figure(), theme.state()] {
-            assert_eq!(style.font, theme.ui_font, "interface chrome is not machine output");
+        for style in [
+            theme.title(),
+            theme.heading(),
+            theme.figure(),
+            theme.state(),
+        ] {
+            assert_eq!(
+                style.font, theme.ui_font,
+                "interface chrome is not machine output"
+            );
         }
         assert_eq!(theme.body().font, theme.ui_font);
     }
@@ -601,10 +622,18 @@ mod tests {
         for style in [theme.heading(), theme.state()] {
             assert!(style.tracking > 0.0, "small capitals pack without it");
         }
-        for style in
-            [theme.title(), theme.figure(), theme.body(), theme.body_strong(), theme.caption(), theme.mono()]
-        {
-            assert_eq!(style.tracking, 0.0, "mixed case and running text are set solid");
+        for style in [
+            theme.title(),
+            theme.figure(),
+            theme.body(),
+            theme.body_strong(),
+            theme.caption(),
+            theme.mono(),
+        ] {
+            assert_eq!(
+                style.tracking, 0.0,
+                "mixed case and running text are set solid"
+            );
         }
         assert!(
             theme.heading().tracking > theme.state().tracking,
@@ -634,10 +663,15 @@ mod tests {
         for appearance in [Appearance::Light, Appearance::Dark] {
             let palette = theme(appearance).palette;
             let step = (palette.surface.luminance() - palette.background.luminance()).abs();
-            assert!(step > 0.02, "{appearance:?} lays its panels on an identical ground");
-            let outline =
-                (palette.border.luminance() - palette.surface.luminance()).abs();
-            assert!(outline > 0.02, "{appearance:?} outlines its panels in their own fill");
+            assert!(
+                step > 0.02,
+                "{appearance:?} lays its panels on an identical ground"
+            );
+            let outline = (palette.border.luminance() - palette.surface.luminance()).abs();
+            assert!(
+                outline > 0.02,
+                "{appearance:?} outlines its panels in their own fill"
+            );
         }
     }
 }

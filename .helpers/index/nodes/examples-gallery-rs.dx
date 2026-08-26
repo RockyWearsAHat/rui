@@ -1,0 +1,81 @@
+---
+id: examples/gallery.rs
+title: gallery.rs
+kind: file-index
+lang: rust
+rank: 0.005455
+links: [[src/widgets.rs]] [[src/element.rs]] [[src/paint.rs]] [[src/style.rs]] [[src/lib.rs]] [[src/theme.rs]] [[src/canvas.rs]] [[src/testing/mod.rs]] [[src/font/raster.rs]] [[src/app.rs]] [[src/color.rs]] [[src/font/mod.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# examples/gallery.rs  ·  rust  ·  205 LOC
+
+## Symbols
+
+- `Gallery` (class) — L16
+- `view` (function) — L23
+- `masthead` (function) — L37
+- `counts` (function) — L80
+- `count` (function) — L94
+- `states` (function) — L102
+- `controls` (function) — L120
+- `form` (function) — L148
+- `main` (function) — L184
+
+## Graph
+
+```mermaid
+graph LR
+  c["gallery.rs"]
+  x0["widgets.rs"]
+  c --> x0
+  x1["element.rs"]
+  c --> x1
+  x2["paint.rs"]
+  c --> x2
+  x3["style.rs"]
+  c --> x3
+  x4["lib.rs"]
+  c --> x4
+  x5["theme.rs"]
+  c --> x5
+  x6["canvas.rs"]
+  c --> x6
+  x7["mod.rs"]
+  c --> x7
+  x8["raster.rs"]
+  c --> x8
+  x9["app.rs"]
+  c --> x9
+  x10["color.rs"]
+  c --> x10
+  x11["mod.rs"]
+  c --> x11
+  x12["input.rs"]
+  c --> x12
+  x13["fonts.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/widgets.rs]] via `ghost`, `spacer`, `micro`, `figure`, `dot`
+- [[src/element.rs]] via `fill`, `bold`, `gap`, `round`, `on_input`
+- [[src/paint.rs]] via `fill`, `render`, `canvas`, `field`, `draw`
+- [[src/style.rs]] via `grow`
+- [[src/lib.rs]] via `canvas`, `color`, `code`
+- [[src/theme.rs]] via `micro`, `figure`, `heading`, `caption`, `title`
+- [[src/canvas.rs]] via `fill`, `fill_rect`, `height`, `width`, `fill_vertical`
+- [[src/testing/mod.rs]] via `scroll`, `canvas`
+- [[src/font/raster.rs]] via `fill`
+- [[src/app.rs]] via `render`
+- [[src/color.rs]] via `fade`
+- [[src/font/mod.rs]] via `render`
+- [[src/input.rs]] via `scroll`
+- [[src/shell/mod.rs]] via `draw`
+- [[src/text.rs]] via `draw`
+
+### Referenced by
+
+- [[src/shell/fonts.rs]] via `count`
+
