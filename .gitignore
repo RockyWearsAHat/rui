@@ -4,3 +4,12 @@ Cargo.lock
 
 # What the examples write when they are asked to draw with no window open.
 *.png
+
+# System cache and state files
+.cache/
+.doc/index.db
+.doc/coverage.jsonl
+.engine/state.db
+.engine/memory/
+.engine/task-*.md
+.engine/task-*.json
