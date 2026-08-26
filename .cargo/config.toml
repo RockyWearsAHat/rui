@@ -1,0 +1,3 @@
+[build]
+# Use rustup-managed Rust to ensure wasm32-unknown-unknown target is available
+rustflags = ["-C", "overflow-checks=on"]
