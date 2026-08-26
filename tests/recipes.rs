@@ -12,8 +12,8 @@
 
 use rui::testing::Harness;
 use rui::{
-    Align, Anchor, Drag, El, Key, Modifiers, Painter, Point, Radius, Rect, Size, Tone, caption,
-    col, draw, panel, row, text,
+    caption, col, draw, panel, row, text, Align, Anchor, Drag, El, Key, Modifiers, Painter, Point,
+    Radius, Rect, Size, Tone,
 };
 
 /// Everything the controls below are wired to.

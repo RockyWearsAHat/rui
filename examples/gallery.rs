@@ -7,9 +7,9 @@
 
 use rui::style::{Align, Justify, Length, Radius};
 use rui::{
-    App, Appearance, El, Size, Status, Tone, button, caption, code, col, divider, dot, draw, field,
-    field_row, figure, heading, image, meter, micro, panel, paragraph, row, section, segmented,
-    spacer, tabs, tag, title,
+    button, caption, code, col, divider, dot, draw, field, field_row, figure, heading, image,
+    meter, micro, panel, paragraph, row, section, segmented, spacer, tabs, tag, title, App,
+    Appearance, El, Size, Status, Tone,
 };
 
 /// What the gallery is showing, so the interactive parts have something to say.
