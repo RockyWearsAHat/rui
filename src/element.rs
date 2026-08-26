@@ -706,7 +706,11 @@ impl<S> El<S> {
 
     /// The hover treatment in force, which a disabled element does not have.
     pub(crate) fn hover(&self) -> Hover {
-        if self.disabled { Hover::default() } else { self.style.hover }
+        if self.disabled {
+            Hover::default()
+        } else {
+            self.style.hover
+        }
     }
 }
 
@@ -829,7 +833,8 @@ mod tests {
         // The whole behaviour model in one assertion: the description borrows
         // nothing, and the handler it carries is an ordinary function of the
         // application's own state.
-        let tree: El<Counter> = button("Increment").on_click(|counter: &mut Counter| counter.count += 1);
+        let tree: El<Counter> =
+            button("Increment").on_click(|counter: &mut Counter| counter.count += 1);
         let mut counter = Counter::default();
         (tree.on_click.expect("the handler just set"))(&mut counter);
         assert_eq!(counter.count, 1);
@@ -842,7 +847,10 @@ mod tests {
 
         let clickable: El<Counter> = text("attached").on_click(|_| {});
         assert!(clickable.interactive());
-        assert!(clickable.focusable, "a clickable thing must be reachable from the keyboard");
+        assert!(
+            clickable.focusable,
+            "a clickable thing must be reachable from the keyboard"
+        );
     }
 
     #[test]

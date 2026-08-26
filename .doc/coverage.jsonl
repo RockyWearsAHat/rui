@@ -1,0 +1,3 @@
+{"landed":"document","path":"index.dx","query":"Establish pre-commit git hook for format enforcement\nAdd a test in `tests/setup.rs` that verifies `.git/hooks/pre-commit` exists and is executable. Implement by writing a bash pre-commit hook that run…"}
+{"landed":"source","path":"tests/setup.rs","query":"Establish pre-commit git hook for format enforcement\nAdd a test in `tests/setup.rs` that verifies `.git/hooks/pre-commit` exists and is executable. Implement by writing a bash pre-commit hook that run…"}
+{"landed":"source","path":"Cargo.toml","query":"Verify Rust toolchain and dependencies availability\nAdd a test in `tests/setup.rs` that checks `rustc --version` and `cargo --version` are callable and meet minimum requirements (1.85+). Implement by …"}

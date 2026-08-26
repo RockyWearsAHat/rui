@@ -551,22 +551,34 @@ impl Window {
                     match button.button {
                         4 => {
                             if event.kind == BUTTON_PRESS {
-                                events.push(Event::Scrolled { x: 0.0, y: WHEEL_STEP });
+                                events.push(Event::Scrolled {
+                                    x: 0.0,
+                                    y: WHEEL_STEP,
+                                });
                             }
                         }
                         5 => {
                             if event.kind == BUTTON_PRESS {
-                                events.push(Event::Scrolled { x: 0.0, y: -WHEEL_STEP });
+                                events.push(Event::Scrolled {
+                                    x: 0.0,
+                                    y: -WHEEL_STEP,
+                                });
                             }
                         }
                         6 => {
                             if event.kind == BUTTON_PRESS {
-                                events.push(Event::Scrolled { x: WHEEL_STEP, y: 0.0 });
+                                events.push(Event::Scrolled {
+                                    x: WHEEL_STEP,
+                                    y: 0.0,
+                                });
                             }
                         }
                         7 => {
                             if event.kind == BUTTON_PRESS {
-                                events.push(Event::Scrolled { x: -WHEEL_STEP, y: 0.0 });
+                                events.push(Event::Scrolled {
+                                    x: -WHEEL_STEP,
+                                    y: 0.0,
+                                });
                             }
                         }
                         other => {
@@ -577,9 +589,15 @@ impl Window {
                                 _ => return,
                             };
                             events.push(if event.kind == BUTTON_PRESS {
-                                Event::PointerDown { position, button: pointer }
+                                Event::PointerDown {
+                                    position,
+                                    button: pointer,
+                                }
                             } else {
-                                Event::PointerUp { position, button: pointer }
+                                Event::PointerUp {
+                                    position,
+                                    button: pointer,
+                                }
                             });
                         }
                     }
@@ -615,9 +633,15 @@ impl Window {
 
             if let Some(named) = key_for_symbol(keysym) {
                 events.push(if event.kind == KEY_PRESS {
-                    Event::KeyDown { key: named, modifiers }
+                    Event::KeyDown {
+                        key: named,
+                        modifiers,
+                    }
                 } else {
-                    Event::KeyUp { key: named, modifiers }
+                    Event::KeyUp {
+                        key: named,
+                        modifiers,
+                    }
                 });
             }
 
@@ -715,7 +739,9 @@ fn from_c(text: *const c_char) -> String {
     if text.is_null() {
         return String::new();
     }
-    unsafe { CStr::from_ptr(text) }.to_string_lossy().into_owned()
+    unsafe { CStr::from_ptr(text) }
+        .to_string_lossy()
+        .into_owned()
 }
 
 #[cfg(test)]
@@ -726,7 +752,11 @@ mod tests {
     fn named_keys_come_from_their_keysyms() {
         assert_eq!(key_for_symbol(0xff1b), Some(Key::Escape));
         assert_eq!(key_for_symbol(0xff52), Some(Key::Up));
-        assert_eq!(key_for_symbol(0xff8d), Some(Key::Enter), "the keypad's Enter");
+        assert_eq!(
+            key_for_symbol(0xff8d),
+            Some(Key::Enter),
+            "the keypad's Enter"
+        );
         assert_eq!(key_for_symbol(0x0041), Some(Key::Character('a')));
         assert_eq!(key_for_symbol(0x0035), Some(Key::Character('5')));
         assert_eq!(key_for_symbol(0xdeadbeef), None);

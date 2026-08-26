@@ -281,7 +281,8 @@ fn maximum_profile(glyph_count: u16) -> Vec<u8> {
 /// Puts the tables into a file, behind the directory that says where they are.
 fn assemble(tables: &[([u8; 4], Vec<u8>)]) -> Vec<u8> {
     let header = 12 + tables.len() * 16;
-    let mut file = Vec::with_capacity(header + tables.iter().map(|(_, body)| body.len()).sum::<usize>());
+    let mut file =
+        Vec::with_capacity(header + tables.iter().map(|(_, body)| body.len()).sum::<usize>());
 
     push_u32(&mut file, 0x0001_0000); // TrueType outlines
     push_u16(&mut file, tables.len() as u16);
@@ -319,7 +320,10 @@ fn aligned(length: usize) -> usize {
 /// what makes halving them lossless — and is why the outline is built from
 /// whole `i16` coordinates rather than the format's shorter one-byte form.
 fn push_short_offset(loca: &mut Vec<u8>, offset: usize) {
-    debug_assert!(offset % 2 == 0, "a short `loca` cannot address an odd offset");
+    debug_assert!(
+        offset % 2 == 0,
+        "a short `loca` cannot address an odd offset"
+    );
     push_u16(loca, (offset / 2) as u16);
 }
 
@@ -346,8 +350,14 @@ mod tests {
         assert_eq!(Font::face_count(&test_font_bytes()), 1);
         assert!(font.has_glyph('A'));
         assert!(font.has_glyph('…'), "the mark a truncated run ends with");
-        assert!(font.has_glyph('é'), "a character that is two bytes of UTF-8");
-        assert!(!font.has_glyph('漢'), "nothing claims coverage it does not have");
+        assert!(
+            font.has_glyph('é'),
+            "a character that is two bytes of UTF-8"
+        );
+        assert!(
+            !font.has_glyph('漢'),
+            "nothing claims coverage it does not have"
+        );
     }
 
     #[test]
@@ -355,7 +365,11 @@ mod tests {
         let font = test_font();
         for character in ['A', 'i', 'W', ' ', '1'] {
             let glyph = font.glyph_for(character);
-            assert_eq!(font.advance(glyph, 20.0), 10.0, "{character} should be half an em");
+            assert_eq!(
+                font.advance(glyph, 20.0),
+                10.0,
+                "{character} should be half an em"
+            );
         }
     }
 
@@ -372,7 +386,10 @@ mod tests {
         let font = test_font();
         let letter = font.render(font.glyph_for('A'), 32.0, 0.0);
         assert!(!letter.mask.is_empty(), "a letter must draw something");
-        assert!(letter.mask.coverage.iter().any(|&value| value > 128), "and draw it solidly");
+        assert!(
+            letter.mask.coverage.iter().any(|&value| value > 128),
+            "and draw it solidly"
+        );
 
         let space = font.render(font.glyph_for(' '), 32.0, 0.0);
         assert!(space.mask.is_empty(), "a space must draw nothing at all");
@@ -393,7 +410,11 @@ mod tests {
         let font = test_font();
         assert_eq!(font.glyph_for(FIRST), GlyphId(1));
         assert_eq!(font.glyph_for('!'), GlyphId(2));
-        assert_eq!(font.glyph_for('漢'), GlyphId(0), "an uncovered character is `.notdef`");
+        assert_eq!(
+            font.glyph_for('漢'),
+            GlyphId(0),
+            "an uncovered character is `.notdef`"
+        );
     }
 
     #[test]

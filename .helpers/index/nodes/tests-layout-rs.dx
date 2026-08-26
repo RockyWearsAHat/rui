@@ -1,0 +1,85 @@
+---
+id: tests/layout.rs
+title: layout.rs
+kind: file-index
+lang: rust
+rank: 0.004946
+links: [[src/testing/mod.rs]] [[src/element.rs]] [[src/widgets.rs]] [[src/lib.rs]] [[tests/rendering.rs]] [[src/input.rs]] [[src/paint.rs]] [[src/canvas.rs]] [[src/app.rs]] [[src/geom.rs]] [[src/text.rs]] [[src/layout.rs]]
+generated_at: 2026-08-08T01:45:22.143Z
+---
+
+# tests/layout.rs  ·  rust  ·  296 LOC
+
+## Symbols
+
+- `Nothing` (class) — L13
+- `showing` (function) — L19
+- `a_run_of_text_is_as_wide_as_its_characters` (function) — L28
+- `text_at_a_larger_size_is_larger_in_both_directions` (function) — L38
+- `a_size_set_on_a_container_reaches_the_text_inside_it` (function) — L50
+- `a_paragraph_wraps_to_the_width_it_was_given` (function) — L62
+- `a_run_too_long_for_its_box_is_cut_short_rather_than_overrunning_it` (function) — L77
+- `the_room_left_over_is_divided_between_the_things_that_asked_for_it` (function) — L87
+- `a_fraction_is_a_share_of_what_the_parent_offered` (function) — L101
+- `room_that_runs_short_is_taken_off_what_was_sized_to_its_content` (function) — L109
+- `a_flow_runs_onto_further_lines_when_its_children_do_not_fit` (function) — L127
+- `a_flow_that_fits_on_one_line_is_one_line` (function) — L149
+- `a_flow_makes_every_line_as_tall_as_the_tallest_thing_on_it` (function) — L167
+- `a_layer_hangs_off_its_anchor_and_takes_no_room_from_it` (function) — L186
+- `a_layer_is_held_inside_the_window_rather_than_opening_off_the_edge` (function) — L207
+- `a_layer_anchored_over_its_parent_covers_it_exactly` (function) — L224
+- `a_dialog_is_centred_on_the_window_and_not_on_whatever_opened_it` (function) — L235
+- `padding_is_taken_off_before_anything_is_placed_inside` (function) — L247
+- `spare_room_is_spread_between_children_rather_than_around_them` (function) — L254
+- `identity_follows_a_key_rather_than_a_position` (function) — L269
+- `a_layout_holds_up_at_a_higher_pixel_density` (function) — L285
+
+## Graph
+
+```mermaid
+graph LR
+  c["layout.rs"]
+  x0["mod.rs"]
+  c --> x0
+  x1["element.rs"]
+  c --> x1
+  x2["widgets.rs"]
+  c --> x2
+  x3["lib.rs"]
+  c --> x3
+  x4["rendering.rs"]
+  c --> x4
+  x5["input.rs"]
+  c --> x5
+  x6["paint.rs"]
+  c --> x6
+  x7["canvas.rs"]
+  c --> x7
+  x8["app.rs"]
+  c --> x8
+  x9["geom.rs"]
+  c --> x9
+  x10["text.rs"]
+  c --> x10
+  x11["layout.rs"]
+  c --> x11
+  x12["style.rs"]
+  c --> x12
+```
+
+### References
+
+- [[src/testing/mod.rs]] via `key`, `rect_of`, `scale`, `text`, `size`
+- [[src/element.rs]] via `key`, `pad`, `wrap`, `grow_by`, `layer`
+- [[src/widgets.rs]] via `panel`, `col`, `text`, `row`, `spacer`
+- [[src/lib.rs]] via `text`
+- [[tests/rendering.rs]] via `showing`
+- [[src/input.rs]] via `text`
+- [[src/paint.rs]] via `text`
+- [[src/canvas.rs]] via `scale`, `size`
+- [[src/app.rs]] via `size`
+- [[src/geom.rs]] via `size`
+- [[src/text.rs]] via `wrap`, `add`
+- [[src/layout.rs]] via `flow`
+- [[src/style.rs]] via `grow`
+

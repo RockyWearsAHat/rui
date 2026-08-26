@@ -32,8 +32,14 @@ fn a_window_is_drawn_in_the_ground_of_whichever_appearance_is_in_force() {
 
     let dark_ground = dark.pixel(100, 50).expect("inside the window");
     let light_ground = light.pixel(100, 50).expect("inside the window");
-    assert_ne!(dark_ground, light_ground, "one description, two appearances");
-    assert!(light_ground.luminance() > dark_ground.luminance(), "and the light one is lighter");
+    assert_ne!(
+        dark_ground, light_ground,
+        "one description, two appearances"
+    );
+    assert!(
+        light_ground.luminance() > dark_ground.luminance(),
+        "and the light one is lighter"
+    );
 }
 
 #[test]
@@ -62,13 +68,22 @@ fn the_same_description_twice_is_the_same_picture() {
     // came out identical is one the screen already shows. A renderer with any
     // state carried between frames would fail this.
     let mut harness = showing(|_| {
-        col((text("Services").text_size(14.0), button("Restart"), spacer().h(10.0))).pad(8.0)
+        col((
+            text("Services").text_size(14.0),
+            button("Restart"),
+            spacer().h(10.0),
+        ))
+        .pad(8.0)
     });
     harness.frame();
     let first: Vec<u32> = harness.canvas().pixels().to_vec();
 
     harness.frame();
-    assert_eq!(first, harness.canvas().pixels(), "an unchanged interface must redraw identically");
+    assert_eq!(
+        first,
+        harness.canvas().pixels(),
+        "an unchanged interface must redraw identically"
+    );
 }
 
 #[test]
@@ -88,30 +103,49 @@ fn a_hover_eases_in_over_several_frames_and_then_settles() {
     .size(200.0, 100.0);
 
     harness.frame();
-    assert!(!harness.is_animating(), "an interface nobody is touching must not keep drawing");
+    assert!(
+        !harness.is_animating(),
+        "an interface nobody is touching must not keep drawing"
+    );
     let at_rest: Vec<u32> = harness.canvas().pixels().to_vec();
 
     harness.hover_text("Restart");
-    assert!(harness.is_animating(), "the pointer arriving starts the hover moving");
+    assert!(
+        harness.is_animating(),
+        "the pointer arriving starts the hover moving"
+    );
     let part_way: Vec<u32> = harness.canvas().pixels().to_vec();
     assert_ne!(at_rest, part_way, "and it is visibly under way");
 
     // Time is given, not read, so an animation is stepped rather than waited
     // for. A second is far past any hover the theme allows itself.
     harness.frames(60);
-    assert!(!harness.is_animating(), "an animation that never settles never stops drawing");
+    assert!(
+        !harness.is_animating(),
+        "an animation that never settles never stops drawing"
+    );
     let settled: Vec<u32> = harness.canvas().pixels().to_vec();
-    assert_ne!(part_way, settled, "it got further than where it was part way");
+    assert_ne!(
+        part_way, settled,
+        "it got further than where it was part way"
+    );
 
     harness.frame();
-    assert_eq!(settled, harness.canvas().pixels(), "and having settled, it stays");
+    assert_eq!(
+        settled,
+        harness.canvas().pixels(),
+        "and having settled, it stays"
+    );
 }
 
 #[test]
 fn a_disabled_control_is_drawn_differently_from_an_available_one() {
     let mut available = showing(|_| col(button("Start").on_click(|_: &mut Nothing| {})));
-    let mut unavailable =
-        showing(|_| col(button("Start").on_click(|_: &mut Nothing| {}).disabled(true)));
+    let mut unavailable = showing(|_| {
+        col(button("Start")
+            .on_click(|_: &mut Nothing| {})
+            .disabled(true))
+    });
     available.frame();
     unavailable.frame();
     assert_ne!(
@@ -128,7 +162,11 @@ fn an_applications_own_drawing_sees_what_a_button_sees() {
     // same answer about the pointer.
     let mut harness = Harness::new(Watched::default(), |_: &Watched| {
         col(draw(Size::new(60.0, 30.0), |painter, rect| {
-            let tone = if painter.visual().hovered { Tone::Ok } else { Tone::Bad };
+            let tone = if painter.visual().hovered {
+                Tone::Ok
+            } else {
+                Tone::Bad
+            };
             painter.fill(rect, Radius::None, tone);
         })
         .key("custom")
@@ -137,12 +175,22 @@ fn an_applications_own_drawing_sees_what_a_button_sees() {
     .size(200.0, 100.0);
 
     harness.frame();
-    let rect = harness.find_key("custom").expect("the control is on screen").rect;
-    let at_rest = harness.pixel(rect.center().x as u32, rect.center().y as u32).expect("a pixel");
+    let rect = harness
+        .find_key("custom")
+        .expect("the control is on screen")
+        .rect;
+    let at_rest = harness
+        .pixel(rect.center().x as u32, rect.center().y as u32)
+        .expect("a pixel");
 
     harness.move_pointer(rect.center());
-    let hovered = harness.pixel(rect.center().x as u32, rect.center().y as u32).expect("a pixel");
-    assert_ne!(at_rest, hovered, "custom drawing must be able to answer the pointer");
+    let hovered = harness
+        .pixel(rect.center().x as u32, rect.center().y as u32)
+        .expect("a pixel");
+    assert_ne!(
+        at_rest, hovered,
+        "custom drawing must be able to answer the pointer"
+    );
 }
 
 #[test]
@@ -153,26 +201,48 @@ fn a_higher_pixel_density_draws_more_pixels_of_the_same_picture() {
     dense.frame();
 
     assert_eq!(plain.canvas().width(), 200);
-    assert_eq!(dense.canvas().width(), 400, "twice the density is twice the pixels across");
-    assert_eq!(dense.canvas().pixels().len(), plain.canvas().pixels().len() * 4);
+    assert_eq!(
+        dense.canvas().width(),
+        400,
+        "twice the density is twice the pixels across"
+    );
+    assert_eq!(
+        dense.canvas().pixels().len(),
+        plain.canvas().pixels().len() * 4
+    );
 }
 
 #[test]
 fn a_layer_is_drawn_over_what_it_covers() {
     let mut harness = showing(|_| {
-        col(row(text("underneath")).h(40.0).fill(Tone::Bad).key("under").add(
-            col(()).size(200.0, 40.0).fill(Tone::Ok).key("over").layer(rui::Anchor::Over),
-        ))
+        col(row(text("underneath"))
+            .h(40.0)
+            .fill(Tone::Bad)
+            .key("under")
+            .add(
+                col(())
+                    .size(200.0, 40.0)
+                    .fill(Tone::Ok)
+                    .key("over")
+                    .layer(rui::Anchor::Over),
+            ))
     });
     harness.frame();
 
     let under = harness.find_key("under").expect("the pane").rect;
-    let drawn = harness.pixel(under.center().x as u32, under.center().y as u32).expect("a pixel");
+    let drawn = harness
+        .pixel(under.center().x as u32, under.center().y as u32)
+        .expect("a pixel");
     let mut alone = showing(|_| col(row(()).h(40.0).fill(Tone::Ok)));
     alone.frame();
-    let expected = alone.pixel(under.center().x as u32, under.center().y as u32).expect("a pixel");
+    let expected = alone
+        .pixel(under.center().x as u32, under.center().y as u32)
+        .expect("a pixel");
 
-    assert_eq!(drawn, expected, "the layer, not what it covers, is what is on top");
+    assert_eq!(
+        drawn, expected,
+        "the layer, not what it covers, is what is on top"
+    );
 }
 
 #[test]
@@ -183,7 +253,9 @@ fn a_frame_can_be_written_out_as_a_png() {
     harness.frame();
 
     let path = std::env::temp_dir().join("rui-rendering-test.png");
-    harness.save_png(&path).expect("the frame should be writable");
+    harness
+        .save_png(&path)
+        .expect("the frame should be writable");
 
     let written = std::fs::read(&path).expect("the file should be there");
     assert_eq!(&written[..8], b"\x89PNG\r\n\x1a\n", "and be a PNG");

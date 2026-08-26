@@ -234,7 +234,13 @@ unsafe fn send_rect(receiver: Object, selector: Sel) -> CgRect {
 
 /// An `NSString` holding `text`, valid until the pool is popped.
 fn ns_string(text: &CStr) -> Object {
-    unsafe { send1(class(c"NSString"), sel(c"stringWithUTF8String:"), text.as_ptr()) }
+    unsafe {
+        send1(
+            class(c"NSString"),
+            sel(c"stringWithUTF8String:"),
+            text.as_ptr(),
+        )
+    }
 }
 
 /// The Rust string behind an `NSString`, or empty when there is none.
@@ -246,7 +252,9 @@ fn from_ns_string(string: Object) -> String {
     if utf8.is_null() {
         return String::new();
     }
-    unsafe { CStr::from_ptr(utf8) }.to_string_lossy().into_owned()
+    unsafe { CStr::from_ptr(utf8) }
+        .to_string_lossy()
+        .into_owned()
 }
 
 // Window style bits, from `NSWindowStyleMask`.
@@ -410,15 +418,20 @@ impl Backend for Window {
                         .into(),
                 ));
             }
-            let _: bool =
-                send1(application, sel(c"setActivationPolicy:"), ACTIVATION_REGULAR);
+            let _: bool = send1(
+                application,
+                sel(c"setActivationPolicy:"),
+                ACTIVATION_REGULAR,
+            );
 
             let content = CgRect {
                 origin: CgPoint { x: 0.0, y: 0.0 },
-                size: CgSize { width: options.width as f64, height: options.height as f64 },
+                size: CgSize {
+                    width: options.width as f64,
+                    height: options.height as f64,
+                },
             };
-            let style =
-                STYLE_TITLED | STYLE_CLOSABLE | STYLE_MINIATURIZABLE | STYLE_RESIZABLE;
+            let style = STYLE_TITLED | STYLE_CLOSABLE | STYLE_MINIATURIZABLE | STYLE_RESIZABLE;
 
             let window: Object = send(class(c"NSWindow"), sel(c"alloc"));
             let window: Object = send4(
@@ -444,7 +457,10 @@ impl Backend for Window {
             let _: () = send1(
                 window,
                 sel(c"setContentMinSize:"),
-                CgSize { width: options.min_width as f64, height: options.min_height as f64 },
+                CgSize {
+                    width: options.min_width as f64,
+                    height: options.min_height as f64,
+                },
             );
             // Mouse movement is not reported unless it is asked for, and hover
             // states are most of what makes an interface feel alive.
@@ -470,7 +486,11 @@ impl Backend for Window {
             install_menu(application, &options.title);
 
             let _: () = send(application, sel(c"finishLaunching"));
-            let _: () = send1(window, sel(c"makeKeyAndOrderFront:"), std::ptr::null_mut::<c_void>());
+            let _: () = send1(
+                window,
+                sel(c"makeKeyAndOrderFront:"),
+                std::ptr::null_mut::<c_void>(),
+            );
             let _: () = send1(application, sel(c"activateIgnoringOtherApps:"), true);
 
             objc_autoreleasePoolPop(pool);
@@ -503,7 +523,9 @@ impl Backend for Window {
         // come back until a drag ends, and the observer firing inside it is the
         // only reason the window keeps drawing while that happens.
         self.live.window.set(std::ptr::from_ref(self));
-        self.live.redraw.set(std::ptr::from_mut(&mut redraw).cast::<c_void>());
+        self.live
+            .redraw
+            .set(std::ptr::from_mut(&mut redraw).cast::<c_void>());
         let result = self.pump_events(timeout, events);
         self.live.window.set(std::ptr::null());
         self.live.redraw.set(std::ptr::null_mut());
@@ -513,7 +535,11 @@ impl Backend for Window {
     fn surface(&self) -> (u32, u32, f32) {
         let (width, height) = self.size.get();
         let scale = self.scale.get();
-        ((width * scale).max(1.0) as u32, (height * scale).max(1.0) as u32, scale as f32)
+        (
+            (width * scale).max(1.0) as u32,
+            (height * scale).max(1.0) as u32,
+            scale as f32,
+        )
     }
 
     fn appearance(&self) -> Appearance {
@@ -719,11 +745,17 @@ impl Window {
             match kind {
                 EVENT_LEFT_DOWN | EVENT_RIGHT_DOWN | EVENT_OTHER_DOWN => {
                     let position = self.pointer_position(event);
-                    events.push(Event::PointerDown { position, button: button_of(kind, event) });
+                    events.push(Event::PointerDown {
+                        position,
+                        button: button_of(kind, event),
+                    });
                 }
                 EVENT_LEFT_UP | EVENT_RIGHT_UP | EVENT_OTHER_UP => {
                     let position = self.pointer_position(event);
-                    events.push(Event::PointerUp { position, button: button_of(kind, event) });
+                    events.push(Event::PointerUp {
+                        position,
+                        button: button_of(kind, event),
+                    });
                 }
                 EVENT_MOUSE_MOVED | EVENT_LEFT_DRAGGED | EVENT_RIGHT_DRAGGED
                 | EVENT_OTHER_DRAGGED => {
@@ -819,7 +851,11 @@ fn button_of(kind: u64, event: Object) -> PointerButton {
             // "Other" covers the middle button and everything past it; only the
             // middle one has a meaning here.
             let number: u64 = unsafe { send(event, sel(c"buttonNumber")) };
-            if number == 2 { PointerButton::Middle } else { PointerButton::Primary }
+            if number == 2 {
+                PointerButton::Middle
+            } else {
+                PointerButton::Primary
+            }
         }
     }
 }
@@ -880,8 +916,8 @@ fn install_menu(application: Object, title: &str) {
         let _: () = send1(bar, sel(c"addItem:"), item);
 
         let submenu: Object = send(send(class(c"NSMenu"), sel(c"alloc")), sel(c"init"));
-        let label = std::ffi::CString::new(format!("Quit {title}"))
-            .unwrap_or_else(|_| c"Quit".to_owned());
+        let label =
+            std::ffi::CString::new(format!("Quit {title}")).unwrap_or_else(|_| c"Quit".to_owned());
         let quit: Object = send3(
             send(class(c"NSMenuItem"), sel(c"alloc")),
             sel(c"initWithTitle:action:keyEquivalent:"),
@@ -903,8 +939,16 @@ mod tests {
     fn named_keys_come_from_positions_not_characters() {
         assert_eq!(key_for_code(53), Some(Key::Escape));
         assert_eq!(key_for_code(126), Some(Key::Up));
-        assert_eq!(key_for_code(76), Some(Key::Enter), "the numeric keypad's Enter");
-        assert_eq!(key_for_code(0), None, "an ordinary letter is not a named key");
+        assert_eq!(
+            key_for_code(76),
+            Some(Key::Enter),
+            "the numeric keypad's Enter"
+        );
+        assert_eq!(
+            key_for_code(0),
+            None,
+            "an ordinary letter is not a named key"
+        );
     }
 
     #[test]
@@ -916,14 +960,18 @@ mod tests {
 
     #[test]
     fn every_modifier_is_recognised_separately() {
-        let all = modifiers_of(MODIFIER_SHIFT | MODIFIER_CONTROL | MODIFIER_OPTION | MODIFIER_COMMAND);
+        let all =
+            modifiers_of(MODIFIER_SHIFT | MODIFIER_CONTROL | MODIFIER_OPTION | MODIFIER_COMMAND);
         assert!(all.shift && all.control && all.alt && all.command);
         assert!(modifiers_of(0).is_empty());
     }
 
     #[test]
     fn function_key_code_points_are_not_treated_as_text() {
-        assert!(is_function_key('\u{f700}'), "the up arrow's private-use code point");
+        assert!(
+            is_function_key('\u{f700}'),
+            "the up arrow's private-use code point"
+        );
         assert!(!is_function_key('a'));
         assert!(!is_function_key('é'));
     }
@@ -961,7 +1009,10 @@ mod tests {
     static TURNS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
     extern "C" fn count_a_turn(_observer: *mut c_void, _activity: u64, info: *mut c_void) {
-        assert!(!info.is_null(), "the context's info pointer should arrive intact");
+        assert!(
+            !info.is_null(),
+            "the context's info pointer should arrive intact"
+        );
         TURNS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
@@ -994,7 +1045,10 @@ mod tests {
                 count_a_turn,
                 &mut context,
             );
-            assert!(!observer.is_null(), "CFRunLoopObserverCreate refused the arguments");
+            assert!(
+                !observer.is_null(),
+                "CFRunLoopObserverCreate refused the arguments"
+            );
             CFRunLoopAddObserver(CFRunLoopGetCurrent(), observer, kCFRunLoopCommonModes);
 
             let timer = CFRunLoopTimerCreate(
@@ -1006,7 +1060,10 @@ mod tests {
                 tick,
                 &mut context,
             );
-            assert!(!timer.is_null(), "CFRunLoopTimerCreate refused the arguments");
+            assert!(
+                !timer.is_null(),
+                "CFRunLoopTimerCreate refused the arguments"
+            );
             CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
 
             // Long enough for the loop to run out of work and be about to
@@ -1028,8 +1085,15 @@ mod tests {
         let live = LiveResize::default();
         let info = std::ptr::from_ref(&live).cast_mut().cast::<c_void>();
         draw_during_live_resize(std::ptr::null_mut(), RUN_LOOP_BEFORE_WAITING, info);
-        draw_during_live_resize(std::ptr::null_mut(), RUN_LOOP_BEFORE_WAITING, std::ptr::null_mut());
-        assert!(!live.drawing.get(), "a firing with nothing set should not have drawn");
+        draw_during_live_resize(
+            std::ptr::null_mut(),
+            RUN_LOOP_BEFORE_WAITING,
+            std::ptr::null_mut(),
+        );
+        assert!(
+            !live.drawing.get(),
+            "a firing with nothing set should not have drawn"
+        );
     }
 
     #[test]

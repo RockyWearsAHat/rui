@@ -12,11 +12,21 @@ struct Counter {
 /// What should be on screen, given that.
 fn view(counter: &Counter) -> El<Counter> {
     col((
-        title(format!("{}", counter.count)).text_size(56.0).bold().center_text(),
+        title(format!("{}", counter.count))
+            .text_size(56.0)
+            .bold()
+            .center_text(),
         row((
-            button("−").w(56.0).on_click(|counter: &mut Counter| counter.count -= 1),
-            button("Reset").w(80.0).on_click(|counter: &mut Counter| counter.count = 0),
-            button("+").primary().w(56.0).on_click(|counter: &mut Counter| counter.count += 1),
+            button("−")
+                .w(56.0)
+                .on_click(|counter: &mut Counter| counter.count -= 1),
+            button("Reset")
+                .w(80.0)
+                .on_click(|counter: &mut Counter| counter.count = 0),
+            button("+")
+                .primary()
+                .w(56.0)
+                .on_click(|counter: &mut Counter| counter.count += 1),
         ))
         .gap(8.0),
     ))

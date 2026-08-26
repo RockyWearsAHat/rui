@@ -81,8 +81,16 @@ impl Drag {
     /// control reading it can never be handed a value outside its own range or
     /// a NaN from dividing by an empty rectangle.
     pub fn fraction(&self) -> Point {
-        let across = if self.rect.w > 0.0 { self.at.x / self.rect.w } else { 0.0 };
-        let down = if self.rect.h > 0.0 { self.at.y / self.rect.h } else { 0.0 };
+        let across = if self.rect.w > 0.0 {
+            self.at.x / self.rect.w
+        } else {
+            0.0
+        };
+        let down = if self.rect.h > 0.0 {
+            self.at.y / self.rect.h
+        } else {
+            0.0
+        };
         Point::new(across.clamp(0.0, 1.0), down.clamp(0.0, 1.0))
     }
 
@@ -111,7 +119,12 @@ pub struct Modifiers {
 
 impl Modifiers {
     /// No modifiers held.
-    pub const NONE: Self = Self { shift: false, control: false, alt: false, command: false };
+    pub const NONE: Self = Self {
+        shift: false,
+        control: false,
+        alt: false,
+        command: false,
+    };
 
     /// Whether Control and the accelerator are the same physical key here.
     ///
@@ -396,21 +409,33 @@ mod tests {
     #[test]
     fn a_press_is_reported_once_however_long_the_button_is_held() {
         let mut input = Input::new();
-        input.apply(Event::PointerDown { position: at(1.0, 1.0), button: PointerButton::Primary });
+        input.apply(Event::PointerDown {
+            position: at(1.0, 1.0),
+            button: PointerButton::Primary,
+        });
         assert!(input.pressed(PointerButton::Primary));
         assert!(input.held(PointerButton::Primary));
 
         input.begin_frame();
         assert!(!input.pressed(PointerButton::Primary), "the press repeated");
-        assert!(input.held(PointerButton::Primary), "the button is still down");
+        assert!(
+            input.held(PointerButton::Primary),
+            "the button is still down"
+        );
     }
 
     #[test]
     fn a_release_clears_the_hold_but_is_itself_reported_once() {
         let mut input = Input::new();
-        input.apply(Event::PointerDown { position: at(1.0, 1.0), button: PointerButton::Primary });
+        input.apply(Event::PointerDown {
+            position: at(1.0, 1.0),
+            button: PointerButton::Primary,
+        });
         input.begin_frame();
-        input.apply(Event::PointerUp { position: at(1.0, 1.0), button: PointerButton::Primary });
+        input.apply(Event::PointerUp {
+            position: at(1.0, 1.0),
+            button: PointerButton::Primary,
+        });
 
         assert!(input.released(PointerButton::Primary));
         assert!(!input.held(PointerButton::Primary));
@@ -422,7 +447,10 @@ mod tests {
     #[test]
     fn buttons_are_tracked_apart_from_one_another() {
         let mut input = Input::new();
-        input.apply(Event::PointerDown { position: at(0.0, 0.0), button: PointerButton::Secondary });
+        input.apply(Event::PointerDown {
+            position: at(0.0, 0.0),
+            button: PointerButton::Secondary,
+        });
         assert!(input.held(PointerButton::Secondary));
         assert!(!input.held(PointerButton::Primary));
         assert!(input.any_held());
@@ -431,10 +459,16 @@ mod tests {
     #[test]
     fn where_a_press_began_is_remembered_for_judging_a_drag() {
         let mut input = Input::new();
-        input.apply(Event::PointerDown { position: at(5.0, 5.0), button: PointerButton::Primary });
+        input.apply(Event::PointerDown {
+            position: at(5.0, 5.0),
+            button: PointerButton::Primary,
+        });
         input.apply(Event::PointerMoved(at(90.0, 90.0)));
 
-        assert_eq!(input.press_origin(PointerButton::Primary), Some(at(5.0, 5.0)));
+        assert_eq!(
+            input.press_origin(PointerButton::Primary),
+            Some(at(5.0, 5.0))
+        );
         assert_eq!(input.pointer(), at(90.0, 90.0));
     }
 
@@ -446,7 +480,11 @@ mod tests {
         assert_eq!(input.scroll(), (1.5, 5.0));
 
         input.begin_frame();
-        assert_eq!(input.scroll(), (0.0, 0.0), "scrolling carried into the next frame");
+        assert_eq!(
+            input.scroll(),
+            (0.0, 0.0),
+            "scrolling carried into the next frame"
+        );
     }
 
     #[test]
@@ -480,18 +518,37 @@ mod tests {
 
     #[test]
     fn a_shortcut_needs_the_accelerator_and_nothing_else() {
-        let accelerator = Modifiers { command: true, ..Modifiers::NONE };
-        let with_shift = Modifiers { command: true, shift: true, ..Modifiers::NONE };
+        let accelerator = Modifiers {
+            command: true,
+            ..Modifiers::NONE
+        };
+        let with_shift = Modifiers {
+            command: true,
+            shift: true,
+            ..Modifiers::NONE
+        };
 
         let mut input = Input::new();
-        input.apply(Event::KeyDown { key: Key::Character('r'), modifiers: accelerator });
+        input.apply(Event::KeyDown {
+            key: Key::Character('r'),
+            modifiers: accelerator,
+        });
         assert!(input.shortcut(Key::Character('r')));
         assert!(!input.shortcut(Key::Character('s')));
 
         input.begin_frame();
-        input.apply(Event::KeyDown { key: Key::Character('r'), modifiers: with_shift });
-        assert!(!input.shortcut(Key::Character('r')), "shift should not match a bare shortcut");
-        assert!(input.key_pressed(Key::Character('r')), "but the key was still pressed");
+        input.apply(Event::KeyDown {
+            key: Key::Character('r'),
+            modifiers: with_shift,
+        });
+        assert!(
+            !input.shortcut(Key::Character('r')),
+            "shift should not match a bare shortcut"
+        );
+        assert!(
+            input.key_pressed(Key::Character('r')),
+            "but the key was still pressed"
+        );
     }
 
     #[test]
@@ -507,33 +564,61 @@ mod tests {
         // What X11 and Windows both send for one press of Control. It has to
         // read as a bare accelerator, or a shortcut on either platform is
         // unpressable — which is exactly what it was.
-        let both = Modifiers { control: true, command: true, ..Modifiers::NONE };
+        let both = Modifiers {
+            control: true,
+            command: true,
+            ..Modifiers::NONE
+        };
         assert_eq!(both.command_only(), Modifiers::CONTROL_IS_ACCELERATOR);
 
         // Control alone, with no accelerator, is never a shortcut anywhere.
-        let control = Modifiers { control: true, ..Modifiers::NONE };
+        let control = Modifiers {
+            control: true,
+            ..Modifiers::NONE
+        };
         assert!(!control.command_only());
     }
 
     #[test]
     fn a_second_modifier_still_stops_it_being_a_bare_accelerator() {
         for extra in [
-            Modifiers { shift: true, ..Modifiers::NONE },
-            Modifiers { alt: true, ..Modifiers::NONE },
+            Modifiers {
+                shift: true,
+                ..Modifiers::NONE
+            },
+            Modifiers {
+                alt: true,
+                ..Modifiers::NONE
+            },
         ] {
-            let held = Modifiers { command: true, ..extra };
-            assert!(!held.command_only(), "{held:?} is the accelerator and something else");
+            let held = Modifiers {
+                command: true,
+                ..extra
+            };
+            assert!(
+                !held.command_only(),
+                "{held:?} is the accelerator and something else"
+            );
         }
     }
 
     #[test]
     fn releasing_a_modifier_updates_what_is_held() {
         let mut input = Input::new();
-        let shifted = Modifiers { shift: true, ..Modifiers::NONE };
-        input.apply(Event::KeyDown { key: Key::Character('a'), modifiers: shifted });
+        let shifted = Modifiers {
+            shift: true,
+            ..Modifiers::NONE
+        };
+        input.apply(Event::KeyDown {
+            key: Key::Character('a'),
+            modifiers: shifted,
+        });
         assert!(input.modifiers().shift);
 
-        input.apply(Event::KeyUp { key: Key::Character('a'), modifiers: Modifiers::NONE });
+        input.apply(Event::KeyUp {
+            key: Key::Character('a'),
+            modifiers: Modifiers::NONE,
+        });
         assert!(input.modifiers().is_empty());
     }
 }

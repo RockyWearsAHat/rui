@@ -1,0 +1,109 @@
+{
+  "version": "v1",
+  "requestId": "1787778209731488000-0",
+  "sessionId": "task-1787777714055-f368-step2-1787778209686407000",
+  "projectPath": "/Users/alexwaldmann/Desktop/rui",
+  "objective": {
+    "statement": "UBIQUITOUS LANGUAGE (the project's shared vocabulary — use these exact terms):",
+    "priority": "high"
+  },
+  "scope": {
+    "inScope": [
+      "UBIQUITOUS LANGUAGE (the project's shared vocabulary — use these exact terms):"
+    ],
+    "outScope": [
+      "Deploy/publish actions unless explicit publish intent evidence is present"
+    ]
+  },
+  "constraints": [
+    "Preserve existing behavior unless user requests a behavior change",
+    "Run project-appropriate verification before completion",
+    "Do not deploy/publish without explicit intent evidence",
+    "Honor user-stated prohibitions exactly"
+  ],
+  "successCriteria": {
+    "items": [
+      "UBIQUITOUS LANGUAGE (the project's shared vocabulary — use these exact terms):",
+      "=== PROJECT DOCUMENTS (dx, searched for this step) ===",
+      "dx#now-worklist]",
+      "- [ ] Add a `wasm32-unknown-unknown` backend under `src/shell/platform/` (a new `wasm",
+      "rs`, gated in `platform/mod",
+      "rs` next to `macos"
+    ],
+    "completionDefinition": "all success criteria met and verification passes"
+  },
+  "projectProfile": {
+    "projectPath": "/Users/alexwaldmann/Desktop/rui",
+    "type": "web-app",
+    "doneDefinition": [
+      "UBIQUITOUS LANGUAGE (the project's shared vocabulary — use these exact terms):",
+      "=== PROJECT DOCUMENTS (dx, searched for this step) ===",
+      "dx#now-worklist]",
+      "- [ ] Add a `wasm32-unknown-unknown` backend under `src/shell/platform/` (a new `wasm",
+      "rs`, gated in `platform/mod",
+      "rs` next to `macos"
+    ],
+    "deployTarget": "local",
+    "verification": {
+      "usesPlaywright": true,
+      "startCmd": "pnpm dev",
+      "checkURL": "http://localhost:3000",
+      "port": 3000,
+      "checkCmds": null
+    },
+    "liveCheckCmd": "curl -sf http://localhost:3000",
+    "executionIntent": {
+      "publishIntent": "explicit",
+      "publishEvidence": [
+        {
+          "source": "request",
+          "excerpt": "2. GREEN: write the minimum production code that makes the test pass. Run the test again — confirm it now passes.",
+          "capturedAt": "2026-08-26T21:03:29Z"
+        }
+      ]
+    },
+    "workingBehaviors": [
+      "User can ubiquitous language (the project's shared vocabulary — use these exact terms):",
+      "User can === project documents (dx, searched for this step) ===",
+      "User can dx#now-worklist]",
+      "User can - [ ] add a `wasm32-unknown-unknown` backend under `src/shell/platform/` (a new `wasm",
+      "User can rs`, gated in `platform/mod",
+      "User can rs` next to `macos"
+    ]
+  },
+  "executionIntent": {
+    "publishIntent": "explicit",
+    "publishEvidence": [
+      {
+        "source": "request",
+        "excerpt": "2. GREEN: write the minimum production code that makes the test pass. Run the test again — confirm it now passes.",
+        "capturedAt": "2026-08-26T21:03:29Z"
+      }
+    ]
+  },
+  "style": {
+    "explicitStyleProvided": true,
+    "assumedStyle": "convention-safe default",
+    "assumptionNoticeSent": {
+      "chat": false,
+      "discord": false
+    }
+  },
+  "continuity": {
+    "completedSteps": [
+      "request intake captured",
+      "pre-start expansion generated"
+    ],
+    "nextStep": "execute highest-priority implementation step and run verification",
+    "knownRisks": null,
+    "unresolvedQuestions": null
+  },
+  "observability": {
+    "canaryEnabled": false,
+    "killSwitches": [
+      "publish-intent-gate",
+      "minimal-chat-policy"
+    ],
+    "traceId": "1787778209731488000-0"
+  }
+}

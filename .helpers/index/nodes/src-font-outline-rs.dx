@@ -1,0 +1,112 @@
+---
+id: src/font/outline.rs
+title: outline.rs
+kind: file-index
+lang: rust
+rank: 0.044828
+links: [[src/font/sfnt.rs]] [[src/input.rs]] [[src/text.rs]] [[src/paint.rs]] [[src/canvas.rs]] [[src/app.rs]] [[src/testing/mod.rs]] [[examples/controls.rs]] [[src/font/mod.rs]] [[src/geom.rs]] [[src/image.rs]] [[src/shell/mod.rs]]
+generated_at: 2026-08-08T01:45:22.141Z
+---
+
+# src/font/outline.rs  ·  rust  ·  596 LOC
+
+## Symbols
+
+- `Transform` (class) — L39
+- `for_glyph` (method) — L54
+- `component` (method) — L59
+- `apply` (method) — L64
+- `then` (method) — L69
+- `GlyphSource` (class) — L88
+- `Edges` (class) — L102
+- `new` (method) — L111
+- `bounds` (method) — L116
+- `move_to` (method) — L128
+- `line_to` (method) — L134
+- `quadratic_to` (method) — L146
+- `close` (method) — L174
+- `glyph_range` (function) — L187
+- `append_glyph` (function) — L208
+- `append_simple` (function) — L238
+- `append_composite` (function) — L285
+- `Point` (class) — L340
+- `append_contour` (function) — L350
+- `midpoint` (function) — L393
+- `read_flags` (function) — L398
+- `read_coordinates` (function) — L425
+- `tests` (module) — L446
+- `identity` (method) — L449
+- `on` (method) — L453
+- `off` (method) — L457
+- `transforms_compose_in_application_order` (method) — L462
+- `the_glyph_transform_flips_the_y_axis` (method) — L472
+- `a_square_contour_becomes_four_edges` (method) — L479
+- `a_contour_is_closed_even_when_the_font_does_not_repeat_its_first_point` (method) — L487
+- `consecutive_off_curve_points_imply_an_on_curve_point_between_them` (method) — L495
+- `a_contour_with_no_on_curve_point_still_produces_a_closed_shape` (method) — L506
+- `a_flatter_curve_needs_fewer_segments_than_a_sharper_one` (method) — L515
+- `flags_expand_their_run_length_encoding` (method) — L533
+- `a_repeat_count_overrunning_the_contour_is_refused` (method) — L541
+- `short_coordinates_take_their_sign_from_the_same_bit` (method) — L548
+- `an_unchanged_coordinate_repeats_the_previous_one` (method) — L557
+- `long_coordinates_accumulate_as_signed_deltas` (method) — L566
+- `an_empty_collection_has_no_bounds` (method) — L576
+- `points_are_transformed_before_being_emitted` (method) — L581
+- `identity_leaves_a_point_alone` (method) — L593
+
+## Graph
+
+```mermaid
+graph LR
+  c["outline.rs"]
+  x0["sfnt.rs"]
+  c --> x0
+  x1["input.rs"]
+  c --> x1
+  x2["text.rs"]
+  c --> x2
+  x3["paint.rs"]
+  x3 --> c
+  x4["canvas.rs"]
+  x4 --> c
+  x5["app.rs"]
+  x5 --> c
+  x6["mod.rs"]
+  x6 --> c
+  x7["controls.rs"]
+  x7 --> c
+  x8["mod.rs"]
+  x8 --> c
+  x9["geom.rs"]
+  x9 --> c
+  x10["image.rs"]
+  x10 --> c
+  x11["mod.rs"]
+  x11 --> c
+  x12["x11.rs"]
+  c --> x12
+  x13["interaction.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/font/sfnt.rs]] via `skip`, `position`, `u32`, `u16`, `i16`
+- [[src/input.rs]] via `apply`
+- [[src/text.rs]] via `len`, `then`
+- [[src/shell/platform/x11.rs]] via `position`
+
+### Referenced by
+
+- [[src/paint.rs]] via `bounds`, `then`, `apply`
+- [[src/canvas.rs]] via `then`, `bounds`
+- [[src/app.rs]] via `bounds`
+- [[src/testing/mod.rs]] via `bounds`, `apply`
+- [[examples/controls.rs]] via `then`
+- [[src/font/mod.rs]] via `bounds`
+- [[src/geom.rs]] via `Point`
+- [[src/image.rs]] via `bounds`
+- [[src/shell/mod.rs]] via `apply`
+- [[tests/interaction.rs]] via `then`
+- [[tests/recipes.rs]] via `then`
+

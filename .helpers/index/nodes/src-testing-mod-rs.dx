@@ -1,0 +1,134 @@
+---
+id: src/testing/mod.rs
+title: mod.rs
+kind: file-index
+lang: rust
+rank: 0.040792
+links: [[tests/layout.rs]] [[tests/interaction.rs]] [[tests/rendering.rs]] [[tests/recipes.rs]] [[src/canvas.rs]] [[src/element.rs]] [[src/layout.rs]] [[src/app.rs]] [[src/widgets.rs]] [[src/paint.rs]] [[examples/controls.rs]] [[src/memory.rs]]
+generated_at: 2026-08-08T01:45:22.141Z
+---
+
+# src/testing/mod.rs  ·  rust  ·  590 LOC
+
+## Symbols
+
+- `font` (module) — L58
+- `Probe` (class) — L88
+- `Harness` (class) — L116
+- `new` (method) — L133
+- `with_app` (method) — L142
+- `size` (method) — L160
+- `scale` (method) — L171
+- `appearance` (method) — L178
+- `frame_time` (method) — L187
+- `frame` (method) — L198
+- `frames` (method) — L224
+- `event` (method) — L235
+- `move_pointer` (method) — L241
+- `leave` (method) — L246
+- `click` (method) — L251
+- `secondary_click` (method) — L258
+- `press` (method) — L265
+- `drag_to` (method) — L270
+- `release` (method) — L275
+- `drag` (method) — L285
+- `scroll` (method) — L290
+- `key` (method) — L295
+- `key_with` (method) — L300
+- `tab` (method) — L305
+- `type_text` (method) — L315
+- `click_text` (method) — L330
+- `hover_text` (method) — L340
+- `rect_of` (method) — L349
+- `find` (method) — L354
+- `find_key` (method) — L360
+- `shows` (method) — L366
+- `text` (method) — L375
+- `probes` (method) — L381
+- `state` (method) — L389
+- `canvas` (method) — L394
+- `pixel` (method) — L402
+- `marked` (method) — L418
+- `ground` (method) — L440
+- `save_png` (method) — L456
+- `focused` (method) — L469
+- `scroll_offset` (method) — L474
+- `is_animating` (method) — L483
+- `ensure_drawn` (method) — L491
+- `require` (method) — L498
+- `probe` (function) — L510
+- `test_fonts` (function) — L530
+- `tests` (module) — L538
+- `Counter` (class) — L544
+- `counter` (method) — L548
+- `a_harness_draws_without_a_window_and_answers_what_it_drew` (method) — L556
+- `clicking_by_name_runs_the_handler_and_the_next_frame_shows_it` (method) — L563
+- `aiming_at_something_that_is_not_there_fails_loudly` (method) — L571
+- `the_face_it_draws_with_measures_in_round_numbers` (method) — L580
+
+## Graph
+
+```mermaid
+graph LR
+  c["mod.rs"]
+  x0["layout.rs"]
+  x0 --> c
+  x1["interaction.rs"]
+  x1 --> c
+  x2["rendering.rs"]
+  x2 --> c
+  x3["recipes.rs"]
+  x3 --> c
+  x4["canvas.rs"]
+  x4 --> c
+  x5["element.rs"]
+  x5 --> c
+  x6["layout.rs"]
+  x6 --> c
+  x7["app.rs"]
+  x7 --> c
+  x8["widgets.rs"]
+  c --> x8
+  x9["paint.rs"]
+  x9 --> c
+  x10["controls.rs"]
+  x10 --> c
+  x11["memory.rs"]
+  x11 --> c
+  x12["input.rs"]
+  c --> x12
+  x13["sfnt.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/widgets.rs]] via `button`, `text`, `col`, `key`, `canvas`
+- [[src/input.rs]] via `is_empty`, `begin_frame`, `apply`, `pointer`, `text`
+- [[src/geom.rs]] via `max_x`, `is_empty`, `center`, `max_y`
+- [[src/lib.rs]] via `text`
+- [[src/text.rs]] via `is_empty`, `set_scale`, `add`
+- [[src/theme.rs]] via `state`
+- [[src/font/outline.rs]] via `bounds`, `apply`
+- [[src/style.rs]] via `is_empty`
+
+### Referenced by
+
+- [[tests/layout.rs]] via `key`, `rect_of`, `scale`, `text`, `size`
+- [[tests/interaction.rs]] via `click`, `frames`, `text`, `key`, `find`
+- [[tests/rendering.rs]] via `frames`, `frame`, `find_key`, `save_png`, `size`
+- [[tests/recipes.rs]] via `text`, `key`, `find_key`, `canvas`, `frames`
+- [[src/canvas.rs]] via `size`, `find`, `bounds`, `clear_vertical`, `is_empty`
+- [[src/element.rs]] via `scroll`, `text`, `click_action`, `anchor`, `on_click`
+- [[src/layout.rs]] via `text`, `key`, `scroll_offset`, `scroll`, `size`
+- [[src/app.rs]] via `frame`, `scale`, `state`, `frame_observed`
+- [[src/paint.rs]] via `press`, `scroll_offset`, `probe`, `focused`, `text`
+- [[examples/controls.rs]] via `size`, `key`, `text`
+- [[src/memory.rs]] via `press`, `scroll_offset`, `is_animating`, `end_frame`, `begin_frame`
+- [[src/font/sfnt.rs]] via `find`
+- [[examples/gallery.rs]] via `scroll`, `canvas`
+- [[src/shell/mod.rs]] via `frame`, `scale`, `is_animating`, `appearance`
+- [[src/font/mod.rs]] via `find`
+- [[examples/icon.rs]] via `canvas`
+- [[src/shell/fonts.rs]] via `font`
+
