@@ -451,6 +451,7 @@ fn read_flags(reader: &mut Reader<'_>, point_count: usize) -> Option<Vec<u8>> {
             if flags.len() + repeats > point_count {
                 return None;
             }
+            #[allow(clippy::incompatible_msrv)]
             flags.extend(std::iter::repeat_n(flag, repeats));
         }
     }
@@ -567,7 +568,7 @@ mod tests {
         );
         assert!(!edges.segments.is_empty());
         let bounds = edges.bounds().expect("bounds");
-        assert!(bounds.1.0 > bounds.0.0 && bounds.1.1 > bounds.0.1);
+        assert!(bounds.1 .0 > bounds.0 .0 && bounds.1 .1 > bounds.0 .1);
     }
 
     #[test]

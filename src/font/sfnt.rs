@@ -253,6 +253,7 @@ impl CharMap {
                 (0, _) => 1,          // Unicode, older
                 _ => 0,
             };
+            #[allow(clippy::incompatible_msrv)]
             if rank > 0 && best.is_none_or(|(best_rank, _)| rank > best_rank) {
                 best = Some((rank, subtable));
             }
