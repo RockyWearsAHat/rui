@@ -1,7 +1,7 @@
 [package]
 name = "rui"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 rust-version = "1.85"
 license = "MIT"
 repository = "https://github.com/RockyWearsAHat/rui"
@@ -17,6 +17,7 @@ exclude = ["/.github"]
 [dependencies]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = { version = "0.3", features = ["Window", "Document", "CanvasRenderingContext2d", "ImageData", "Navigator"] }
 wasm-bindgen = "0.2"
 
 [lints.rust]
