@@ -2,7 +2,7 @@
 //!
 //! `cargo run -p rui --example counter` opens it.
 
-use rui::{El, button, col, row, title};
+use rui::{button, col, row, title, El};
 
 /// Everything this program knows.
 struct Counter {

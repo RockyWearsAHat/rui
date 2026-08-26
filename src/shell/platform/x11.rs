@@ -18,7 +18,7 @@
 
 use crate::theme::Appearance;
 use crate::{Canvas, Event, Key, Modifiers, Point, PointerButton};
-use std::ffi::{CStr, c_char, c_int, c_long, c_uint, c_ulong, c_void};
+use std::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void, CStr};
 use std::time::Duration;
 
 use crate::shell::{Backend, Error, WindowOptions};
