@@ -154,6 +154,25 @@ impl<S: 'static> Harness<S> {
         }
     }
 
+    /// An application with specific fonts loaded (e.g., from `load_system_fonts()`).
+    ///
+    /// Useful for testing with embedded or system fonts instead of the synthetic
+    /// test font. The fonts must be pre-loaded and passed as a `LoadedFonts`.
+    pub fn with_fonts(state: S, view: impl Fn(&S) -> El<S> + 'static, fonts: LoadedFonts) -> Self {
+        let (width, height) = DEFAULT_SIZE;
+        Self {
+            app: App::new("test", state, view),
+            fonts,
+            canvas: Canvas::new(width as u32, height as u32, 1.0),
+            memory: Memory::new(),
+            input: Input::new(),
+            appearance: Appearance::Dark,
+            elapsed: FRAME,
+            pending: Vec::new(),
+            probes: Vec::new(),
+        }
+    }
+
     // ----- how it is set up ---------------------------------------------------
 
     /// Draws at this size, in logical units.
