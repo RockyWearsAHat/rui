@@ -1,10 +1,13 @@
 //! Verify project setup and hooks are properly configured.
 
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
+#[cfg(not(target_arch = "wasm32"))]
+use std::os::unix::fs::PermissionsExt;
+
 #[test]
+#[cfg(not(target_arch = "wasm32"))]
 fn pre_commit_hook_exists_and_is_executable() {
     let hook_path = PathBuf::from(".git/hooks/pre-commit");
 
@@ -36,6 +39,7 @@ fn pre_commit_hook_exists_and_is_executable() {
 }
 
 #[test]
+#[cfg(not(target_arch = "wasm32"))]
 fn pre_commit_hook_runs_successfully_when_code_is_clean() {
     use std::process::Command;
 
@@ -52,6 +56,7 @@ fn pre_commit_hook_runs_successfully_when_code_is_clean() {
 }
 
 #[test]
+#[cfg(not(target_arch = "wasm32"))]
 fn rustc_version_meets_minimum_requirement() {
     use std::process::Command;
 
@@ -78,6 +83,7 @@ fn rustc_version_meets_minimum_requirement() {
 }
 
 #[test]
+#[cfg(not(target_arch = "wasm32"))]
 fn cargo_version_is_available() {
     use std::process::Command;
 
@@ -108,6 +114,7 @@ fn format_version(version: &(u32, u32)) -> String {
 }
 
 #[test]
+#[cfg(not(target_arch = "wasm32"))]
 fn the_wasm_backend_is_compiled_in_and_costs_the_native_builds_nothing() {
     use std::fs;
     use std::path::Path;
