@@ -5,7 +5,7 @@
 
 #![cfg(target_arch = "wasm32")]
 
-use rui::wasm::init_counter;
+use rui::wasm::{init_counter, listen_counter, present_counter, CounterApp};
 
 #[wasm_bindgen_test::wasm_bindgen_test]
 fn wasm_exports_counter_init() {
@@ -13,6 +13,14 @@ fn wasm_exports_counter_init() {
     // This test verifies that the wasm module has the required export by
     // calling the function directly. If init_counter is not exported or callable,
     // this test will not compile.
+    let result = init_counter();
+    assert_eq!(result, 0, "init_counter should return 0 on success");
+}
+
+#[wasm_bindgen_test::wasm_bindgen_test]
+fn counter_initialized_via_thread_local() {
+    // Test that init_counter stores the app in a thread-local
+    // Just verify that the function completes without error
     let result = init_counter();
     assert_eq!(result, 0, "init_counter should return 0 on success");
 }
