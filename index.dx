@@ -34,7 +34,7 @@ Runnable demonstrations of library features. `counter.rs` shows basic state mana
 
 ## src/ — 28 files
 
-TODO: what src/ is for, its entry points, and how it connects to the rest. Entry points seen: lib.rs.
+The rendering and UI core. element.rs defines the El tree builder API and widget types. layout.rs implements Flexbox-style measurement and positioning. canvas.rs is the pixel buffer and rasterizer. paint.rs abstracts drawing operations. text.rs and font/ handle TrueType parsing and glyph layout. style.rs and theme.rs manage layout attributes and semantic colors (Tone). input.rs maps platform events. memory.rs tracks interaction state. shell/ abstracts platform windows; all code above shell/platform/*.rs is platform-agnostic safe Rust. app.rs couples state, views, and the runtime.
 
 - src/font/ (4 files)
 - src/shell/ (7 files)
