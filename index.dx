@@ -1,1 +1,65 @@
-~ dx1 bb1c607cbb52465e7b730e9efb1db84976f30853d4141e635ad287260672a512
+# rui — project index
+
+From the project's own README: A declarative interface library for Rust, with no dependencies at all.
+
+Scaffold from the file tree, written by `dx index`. Improve it: replace each TODO with what the area does and how it connects to the rest, and add code blocks for the load-bearing files — they render as the file's current text, never a stale copy. Files below are ranked by how load-bearing they look (entry points, how many files reference them, size); trust the ranking as a place to start, not as the truth. Keep this document true as the code changes.
+
+Direction (2026-08-26): rui is gaining a WebAssembly rendering backend so it can run inside a browser, not just as a native window — see the `Now` worklist below. The concrete driver is [[Forge]], a self-hosted git server whose web UI (currently plain HTML/CSS/JS) is being rebuilt on rui-wasm into a real GitHub-style UI (repo list, file tree, blob viewer, commit log). SARA's engine watches both this project and Forge (`factory/.sara/config.json`'s `watchedProjects`) and should treat them as one coordinated initiative — a rui primitive Forge's UI needs belongs in rui's own worklist, not duplicated or worked around in Forge.
+
+## Now
+
+The working section — the designated first read of every turn, and its last write. The worklist below is the task's program counter (found / fixing / verified), which makes the task the unit of work instead of the session: it survives compaction, crashes, and handoffs, and a second agent can pick up an unclaimed line. Thoughts land here the moment they form (`dx_append`, `dx_check`) and are promoted into the sections below when they harden. Keep it small — everything else in this document is the archive.
+
+- [ ] Add a `wasm32-unknown-unknown` backend under `src/shell/platform/` (a new `wasm.rs`, gated in `platform/mod.rs` next to `macos.rs`/`windows.rs`/`x11.rs`), implementing the same `Backend` trait (`open`, `pump`, `surface`, `appearance`, `present`, `is_open`) from `src/shell/mod.rs`. `present` writes `Canvas::pixels()` to a `<canvas>` via `ImageData`/`putImageData` (or a WebGL texture blit if that profiles faster) through `wasm-bindgen`/`web-sys`. `appearance` reads `prefers-color-scheme` via `matchMedia`. `pump` maps DOM pointer/keyboard/wheel events to the existing `Event`/`Input` types the native backends already produce — no new event vocabulary, so `element.rs`/`input.rs`/`layout.rs` etc. need zero changes.
+- [ ] `run()` in `src/shell/mod.rs` is a blocking `while window.is_open() { ... }` loop — that model cannot run on wasm, where the JS thread must never block. Split it: keep the native loop as-is, add a wasm path that turns the same per-frame body (`Surface::draw`) into a `requestAnimationFrame` callback loop instead, so the frame logic (the part that matters) stays identical and only the *driving* of it differs per platform.
+- [ ] Fonts: `load_system_fonts` (`src/shell/fonts.rs`) reads fonts off the desktop's filesystem — no filesystem in a browser. Wasm needs its own font source: bundle a default UI font as embedded bytes (the crate already ships a synthetic test font under `testing/` — same embed-a-TTF mechanism, real face this time) so a wasm build has *a* font with zero setup, with room to accept a fetched font file later.
+- [ ] Prove it end to end: `cargo build --target wasm32-unknown-unknown -p rui --example counter`, wire `wasm-bindgen` output + a one-page HTML harness, and load it in a real browser — screenshot it, and compare pixel-for-pixel against `cargo run -p rui --example gallery -- .`'s native PNG output for the same example, since the whole design point (`shell/mod.rs`'s own doc comment) is that native and any other backend draw an identical frame from the identical `Surface::draw`.
+- [ ] This backend exists to serve a real caller: [[Forge]]'s web UI is being rebuilt on top of it (see `/Users/alexwaldmann/Desktop/Forge/index.dx`'s own worklist) — a repo list, file tree, blob viewer, and commit log built from rui's primitives (`col`, `row`, `panel`, `tabs`, `code`, `text`) and compiled to wasm instead of hand-written HTML/CSS/JS. Keep the two worklists in sync: a primitive Forge's UI needs that rui doesn't have yet (e.g. a resizable split view for the file tree + blob pane, syntax-aware `code()` styling) is a rui worklist item, not a workaround in Forge.
+- [ ] Improve this index: replace each TODO with what each area does
+
+## Recipes
+
+How a change flows
+
+TODO: recipes — for each common kind of change (a new flag, a new module, a fix), the ordered list of files it touches. Write the first recipe the moment your first change lands; recipes are what make the second change cheap.
+
+## examples/ — 4 files
+
+TODO: what examples/ is for, its entry points, and how it connects to the rest.
+
+- examples/counter.rs — 30 lines, referenced by 6 files
+- examples/icon.rs — 101 lines, referenced by 4 files
+- examples/controls.rs — 287 lines, referenced by 3 files
+- examples/gallery.rs — 205 lines
+
+## src/ — 28 files
+
+TODO: what src/ is for, its entry points, and how it connects to the rest. Entry points seen: lib.rs.
+
+- src/font/ (4 files)
+- src/shell/ (7 files)
+- src/testing/ (2 files)
+- src/text.rs — 524 lines, referenced by 28 files
+- src/canvas.rs — 1268 lines, referenced by 24 files
+- src/layout.rs — 783 lines, referenced by 20 files
+- src/theme.rs — 643 lines, referenced by 18 files
+- src/input.rs — 539 lines, referenced by 14 files
+- src/color.rs — 211 lines, referenced by 14 files
+- src/memory.rs — 556 lines, referenced by 13 files
+- src/style.rs — 514 lines, referenced by 12 files
+- src/element.rs — 854 lines, referenced by 11 files
+- src/geom.rs — 403 lines, referenced by 11 files
+- src/image.rs — 218 lines, referenced by 9 files
+- src/paint.rs — 862 lines, referenced by 8 files
+- src/widgets.rs — 467 lines, referenced by 8 files
+- src/app.rs — 265 lines
+- src/lib.rs — entry point, 164 lines
+
+## tests/ — 4 files
+
+TODO: what tests/ is for, its entry points, and how it connects to the rest.
+
+- tests/layout.rs — 296 lines, referenced by 20 files
+- tests/interaction.rs — 358 lines, referenced by 5 files
+- tests/rendering.rs — 191 lines, referenced by 4 files
+- tests/recipes.rs — 256 lines, referenced by 1 file
