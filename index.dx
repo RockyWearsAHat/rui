@@ -57,7 +57,7 @@ The rendering and UI core. element.rs defines the El tree builder API and widget
 
 ## tests/ — 4 files
 
-TODO: what tests/ is for, its entry points, and how it connects to the rest.
+Integration tests using `Harness`, the real frame with synthetic fonts for deterministic testing. `layout.rs` verifies Flexbox measurement and sizing. `interaction.rs` tests events, hover/focus, animations, and multi-pointer drag. `rendering.rs` confirms canvas output and painter operations. `recipes.rs` documents and tests controls built from primitives (checkbox, slider, radio, switch, tooltip) as templates and tests. `setup.rs` verifies Rust 1.85+ and pre-commit availability. Harness methods: click_text, drag, shows, pixel, save_png.
 
 - tests/layout.rs — 296 lines, referenced by 20 files
 - tests/interaction.rs — 358 lines, referenced by 5 files
