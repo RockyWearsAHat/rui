@@ -118,26 +118,42 @@ impl LoadedFonts {
 /// a console that renders log output in the wrong face is worth having, and one
 /// that refuses to start is not.
 pub fn load_system_fonts() -> Result<LoadedFonts, Error> {
-    let mut fonts = Fonts::new();
+    #[cfg(target_arch = "wasm32")]
+    {
+        use super::embedded_fonts::{embedded_mono_font, embedded_ui_font};
+        let mut fonts = Fonts::new();
+        let ui_font = fonts.add(embedded_ui_font()?);
+        let mono_font = fonts.add(embedded_mono_font()?);
+        return Ok(LoadedFonts {
+            fonts,
+            ui_font,
+            mono_font,
+        });
+    }
 
-    let ui_font = match first_usable(UI_CANDIDATES) {
-        Some(font) => fonts.add(font),
-        None => {
-            return Err(Error::NoFont {
-                searched: UI_CANDIDATES
-                    .iter()
-                    .map(|name| (*name).to_owned())
-                    .collect(),
-            });
-        }
-    };
-    let mono_font = first_usable(MONO_CANDIDATES).map_or(ui_font, |font| fonts.add(font));
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let mut fonts = Fonts::new();
 
-    Ok(LoadedFonts {
-        fonts,
-        ui_font,
-        mono_font,
-    })
+        let ui_font = match first_usable(UI_CANDIDATES) {
+            Some(font) => fonts.add(font),
+            None => {
+                return Err(Error::NoFont {
+                    searched: UI_CANDIDATES
+                        .iter()
+                        .map(|name| (*name).to_owned())
+                        .collect(),
+                });
+            }
+        };
+        let mono_font = first_usable(MONO_CANDIDATES).map_or(ui_font, |font| fonts.add(font));
+
+        Ok(LoadedFonts {
+            fonts,
+            ui_font,
+            mono_font,
+        })
+    }
 }
 
 /// The first candidate that exists and parses.
@@ -298,5 +314,34 @@ mod tests {
         let width = loaded.fonts.measure(&tracked, word);
         assert_eq!(loaded.fonts.fit(&tracked, word, width), word.len());
         assert!(loaded.fonts.fit(&tracked, word, width - 1.0) < word.len());
+    }
+
+    #[test]
+    #[cfg(target_arch = "wasm32")]
+    fn wasm_loads_embedded_fonts() {
+        let loaded = load_system_fonts().expect("wasm should load embedded fonts");
+        assert_eq!(
+            loaded.fonts.len(),
+            2,
+            "wasm should load both ui and mono fonts"
+        );
+        let ui_font = loaded
+            .fonts
+            .font(loaded.ui_font)
+            .expect("ui font should exist");
+        let mono_font = loaded
+            .fonts
+            .font(loaded.mono_font)
+            .expect("mono font should exist");
+        for &character in MARKS {
+            assert!(
+                ui_font.has_glyph(character),
+                "embedded ui font should have {character:?}"
+            );
+            assert!(
+                mono_font.has_glyph(character),
+                "embedded mono font should have {character:?}"
+            );
+        }
     }
 }
