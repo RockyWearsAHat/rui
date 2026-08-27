@@ -106,3 +106,33 @@ fn parse_rustc_version(version_string: &str) -> Option<(u32, u32)> {
 fn format_version(version: &(u32, u32)) -> String {
     format!("{}.{}", version.0, version.1)
 }
+
+#[test]
+fn wasm_backend_scaffold_removed() {
+    use std::fs;
+    use std::path::Path;
+
+    let wasm_platform_file = Path::new("src/shell/platform/wasm.rs");
+    assert!(
+        !wasm_platform_file.exists(),
+        "wasm.rs backend file should be removed"
+    );
+
+    let cargo_toml = fs::read_to_string("Cargo.toml")
+        .expect("failed to read Cargo.toml");
+    assert!(
+        !cargo_toml.contains("wasm-bindgen"),
+        "Cargo.toml should not contain wasm-bindgen dependency"
+    );
+    assert!(
+        !cargo_toml.contains("web-sys"),
+        "Cargo.toml should not contain web-sys dependency"
+    );
+
+    let platform_mod = fs::read_to_string("src/shell/platform/mod.rs")
+        .expect("failed to read platform/mod.rs");
+    assert!(
+        !platform_mod.contains("target_arch = \"wasm32\""),
+        "platform/mod.rs should not have wasm32 conditionals"
+    );
+}

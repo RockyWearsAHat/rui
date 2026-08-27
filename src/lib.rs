@@ -1,4 +1,6 @@
 //! A declarative interface library for Rust.
+#![deny(unsafe_code)]
+#![warn(missing_docs)]
 //!
 //! `rui` takes the three things the web splits across three languages — the
 //! structure of a page, how it looks, and what it does — and makes them one Rust
@@ -103,9 +105,6 @@
 //! — all of it in [`Memory`], under an identity derived from the element's path
 //! through the tree.
 
-#![deny(unsafe_code)]
-#![warn(missing_docs)]
-
 pub mod app;
 pub mod canvas;
 pub mod color;
@@ -123,9 +122,6 @@ pub mod testing;
 pub mod text;
 pub mod theme;
 pub mod widgets;
-
-#[cfg(target_arch = "wasm32")]
-pub mod wasm;
 
 pub use app::{run, App};
 pub use canvas::{Canvas, Corner, Mask};
