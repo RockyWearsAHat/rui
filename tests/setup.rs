@@ -151,3 +151,15 @@ fn the_wasm_backend_is_compiled_in_and_costs_the_native_builds_nothing() {
         "the browser's crates must stay under [target.'cfg(target_arch = \"wasm32\")'.dependencies]"
     );
 }
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn wasm_builds_declare_the_cdylib_crate_type() {
+    use std::fs;
+
+    let cargo_toml = fs::read_to_string("Cargo.toml").expect("failed to read Cargo.toml");
+    assert!(
+        cargo_toml.contains("crate-type = [\"cdylib\", \"rlib\"]"),
+        "wasm builds require cdylib crate-type to generate JavaScript bindings"
+    );
+}

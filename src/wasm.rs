@@ -4,7 +4,6 @@
 //! counter interface. The rendering pipeline is identical to the native backend:
 //! the view function is called, the result is laid out and drawn to a canvas.
 
-use crate::input::Event;
 use crate::shell;
 use crate::theme::Appearance;
 use crate::{App, Canvas, El};
@@ -86,8 +85,8 @@ pub fn init_counter() -> i32 {
 /// Render the counter app to pixels and present them to the browser canvas.
 ///
 /// Called by JavaScript after events have been collected via `listen_counter`.
-/// Returns the canvas dimensions on success for testing.
-pub fn present_counter() -> Result<(u32, u32), crate::Error> {
+#[wasm_bindgen]
+pub fn present_counter() {
     COUNTER_APP.with(|app| {
         let mut app_borrow = app.borrow_mut();
         if let Some(app) = app_borrow.as_mut() {
@@ -102,18 +101,15 @@ pub fn present_counter() -> Result<(u32, u32), crate::Error> {
             );
 
             // Present the canvas to the browser
-            shell::present(&app.canvas)?;
-
-            Ok((app.canvas.width(), app.canvas.height()))
-        } else {
-            Err(crate::Error::Platform("app not initialized".to_string()))
+            let _ = shell::present(&app.canvas);
         }
     })
 }
 
-/// Collect events from the browser canvas and return them.
+/// Collect events from the browser canvas and apply them.
 ///
 /// Called by JavaScript before each `present_counter` to apply user input.
-pub fn listen_counter() -> Result<Vec<Event>, crate::Error> {
-    shell::listen()
+#[wasm_bindgen]
+pub fn listen_counter() {
+    let _ = shell::listen();
 }
