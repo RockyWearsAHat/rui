@@ -13,3 +13,8 @@ Cargo.lock
 .engine/memory/
 .engine/task-*.md
 .engine/task-*.json
+.engine/*.md
+# dx: the local index is rebuildable from .doc/repo.dxcp
+.doc/index.db-wal
+.doc/index.db-shm
+.doc/local.dxcp
