@@ -16,6 +16,29 @@ exclude = ["/.github"]
 # in this crate, so there is nothing left to depend on.
 [dependencies]
 
+# Except in a browser, where the platform is not callable from Rust at all: its
+# windows and its canvases are JavaScript objects, and `wasm-bindgen` *is* the
+# call into them. Scoped to `wasm32` rather than added outright, so a build for
+# any of the three native platforms still resolves to no dependencies.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = [
+    "CanvasRenderingContext2d",
+    "Document",
+    "Element",
+    "Event",
+    "EventTarget",
+    "HtmlCanvasElement",
+    "ImageData",
+    "Window",
+] }
+
+# The rendering suite builds the `<canvas>` the backend looks for, and reads the
+# pixels back out of it afterwards, inside a browser `wasm-bindgen-test` drives.
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+web-sys = { version = "0.3", features = ["HtmlElement", "Node"] }
+
 [lints.rust]
 # Not `forbid`: opening a window is the one thing that cannot be done without
 # calling the platform. Every `unsafe` in the crate is inside `src/shell/platform/`,

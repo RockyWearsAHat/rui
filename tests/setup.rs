@@ -108,30 +108,39 @@ fn format_version(version: &(u32, u32)) -> String {
 }
 
 #[test]
-fn wasm_backend_scaffold_removed() {
+fn the_wasm_backend_is_compiled_in_and_costs_the_native_builds_nothing() {
     use std::fs;
     use std::path::Path;
 
-    let wasm_platform_file = Path::new("src/shell/platform/wasm.rs");
     assert!(
-        !wasm_platform_file.exists(),
-        "wasm.rs backend file should be removed"
-    );
-
-    let cargo_toml = fs::read_to_string("Cargo.toml").expect("failed to read Cargo.toml");
-    assert!(
-        !cargo_toml.contains("wasm-bindgen"),
-        "Cargo.toml should not contain wasm-bindgen dependency"
-    );
-    assert!(
-        !cargo_toml.contains("web-sys"),
-        "Cargo.toml should not contain web-sys dependency"
+        Path::new("src/shell/platform/wasm.rs").exists(),
+        "the browser backend belongs beside the native ones"
     );
 
     let platform_mod =
         fs::read_to_string("src/shell/platform/mod.rs").expect("failed to read platform/mod.rs");
     assert!(
-        !platform_mod.contains("target_arch = \"wasm32\""),
-        "platform/mod.rs should not have wasm32 conditionals"
+        platform_mod.contains("target_arch = \"wasm32\""),
+        "and must be chosen by a cfg, or it is never built"
+    );
+
+    // The crate's headline claim is no dependencies. `wasm-bindgen` is the one
+    // exception and it is scoped to `wasm32`, so this asserts the scoping and
+    // not merely the absence: a plain `[dependencies]` entry would pass a
+    // "contains wasm-bindgen" check while quietly costing every native build.
+    let cargo_toml = fs::read_to_string("Cargo.toml").expect("failed to read Cargo.toml");
+    let plain: String = cargo_toml
+        .split("[dependencies]")
+        .nth(1)
+        .expect("a [dependencies] section")
+        .split("\n[")
+        .next()
+        .expect("its end")
+        .lines()
+        .filter(|line| !line.trim_start().starts_with('#'))
+        .collect();
+    assert!(
+        !plain.contains("wasm-bindgen") && !plain.contains("web-sys"),
+        "the browser's crates must stay under [target.'cfg(target_arch = \"wasm32\")'.dependencies]"
     );
 }

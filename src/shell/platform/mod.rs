@@ -4,6 +4,10 @@
 //! [`Backend`](crate::Backend). `unsafe` is confined to these files: the run
 //! loop above them and the toolkit beneath them contain none.
 
+#[cfg(target_arch = "wasm32")]
+#[path = "wasm.rs"]
+mod backend;
+
 #[cfg(target_os = "macos")]
 #[path = "macos.rs"]
 #[allow(unsafe_code, reason = "AppKit and Core Graphics are C and Objective-C")]
@@ -14,12 +18,17 @@ mod backend;
 #[allow(unsafe_code, reason = "the Win32 window and bitmap calls are C")]
 mod backend;
 
-#[cfg(all(unix, not(target_os = "macos")))]
+#[cfg(all(unix, not(target_os = "macos"), not(target_arch = "wasm32")))]
 #[path = "x11.rs"]
 #[allow(unsafe_code, reason = "Xlib is C")]
 mod backend;
 
-#[cfg(not(any(target_os = "macos", target_os = "windows", unix,)))]
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "windows",
+    unix,
+    target_arch = "wasm32"
+)))]
 #[path = "unsupported.rs"]
 mod backend;
 
