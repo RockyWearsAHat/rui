@@ -118,8 +118,7 @@ fn wasm_backend_scaffold_removed() {
         "wasm.rs backend file should be removed"
     );
 
-    let cargo_toml = fs::read_to_string("Cargo.toml")
-        .expect("failed to read Cargo.toml");
+    let cargo_toml = fs::read_to_string("Cargo.toml").expect("failed to read Cargo.toml");
     assert!(
         !cargo_toml.contains("wasm-bindgen"),
         "Cargo.toml should not contain wasm-bindgen dependency"
@@ -129,8 +128,8 @@ fn wasm_backend_scaffold_removed() {
         "Cargo.toml should not contain web-sys dependency"
     );
 
-    let platform_mod = fs::read_to_string("src/shell/platform/mod.rs")
-        .expect("failed to read platform/mod.rs");
+    let platform_mod =
+        fs::read_to_string("src/shell/platform/mod.rs").expect("failed to read platform/mod.rs");
     assert!(
         !platform_mod.contains("target_arch = \"wasm32\""),
         "platform/mod.rs should not have wasm32 conditionals"

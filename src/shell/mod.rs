@@ -251,8 +251,6 @@ impl Surface {
     }
 }
 
-/// Abstracts the differences in how native and wasm platforms drive the event loop.
-
 /// Opens a window and runs `app` in it until it is closed.
 pub(crate) fn run<S>(
     options: WindowOptions,
@@ -313,4 +311,3 @@ pub(crate) fn run<S>(
     }
     Ok(())
 }
-
