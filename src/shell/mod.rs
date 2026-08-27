@@ -252,49 +252,6 @@ impl Surface {
 }
 
 /// Abstracts the differences in how native and wasm platforms drive the event loop.
-///
-/// On native platforms, the loop is synchronous and blocking—we call a callback
-/// repeatedly until it signals completion. On wasm, the JS thread must never block,
-/// so the callback becomes a `requestAnimationFrame` callback instead.
-///
-/// This trait encapsulates that difference so the frame logic (what the callback
-/// does) stays identical on both platforms.
-#[allow(dead_code)]
-trait EventLoopDriver {
-    /// Repeatedly calls `f` until it returns `Ok(false)`.
-    ///
-    /// On native platforms, this loops synchronously. On wasm, it queues callbacks
-    /// and returns immediately.
-    fn drive(&mut self, f: impl FnMut() -> Result<bool, Error>) -> Result<(), Error>;
-}
-
-/// Native event loop driver: a synchronous blocking loop.
-#[cfg(not(target_arch = "wasm32"))]
-struct NativeEventLoopDriver;
-
-#[cfg(not(target_arch = "wasm32"))]
-impl EventLoopDriver for NativeEventLoopDriver {
-    fn drive(&mut self, mut f: impl FnMut() -> Result<bool, Error>) -> Result<(), Error> {
-        loop {
-            if !f()? {
-                break;
-            }
-        }
-        Ok(())
-    }
-}
-
-/// WebAssembly event loop driver: queues callbacks asynchronously.
-#[cfg(target_arch = "wasm32")]
-struct WasmEventLoopDriver;
-
-#[cfg(target_arch = "wasm32")]
-impl EventLoopDriver for WasmEventLoopDriver {
-    fn drive(&mut self, _f: impl FnMut() -> Result<bool, Error>) -> Result<(), Error> {
-        // Stub: will be implemented to use requestAnimationFrame in a later step.
-        Ok(())
-    }
-}
 
 /// Opens a window and runs `app` in it until it is closed.
 pub(crate) fn run<S>(
@@ -357,32 +314,3 @@ pub(crate) fn run<S>(
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_event_loop_driver_compiles_for_native() {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let mut driver = NativeEventLoopDriver;
-            let mut count = 0;
-            let result = driver.drive(|| {
-                count += 1;
-                Ok::<bool, Error>(count < 3)
-            });
-            assert!(result.is_ok());
-            assert_eq!(count, 3);
-        }
-    }
-
-    #[test]
-    fn test_event_loop_driver_compiles_for_wasm() {
-        #[cfg(target_arch = "wasm32")]
-        {
-            let mut driver = WasmEventLoopDriver;
-            let result = driver.drive(|| Ok::<bool, Error>(false));
-            assert!(result.is_ok());
-        }
-    }
-}
