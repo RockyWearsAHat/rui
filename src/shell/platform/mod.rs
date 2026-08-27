@@ -19,15 +19,10 @@ mod backend;
 #[allow(unsafe_code, reason = "Xlib is C")]
 mod backend;
 
-#[cfg(target_arch = "wasm32")]
-#[path = "wasm.rs"]
-mod backend;
-
 #[cfg(not(any(
     target_os = "macos",
     target_os = "windows",
     unix,
-    target_arch = "wasm32"
 )))]
 #[path = "unsupported.rs"]
 mod backend;
