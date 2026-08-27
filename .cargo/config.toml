@@ -1,3 +1,10 @@
 [build]
 # Use rustup-managed Rust to ensure wasm32-unknown-unknown target is available
 rustflags = ["-C", "overflow-checks=on"]
+
+# A wasm test is not run, it is loaded: `wasm-bindgen-test-runner` serves the
+# built module to a real browser over a WebDriver session and reports back what
+# it did there. Nowhere else does a `<canvas>` exist to draw into, so nowhere
+# else is there anything for these tests to assert against.
+[target.wasm32-unknown-unknown]
+runner = "wasm-bindgen-test-runner"

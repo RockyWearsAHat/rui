@@ -261,3 +261,84 @@ fn a_frame_can_be_written_out_as_a_png() {
     assert_eq!(&written[..8], b"\x89PNG\r\n\x1a\n", "and be a PNG");
     std::fs::remove_file(&path).ok();
 }
+
+// The browser suite. Only compiled for wasm — everywhere else there is no page
+// to draw into or listen to, and these assertions would have nothing to say.
+#[cfg(target_arch = "wasm32")]
+wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+/// Builds the page the backend expects to find: one canvas, named `surface`.
+#[cfg(target_arch = "wasm32")]
+fn surface_on_the_page(width: u32, height: u32) -> web_sys::HtmlCanvasElement {
+    use wasm_bindgen::JsCast;
+
+    let document = web_sys::window()
+        .expect("a window")
+        .document()
+        .expect("a document");
+    let surface: web_sys::HtmlCanvasElement = document
+        .create_element("canvas")
+        .expect("a canvas")
+        .dyn_into()
+        .expect("a canvas element");
+    surface.set_id("surface");
+    surface.set_width(width);
+    surface.set_height(height);
+    document
+        .body()
+        .expect("a body")
+        .append_child(&surface)
+        .expect("appended");
+    surface
+}
+
+/// The browser is a backend like any other: the same frame, the same buffer.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen_test::wasm_bindgen_test]
+fn wasm_backend_renders_to_canvas() {
+    use wasm_bindgen::JsCast;
+
+    let mut harness = showing(|_| {
+        draw(Size::new(200.0, 100.0), |painter, rect| {
+            painter.fill(rect, Radius::None, Tone::Bad)
+        })
+    });
+    harness.frame();
+    let red = harness.pixel(100, 50).expect("the rectangle covers it");
+
+    let surface = surface_on_the_page(harness.canvas().width(), harness.canvas().height());
+    rui::shell::present(harness.canvas()).expect("the frame should reach the canvas");
+
+    // Read the pixels back out of the DOM, not out of rui.
+    let context: web_sys::CanvasRenderingContext2d = surface
+        .get_context("2d")
+        .expect("a context")
+        .expect("a context")
+        .dyn_into()
+        .expect("a 2d context");
+    let read = context
+        .get_image_data(100.0, 50.0, 1.0, 1.0)
+        .expect("the pixel")
+        .data();
+
+    assert_eq!(
+        (read[0], read[1], read[2], read[3]),
+        (red.r, red.g, red.b, 255),
+        "what rui drew is what the DOM holds"
+    );
+}
+
+/// A browser hands events to callbacks and never to a caller that asked for
+/// them, so the backend must have somewhere to put them: opening the page's
+/// surface registers those listeners and leaves an empty queue behind.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen_test::wasm_bindgen_test]
+fn wasm_backend_event_listeners() {
+    surface_on_the_page(200, 100);
+
+    assert_eq!(
+        rui::shell::listen().expect("the listeners should attach"),
+        Vec::new(),
+        "a page nobody has touched has caught nothing"
+    );
+}

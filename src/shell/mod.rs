@@ -251,6 +251,36 @@ impl Surface {
     }
 }
 
+/// Draws `canvas` into the page's `<canvas id="surface">`.
+///
+/// The browser's way in, until it has a loop of its own. [`run`] below waits on
+/// the platform and does not return, which is exactly what a page's one thread
+/// may never do — so a browser presents frames it drew itself, one at a time,
+/// through here. The buffer that arrives is an ordinary [`Canvas`], drawn by
+/// the same code that draws every native frame.
+#[cfg(target_arch = "wasm32")]
+pub fn present(canvas: &Canvas) -> Result<(), Error> {
+    platform::Window::open(&WindowOptions::default())?.present(canvas)
+}
+
+/// Listens to the page's `<canvas id="surface">` and collects what it caught.
+///
+/// The other half of [`present`], and here for the same reason: a page that
+/// drives its own frames needs the events that arrived before one as much as it
+/// needs somewhere to put the pixels after it. The events that come back are
+/// the ordinary [`Event`]s every backend produces, so what a browser did with a
+/// gesture is indistinguishable, from here up, from what a desktop did with it.
+#[cfg(target_arch = "wasm32")]
+pub fn listen() -> Result<Vec<Event>, Error> {
+    let mut events = Vec::new();
+    platform::Window::open(&WindowOptions::default())?.pump(
+        Duration::ZERO,
+        &mut events,
+        &mut |_| {},
+    )?;
+    Ok(events)
+}
+
 /// Opens a window and runs `app` in it until it is closed.
 pub(crate) fn run<S>(
     options: WindowOptions,
