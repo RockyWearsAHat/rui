@@ -22,11 +22,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_embedded_fonts_parse() {
-        let ui_result = embedded_ui_font();
-        let mono_result = embedded_mono_font();
+    fn test_embedded_fonts_parse_and_load_glyphs() {
+        let ui_font = embedded_ui_font().expect("UI font should parse");
+        let mono_font = embedded_mono_font().expect("Mono font should parse");
 
-        assert!(ui_result.is_ok());
-        assert!(mono_result.is_ok());
+        // Verify UI font can load at least one glyph
+        let ui_glyph_id = ui_font.glyph_for('A');
+        let ui_rendered = ui_font.render(ui_glyph_id, 16.0, 0.0);
+        assert!(
+            !ui_rendered.mask.is_empty(),
+            "UI font should render glyph 'A'"
+        );
+
+        // Verify mono font can load at least one glyph
+        let mono_glyph_id = mono_font.glyph_for('A');
+        let mono_rendered = mono_font.render(mono_glyph_id, 16.0, 0.0);
+        assert!(
+            !mono_rendered.mask.is_empty(),
+            "Mono font should render glyph 'A'"
+        );
     }
 }
