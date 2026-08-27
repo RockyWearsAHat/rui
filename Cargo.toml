@@ -11,6 +11,9 @@ keywords = ["gui", "ui", "declarative", "renderer", "no-std-deps"]
 categories = ["gui", "rendering"]
 exclude = ["/.github"]
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 # Nothing. Not a policy so much as a consequence: the TrueType parser, the glyph
 # rasteriser, the text layout, the PNG writer, and the platform windows are all
 # in this crate, so there is nothing left to depend on.
