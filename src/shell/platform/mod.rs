@@ -19,11 +19,7 @@ mod backend;
 #[allow(unsafe_code, reason = "Xlib is C")]
 mod backend;
 
-#[cfg(not(any(
-    target_os = "macos",
-    target_os = "windows",
-    unix,
-)))]
+#[cfg(not(any(target_os = "macos", target_os = "windows", unix,)))]
 #[path = "unsupported.rs"]
 mod backend;
 
