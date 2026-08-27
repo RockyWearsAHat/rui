@@ -25,7 +25,7 @@ TODO: recipes — for each common kind of change (a new flag, a new module, a fi
 
 ## examples/ — 4 files
 
-TODO: what examples/ is for, its entry points, and how it connects to the rest.
+Runnable demonstrations of library features. `counter.rs` shows basic state management and view rebuilding. `controls.rs` demonstrates building controls from primitive draw/drag/key APIs. `gallery.rs` renders elements to PNG for visual testing. `icon.rs` shows custom painter-based drawing. All use the view/state pattern from `src/app.rs` and demonstrate the patterns documented in `src/element.rs`.
 
 - examples/counter.rs — 30 lines, referenced by 6 files
 - examples/icon.rs — 101 lines, referenced by 4 files
