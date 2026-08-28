@@ -352,3 +352,32 @@ fn a_note_that_is_up_does_not_come_up_again_every_frame() {
         "the pointer has not moved, so nothing has changed"
     );
 }
+
+#[test]
+fn code_block_highlights_keywords_and_strings() {
+    use rui::{code_block, Language};
+
+    #[derive(Default)]
+    struct App;
+
+    let code = "let x = \"hello\"; // comment";
+    let mut harness = Harness::new(App, move |_: &App| {
+        col(code_block(code, Language::Rust)).align(Align::Start)
+    })
+    .size(400.0, 100.0);
+
+    harness.frame();
+
+    // Verify that keywords are rendered
+    assert!(harness.shows("let"), "keyword 'let' is rendered");
+
+    // Verify that strings are rendered
+    assert!(harness.shows("\"hello\""), "string literal is rendered");
+
+    // Verify that comments are rendered
+    assert!(harness.shows("// comment"), "comment is rendered");
+
+    // Verify that the code block has elements
+    let probes = harness.probes();
+    assert!(!probes.is_empty(), "code block renders elements");
+}

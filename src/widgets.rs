@@ -126,6 +126,24 @@ pub fn code<S>(text: impl Into<String>) -> El<S> {
     El::of(Node::Text(text.into())).text_size(CODE_SIZE).mono()
 }
 
+/// A code block with syntax highlighting for the given language.
+pub fn code_block<S>(text: impl Into<String>, language: crate::Language) -> El<S> {
+    let code_text = text.into();
+    let tokens = crate::syntax::tokenize(&code_text, language);
+
+    let elements: Vec<El<S>> = tokens
+        .into_iter()
+        .map(|token| {
+            crate::widgets::text(token.text)
+                .text_size(CODE_SIZE)
+                .mono()
+                .color(token.ty.tone())
+        })
+        .collect();
+
+    row(elements).text_size(CODE_SIZE)
+}
+
 /// A paragraph, wrapped to whatever width it is given.
 pub fn paragraph<S>(text: impl Into<String>) -> El<S> {
     El::of(Node::Text(text.into())).wrap().w(Length::Fill(1.0))
