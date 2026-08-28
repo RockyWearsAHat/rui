@@ -306,7 +306,17 @@ Once you understand this exemplar, here are common next steps:
 
 ### Meter Widget Exemplar
 
-The `meter` widget is a minimal exemplar of a **passive/display-only** widget. Unlike segmented (which responds to clicks), meter simply displays a value as a progress bar. It teaches:
+The `meter` widget is a minimal exemplar of a **passive/display-only** widget. Unlike segmented (which responds to clicks), meter simply displays a value as a progress bar.
+
+**Pattern at a Glance:**
+```
+State:   struct App { progress: f32 }
+View:    fn view(app: &App) -> El<App> { meter(app.progress, Tone::Accent) }
+Handler: (none — no user interaction)
+```
+Passive widgets read state and display it. No handler needed. State determines appearance.
+
+It teaches:
 - How state flows into the view without user interaction
 - How to build visual feedback from primitives (`draw`, `Painter`, `Rect`)
 - The difference between interactive and read-only widgets
