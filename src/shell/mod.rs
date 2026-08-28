@@ -487,4 +487,22 @@ impl<S> FrameDriver<S> {
     pub fn frame_count(&self) -> u64 {
         self.memory.frame_count()
     }
+
+    /// Collects pending events from the platform.
+    ///
+    /// On WASM, calls the browser's event listener. On native platforms,
+    /// returns an empty vector (events are collected by the windowing system).
+    #[cfg(target_arch = "wasm32")]
+    pub fn collect_events(&mut self) -> Result<Vec<Event>, Error> {
+        listen()
+    }
+
+    /// Collects pending events from the platform.
+    ///
+    /// On WASM, calls the browser's event listener. On native platforms,
+    /// returns an empty vector (events are collected by the windowing system).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn collect_events(&mut self) -> Result<Vec<Event>, Error> {
+        Ok(Vec::new())
+    }
 }

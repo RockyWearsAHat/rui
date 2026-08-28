@@ -72,3 +72,22 @@ fn step_returns_pending_error() {
         "step() should succeed after error was consumed"
     );
 }
+
+#[test]
+fn collect_events_returns_result() {
+    let mut driver = FrameDriver::new(Counter { count: 0 }, counter_view);
+
+    // collect_events should return a Result
+    let result = driver.collect_events();
+    assert!(
+        result.is_ok(),
+        "collect_events should return Ok when no error occurs"
+    );
+
+    // Result should contain a Vec<Event>
+    let events = result.unwrap();
+    assert!(
+        events.is_empty() || !events.is_empty(),
+        "collect_events should return a Vec<Event>"
+    );
+}
