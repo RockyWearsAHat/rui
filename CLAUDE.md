@@ -255,9 +255,9 @@ The `meter` widget is a minimal exemplar of a **passive/display-only** widget. U
 
 **Try it first:**
 ```bash
-cargo run -p rui --example controls
+cargo run -p rui --example meter
 ```
-The meter appears as a progress bar in the control showcase.
+Click to watch the meter display progress from 0% to 100%.
 
 **State:**
 ```rust
