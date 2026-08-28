@@ -246,6 +246,62 @@ Once you understand this exemplar, copy it and modify. Here are common next step
 
 5. **Explore other controls:** Look at `checkbox`, `switch`, `slider`, `radio` in `tests/recipes.rs` (lines 77–450). Each follows the same state-view-handler pattern.
 
+### Meter Widget Exemplar
+
+The `meter` widget is a minimal exemplar of a **passive/display-only** widget. Unlike segmented (which responds to clicks), meter simply displays a value as a progress bar. It teaches:
+- How state flows into the view without user interaction
+- How to build visual feedback from primitives (`draw`, `Painter`, `Rect`)
+- The difference between interactive and read-only widgets
+
+**Try it first:**
+```bash
+cargo run -p rui --example controls
+```
+The meter appears as a progress bar in the control showcase.
+
+**State:**
+```rust
+struct App {
+    progress: f32,  // a value from 0.0 to 1.0
+}
+```
+
+**View:**
+```rust
+fn view(app: &App) -> El<App> {
+    col((
+        text("Upload progress:"),
+        meter(app.progress, Tone::Accent),
+    ))
+}
+```
+
+The `meter()` widget takes only two arguments:
+- `fraction: f32` — clamped to 0.0–1.0 for display
+- `tone: Tone` — the color role (e.g., `Accent`, `Success`, `Warning`)
+
+**How to modify:**
+- Change `Tone::Accent` to `Tone::Success`, `Tone::Warning`, etc. for different colors
+- To customize the bar width/height, copy the implementation from `src/widgets.rs` line 259–280 and adjust `Size::new(80.0, 6.0)`
+- To add animation, update `app.progress` over time in your event loop
+
+**Implementation details:**
+The meter is a draw primitive showing a filled rectangle inside a track; see `src/widgets.rs` line 259–280. It uses:
+- `draw()` to paint the meter directly to the canvas
+- `Painter` to fill the track (sunken background) and filled portion (accent color)
+- Corner rounding for a polished appearance
+
+**Verification:**
+- Run the example: `cargo run -p rui --example controls`
+- Inspect the test: `tests/recipes.rs` shows `a_meter_displays_progress_as_a_fraction`
+- The meter renders at any fraction value; display behavior is deterministic
+
+**Key difference from segmented:**
+- **Segmented:** Interactive. State changes on click. Handler runs user code.
+- **Meter:** Passive. State flows to view. No handler; just displays.
+
+Copy the meter pattern when building read-only visualizations: progress bars, volume indicators, status lights, or any gauge that reads state without changing it.
+
 ### Building Custom Controls
 
 Copy a recipe from `tests/recipes.rs` or `examples/controls.rs`—they are ordinary `El` types, not variants. Modify freely:
