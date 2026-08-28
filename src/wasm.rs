@@ -97,7 +97,7 @@ pub fn present_counter() {
     COUNTER_APP.with(|app| {
         let mut app_borrow = app.borrow_mut();
         if let Some(app) = app_borrow.as_mut() {
-            let appearance = Appearance::Light; // TODO: read from browser prefers-color-scheme
+            let appearance = shell::get_appearance();
 
             // Draw the app into the canvas
             app.app
