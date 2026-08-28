@@ -224,7 +224,66 @@ Files touched:
 - Browser testing: `wasm-pack test --headless --firefox` confirms the app initializes and responds to DOM events.
 - Parity verification: `examples/parity.html` (browser) renders pixel-for-pixel identical frames to the native desktop. Light and dark modes both verified. Gate runs as part of `cargo test --test interaction`.
 
-**Cross-Module Coordination**
+#### Verification at Each Phase
+
+Each phase had verification gates to confirm correctness before integrating further:
+
+**Phase 1: Clock Abstraction**
+
+Compiled verification:
+```bash
+cargo test --lib
+```
+Confirms `Moment::now()` works on both native (uses `Instant`) and WASM (uses `performance.now()`), and `Moment::since()` correctly measures elapsed time. Time flows continuously on both platforms.
+
+**Phase 2: FrameDriver Refactor**
+
+Compiled verification:
+```bash
+cargo build
+cargo test --lib
+```
+
+Frame-stepping test:
+```bash
+cargo test --test shell_stepping -- --nocapture
+```
+Confirms the `turn()` abstraction can be called repeatedly without owning an event loop. The test verifies that state persists across calls, input is collected correctly, and frames are drawn and presented. This is the crucial gate: if frame-stepping works, both native (which loops) and WASM (which doesn't) can call the same function.
+
+**Phase 3: WASM Integration**
+
+Compiled verification (native still works):
+```bash
+cargo build
+cargo test --lib
+```
+
+WASM target compilation:
+```bash
+cargo build --target wasm32-unknown-unknown -p rui --example counter
+```
+Confirms WASM builds without errors and the clock abstraction works in the browser environment.
+
+Browser testing (requires Firefox):
+```bash
+wasm-pack test --headless --firefox
+```
+Confirms the page initializes, responds to DOM events (click, mousemove, wheel), and state persists across repaints. Memory tests verify that hover/focus/scroll state is preserved between frames.
+
+Parity verification (pixel-perfect comparison):
+```bash
+# 1. Build native reference frame
+cargo run -p rui --example parity -- target/parity
+
+# 2. Build and serve WASM package
+wasm-pack build --target web --release --out-dir pkg
+python3 -m http.server 8731 --bind 127.0.0.1
+
+# 3. Open http://127.0.0.1:8731/examples/parity.html in a browser
+```
+Verifies that the WASM backend renders pixel-for-pixel identical frames to native. Light and dark modes are both tested. A green page indicates zero differing pixels; red indicates differences and their count. This gate confirms the rendering pipeline is truly platform-agnostic.
+
+#### Cross-Module Coordination
 
 - **`shell::clock`** abstracts platform time so `shell/mod.rs` does not know or care about `Instant` vs `performance.now()`.
 - **`Backend` trait** (in `shell/mod.rs`) unifies the interface: `open()`, `pump()`, `surface()`, `appearance()`, `present()` work the same for native and WASM. Only the platform-specific implementations differ.
