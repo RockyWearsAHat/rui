@@ -338,6 +338,53 @@ Both drivers call identical frame logic; the only difference is how they schedul
 
 The view function and all frame logic are shared between both.
 
+#### Template for the Next Backend
+
+Adding a new backend (e.g., native Wayland, or a game engine) follows the same pattern. Here is the replicable checklist:
+
+1. **Add platform abstraction if needed** (`src/shell/clock.rs` was added for WASM because `Instant::now()` panics there; a new platform may need similar handling)
+   - If the platform has unusual time handling, add a platform-specific branch to `shell::clock`.
+   - Test with: `cargo test --lib` (confirm time is measured correctly on the new platform).
+
+2. **Implement the `Backend` trait** (add `src/shell/platform/wayland.rs` or similar)
+   - Implement all six methods: `open()`, `pump()`, `surface()`, `appearance()`, `present()`, `is_open()`.
+   - The implementation is entirely platform-specific; nothing above `Backend` changes.
+   - Compile check: `cargo build --features "wayland"` or similar platform gate.
+
+3. **Wire the new backend into `shell/mod.rs`** (the platform selector, lines 68-88)
+   - Add a new `#[cfg(target_os = "...")]` branch to the `Backend` trait impl or selector function.
+   - Ensure `src/shell/mod.rs` either imports the new platform module or gates it with a feature flag.
+
+4. **Conditional `run()` implementation in `shell/mod.rs`** (around line 382)
+   - Add `#[cfg(target_os = "...")]` to a new `pub(crate) fn run<S: 'static>(...)` that uses the new backend.
+   - The function body is always: create a `Surface`, loop calling `turn()` with the backend, check `continues()`, repeat.
+   - If the platform cannot block (like WASM), use the callback pattern (lines 413-500) instead.
+
+5. **Add platform detection and initialization** (in `src/app.rs`, lines 123-132)
+   - Verify the platform is available at compile time (use `#[cfg(...)]`).
+   - Add a gate to `run()` and `run_with_fonts()` if needed (e.g., require `'static` for some platforms).
+
+6. **Verify with a quick integration test**
+   - Build the example: `cargo build --target wasm32-unknown-unknown -p rui --example counter` (or native equivalent).
+   - Run the example and confirm basic interaction works (click, keyboard, mousemove).
+
+7. **Add parity test** (in `examples/parity.rs` or `tests/integration.rs`)
+   - Render the reference frame to pixels using the new backend.
+   - Compare against a known-good frame (rendered by the native backend) to confirm pixel-perfect identical rendering.
+   - Test both light and dark modes.
+
+8. **Document the backend** (in `CLAUDE.md`, update the module index table to list the new platform file)
+   - Add a row to the module structure table mentioning the new backend follows the `Backend` trait pattern.
+   - Link to the recipe that shows how backends are added.
+
+**Spot-check against WASM:**
+
+- WASM's `src/shell/platform/wasm.rs` (lines 1-100): Implements `Backend` trait entirely in platform-specific code. Lines in the file correspond exactly to the six trait methods.
+- WASM's `shell/mod.rs` conditional `run()` (lines 413-500): Creates a `Page` struct, registers a callback, and returns. Calls `turn()` from the callback.
+- WASM's `src/wasm.rs` (lines 1-50): Exports WASM-specific functions (`init_counter`, `listen_counter`, `present_counter`) that drive the page loop. These are not part of the generic pattern; they are how the browser calls into Rust.
+
+The pattern holds: add a platform module implementing `Backend`, wire it into the selector, add a `run()` that calls `turn()`, verify with parity tests. Everything above `Backend` is unchanged.
+
 ## Workflow Notes
 
 - **Unsafe code:** Confined to `shell/platform/*.rs` (one file per OS). Everything above that—elements, layout, rendering, fonts—is safe Rust.
