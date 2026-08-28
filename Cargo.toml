@@ -38,6 +38,7 @@ web-sys = { version = "0.3", features = [
     "MediaQueryList",
     "MouseEvent",
     "Window",
+    "WheelEvent",
 ] }
 
 # The rendering suite builds the `<canvas>` the backend looks for, and reads the
