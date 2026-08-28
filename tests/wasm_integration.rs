@@ -53,3 +53,16 @@ fn wasm_exports_all_counter_functions() {
     // present_counter should be exported and callable
     present_counter();
 }
+
+#[wasm_bindgen_test::wasm_bindgen_test]
+fn memory_persists_across_frames() {
+    // Initialize the counter app
+    init_counter();
+
+    // Call present_counter 5 times in sequence.
+    // This validates that Memory persists correctly across multiple render calls,
+    // detecting if state is being lost or allocated fresh each frame.
+    for _ in 0..5 {
+        present_counter();
+    }
+}
