@@ -134,6 +134,13 @@ impl Backend for Window {
     }
 
     fn appearance(&self) -> Appearance {
+        if let Some(window) = web_sys::window() {
+            if let Ok(Some(query)) = window.match_media("(prefers-color-scheme: dark)") {
+                if query.matches() {
+                    return Appearance::Dark;
+                }
+            }
+        }
         Appearance::Light
     }
 
