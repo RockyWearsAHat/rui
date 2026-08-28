@@ -210,7 +210,7 @@ The widget is built entirely from primitives; see `src/widgets.rs` line 333–36
 
 **Verification:**
 - Run the example: `cargo run -p rui --example segmented`
-- Inspect the test: `tests/recipes.rs` line 40–52 shows `a_segmented_control_changes_selection_when_clicked`
+- Inspect the test: `tests/recipes.rs` line 386 shows `a_segmented_control_changes_selection_when_clicked`
 - Copy the entire pattern to build new controls: state type → view function → handler closure
 
 **Next: Building Custom Controls**
@@ -244,7 +244,7 @@ Once you understand this exemplar, copy it and modify. Here are common next step
 
 4. **Connect to the test:** Copy `tests/recipes.rs` line 40–52 as a template for verifying your custom control.
 
-5. **Explore other controls:** Look at `checkbox`, `switch`, `slider`, `radio` in `tests/recipes.rs` (lines 77–450). Each follows the same state-view-handler pattern.
+5. **Explore other controls:** Look at `checkbox`, `switch`, `slider`, `radio` in `tests/recipes.rs`. Each follows the same state-view-handler pattern.
 
 ### Meter Widget Exemplar
 
@@ -292,8 +292,8 @@ The meter is a draw primitive showing a filled rectangle inside a track; see `sr
 - Corner rounding for a polished appearance
 
 **Verification:**
-- Run the example: `cargo run -p rui --example controls`
-- Inspect the test: `tests/recipes.rs` shows `a_meter_displays_progress_as_a_fraction`
+- Run the example: `cargo run -p rui --example meter`
+- Inspect the test: `tests/recipes.rs` line 427 shows `a_meter_displays_progress_as_a_fraction`
 - The meter renders at any fraction value; display behavior is deterministic
 
 **Key difference from segmented:**
