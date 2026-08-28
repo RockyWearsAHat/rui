@@ -143,7 +143,7 @@ pub use text::{FontId, Fonts, TextStyle};
 pub use theme::{Appearance, Palette, Status, Theme};
 pub use widgets::{
     button, caption, code, code_block, col, divider, dot, draw, field, field_row, figure, heading,
-    meter, micro, panel, paragraph, row, section, segmented, spacer, tabs, tag, text, title,
+    meter, micro, panel, paragraph, row, section, segmented, spacer, split, tabs, tag, text, title,
 };
 
 /// A run of text, formatted.

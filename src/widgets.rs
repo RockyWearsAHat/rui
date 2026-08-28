@@ -15,6 +15,7 @@
 
 use crate::element::{Children, El, Node};
 use crate::geom::{Rect, Size};
+use crate::input::Drag;
 use crate::paint::Painter;
 use crate::style::{Align, Axis, Length, Radius, Tone};
 use crate::theme::Status;
@@ -452,6 +453,49 @@ pub fn field_row<S>(label: impl Into<String>, value: El<S>) -> El<S> {
     row((heading(label).w(78.0), value.grow()))
         .gap(8.0)
         .min_h(20.0)
+}
+
+/// A pane divided into two resizable sections with a draggable divider.
+///
+/// The divider can be dragged to adjust the ratio of space given to each side.
+/// The ratio is clamped to [0.1, 0.9] to prevent either side from disappearing.
+pub fn split<S: 'static>(
+    left: El<S>,
+    right: El<S>,
+    ratio: f32,
+    on_resize: impl Fn(&mut S, f32) + 'static,
+) -> El<S> {
+    let ratio = ratio.clamp(0.1, 0.9);
+    let divider_width = 4.0;
+
+    row((
+        left.grow_by(ratio),
+        draw(
+            Size::new(divider_width, 100.0),
+            move |painter: &mut Painter<'_>, rect: Rect| {
+                painter.fill(rect, Radius::None, Tone::Border);
+            },
+        )
+        .w(divider_width)
+        .on_drag(move |state: &mut S, drag: Drag| {
+            // When the divider is at ratio r in a container of width w:
+            // divider_x = w * r
+            // So: w = divider_x / r
+            let current_divider_x = drag.rect.x;
+            let container_width = if ratio > 0.001 {
+                current_divider_x / ratio
+            } else {
+                100.0
+            };
+
+            // Calculate new divider position from drag
+            let new_divider_x = current_divider_x + drag.at.x;
+            let new_ratio = (new_divider_x / container_width).clamp(0.1, 0.9);
+            on_resize(state, new_ratio);
+        })
+        .key("split_divider"),
+        right.grow_by(1.0 - ratio),
+    ))
 }
 
 #[cfg(test)]
