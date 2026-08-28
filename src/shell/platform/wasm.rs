@@ -39,33 +39,86 @@ type EventQueue = Rc<RefCell<Vec<Event>>>;
 /// what [`listeners`] hands back and what [`Window`] keeps alive.
 type Listener = Closure<dyn FnMut(web_sys::Event)>;
 
-/// Handler function type: takes an event and returns an Option<Event> if it can be processed.
-type EventHandler = fn(&web_sys::Event) -> Option<Event>;
+/// Handler function type: takes an event and the surface it landed on, and
+/// returns an `Event` if it is one the toolkit has a use for.
+///
+/// The surface is passed because a pointer's position arrives measured from the
+/// corner of the viewport, and everything below here only ever thinks in units
+/// measured from the corner of its own canvas.
+type EventHandler = fn(&web_sys::Event, &web_sys::HtmlCanvasElement) -> Option<Event>;
+
+/// Where on the interface a pointer event landed, in the units it draws in.
+///
+/// Two corrections, and they are separate things. The canvas sits somewhere in
+/// a page, so its own corner comes off first. Then the element's drawing buffer
+/// need not be the size the page gives the element — a display with a scale
+/// factor is exactly the case where it is not — so the offset is carried into
+/// the buffer's own scale and back out of the interface's, which leaves the
+/// logical position every other backend reports.
+fn canvas_point(surface: &web_sys::HtmlCanvasElement, event: &web_sys::MouseEvent) -> Point {
+    let rect = surface.get_bounding_client_rect();
+    let scale = web_sys::window().map_or(1.0, |window| window.device_pixel_ratio());
+    let across = |offset: f64, shown: f64, buffer: f64| {
+        if shown > 0.0 && scale > 0.0 {
+            (offset * buffer / shown / scale) as f32
+        } else {
+            offset as f32
+        }
+    };
+    Point::new(
+        across(
+            event.client_x() as f64 - rect.left(),
+            rect.width(),
+            surface.width() as f64,
+        ),
+        across(
+            event.client_y() as f64 - rect.top(),
+            rect.height(),
+            surface.height() as f64,
+        ),
+    )
+}
 
 /// Handles a simple pointer down event: extracts button and position.
-fn handle_pointer_down(event: &web_sys::Event) -> Option<Event> {
+fn handle_pointer_down(
+    event: &web_sys::Event,
+    surface: &web_sys::HtmlCanvasElement,
+) -> Option<Event> {
     event
         .dyn_ref::<web_sys::MouseEvent>()
         .and_then(|mouse_event| {
             let button = event_mapping::map_pointer_button(mouse_event.button() as u16)?;
-            let position = Point::new(mouse_event.client_x() as f32, mouse_event.client_y() as f32);
+            let position = canvas_point(surface, mouse_event);
             Some(Event::PointerDown { position, button })
         })
 }
 
 /// Handles a simple pointer up event: extracts button and position.
-fn handle_pointer_up(event: &web_sys::Event) -> Option<Event> {
+fn handle_pointer_up(
+    event: &web_sys::Event,
+    surface: &web_sys::HtmlCanvasElement,
+) -> Option<Event> {
     event
         .dyn_ref::<web_sys::MouseEvent>()
         .and_then(|mouse_event| {
             let button = event_mapping::map_pointer_button(mouse_event.button() as u16)?;
-            let position = Point::new(mouse_event.client_x() as f32, mouse_event.client_y() as f32);
+            let position = canvas_point(surface, mouse_event);
             Some(Event::PointerUp { position, button })
         })
 }
 
+/// Handles the pointer moving: where it now is, in the interface's own units.
+fn handle_pointer_moved(
+    event: &web_sys::Event,
+    surface: &web_sys::HtmlCanvasElement,
+) -> Option<Event> {
+    event
+        .dyn_ref::<web_sys::MouseEvent>()
+        .map(|mouse_event| Event::PointerMoved(canvas_point(surface, mouse_event)))
+}
+
 /// Handles a keyboard down event: extracts key and modifiers.
-fn handle_key_down(event: &web_sys::Event) -> Option<Event> {
+fn handle_key_down(event: &web_sys::Event, _surface: &web_sys::HtmlCanvasElement) -> Option<Event> {
     event
         .dyn_ref::<web_sys::KeyboardEvent>()
         .and_then(|keyboard_event| {
@@ -76,7 +129,7 @@ fn handle_key_down(event: &web_sys::Event) -> Option<Event> {
 }
 
 /// Handles a keyboard up event: extracts key and modifiers.
-fn handle_key_up(event: &web_sys::Event) -> Option<Event> {
+fn handle_key_up(event: &web_sys::Event, _surface: &web_sys::HtmlCanvasElement) -> Option<Event> {
     event
         .dyn_ref::<web_sys::KeyboardEvent>()
         .and_then(|keyboard_event| {
@@ -87,7 +140,10 @@ fn handle_key_up(event: &web_sys::Event) -> Option<Event> {
 }
 
 /// Handles a text input event: extracts and filters text data.
-fn handle_text_input(event: &web_sys::Event) -> Option<Event> {
+fn handle_text_input(
+    event: &web_sys::Event,
+    _surface: &web_sys::HtmlCanvasElement,
+) -> Option<Event> {
     event
         .dyn_ref::<web_sys::InputEvent>()
         .and_then(|input_event| {
@@ -102,7 +158,7 @@ fn handle_text_input(event: &web_sys::Event) -> Option<Event> {
 }
 
 /// Handles a scroll wheel event: extracts and normalizes delta values.
-fn handle_scroll(event: &web_sys::Event) -> Option<Event> {
+fn handle_scroll(event: &web_sys::Event, _surface: &web_sys::HtmlCanvasElement) -> Option<Event> {
     event
         .dyn_ref::<web_sys::WheelEvent>()
         .and_then(|wheel_event| {
@@ -124,6 +180,7 @@ const SIMPLE_EVENTS: [(&str, Event); 1] = [("pointerleave", Event::PointerLeft)]
 const EXTRACTED_EVENTS: &[(&str, EventHandler)] = &[
     ("mousedown", handle_pointer_down),
     ("mouseup", handle_pointer_up),
+    ("mousemove", handle_pointer_moved),
     ("keydown", handle_key_down),
     ("keyup", handle_key_up),
     ("textinput", handle_text_input),
@@ -185,8 +242,9 @@ fn listeners(
     // Register events that require data extraction from handler table
     for (name, handler) in EXTRACTED_EVENTS {
         let queue = Rc::clone(queue);
+        let element = surface.clone();
         let listener = Listener::new(move |event: web_sys::Event| {
-            if let Some(rui_event) = handler(&event) {
+            if let Some(rui_event) = handler(&event, &element) {
                 queue.borrow_mut().push(rui_event);
             }
         });
