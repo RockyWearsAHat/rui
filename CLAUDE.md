@@ -174,6 +174,64 @@ A recipe is a worked example of implementing a major feature: files touched in o
 
 See `tests/recipes.rs` for reference implementations of common controls (`checkbox`, `switch`, `slider`, `radio`, `tooltip`). Each recipe there is a small, testable example following the same structure as a larger feature: define state shape, build the element tree, handle input events, verify the output.
 
+### Recipe 1: Adding a WASM Backend
+
+**Commits:** 17 total from 77d4780 to 2df7f1c, grouped in three phases: clock abstraction, FrameDriver refactor, and WASM integration.
+
+The WASM backend allows the same UI code to run in a browser with no changes to the view function. The implementation required three coordinated changes to the shell:
+
+**Phase 1: Clock Abstraction (Commit 77d4780 — "Split the loop's driving from the loop's frame")**
+
+Commits in this phase: `77d4780`
+
+Files touched:
+- `src/shell/clock.rs` (new): Platform-agnostic clock abstraction. Desktops use `std::time::Instant`; WASM uses `performance.now()` (since `Instant::now()` panics on `wasm32-unknown-unknown`). Both return a `Moment` type that understands its platform.
+- `src/shell/mod.rs` (line 58+): Import `clock::Moment` and replace `Instant` with `Moment` in the `Surface` struct. Update `begin_frame()` calls to use `Moment::since()` instead of `saturating_duration_since()`.
+- `src/app.rs`: Add `'static` bound to `run()` and `run_with_fonts()` (required for WASM closures to capture state across frame boundaries).
+- `Cargo.toml`: Add WASM dependencies (`Performance`, `console` to `web-sys` features).
+
+**Why this order:** The loop's driving logic (wait for events, draw, present) needs to work identically on desktop and browser. But a desktop waits on a blocking system call, while a browser calls back via `requestAnimationFrame`. To unify these, we first abstract time (since `Instant` cannot be used on WASM), then split the loop into a reusable `turn()` function that both drivers can call.
+
+**Verification gate:** `cargo test --lib` passes; time is correctly measured on both platforms (desktop via system clock, browser via `performance.now()`).
+
+**Phase 2: FrameDriver Refactor (Commits 531214f, 9afc9b1, b6a1b2c, 2ef3c2b — preparation and testing for frame-stepping abstraction)**
+
+Commits in this phase: `531214f` (fix docs), `9afc9b1` (frame-stepping test), `b6a1b2c` (WASM documentation), `2ef3c2b` (Step 8: backend selector gate), `caa3066` (Step 3: refactor native run)
+
+Files touched:
+- `src/shell/mod.rs` (line 295+): Extract the core loop body into a new `turn()` function that both native and WASM drivers call. Introduce `continues()` helper. The native driver still owns the `while` loop; the browser driver calls `turn()` from `requestAnimationFrame`.
+- `tests/shell_stepping.rs` (new): Test that `turn()` can be called repeatedly to step through frames without owning an event loop. This test verifies the abstraction is sound before WASM tries to use it.
+
+**Why this order:** WASM cannot block (there is no thread to yield), so the loop cannot be a `while` at the top level. Extracting `turn()` makes the frame logic platform-agnostic; both drivers become thin wrappers that provide events and decide when to call `turn()` again. The test suite (shell_stepping and later WASM-specific tests) verifies the frame-stepping logic is correct before integration.
+
+**Verification gate:** `cargo test --test shell_stepping` passes (frame stepping works). `cargo build` for native still works (no regression). `cargo test --lib` confirms compiled tests pass.
+
+**Phase 3: WASM Integration (Commits b116ac8, 32bf53d, d820ff6, e41376e, 929899a, 830033c, 2365866, 3062aba, 401a8a7, ce4acad, 2df7f1c)**
+
+Commits in this phase: `b116ac8` (Step 5: verify memory persistence), `32bf53d` (Step 5: fix wasm config), `d820ff6` (scout: add Recipes to worklist), `e41376e` (worklist: close item 3), `929899a` (Step 5: verify memory), `830033c` (record backend parity check), `2365866` (check browser round trip), `3062aba` (prove native/wasm parity), `2b02fd0` (Step 4: error recovery), `401a8a7` (Step 5: expose FrameDriver), `ce4acad` (Step 6: integrate WASM events), `2df7f1c` (Step 7: parity test)
+
+Files touched:
+- `src/shell/mod.rs` (line 412+): Add `#[cfg(target_arch = "wasm32")] pub(crate) fn run()` that creates a `Page` struct holding all loop state, registers a `requestAnimationFrame` callback, and returns immediately. The callback holds `Rc<RefCell<>>` of the page state and calls `turn()` on each repaint. Add `schedule()` and `report()` functions for browser integration.
+- `src/shell/clock.rs`: Update to handle WASM timing edge cases; add fallback to zero duration if performance API is unavailable.
+- `src/wasm.rs` (new): WASM-specific bindings for the browser. Exports `init_counter()`, `listen_counter()`, `present_counter()` that call into the generic `turn()` loop. The page's event listener (DOM click, mousemove, wheel) collects events into the `Input` queue; each frame, `turn()` consumes them.
+- `src/shell/platform/wasm.rs` (new): Implement the `Backend` trait for the browser (canvas rendering, event listening, `appearance()` from `prefers-color-scheme`).
+
+**Why this order:** The native `run()` was already done and working. WASM adds a sibling `run()` (guarded by `#[cfg(target_arch = "wasm32")]`) that uses the same `turn()` but with no `while` — it relies on the browser to call the callback repeatedly. The `Backend` trait is unchanged; only the platform-specific initialization differs. Integration testing (memory persistence, parity checks) runs throughout to catch issues early.
+
+**Verification gates:**
+- Compiled verification: `cargo build --target wasm32-unknown-unknown -p rui --example counter` succeeds.
+- Unit tests: `cargo test --lib` passes; memory and animation state persist across frames.
+- Browser testing: `wasm-pack test --headless --firefox` confirms the app initializes and responds to DOM events.
+- Parity verification: `examples/parity.html` (browser) renders pixel-for-pixel identical frames to the native desktop. Light and dark modes both verified. Gate runs as part of `cargo test --test interaction`.
+
+**Cross-Module Coordination**
+
+- **`shell::clock`** abstracts platform time so `shell/mod.rs` does not know or care about `Instant` vs `performance.now()`.
+- **`Backend` trait** (in `shell/mod.rs`) unifies the interface: `open()`, `pump()`, `surface()`, `appearance()`, `present()` work the same for native and WASM. Only the platform-specific implementations differ.
+- **`turn()` function** (line 313+) is the coordination point: it accepts a `Backend` and calls its methods. Both native `run()` (which loops) and WASM `run()` (which returns and relies on callbacks) call the same `turn()`, so a change to the rendering pipeline only needs to be made once.
+- **Event flow:** Native events come from `window.pump()` (a blocking wait on the platform); WASM events come from DOM listeners. Both feed into the same `Input` queue, so the rest of the frame logic is unchanged.
+- **State persistence:** The `Memory` struct (in `src/memory`) tracks hover, focus, scroll, and animation state. The same state machine is used on both platforms; the only difference is how each platform asks for the next frame.
+
 ## Workflow Notes
 
 - **Unsafe code:** Confined to `shell/platform/*.rs` (one file per OS). Everything above that—elements, layout, rendering, fonts—is safe Rust.
