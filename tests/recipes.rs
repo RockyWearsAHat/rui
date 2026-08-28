@@ -381,3 +381,44 @@ fn code_block_highlights_keywords_and_strings() {
     let probes = harness.probes();
     assert!(!probes.is_empty(), "code block renders elements");
 }
+
+#[test]
+fn a_segmented_control_changes_selection_when_clicked() {
+    use rui::segmented;
+
+    let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
+        col(segmented(
+            &["Small", "Medium", "Large"],
+            settings.format,
+            |settings: &mut Settings, index| settings.format = index,
+        ))
+        .align(Align::Start)
+    });
+
+    // Initially, first option is selected
+    assert_eq!(harness.state().format, 0);
+
+    // Click on "Medium" (second option)
+    harness.click_text("Medium");
+    assert_eq!(
+        harness.state().format,
+        1,
+        "clicking an option changes the selection"
+    );
+
+    // Click on "Large" (third option)
+    harness.click_text("Large");
+    assert_eq!(
+        harness.state().format,
+        2,
+        "selection changes to the new option"
+    );
+
+    // Click back to "Small"
+    harness.click_text("Small");
+    assert_eq!(
+        harness.state().format,
+        0,
+        "selection can cycle back to previous options"
+    );
+}
