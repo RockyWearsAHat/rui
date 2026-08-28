@@ -215,10 +215,36 @@ The widget is built entirely from primitives; see `src/widgets.rs` line 333–36
 
 **Next: Building Custom Controls**
 
-Once you understand this exemplar, copy it and modify:
-- Replace `segmented()` with your own layout (e.g., vertical radio buttons instead of horizontal tabs)
-- Change the handler to do something more complex (update multiple fields, trigger an API call, etc.)
-- Use the same state-view-handler pattern for checkboxes, dropdowns, sliders, or any control
+Once you understand this exemplar, copy it and modify. Here are common next steps:
+
+1. **Add more state fields:**
+   ```rust
+   struct App {
+       selected: usize,
+       confirmed: bool,  // Add a confirmation step
+   }
+   ```
+
+2. **Update the handler to do more:**
+   ```rust
+   widgets::segmented(&choices, app.selected, |app: &mut App, index| {
+       app.selected = index;
+       app.confirmed = false;  // Reset confirmation when selection changes
+   }),
+   ```
+
+3. **Build from primitives instead (copy `src/widgets.rs` line 333–365):**
+   ```rust
+   row(choices.iter().enumerate().map(|(i, label)| {
+       widgets::button(*label, move |app: &mut App| {
+           app.selected = i;
+       })
+   }))
+   ```
+
+4. **Connect to the test:** Copy `tests/recipes.rs` line 40–52 as a template for verifying your custom control.
+
+5. **Explore other controls:** Look at `checkbox`, `switch`, `slider`, `radio` in `tests/recipes.rs` (lines 77–450). Each follows the same state-view-handler pattern.
 
 ### Building Custom Controls
 
