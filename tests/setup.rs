@@ -163,3 +163,73 @@ fn wasm_builds_declare_the_cdylib_crate_type() {
         "wasm builds require cdylib crate-type to generate JavaScript bindings"
     );
 }
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn wasm_pack_release_profile_disables_wasm_opt() {
+    use std::fs;
+
+    let cargo_toml = fs::read_to_string("Cargo.toml").expect("failed to read Cargo.toml");
+    assert!(
+        cargo_toml.contains("[package.metadata.wasm-pack.profile.release]"),
+        "wasm-pack release profile section must be configured in Cargo.toml"
+    );
+    assert!(
+        cargo_toml.contains("wasm-opt = false"),
+        "wasm-pack must disable wasm-opt optimization for bulk memory compatibility"
+    );
+}
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn window_backend_selector_gates_wasm_correctly() {
+    use std::fs;
+
+    let platform_mod =
+        fs::read_to_string("src/shell/platform/mod.rs").expect("failed to read platform/mod.rs");
+
+    // Verify wasm cfg is present and ordered correctly
+    let wasm_index = platform_mod
+        .find("target_arch = \"wasm32\"")
+        .expect("wasm32 cfg must be defined");
+    let unsupported_index = platform_mod
+        .find("not(any(")
+        .expect("unsupported fallback must be defined");
+
+    assert!(
+        wasm_index < unsupported_index,
+        "wasm backend must be checked before unsupported fallback to ensure wasm32 targets compile"
+    );
+
+    // Verify the path assignment for wasm
+    assert!(
+        platform_mod.contains("#[path = \"wasm.rs\"]\nmod backend;")
+            || platform_mod.contains("#[path = \"wasm.rs\"]\n#["),
+        "wasm.rs must be selected when target_arch = wasm32"
+    );
+
+    // Verify other platforms select their correct backends
+    assert!(
+        platform_mod.contains("target_os = \"macos\""),
+        "macos backend must be defined"
+    );
+    assert!(
+        platform_mod.contains("target_os = \"windows\""),
+        "windows backend must be defined"
+    );
+    assert!(
+        platform_mod
+            .contains("all(unix, not(target_os = \"macos\"), not(target_arch = \"wasm32\"))"),
+        "x11 backend must be selected for unix platforms excluding macos and wasm"
+    );
+
+    // Verify all backends are assigned to the mod named 'backend'
+    let backend_assignments = platform_mod
+        .matches("mod backend;")
+        .collect::<Vec<_>>()
+        .len();
+    assert_eq!(
+        backend_assignments, 5,
+        "exactly 5 backend cfgs should each define 'mod backend;' (wasm, macos, windows, x11, unsupported)"
+    );
+}
