@@ -242,7 +242,7 @@ Once you understand this exemplar, copy it and modify. Here are common next step
    }))
    ```
 
-4. **Connect to the test:** Copy `tests/recipes.rs` line 40–52 as a template for verifying your custom control.
+4. **Connect to the test:** Copy `tests/recipes.rs` line 386 as a template for verifying your custom control.
 
 5. **Explore other controls:** Look at `checkbox`, `switch`, `slider`, `radio` in `tests/recipes.rs`. Each follows the same state-view-handler pattern.
 
