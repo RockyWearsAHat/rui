@@ -49,6 +49,44 @@ pub fn map_pointer_button(button: u16) -> Option<PointerButton> {
     }
 }
 
+/// Filters text input data, removing control characters except tab and newline.
+///
+/// Input events may contain control characters that shouldn't be inserted.
+/// This function keeps printable characters (code >= 32) plus tab (9) and newline (10).
+#[allow(dead_code)]
+pub fn filter_text_input_data(data: &str) -> String {
+    data.chars()
+        .filter(|c| {
+            let code = *c as u32;
+            code >= 32 || *c == '\t' || *c == '\n'
+        })
+        .collect()
+}
+
+/// Normalizes wheel event delta values to pixels with correct sign.
+///
+/// Handles three deltaMode values:
+/// - 0: DOM_DELTA_PIXEL (already in pixels)
+/// - 1: DOM_DELTA_LINE (multiply by standard line height of 16px)
+/// - 2: DOM_DELTA_PAGE (multiply by standard page height of 400px)
+///
+/// The sign is preserved as-is: positive deltaY means scroll down (content moves down),
+/// which is positive in rui's coordinate system.
+#[allow(dead_code)]
+pub fn normalize_wheel_delta(delta_x: f64, delta_y: f64, delta_mode: u32) -> (f32, f32) {
+    const LINE_HEIGHT: f64 = 16.0;
+    const PAGE_HEIGHT: f64 = 400.0;
+
+    let multiplier = match delta_mode {
+        0 => 1.0,         // pixels
+        1 => LINE_HEIGHT, // lines
+        2 => PAGE_HEIGHT, // pages
+        _ => 1.0,         // unknown mode, treat as pixels
+    };
+
+    ((delta_x * multiplier) as f32, (delta_y * multiplier) as f32)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +240,58 @@ mod tests {
                 button
             );
         }
+    }
+
+    #[test]
+    fn simple_character_passes_through() {
+        assert_eq!(filter_text_input_data("a"), "a");
+    }
+
+    #[test]
+    fn multiple_characters_pass_through() {
+        assert_eq!(filter_text_input_data("hello"), "hello");
+    }
+
+    #[test]
+    fn tab_character_is_preserved() {
+        assert_eq!(filter_text_input_data("\t"), "\t");
+    }
+
+    #[test]
+    fn newline_character_is_preserved() {
+        assert_eq!(filter_text_input_data("\n"), "\n");
+    }
+
+    #[test]
+    fn mixed_text_with_tab_and_newline() {
+        assert_eq!(
+            filter_text_input_data("hello\tworld\ntest"),
+            "hello\tworld\ntest"
+        );
+    }
+
+    #[test]
+    fn control_characters_are_filtered() {
+        assert_eq!(filter_text_input_data("\x00\x01\x02"), "");
+    }
+
+    #[test]
+    fn mixed_text_and_control_characters() {
+        assert_eq!(filter_text_input_data("a\x00b\x01c"), "abc");
+    }
+
+    #[test]
+    fn printable_special_characters_pass_through() {
+        assert_eq!(filter_text_input_data("!@#$%^&*()"), "!@#$%^&*()");
+    }
+
+    #[test]
+    fn space_character_passes_through() {
+        assert_eq!(filter_text_input_data(" "), " ");
+    }
+
+    #[test]
+    fn empty_string_remains_empty() {
+        assert_eq!(filter_text_input_data(""), "");
     }
 }
