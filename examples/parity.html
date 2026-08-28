@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rui — backend parity</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0;
+    padding: 24px;
+    font: 13px/1.5 ui-sans-serif, system-ui, sans-serif;
+    background: #f5f5f5;
+    color: #111;
+  }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  p.lede { margin: 0 0 20px; color: #555; max-width: 68ch; }
+  section { margin-bottom: 28px; }
+  h2 { font-size: 13px; margin: 0 0 8px; font-weight: 600; }
+  canvas, img {
+    display: block;
+    border: 1px solid #ccc;
+    background: #fff;
+    width: 480px;
+    height: 320px;
+    image-rendering: pixelated;
+  }
+  .pair { display: flex; gap: 16px; flex-wrap: wrap; }
+  .verdict {
+    font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: pre-wrap;
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fff;
+    max-width: 80ch;
+  }
+  .verdict.pass { border-color: #1a7f37; background: #eaf6ec; color: #0d4d21; }
+  .verdict.fail { border-color: #b42318; background: #fdeceb; color: #7a1710; }
+  .caption { color: #666; margin: 6px 0 0; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>rui — native / browser backend parity</h1>
+<p class="lede">
+  The wasm build presents one frame of <code>rui::demo::reference_frame</code>
+  through the real browser backend (<code>putImageData</code> onto
+  <code>&lt;canvas id="surface"&gt;</code>). Those pixels are read straight back
+  out with <code>getImageData</code> and compared, byte for byte, against the
+  same frame drawn by <code>cargo run -p rui --example parity</code> on this
+  machine. Both sides use the embedded faces, 960&times;640, scale&nbsp;1, and a
+  freshly zeroed <code>Memory</code>, so nothing but the backend differs.
+</p>
+
+<section>
+  <h2>Verdict</h2>
+  <div class="verdict" id="verdict">running…</div>
+</section>
+
+<section>
+  <h2>Light</h2>
+  <div class="pair">
+    <div>
+      <canvas id="surface" width="960" height="640"></canvas>
+      <p class="caption">browser — wasm backend, live</p>
+    </div>
+    <div>
+      <img id="native-light" alt="native light reference">
+      <p class="caption">native — <code>parity-light.png</code></p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Dark</h2>
+  <div class="pair">
+    <div>
+      <canvas id="dark-shot" width="960" height="640"></canvas>
+      <p class="caption">browser — wasm backend, captured</p>
+    </div>
+    <div>
+      <img id="native-dark" alt="native dark reference">
+      <p class="caption">native — <code>parity-dark.png</code></p>
+    </div>
+  </div>
+</section>
+
+<script type="module">
+import init, { present_parity_frame, parity_frame_size } from '/pkg/rui.js';
+
+/// Where `cargo run -p rui --example parity -- target/parity` put its files.
+const REFERENCE = '/target/parity';
+
+const verdict = document.getElementById('verdict');
+const surface = document.getElementById('surface');
+
+/// The `<canvas>` the backend draws into, read back as raw RGBA.
+///
+/// `willReadFrequently` keeps the browser from moving the backing store onto
+/// the GPU, which is what makes a read-back lossy on some drivers.
+function readBack(canvas) {
+  const context = canvas.getContext('2d', { willReadFrequently: true, colorSpace: 'srgb' });
+  return context.getImageData(0, 0, canvas.width, canvas.height).data;
+}
+
+/// The first byte at which two frames disagree, or `null` if they never do.
+///
+/// Reported as a pixel and a channel rather than an offset, because "byte
+/// 1_234_567" says nothing about where on screen the two backends parted ways.
+function firstDifference(mine, theirs, width) {
+  if (mine.length !== theirs.length) {
+    return { kind: 'length', mine: mine.length, theirs: theirs.length };
+  }
+  let differing = 0;
+  let first = null;
+  for (let index = 0; index < mine.length; index += 1) {
+    if (mine[index] !== theirs[index]) {
+      differing += 1;
+      if (first === null) {
+        const pixel = Math.floor(index / 4);
+        first = {
+          kind: 'pixel',
+          x: pixel % width,
+          y: Math.floor(pixel / width),
+          channel: 'RGBA'[index % 4],
+          browser: mine[index],
+          native: theirs[index],
+        };
+      }
+    }
+  }
+  return first === null ? null : { ...first, differing };
+}
+
+async function reference(name) {
+  const response = await fetch(`${REFERENCE}/parity-${name}.rgba`);
+  if (!response.ok) {
+    throw new Error(
+      `${REFERENCE}/parity-${name}.rgba is missing (${response.status}). ` +
+      'Run: cargo run -p rui --example parity -- target/parity'
+    );
+  }
+  return new Uint8ClampedArray(await response.arrayBuffer());
+}
+
+/// Presents one appearance through the backend and compares what landed.
+///
+/// `against` names the reference to hold it to, which is the appearance's own
+/// name for a real check and the *other* one for the control.
+async function check(name, dark, into, against = name) {
+  present_parity_frame(dark);
+  const drawn = readBack(surface);
+
+  // Keep a copy of the dark frame on screen; the live surface is about to be
+  // redrawn light again, and a page with only one of the two on it cannot be
+  // screenshotted as evidence of both.
+  if (into !== surface) {
+    const context = into.getContext('2d');
+    context.putImageData(new ImageData(drawn, surface.width, surface.height), 0, 0);
+  }
+
+  return { name, difference: firstDifference(drawn, await reference(against), surface.width) };
+}
+
+function describe({ name, difference }) {
+  if (difference === null) return `  ${name}: 0 differing bytes`;
+  if (difference.kind === 'length') {
+    return `  ${name}: size mismatch — browser ${difference.mine}, native ${difference.theirs}`;
+  }
+  return (
+    `  ${name}: ${difference.differing} differing bytes; ` +
+    `first at (${difference.x}, ${difference.y}) channel ${difference.channel} — ` +
+    `browser ${difference.browser}, native ${difference.native}`
+  );
+}
+
+function report(size, results, control) {
+  // A comparison that cannot fail proves nothing, and every way this page could
+  // be quietly broken — a reference file served as the wrong thing, a read-back
+  // that answers the frame it was just handed, a loop that exits early — shows
+  // up the same way: as a pass. So the light frame is also held against the
+  // *dark* reference, where a pass is the bug.
+  const controlHeld = control.difference !== null;
+  const failures = results.filter((result) => result.difference !== null);
+  const passed = failures.length === 0 && controlHeld;
+  verdict.className = `verdict ${passed ? 'pass' : 'fail'}`;
+
+  const lines = [
+    `frame ${size[0]}x${size[1]}, ${size[0] * size[1] * 4} bytes per appearance`,
+    ...results.map(describe),
+    controlHeld
+      ? `  control (light vs dark reference): ${control.difference.differing} differing bytes — the diff can fail`
+      : '  control (light vs dark reference): IDENTICAL — this page is not comparing anything',
+  ];
+
+  const headline = passed
+    ? 'PASS — every byte identical.'
+    : controlHeld
+      ? 'FAIL — the two backends drew different frames.'
+      : 'FAIL — the check itself is broken; its verdict means nothing.';
+  verdict.textContent = [headline, ...lines].join('\n');
+}
+
+async function run() {
+  await init();
+
+  const size = parity_frame_size();
+  for (const canvas of [surface, document.getElementById('dark-shot')]) {
+    canvas.width = size[0];
+    canvas.height = size[1];
+  }
+  document.getElementById('native-light').src = `${REFERENCE}/parity-light.png`;
+  document.getElementById('native-dark').src = `${REFERENCE}/parity-dark.png`;
+
+  const dark = await check('dark', true, document.getElementById('dark-shot'));
+  const control = await check('control', false, surface, 'dark');
+  const light = await check('light', false, surface);
+  report(size, [light, dark], control);
+  console.log('[parity]', verdict.textContent.replaceAll('\n', ' | '));
+}
+
+run().catch((error) => {
+  verdict.className = 'verdict fail';
+  verdict.textContent = `FAIL — ${error.message}`;
+  console.error('[parity]', error);
+});
+</script>
+</body>
+</html>

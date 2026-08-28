@@ -1,40 +1,22 @@
 //! The whole of a `rui` program, in a screenful.
 //!
 //! `cargo run -p rui --example counter` opens it.
+//!
+//! State in, description out, and a loop that runs the two: that is the whole
+//! of the shape, and it is all that is left here. The description itself — the
+//! `Counter` and the `El` tree that is a pure function of it — is
+//! [`rui::demo::counter_view`], read it there.
+//!
+//! It lives in the library rather than in this file so that this example and
+//! the browser build in `src/wasm.rs` are not two similar programs but one
+//! program with two drivers. `examples/parity.rs` then draws that same
+//! description to a PNG with no window at all, and `examples/parity.html`
+//! checks — byte for byte — that a browser puts the identical picture on a
+//! `<canvas>`. A copy of the view pasted into each backend would have made that
+//! comparison meaningless the first time one copy was edited.
 
-use rui::{button, col, row, title, El};
-
-/// Everything this program knows.
-struct Counter {
-    count: i32,
-}
-
-/// What should be on screen, given that.
-fn view(counter: &Counter) -> El<Counter> {
-    col((
-        title(format!("{}", counter.count))
-            .text_size(56.0)
-            .bold()
-            .center_text(),
-        row((
-            button("−")
-                .w(56.0)
-                .on_click(|counter: &mut Counter| counter.count -= 1),
-            button("Reset")
-                .w(80.0)
-                .on_click(|counter: &mut Counter| counter.count = 0),
-            button("+")
-                .primary()
-                .w(56.0)
-                .on_click(|counter: &mut Counter| counter.count += 1),
-        ))
-        .gap(8.0),
-    ))
-    .gap(20.0)
-    .pad(32.0)
-    .center()
-}
+use rui::demo::{counter_view, Counter};
 
 fn main() -> Result<(), rui::Error> {
-    rui::run("Counter", Counter { count: 0 }, view)
+    rui::run("Counter", Counter { count: 0 }, counter_view)
 }
