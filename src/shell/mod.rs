@@ -250,7 +250,7 @@ pub(crate) fn run<S>(
                 driver.resize(w, h, s);
                 driver.set_appearance(window.appearance());
                 driver.apply_events(vec![]);
-                driver.step();
+                let _ = driver.step();
                 if driver.pixels_changed() {
                     let _ = window.present(driver.canvas());
                 }
@@ -262,7 +262,7 @@ pub(crate) fn run<S>(
         driver.resize(w, h, s);
         driver.set_appearance(window.appearance());
         driver.apply_events(std::mem::take(&mut events));
-        driver.step();
+        driver.step()?;
         if driver.pixels_changed() {
             window.present(driver.canvas())?;
         }
@@ -290,6 +290,7 @@ pub struct FrameDriver<S> {
     drawn_at: Instant,
     drawn_changed: bool,
     appearance: Appearance,
+    pending_error: Option<Error>,
 }
 
 impl<S: 'static> FrameDriver<S> {
@@ -314,6 +315,7 @@ impl<S: 'static> FrameDriver<S> {
             drawn_at: Instant::now(),
             drawn_changed: false,
             appearance: Appearance::Dark,
+            pending_error: None,
         }
     }
 }
@@ -339,6 +341,7 @@ impl<S> FrameDriver<S> {
             drawn_at: Instant::now(),
             drawn_changed: false,
             appearance: Appearance::Light,
+            pending_error: None,
         }
     }
 
@@ -380,7 +383,14 @@ impl<S> FrameDriver<S> {
     /// the frame to the canvas. The canvas is updated whether or not pixels
     /// changed — use [`Self::has_drawn`] to check if this step's output
     /// differs from the last one.
-    pub fn step(&mut self) {
+    ///
+    /// Returns any pending error from a previous step, preventing errors
+    /// from silently accumulating.
+    pub fn step(&mut self) -> Result<(), Error> {
+        if let Some(error) = self.pending_error.take() {
+            return Err(error);
+        }
+
         let now = Instant::now();
         self.memory
             .begin_frame(now.saturating_duration_since(self.drawn_at));
@@ -403,6 +413,7 @@ impl<S> FrameDriver<S> {
         self.memory.end_frame(&self.input);
 
         self.drawn_changed = true;
+        Ok(())
     }
 
     /// The application's current state.
@@ -458,5 +469,15 @@ impl<S> FrameDriver<S> {
     /// Whether close was requested.
     pub fn close_requested(&self) -> bool {
         self.input.close_requested()
+    }
+
+    /// Sets a pending error to be returned on the next call to `step()`.
+    ///
+    /// Used for testing error recovery paths without requiring actual
+    /// window or drawing failures.
+    pub fn set_pending_error(&mut self, error: Result<(), Error>) {
+        if let Err(e) = error {
+            self.pending_error = Some(e);
+        }
     }
 }
