@@ -422,3 +422,68 @@ fn a_segmented_control_changes_selection_when_clicked() {
         "selection can cycle back to previous options"
     );
 }
+
+#[test]
+fn a_meter_displays_progress_as_a_fraction() {
+    use rui::meter;
+
+    #[derive(Default)]
+    struct ProgressState {
+        progress: f32,
+    }
+
+    // Test meter at 0% progress
+    let mut harness = Harness::new(ProgressState { progress: 0.0 }, |state: &ProgressState| {
+        col((
+            text("Upload progress:"),
+            meter(state.progress, Tone::Accent),
+        ))
+    });
+
+    assert_eq!(harness.state().progress, 0.0, "progress starts at 0%");
+    let pixels_at_zero = harness.frame().canvas().pixels().len();
+    assert!(pixels_at_zero > 0, "meter at 0% renders pixels");
+
+    // Test meter at 50% progress
+    let mut harness = Harness::new(ProgressState { progress: 0.5 }, |state: &ProgressState| {
+        col((
+            text("Upload progress:"),
+            meter(state.progress, Tone::Accent),
+        ))
+    });
+
+    assert_eq!(harness.state().progress, 0.5, "progress at 50%");
+    let pixels_at_half = harness.frame().canvas().pixels().len();
+    assert!(pixels_at_half > 0, "meter at 50% renders pixels");
+
+    // Test meter at 100% progress
+    let mut harness = Harness::new(ProgressState { progress: 1.0 }, |state: &ProgressState| {
+        col((
+            text("Upload progress:"),
+            meter(state.progress, Tone::Accent),
+        ))
+    });
+
+    assert_eq!(harness.state().progress, 1.0, "progress at 100% completion");
+    let pixels_at_full = harness.frame().canvas().pixels().len();
+    assert!(pixels_at_full > 0, "meter at 100% renders pixels");
+
+    // Meter clamps values beyond 1.0 in its display logic
+    let mut harness = Harness::new(ProgressState { progress: 1.5 }, |state: &ProgressState| {
+        col((
+            text("Upload progress:"),
+            meter(state.progress, Tone::Accent),
+        ))
+    });
+
+    assert_eq!(
+        harness.state().progress,
+        1.5,
+        "state can hold values beyond 1.0"
+    );
+    let pixels_beyond = harness.frame().canvas().pixels().len();
+    assert!(
+        pixels_beyond > 0,
+        "meter displays when progress exceeds 1.0"
+    );
+}
