@@ -361,7 +361,7 @@ pub(crate) fn run<S>(
 ///
 /// Used to verify that the frame rendering pipeline can be driven by events
 /// without being tied to a blocking window loop. The same code path that a
-/// [`run`] loop uses is called here with synthetic input, no display, and full
+/// [`crate::run`] loop uses is called here with synthetic input, no display, and full
 /// control over timing.
 pub struct FrameDriver<S> {
     app: App<S>,
