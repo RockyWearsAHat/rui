@@ -118,6 +118,7 @@ pub mod memory;
 pub mod paint;
 pub mod shell;
 pub mod style;
+pub mod syntax;
 pub mod testing;
 pub mod text;
 pub mod theme;
@@ -137,11 +138,12 @@ pub use memory::{Id, Memory, Response};
 pub use paint::{Painter, Visual};
 pub use shell::{Error, LoadedFonts, WindowOptions};
 pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Radius, Style, Tone};
+pub use syntax::Language;
 pub use text::{FontId, Fonts, TextStyle};
 pub use theme::{Appearance, Palette, Status, Theme};
 pub use widgets::{
-    button, caption, code, col, divider, dot, draw, field, field_row, figure, heading, meter,
-    micro, panel, paragraph, row, section, segmented, spacer, tabs, tag, text, title,
+    button, caption, code, code_block, col, divider, dot, draw, field, field_row, figure, heading,
+    meter, micro, panel, paragraph, row, section, segmented, spacer, tabs, tag, text, title,
 };
 
 /// A run of text, formatted.
