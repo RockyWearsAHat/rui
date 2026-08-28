@@ -283,13 +283,60 @@ python3 -m http.server 8731 --bind 127.0.0.1
 ```
 Verifies that the WASM backend renders pixel-for-pixel identical frames to native. Light and dark modes are both tested. A green page indicates zero differing pixels; red indicates differences and their count. This gate confirms the rendering pipeline is truly platform-agnostic.
 
-#### Cross-Module Coordination
+#### Cross-Module Concerns
 
-- **`shell::clock`** abstracts platform time so `shell/mod.rs` does not know or care about `Instant` vs `performance.now()`.
-- **`Backend` trait** (in `shell/mod.rs`) unifies the interface: `open()`, `pump()`, `surface()`, `appearance()`, `present()` work the same for native and WASM. Only the platform-specific implementations differ.
-- **`turn()` function** (line 313+) is the coordination point: it accepts a `Backend` and calls its methods. Both native `run()` (which loops) and WASM `run()` (which returns and relies on callbacks) call the same `turn()`, so a change to the rendering pipeline only needs to be made once.
-- **Event flow:** Native events come from `window.pump()` (a blocking wait on the platform); WASM events come from DOM listeners. Both feed into the same `Input` queue, so the rest of the frame logic is unchanged.
-- **State persistence:** The `Memory` struct (in `src/memory`) tracks hover, focus, scroll, and animation state. The same state machine is used on both platforms; the only difference is how each platform asks for the next frame.
+**Why `shell::clock::Moment` was needed (Instant::now() panics on WASM)**
+
+On desktop, `std::time::Instant::now()` is trivial—it calls the system's clock. On WASM (`wasm32-unknown-unknown`), there is no system clock; `Instant::now()` is compiled from an unsupported platform and panics immediately. The solution is a platform-agnostic `shell::clock::Moment` type (in `src/shell/clock.rs`) that:
+- Returns `Instant` on native (via `std::time::Instant`)
+- Returns milliseconds since page load on WASM (via `web_sys::Performance::now()`)
+- Exposes a unified API: `Moment::now()` and `Moment::since()` that work on both.
+
+Anything that measures elapsed time must use `shell::clock::Moment`, not `Instant` directly. This allows the same frame-stepping logic to work on both platforms.
+
+**How `shell::clock` flows through the frame loop**
+
+`src/shell/mod.rs` imports `shell::clock::Moment` (line 58) and uses it in two places:
+1. `Surface::drawn_at` (line 61+): Stores the time the previous frame was drawn as a `Moment`.
+2. `Surface::draw()` (line 265): Calls `Moment::now()` to get the current time, then `self.memory.begin_frame(now.since(self.drawn_at))` to measure elapsed time for animations.
+
+Both desktop `run()` and WASM `run()` call the same `Surface::draw()`, so both measure time correctly without additional logic.
+
+**Why the generic `turn()` loop works for both backends**
+
+The key abstraction is the `Backend` trait (lines 68-88 in `src/shell/mod.rs`):
+```rust
+pub trait Backend {
+    fn open(options: &WindowOptions) -> Result<Self, Error>;
+    fn pump(&mut self, wait: Duration, events: &mut Vec<Event>, redraw: &mut dyn FnMut(&Self));
+    fn surface(&self) -> (u32, u32, f32); // width, height, scale
+    fn appearance(&self) -> Appearance;
+    fn present(&mut self, canvas: &Canvas) -> Result<(), Error>;
+    fn is_open(&self) -> bool;
+}
+```
+
+The `turn()` function (line 313+) accepts a `Backend` and calls only these six methods. It does not know or care whether the backend is native, WASM, or something else:
+- Native `run()` (line 380): Loops calling `turn()` with a native `Backend`.
+- WASM `run()` (line 413): Registers a callback that calls `turn()` with a WASM `Backend`.
+
+Both drivers call identical frame logic; the only difference is how they schedule the next frame.
+
+**Coordination points: How modules communicate**
+
+1. **`shell/clock.rs` ↔ `shell/mod.rs`:** `Surface::draw()` measures time via `shell::clock::Moment::now()` and `since()`. This abstraction hides platform differences.
+
+2. **`Backend` trait ↔ `turn()` function:** `turn()` is the central coordination point. It accepts any `Backend` and calls the six-method interface. Both native and WASM platforms implement `Backend`; the rendering pipeline above it is unified.
+
+3. **Event flow:** Native `Backend` collects events from `window.pump()` (blocking wait on platform); WASM `Backend` collects from DOM listeners. Both feed `Vec<Event>` into `surface.draw()`, which passes them to the view function. The `Input` module (in `src/input`) enqueues events; the same state machine processes them on both platforms.
+
+4. **State persistence:** `Memory` (in `src/memory`) holds hover, focus, scroll, animation, and caret state. This is queried by the frame-stepping logic in both desktop and browser loops. A change to how state is animated or persisted only needs to be coded once.
+
+5. **Platform initialization:** `App::run()` (in `src/app.rs`) is generic over the state type `S`. It calls `shell::run()`, which has two implementations:
+   - `#[cfg(not(target_arch = "wasm32"))]`: Native loop with blocking event wait
+   - `#[cfg(target_arch = "wasm32")]`: Callback-based loop with `requestAnimationFrame`
+
+The view function and all frame logic are shared between both.
 
 ## Workflow Notes
 
