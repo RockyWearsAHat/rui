@@ -1,8 +1,8 @@
 //! Tests for WASM event handling, particularly pointer events with button mapping.
 #![cfg(target_arch = "wasm32")]
 
-use rui::input::PointerButton;
-use rui::shell::event_mapping::map_pointer_button;
+use rui::input::{Key, PointerButton};
+use rui::shell::event_mapping::{map_keyboard_code_to_key, map_pointer_button};
 
 #[wasm_bindgen_test::wasm_bindgen_test]
 fn test_wasm_pointer_button_mapping() {
@@ -29,5 +29,27 @@ fn test_wasm_pointer_button_mapping() {
         map_pointer_button(2),
         Some(PointerButton::Secondary),
         "DOM button 2 (right) should map to PointerButton::Secondary"
+    );
+}
+
+#[wasm_bindgen_test::wasm_bindgen_test]
+fn test_wasm_keyboard_events() {
+    // Test keyboard code mapping for common keys
+    assert_eq!(
+        map_keyboard_code_to_key("KeyA"),
+        Some(Key::Character('a')),
+        "KeyA should map to Character('a')"
+    );
+
+    assert_eq!(
+        map_keyboard_code_to_key("Enter"),
+        Some(Key::Enter),
+        "Enter should map to Key::Enter"
+    );
+
+    assert_eq!(
+        map_keyboard_code_to_key("Shift"),
+        None,
+        "Shift key code should not map (modifiers are handled separately)"
     );
 }
