@@ -292,10 +292,22 @@ impl Backend for Window {
         _redraw: &mut dyn FnMut(&Self),
     ) -> Result<(), Error> {
         // Nothing is waited for: a page's one thread may never block, so the
-        // timeout is a promise to come back rather than a promise to sleep, and
-        // whatever the listeners caught before now is the whole of this frame's
-        // input.
-        events.append(&mut self.event_queue.borrow_mut());
+        // timeout is a promise to come back rather than a promise to sleep.
+        //
+        // What the listeners caught is not all handed over at once, though. A
+        // frame folds the events it is given into a single `Input`, so a second
+        // press and release in the same batch overwrites the first and that
+        // click is silently lost. A native loop never risks it, because it
+        // wakes on each event; a frame loop does, because the queue keeps
+        // filling between frames and a hidden tab is given no frames at all. So
+        // a batch ends at the release that completes a click and the rest waits
+        // — the next frame is a sixtieth of a second away, and asks again.
+        let mut queued = self.event_queue.borrow_mut();
+        let cut = queued
+            .iter()
+            .position(|event| matches!(event, Event::PointerUp { .. }))
+            .map_or(queued.len(), |release| release + 1);
+        events.extend(queued.drain(..cut));
         Ok(())
     }
 
