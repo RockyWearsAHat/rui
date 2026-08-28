@@ -10,6 +10,7 @@
 //! into it goes through `wasm-bindgen`, which is safe on both sides.
 
 use crate::geom::Point;
+use crate::input::Modifiers;
 use crate::shell::event_mapping;
 use crate::theme::Appearance;
 use crate::{Canvas, Event};
@@ -58,6 +59,16 @@ pub(crate) struct Window {
 /// Turns a JavaScript exception into the error the shell speaks.
 fn platform(what: &str) -> impl FnOnce(wasm_bindgen::JsValue) -> Error + '_ {
     move |error| Error::Platform(format!("{what}: {error:?}"))
+}
+
+/// Extracts modifier state from a KeyboardEvent.
+fn extract_modifiers(event: &web_sys::KeyboardEvent) -> Modifiers {
+    Modifiers {
+        shift: event.shift_key(),
+        control: event.ctrl_key(),
+        alt: event.alt_key(),
+        command: event.meta_key(),
+    }
 }
 
 /// Puts listeners on `surface` for pointer and keyboard events, each pushing to `queue`.
@@ -123,6 +134,40 @@ fn listeners(
         surface
             .add_event_listener_with_callback("mouseup", listener.as_ref().unchecked_ref())
             .map_err(platform("mouseup"))?;
+        all_listeners.push(listener);
+    }
+
+    // Keyboard down events: extract key and modifiers
+    {
+        let queue = Rc::clone(queue);
+        let listener = Listener::new(move |event: web_sys::Event| {
+            if let Ok(keyboard_event) = event.dyn_into::<web_sys::KeyboardEvent>() {
+                if let Some(key) = event_mapping::map_keyboard_code_to_key(&keyboard_event.code()) {
+                    let modifiers = extract_modifiers(&keyboard_event);
+                    queue.borrow_mut().push(Event::KeyDown { key, modifiers });
+                }
+            }
+        });
+        surface
+            .add_event_listener_with_callback("keydown", listener.as_ref().unchecked_ref())
+            .map_err(platform("keydown"))?;
+        all_listeners.push(listener);
+    }
+
+    // Keyboard up events: extract key and modifiers
+    {
+        let queue = Rc::clone(queue);
+        let listener = Listener::new(move |event: web_sys::Event| {
+            if let Ok(keyboard_event) = event.dyn_into::<web_sys::KeyboardEvent>() {
+                if let Some(key) = event_mapping::map_keyboard_code_to_key(&keyboard_event.code()) {
+                    let modifiers = extract_modifiers(&keyboard_event);
+                    queue.borrow_mut().push(Event::KeyUp { key, modifiers });
+                }
+            }
+        });
+        surface
+            .add_event_listener_with_callback("keyup", listener.as_ref().unchecked_ref())
+            .map_err(platform("keyup"))?;
         all_listeners.push(listener);
     }
 
