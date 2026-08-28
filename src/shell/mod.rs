@@ -480,4 +480,11 @@ impl<S> FrameDriver<S> {
             self.pending_error = Some(e);
         }
     }
+
+    /// The current frame count from memory.
+    ///
+    /// Increments each frame; used to verify memory persists across redraws.
+    pub fn frame_count(&self) -> u64 {
+        self.memory.frame_count()
+    }
 }
