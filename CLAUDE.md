@@ -157,31 +157,34 @@ The synthetic font ensures widths are arithmetic (half an em per character). Ani
 
 ### Segmented Control Exemplar
 
-The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough (26 lines) to copy and modify immediately:
+The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough (26 lines) to copy and modify immediately. Run `cargo run -p rui --example segmented` to see it in action.
 
 **State:**
 ```rust
-#[derive(Clone, Copy, PartialEq)]
-enum Size { Small, Medium, Large }
-
 struct App {
-    size: Size,
+    selected: usize,  // index of the choice
 }
 ```
 
 **View:**
 ```rust
 fn view(app: &App) -> El<App> {
-    widgets::segmented(
-        vec!["Small", "Medium", "Large"],
-        vec![Size::Small, Size::Medium, Size::Large],
-        Some(app.size),
-        |app: &mut App, choice| app.size = choice,
-    )
+    let choices = ["Small", "Medium", "Large"];
+    
+    col((
+        text("Pick a size:"),
+        widgets::segmented(
+            &choices,
+            app.selected,
+            |app: &mut App, index| {
+                app.selected = index;
+            },
+        ),
+    ))
 }
 ```
 
-This widget is built from primitives (`row`, `on_click`, `Painter`); see `src/widgets.rs` line 333–365 for the implementation. To modify: change the label text, add more choices, or style with `.pad()` / `.fill()`. See `tests/recipes.rs` for a full test example.
+This widget is built from primitives (`row`, `on_click`, `Painter`); see `src/widgets.rs` line 333–365 for the implementation. To modify: change the label text, adjust styling with `.pad()` / `.fill()`, or copy to create a new control. See `examples/segmented.rs` for a complete runnable example and `tests/recipes.rs` for integration tests.
 
 ### Building Custom Controls
 
