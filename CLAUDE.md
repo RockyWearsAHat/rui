@@ -600,6 +600,102 @@ Adding a new backend (e.g., native Wayland, or a game engine) follows the same p
 
 The pattern holds: add a platform module implementing `Backend`, wire it into the selector, add a `run()` that calls `turn()`, verify with parity tests. Everything above `Backend` is unchanged.
 
+### Recipe 2: Add a New Widget
+
+**Commits:** 1 per verification gate; typically 3–5 total.
+
+A widget is a function that builds an `El<S>` from application state and wires handlers to mutate it. The simplest widgets (like `meter`) are passive display; more complex ones (like `segmented`) handle clicks or drags. Both follow the same pattern: state → view → handlers.
+
+**Files Touched:**
+- `src/widgets.rs`: Define the widget function
+- `tests/recipes.rs`: Add a test using `Harness`
+- `examples/` (optional): Add a standalone example
+
+**Steps in Order:**
+
+1. **Decide on state and appearance** — What does the widget display? What user interaction does it need? (e.g., "a choice between options" → state is `selected: usize`)
+
+2. **Write the widget function in `src/widgets.rs`** — Build an `El<S>` from primitives. Use `draw()` for custom shapes, `row()`/`col()` for layout, `.on_click()` / `.on_drag()` for handlers. No closures; handlers receive `&mut S`.
+
+3. **Add a test in `tests/recipes.rs`** — Use `Harness::new(state, view)` to drive the widget with no window. Call `harness.click_text()` or other interactions and assert state changed as expected.
+
+4. **Verify `cargo test --test recipes -- widget_name` passes** — The test proves the widget responds to input and updates state correctly.
+
+5. **Run an example to confirm visually** — If interactive, add a minimal example in `examples/` or use the counter example with your widget in the view.
+
+**Verification Gates:**
+
+- `cargo test --test recipes -- widget_name` passes
+- `cargo build` succeeds with no warnings
+- Widget renders at all state values (test 0%, 50%, 100% for progress; all options for choice)
+
+**How the Pattern Scales:**
+
+- **Simple, passive (like `meter`):** Just draw; no handlers. State flows in, pixels flow out.
+- **Interactive (like `segmented`):** Add `.on_click()` handlers. Handler closures take `&mut S` and mutate state. Handlers run *after* the frame is drawn, so no re-entrancy.
+- **Complex (like `tabs`):** Combine layout (`row` of buttons), styling (highlight current), and handlers (call user's choice callback). Still built from primitives; no special support needed.
+
+**Cross-Module Coordination:**
+
+If your widget uses `draw()`, it needs `Painter` (from `paint::Painter`) to fill shapes and stroke outlines. The painter is stateful: colors are looked up via `painter.color(tone)` to respect themes (light/dark). If your widget has text, inherit `text_size` and `color` from the parent—these flow automatically to children. If your widget has interactive state (hover, focus, caret), it lives in `memory::Memory`, keyed by element identity; preserve element identity across frame rebuilds with `.key()` for reordered lists.
+
+#### End-to-End Example: Building a Custom Widget
+
+Here's how to add a new widget following Recipe 2:
+
+**1. Choose state and appearance:**
+Suppose you want a `star_rating` widget: display 1–5 stars, clickable to set the rating.
+
+```rust
+struct App {
+    rating: usize,  // 0..=5
+}
+```
+
+**2. Write the function in `src/widgets.rs`:**
+```rust
+pub fn star_rating<S: 'static>(
+    rating: usize,
+    set_rating: impl Fn(&mut S, usize) + Copy + 'static,
+) -> El<S> {
+    row((1..=5).map(|i| {
+        let filled = i <= rating;
+        draw(Size::new(16.0, 16.0), move |painter: &mut Painter<'_>, rect: Rect| {
+            let color = if filled { Tone::Accent } else { Tone::Muted };
+            painter.fill(rect, Radius::None, painter.color(color));
+        })
+        .key(format!("star-{}", i))
+        .on_click(move |state: &mut S| set_rating(state, i))
+    }).collect::<Vec<_>>())
+    .gap(4.0)
+}
+```
+
+**3. Add a test in `tests/recipes.rs`:**
+```rust
+#[test]
+fn a_star_rating_updates_when_clicked() {
+    let mut harness = Harness::new(App { rating: 0 }, |app: &App| {
+        col(star_rating(app.rating, |app: &mut App, r| app.rating = r))
+    });
+    harness.click_at(Point::new(48.0, 8.0)); // Click the 4th star
+    assert_eq!(harness.state().rating, 4);
+}
+```
+
+**4. Run `cargo test --test recipes -- star_rating`** — Test passes ✓
+
+**5. Verify visually** (optional):
+Add to your view function or the counter example:
+```rust
+col((
+    text("Rate this:"),
+    star_rating(app.rating, |app: &mut App, r| app.rating = r),
+))
+```
+
+Done. The widget is ready to use anywhere state is a Rust struct with a `rating` field.
+
 ## Workflow Notes
 
 - **Unsafe code:** Confined to `shell/platform/*.rs` (one file per OS). Everything above that—elements, layout, rendering, fonts—is safe Rust.
