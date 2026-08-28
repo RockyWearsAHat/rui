@@ -46,6 +46,7 @@ mod platform;
 
 use crate::app::App;
 use crate::canvas::Canvas;
+use crate::element::El;
 use crate::font::FontError;
 use crate::input::{Event, Input};
 use crate::memory::Memory;
@@ -354,4 +355,91 @@ pub(crate) fn run<S>(
         }
     }
     Ok(())
+}
+
+/// Drives a frame loop one step at a time, without a window or platform backend.
+///
+/// Used to verify that the frame rendering pipeline can be driven by events
+/// without being tied to a blocking window loop. The same code path that a
+/// [`run`] loop uses is called here with synthetic input, no display, and full
+/// control over timing.
+pub struct FrameDriver<S> {
+    app: App<S>,
+    fonts: LoadedFonts,
+    canvas: Canvas,
+    memory: Memory,
+    input: Input,
+    drawn_at: Instant,
+    drawn_changed: bool,
+}
+
+impl<S: 'static> FrameDriver<S> {
+    /// A frame driver showing `state`, described by `view`.
+    ///
+    /// Draws at 800×600 logical units, scale 1.0, with the test font.
+    pub fn new(state: S, view: impl Fn(&S) -> El<S> + 'static) -> Self {
+        const WIDTH: u32 = 800;
+        const HEIGHT: u32 = 600;
+        const SCALE: f32 = 1.0;
+
+        let app = App::new("test", state, view);
+        let fonts = crate::testing::test_fonts();
+
+        Self {
+            app,
+            canvas: Canvas::new(WIDTH, HEIGHT, SCALE),
+            memory: Memory::new(),
+            input: Input::new(),
+            fonts,
+            drawn_at: Instant::now(),
+            drawn_changed: false,
+        }
+    }
+
+    /// Draws one frame with the accumulated input and animations.
+    ///
+    /// Applies all changes from event handlers to the state, and presents
+    /// the frame to the canvas. The canvas is updated whether or not pixels
+    /// changed — use [`Self::has_drawn`] to check if this step's output
+    /// differs from the last one.
+    pub fn step(&mut self) {
+        let now = Instant::now();
+        self.memory
+            .begin_frame(now.saturating_duration_since(self.drawn_at));
+        self.drawn_at = now;
+
+        self.input.begin_frame();
+
+        self.fonts.fonts.set_scale(self.canvas.scale());
+        let theme = Theme::new(
+            crate::theme::Appearance::Dark,
+            self.fonts.ui_font,
+            self.fonts.mono_font,
+        );
+        self.canvas
+            .clear_vertical(theme.palette.background, theme.palette.background_deep);
+
+        self.app.frame(
+            &mut self.canvas,
+            &self.fonts.fonts,
+            &self.input,
+            &mut self.memory,
+            &theme,
+        );
+        self.memory.end_frame(&self.input);
+
+        self.drawn_changed = true;
+    }
+
+    /// The application's current state.
+    pub fn state(&self) -> &S {
+        self.app.state()
+    }
+
+    /// Whether a frame was drawn since this was last called.
+    pub fn has_drawn(&mut self) -> bool {
+        let changed = self.drawn_changed;
+        self.drawn_changed = false;
+        changed
+    }
 }
