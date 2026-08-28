@@ -26,6 +26,8 @@ pub enum TokenType {
     String,
     /// Comments
     Comment,
+    /// Number literals
+    Number,
     /// Everything else
     Other,
 }
@@ -37,6 +39,7 @@ impl TokenType {
             TokenType::Keyword => Tone::Accent,
             TokenType::String => Tone::Accent, // Can be customized
             TokenType::Comment => Tone::Muted,
+            TokenType::Number => Tone::Accent,
             TokenType::Other => Tone::Text,
         }
     }
@@ -322,4 +325,19 @@ fn basic_tokenize(code: &str, keywords: &[&str]) -> Vec<Token> {
     }
 
     tokens
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn number_variant_exists() {
+        let _ = TokenType::Number;
+    }
+
+    #[test]
+    fn number_tone_is_accent() {
+        assert_eq!(TokenType::Number.tone(), Tone::Accent);
+    }
 }
