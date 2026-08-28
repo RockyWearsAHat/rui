@@ -29,6 +29,7 @@ web-sys = { version = "0.3", features = [
     "CanvasRenderingContext2d",
     "console",
     "Document",
+    "DomRect",
     "Element",
     "Event",
     "EventTarget",
