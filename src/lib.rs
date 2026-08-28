@@ -108,6 +108,7 @@
 pub mod app;
 pub mod canvas;
 pub mod color;
+pub mod demo;
 pub mod element;
 pub mod font;
 pub mod geom;

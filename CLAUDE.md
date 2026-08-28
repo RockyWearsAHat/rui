@@ -31,6 +31,14 @@ cargo run -p rui --example counter               # Interactive counter app
 cargo run -p rui --example controls              # Control showcase with checkbox, slider, etc.
 cargo run -p rui --example gallery -- .          # Render every UI element to PNG (no window)
 
+# Native / browser backend parity — that both draw the identical frame
+cargo build --target wasm32-unknown-unknown -p rui --example counter
+wasm-pack build --target web --release --out-dir pkg   # the wasm-bindgen glue
+cargo run -p rui --example parity -- target/parity     # the native reference frame
+python3 -m http.server 8731 --bind 127.0.0.1           # then open:
+#   http://127.0.0.1:8731/examples/parity.html         # verdict is on the page
+wasm-pack test --headless --firefox --test wasm_integration  # the CI-able half
+
 # Test
 cargo test                                       # Run all tests
 cargo test --test setup                          # Verify Rust version and pre-commit hook
@@ -59,6 +67,7 @@ cargo doc --no-deps --open                       # Generate and open docs
 | `canvas` | Pixel buffer and rasteriser; `Canvas::draw` is the root drawing operation. |
 | `font` & `text` | TrueType parser, glyph rasterising, text layout with kerning/ligatures. `FontId` indexes loaded fonts. |
 | `color` | RGB(A) colors and sRGB gamma handling. |
+| `demo` | The counter, in one place. `examples/counter.rs`, `src/wasm.rs`, and `examples/parity.rs` all drive this one description, which is what makes "every backend draws the identical frame" checkable rather than merely claimed. |
 | `geom` | Primitives: `Rect`, `Point`, `Size`, `Insets`. |
 | `image` | PNG encoder for rendering to files (used by `gallery` example). |
 | `shell` | Platform window management: macOS/Windows/X11 backends implement `Backend` trait. Event loop lives here. |
