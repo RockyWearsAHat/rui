@@ -12,6 +12,7 @@
 use crate::geom::Point;
 use crate::input::Modifiers;
 use crate::shell::event_mapping;
+use crate::shell::pixel_conversion::convert_pixels_to_rgba;
 use crate::theme::Appearance;
 use crate::{Canvas, Event};
 use std::cell::RefCell;
@@ -261,18 +262,7 @@ impl Backend for Window {
             return Ok(());
         }
 
-        // `Canvas` holds one packed `u32` per pixel, which little-endian memory
-        // reads back as b, g, r, a. `ImageData` wants r, g, b, a, so the bytes
-        // are unpacked from the word rather than read out of it — the same
-        // arithmetic on either endianness, and the only per-pixel work the
-        // browser backend does that the native ones do not.
-        let mut rgba = Vec::with_capacity(canvas.pixels().len() * 4);
-        for &pixel in canvas.pixels() {
-            rgba.push((pixel >> 16) as u8);
-            rgba.push((pixel >> 8) as u8);
-            rgba.push(pixel as u8);
-            rgba.push((pixel >> 24) as u8);
-        }
+        let rgba = convert_pixels_to_rgba(canvas.pixels());
 
         let image = web_sys::ImageData::new_with_u8_clamped_array_and_sh(
             Clamped(&rgba),
