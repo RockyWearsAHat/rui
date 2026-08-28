@@ -23,3 +23,24 @@ fn stepping_one_frame() {
         "state should be unchanged after first step"
     );
 }
+
+#[test]
+fn frame_driver_with_events_and_resize() {
+    let mut driver = FrameDriver::new(Counter { count: 0 }, counter_view);
+
+    // Initial step
+    driver.step();
+    assert!(driver.has_drawn());
+
+    // Resize should work
+    driver.resize(1024, 768, 1.0);
+    driver.step();
+    assert!(driver.has_drawn());
+
+    // Apply events (empty for now)
+    driver.apply_events(vec![]);
+    driver.step();
+
+    // is_animating should work
+    let _ = driver.is_animating();
+}
