@@ -61,13 +61,13 @@ pub fn present_counter() {
 /// Called by JavaScript before each `present_counter` to apply user input.
 #[wasm_bindgen]
 pub fn listen_counter() {
-    if let Ok(events) = shell::listen() {
-        COUNTER_DRIVER.with(|driver| {
-            if let Some(d) = driver.borrow_mut().as_mut() {
+    COUNTER_DRIVER.with(|driver| {
+        if let Some(d) = driver.borrow_mut().as_mut() {
+            if let Ok(events) = d.collect_events() {
                 d.apply_events(events);
             }
-        })
-    }
+        }
+    })
 }
 
 /// Get the current frame count of the counter app's memory.
