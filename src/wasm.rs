@@ -12,52 +12,28 @@
 use crate::demo::{self, Counter};
 use crate::shell;
 use crate::theme::Appearance;
-use crate::{App, Canvas};
+use crate::FrameDriver;
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 
 thread_local! {
-    static COUNTER_APP: RefCell<Option<CounterApp>> = const { RefCell::new(None) };
-}
-
-/// The counter app wrapper for wasm, holding app state and rendering surfaces.
-pub struct CounterApp {
-    app: App<Counter>,
-    canvas: Canvas,
-    fonts: crate::LoadedFonts,
-    memory: crate::Memory,
-}
-
-impl CounterApp {
-    /// Create a new counter app with default window size.
-    pub fn new() -> Self {
-        let app = demo::counter_app();
-        let fonts = shell::load_system_fonts().expect("fonts should load in wasm");
-
-        // Default wasm canvas size (960x640, same as default WindowOptions)
-        let canvas = Canvas::new(demo::REFERENCE_WIDTH, demo::REFERENCE_HEIGHT, 1.0);
-        let memory = crate::Memory::new();
-
-        Self {
-            app,
-            canvas,
-            fonts,
-            memory,
-        }
-    }
-}
-
-impl Default for CounterApp {
-    fn default() -> Self {
-        Self::new()
-    }
+    static COUNTER_DRIVER: RefCell<Option<FrameDriver<Counter>>> = const { RefCell::new(None) };
 }
 
 /// Initialize the counter app and store it for use by present/listen.
 #[wasm_bindgen]
 pub fn init_counter() -> i32 {
-    COUNTER_APP.with(|app| {
-        *app.borrow_mut() = Some(CounterApp::new());
+    COUNTER_DRIVER.with(|driver| {
+        let app = demo::counter_app();
+        let fonts = shell::load_system_fonts().expect("fonts should load in wasm");
+        let frame_driver = FrameDriver::from_parts(
+            app,
+            fonts,
+            demo::REFERENCE_WIDTH,
+            demo::REFERENCE_HEIGHT,
+            1.0,
+        );
+        *driver.borrow_mut() = Some(frame_driver);
     });
     0
 }
@@ -67,17 +43,15 @@ pub fn init_counter() -> i32 {
 /// Called by JavaScript after events have been collected via `listen_counter`.
 #[wasm_bindgen]
 pub fn present_counter() {
-    COUNTER_APP.with(|app| {
-        let mut app_borrow = app.borrow_mut();
-        if let Some(app) = app_borrow.as_mut() {
+    COUNTER_DRIVER.with(|driver| {
+        let mut driver_borrow = driver.borrow_mut();
+        if let Some(driver) = driver_borrow.as_mut() {
             let appearance = shell::get_appearance();
-
-            // Draw the app into the canvas
-            app.app
-                .draw_into(&mut app.canvas, &mut app.fonts, appearance, &mut app.memory);
-
-            // Present the canvas to the browser
-            let _ = shell::present(&app.canvas);
+            driver.set_appearance(appearance);
+            let _ = driver.step();
+            if driver.pixels_changed() {
+                let _ = shell::present(driver.canvas());
+            }
         }
     })
 }
@@ -87,7 +61,13 @@ pub fn present_counter() {
 /// Called by JavaScript before each `present_counter` to apply user input.
 #[wasm_bindgen]
 pub fn listen_counter() {
-    let _ = shell::listen();
+    if let Ok(events) = shell::listen() {
+        COUNTER_DRIVER.with(|driver| {
+            if let Some(d) = driver.borrow_mut().as_mut() {
+                d.apply_events(events);
+            }
+        })
+    }
 }
 
 /// Get the current frame count of the counter app's memory.
@@ -98,10 +78,10 @@ pub fn listen_counter() {
 /// reallocated fresh each frame, the counter would reset to 1 each time.
 #[wasm_bindgen]
 pub fn counter_frame_count() -> u64 {
-    COUNTER_APP.with(|app| {
-        let app_borrow = app.borrow();
-        if let Some(app) = app_borrow.as_ref() {
-            app.memory.frame_count()
+    COUNTER_DRIVER.with(|driver| {
+        let driver_borrow = driver.borrow();
+        if let Some(d) = driver_borrow.as_ref() {
+            d.frame_count()
         } else {
             0
         }
