@@ -57,14 +57,66 @@ fn test_wasm_keyboard_events() {
 #[wasm_bindgen_test::wasm_bindgen_test]
 fn test_wasm_text_input_event() {
     // Test that plain text characters are accepted and control characters are filtered
-    use rui::input::Event;
+    use rui::shell::event_mapping::filter_text_input_data;
 
     // Verify that a simple character produces Event::Text
-    let text = "a";
-    let event = Event::Text(text.to_string());
     assert_eq!(
-        event,
-        Event::Text("a".to_string()),
-        "Simple character should produce Event::Text"
+        filter_text_input_data("a"),
+        "a",
+        "Simple character should pass through"
     );
+
+    // Verify that control characters are filtered
+    assert_eq!(
+        filter_text_input_data("a\x00b"),
+        "ab",
+        "Control characters should be filtered"
+    );
+
+    // Verify tab is preserved
+    assert_eq!(
+        filter_text_input_data("a\tb"),
+        "a\tb",
+        "Tab should be preserved"
+    );
+
+    // Verify newline is preserved
+    assert_eq!(
+        filter_text_input_data("a\nb"),
+        "a\nb",
+        "Newline should be preserved"
+    );
+}
+
+#[wasm_bindgen_test::wasm_bindgen_test]
+fn test_wasm_scroll_events() {
+    use rui::shell::event_mapping::normalize_wheel_delta;
+
+    // Test that positive wheel deltaY (scroll down) produces positive y scroll
+    // W3C spec: positive deltaY = wheel moved away from user = content scrolls down
+    let (_x, y) = normalize_wheel_delta(0.0, 100.0, 0);
+    assert!(y > 0.0, "positive deltaY should produce positive scroll");
+
+    // Test that negative wheel deltaY (scroll up) produces negative y scroll
+    let (_x, y) = normalize_wheel_delta(0.0, -100.0, 0);
+    assert!(y < 0.0, "negative deltaY should produce negative scroll");
+
+    // Test that deltaMode 1 (lines) is normalized to pixels
+    let (_x, y) = normalize_wheel_delta(0.0, 1.0, 1);
+    assert!(
+        y > 0.0,
+        "line mode should produce positive scroll for positive delta"
+    );
+
+    // Test that deltaMode 2 (pages) is normalized to pixels
+    let (_x, y) = normalize_wheel_delta(0.0, 1.0, 2);
+    assert!(
+        y > 0.0,
+        "page mode should produce positive scroll for positive delta"
+    );
+
+    // Test horizontal scroll
+    let (x, y) = normalize_wheel_delta(50.0, 0.0, 0);
+    assert!(x > 0.0, "positive deltaX should produce positive x scroll");
+    assert_eq!(y, 0.0, "deltaY should be zero");
 }

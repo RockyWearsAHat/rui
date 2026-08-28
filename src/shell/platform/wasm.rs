@@ -177,13 +177,7 @@ fn listeners(
         let listener = Listener::new(move |event: web_sys::Event| {
             if let Ok(input_event) = event.dyn_into::<web_sys::InputEvent>() {
                 if let Some(data) = input_event.data() {
-                    let filtered: String = data
-                        .chars()
-                        .filter(|c| {
-                            let code = *c as u32;
-                            code >= 32 || *c == '\t' || *c == '\n'
-                        })
-                        .collect();
+                    let filtered = super::super::event_mapping::filter_text_input_data(&data);
                     if !filtered.is_empty() {
                         queue.borrow_mut().push(Event::Text(filtered));
                     }
@@ -193,6 +187,25 @@ fn listeners(
         surface
             .add_event_listener_with_callback("textinput", listener.as_ref().unchecked_ref())
             .map_err(platform("textinput"))?;
+        all_listeners.push(listener);
+    }
+
+    // Scroll wheel events: extract deltaX, deltaY, deltaMode
+    {
+        let queue = Rc::clone(queue);
+        let listener = Listener::new(move |event: web_sys::Event| {
+            if let Ok(wheel_event) = event.dyn_into::<web_sys::WheelEvent>() {
+                let (x, y) = event_mapping::normalize_wheel_delta(
+                    wheel_event.delta_x(),
+                    wheel_event.delta_y(),
+                    wheel_event.delta_mode(),
+                );
+                queue.borrow_mut().push(Event::Scrolled { x, y });
+            }
+        });
+        surface
+            .add_event_listener_with_callback("wheel", listener.as_ref().unchecked_ref())
+            .map_err(platform("wheel"))?;
         all_listeners.push(listener);
     }
 
