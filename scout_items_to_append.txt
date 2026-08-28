@@ -1,0 +1,5 @@
+- [ ] Document Recipe 2: X11 Backend — Reverse-engineer the commits that implemented the X11 backend from git history, document them in CLAUDE.md using the same structure as Recipe 1 (phases, file sequences, verification gates, cross-module coordination). This proves the "Template for the Next Backend" is correct and actionable. Verification: All referenced commits exist, all files mentioned exist, `cargo build` and `cargo test --lib` pass.
+
+- [ ] Document Recipe 3: Custom Control (Checkbox) — Document the checkbox implementation from tests/recipes.rs as a recipe in CLAUDE.md with the same structure as Recipe 1 (define state, build element tree, handle events, verify output with phases and verification gates). Verification: Recipe structure matches Recipe 1, `cargo test --test recipes -- --nocapture` passes.
+
+- [ ] Extend recipe verification tooling — Update verify_recipes.sh to check Recipe 2 and Recipe 3 when they're documented. Add checks for control recipes alongside backend recipes. Verification: Script runs without errors, all checks pass for each documented recipe.
