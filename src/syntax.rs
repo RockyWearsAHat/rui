@@ -136,6 +136,40 @@ fn tokenize_rust(code: &str) -> Vec<Token> {
                 ty: TokenType::String,
             });
         }
+        // Handle numbers (including hex, binary, floats, and Rust underscore separators)
+        else if ch.is_numeric() {
+            if !current.is_empty() {
+                let ty = if keywords.contains(&current.as_str()) {
+                    TokenType::Keyword
+                } else {
+                    TokenType::Other
+                };
+                tokens.push(Token {
+                    text: current.clone(),
+                    ty,
+                });
+                current.clear();
+            }
+
+            let mut number = String::new();
+            while let Some(&c) = chars.peek() {
+                if c.is_numeric()
+                    || c == '_'
+                    || c == '.'
+                    || ((number == "0" || number.ends_with('0')) && (c == 'x' || c == 'b'))
+                {
+                    number.push(c);
+                    chars.next();
+                } else {
+                    break;
+                }
+            }
+
+            tokens.push(Token {
+                text: number,
+                ty: TokenType::Number,
+            });
+        }
         // Handle identifiers and keywords
         else if ch.is_alphabetic() || ch == '_' {
             current.push(ch);
@@ -285,6 +319,34 @@ fn basic_tokenize(code: &str, keywords: &[&str]) -> Vec<Token> {
                 text: comment,
                 ty: TokenType::Comment,
             });
+        } else if ch.is_numeric() {
+            if !current.is_empty() {
+                let ty = if keywords.contains(&current.as_str()) {
+                    TokenType::Keyword
+                } else {
+                    TokenType::Other
+                };
+                tokens.push(Token {
+                    text: current.clone(),
+                    ty,
+                });
+                current.clear();
+            }
+
+            let mut number = String::new();
+            while let Some(&c) = chars.peek() {
+                if c.is_numeric() || c == '.' {
+                    number.push(c);
+                    chars.next();
+                } else {
+                    break;
+                }
+            }
+
+            tokens.push(Token {
+                text: number,
+                ty: TokenType::Number,
+            });
         } else if ch.is_alphabetic() || ch == '_' {
             current.push(ch);
             chars.next();
@@ -339,5 +401,36 @@ mod tests {
     #[test]
     fn number_tone_is_accent() {
         assert_eq!(TokenType::Number.tone(), Tone::Accent);
+    }
+
+    #[test]
+    fn rust_tokenizer_recognizes_integers() {
+        let tokens = tokenize_rust("let x = 42;");
+        let number_tokens: Vec<_> = tokens
+            .iter()
+            .filter(|t| t.ty == TokenType::Number)
+            .collect();
+        assert!(!number_tokens.is_empty(), "Expected to find number tokens");
+        assert_eq!(number_tokens[0].text, "42");
+    }
+
+    #[test]
+    fn rust_tokenizer_recognizes_floats() {
+        let tokens = tokenize_rust("let pi = 3.14;");
+        let number_tokens: Vec<_> = tokens
+            .iter()
+            .filter(|t| t.ty == TokenType::Number)
+            .collect();
+        assert!(!number_tokens.is_empty(), "Expected to find number tokens");
+    }
+
+    #[test]
+    fn basic_tokenizer_recognizes_numbers() {
+        let tokens = basic_tokenize("x = 123", &["if"]);
+        let number_tokens: Vec<_> = tokens
+            .iter()
+            .filter(|t| t.ty == TokenType::Number)
+            .collect();
+        assert!(!number_tokens.is_empty(), "Expected to find number tokens");
     }
 }
