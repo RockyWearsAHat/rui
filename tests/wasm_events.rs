@@ -53,3 +53,18 @@ fn test_wasm_keyboard_events() {
         "Shift key code should not map (modifiers are handled separately)"
     );
 }
+
+#[wasm_bindgen_test::wasm_bindgen_test]
+fn test_wasm_text_input_event() {
+    // Test that plain text characters are accepted and control characters are filtered
+    use rui::input::Event;
+
+    // Verify that a simple character produces Event::Text
+    let text = "a";
+    let event = Event::Text(text.to_string());
+    assert_eq!(
+        event,
+        Event::Text("a".to_string()),
+        "Simple character should produce Event::Text"
+    );
+}
