@@ -52,6 +52,7 @@ pub struct CounterApp {
     app: App<Counter>,
     canvas: Canvas,
     fonts: crate::LoadedFonts,
+    memory: crate::Memory,
 }
 
 impl CounterApp {
@@ -62,8 +63,14 @@ impl CounterApp {
 
         // Default wasm canvas size (960x640, same as default WindowOptions)
         let canvas = Canvas::new(960, 640, 1.0);
+        let memory = crate::Memory::new();
 
-        Self { app, canvas, fonts }
+        Self {
+            app,
+            canvas,
+            fonts,
+            memory,
+        }
     }
 }
 
@@ -93,12 +100,8 @@ pub fn present_counter() {
             let appearance = Appearance::Light; // TODO: read from browser prefers-color-scheme
 
             // Draw the app into the canvas
-            app.app.draw_into(
-                &mut app.canvas,
-                &mut app.fonts,
-                appearance,
-                &mut crate::Memory::new(),
-            );
+            app.app
+                .draw_into(&mut app.canvas, &mut app.fonts, appearance, &mut app.memory);
 
             // Present the canvas to the browser
             let _ = shell::present(&app.canvas);
