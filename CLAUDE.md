@@ -157,7 +157,16 @@ The synthetic font ensures widths are arithmetic (half an em per character). Ani
 
 ### Segmented Control Exemplar
 
-The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough (26 lines) to copy and modify immediately. Run `cargo run -p rui --example segmented` to see it in action.
+The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough (26 lines) to copy and modify immediately. This exemplar teaches:
+- How state shapes the view (`app.selected` determines which button is highlighted)
+- How handlers update state (the closure on line 179–181 mutates `app`)
+- How to build custom controls from primitives (`row`, `on_click`, `Painter`)
+
+**Try it first:**
+```bash
+cargo run -p rui --example segmented
+```
+Click the buttons to change selection; state persists across frames.
 
 **State:**
 ```rust
@@ -165,6 +174,7 @@ struct App {
     selected: usize,  // index of the choice
 }
 ```
+The state is just an index—no closures, no `Rc<RefCell<>>`. This simplicity is rui's design.
 
 **View:**
 ```rust
@@ -184,7 +194,31 @@ fn view(app: &App) -> El<App> {
 }
 ```
 
-This widget is built from primitives (`row`, `on_click`, `Painter`); see `src/widgets.rs` line 333–365 for the implementation. To modify: change the label text, adjust styling with `.pad()` / `.fill()`, or copy to create a new control. See `examples/segmented.rs` for a complete runnable example and `tests/recipes.rs` for integration tests.
+The handler (lines 179–181) is a function that receives mutable state as an argument, not a closure capturing a reference. This means you can freely modify `app` without any interior mutability tricks.
+
+**How to modify:**
+- Change `["Small", "Medium", "Large"]` to any `&[&str]` slice
+- Replace the label `text("Pick a size:")` with your own description
+- To add more buttons: extend the choices array and extend the width
+- To change colors: call `.fill()` on the widget to style the background
+
+**Implementation details:**
+The widget is built entirely from primitives; see `src/widgets.rs` line 333–365. It uses:
+- `row()` to lay out buttons horizontally
+- `on_click()` to handle clicks and call the handler
+- `Painter` to draw the background highlight
+
+**Verification:**
+- Run the example: `cargo run -p rui --example segmented`
+- Inspect the test: `tests/recipes.rs` line 40–52 shows `a_segmented_control_changes_selection_when_clicked`
+- Copy the entire pattern to build new controls: state type → view function → handler closure
+
+**Next: Building Custom Controls**
+
+Once you understand this exemplar, copy it and modify:
+- Replace `segmented()` with your own layout (e.g., vertical radio buttons instead of horizontal tabs)
+- Change the handler to do something more complex (update multiple fields, trigger an API call, etc.)
+- Use the same state-view-handler pattern for checkboxes, dropdowns, sliders, or any control
 
 ### Building Custom Controls
 
