@@ -90,6 +90,24 @@ pub fn listen_counter() {
     let _ = shell::listen();
 }
 
+/// Get the current frame count of the counter app's memory.
+///
+/// Tests use this to verify that memory persists across frames.
+/// The frame count increments each time the app draws, so if the same Memory
+/// object is being reused, the counter will keep increasing. If Memory is
+/// reallocated fresh each frame, the counter would reset to 1 each time.
+#[wasm_bindgen]
+pub fn counter_frame_count() -> u64 {
+    COUNTER_APP.with(|app| {
+        let app_borrow = app.borrow();
+        if let Some(app) = app_borrow.as_ref() {
+            app.memory.frame_count()
+        } else {
+            0
+        }
+    })
+}
+
 /// Draw the parity frame and present it through the browser backend.
 ///
 /// The frame is [`crate::demo::reference_frame`] — the same call
