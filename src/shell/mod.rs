@@ -282,6 +282,18 @@ pub fn listen() -> Result<Vec<Event>, Error> {
     Ok(events)
 }
 
+/// Returns the browser's current color scheme preference.
+///
+/// Queries the system via `window.matchMedia("(prefers-color-scheme: dark)")`
+/// and returns `Appearance::Dark` if the system prefers dark mode, or
+/// `Appearance::Light` otherwise.
+#[cfg(target_arch = "wasm32")]
+pub fn get_appearance() -> Appearance {
+    platform::Window::open(&WindowOptions::default())
+        .map(|w| w.appearance())
+        .unwrap_or(Appearance::Light)
+}
+
 /// Opens a window and runs `app` in it until it is closed.
 pub(crate) fn run<S>(
     options: WindowOptions,

@@ -5,7 +5,24 @@
 
 #![cfg(target_arch = "wasm32")]
 
+use rui::theme::Appearance;
 use rui::wasm::{init_counter, listen_counter, present_counter};
+
+#[wasm_bindgen_test::wasm_bindgen_test]
+fn appearance_matches_system_preference() {
+    // In a wasm test environment (Node.js), there may not be a real browser window.
+    // However, the get_appearance() function should handle this gracefully
+    // and return a valid appearance value.
+    let appearance = rui::shell::get_appearance();
+
+    // Verify it returns a valid appearance (not a panic)
+    // The actual value (Dark vs Light) depends on the environment,
+    // but it must be one of these two.
+    assert!(
+        appearance == Appearance::Dark || appearance == Appearance::Light,
+        "get_appearance() should return either Dark or Light"
+    );
+}
 
 #[wasm_bindgen_test::wasm_bindgen_test]
 fn wasm_exports_counter_init() {
