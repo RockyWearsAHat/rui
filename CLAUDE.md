@@ -155,6 +155,34 @@ assert!(harness.frame().shows("1"));
 
 The synthetic font ensures widths are arithmetic (half an em per character). Animations are stepped by hand, not waited for. See `tests/recipes.rs` for live examples building `checkbox`, `switch`, `slider`, `radio`, `tooltip`.
 
+### Segmented Control Exemplar
+
+The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough (26 lines) to copy and modify immediately:
+
+**State:**
+```rust
+#[derive(Clone, Copy, PartialEq)]
+enum Size { Small, Medium, Large }
+
+struct App {
+    size: Size,
+}
+```
+
+**View:**
+```rust
+fn view(app: &App) -> El<App> {
+    widgets::segmented(
+        vec!["Small", "Medium", "Large"],
+        vec![Size::Small, Size::Medium, Size::Large],
+        Some(app.size),
+        |app: &mut App, choice| app.size = choice,
+    )
+}
+```
+
+This widget is built from primitives (`row`, `on_click`, `Painter`); see `src/widgets.rs` line 333–365 for the implementation. To modify: change the label text, add more choices, or style with `.pad()` / `.fill()`. See `tests/recipes.rs` for a full test example.
+
 ### Building Custom Controls
 
 Copy a recipe from `tests/recipes.rs` or `examples/controls.rs`—they are ordinary `El` types, not variants. Modify freely:
