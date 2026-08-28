@@ -31,14 +31,6 @@ cargo run -p rui --example counter               # Interactive counter app
 cargo run -p rui --example controls              # Control showcase with checkbox, slider, etc.
 cargo run -p rui --example gallery -- .          # Render every UI element to PNG (no window)
 
-# Native / browser backend parity — that both draw the identical frame
-cargo build --target wasm32-unknown-unknown -p rui --example counter
-wasm-pack build --target web --release --out-dir pkg   # the wasm-bindgen glue
-cargo run -p rui --example parity -- target/parity     # the native reference frame
-python3 -m http.server 8731 --bind 127.0.0.1           # then open:
-#   http://127.0.0.1:8731/examples/parity.html         # verdict is on the page
-wasm-pack test --headless --firefox --test wasm_integration  # the CI-able half
-
 # Test
 cargo test                                       # Run all tests
 cargo test --test setup                          # Verify Rust version and pre-commit hook
@@ -54,6 +46,63 @@ cargo clippy                                     # Run linter
 # Documentation
 cargo doc --no-deps --open                       # Generate and open docs
 ```
+
+## WASM Backend
+
+**rui** includes a WebAssembly backend (`src/shell/platform/wasm.rs`), allowing the same UI code to run in a browser with no changes. The backend implements the `Backend` trait using DOM canvas rendering and `wasm-bindgen` for JavaScript interop.
+
+### Requirements
+
+- **wasm-pack**: Install with `curl https://rustwasm.org/wasm-pack/installer/init.sh -sSf | sh`
+- **WASM target**: Already installed by rustup, but verify with `rustup target add wasm32-unknown-unknown`
+- **A modern browser**: Chrome, Firefox, Safari (for pixel comparison in parity verification)
+
+### Build & Test
+
+```bash
+# Build the WASM target
+cargo build --target wasm32-unknown-unknown -p rui --example counter
+
+# Generate wasm-bindgen glue and a web package
+wasm-pack build --target web --release --out-dir pkg
+
+# Test in a headless browser (Firefox required)
+cargo test --target wasm32-unknown-unknown  # All WASM tests
+wasm-pack test --headless --firefox --test wasm_integration  # Browser-specific integration tests
+```
+
+### Exports
+
+The counter example exports three main functions via `#[wasm_bindgen]` in `src/wasm.rs`:
+
+- **`init_counter()`**: Initialize the counter app and store it in thread-local state. Must be called once before `present_counter()`.
+- **`listen_counter()`**: Collect events from the DOM (`mousemove`, `click`, `wheel`, etc.) and apply them to the app state. Called before each frame.
+- **`present_counter()`**: Draw the app to pixels and present them to the browser `<canvas>`. Called after `listen_counter()` in the animation loop.
+
+Additional utilities:
+- **`counter_frame_count()`**: Get the current frame count; used by tests to verify memory persistence.
+- **`present_parity_frame(dark: bool)`**: Draw the reference frame (identical to the native desktop render) and present it to the canvas, for pixel-perfect backend comparison.
+- **`parity_frame_size()`**: Get the dimensions of the parity frame as `[width, height]`.
+
+### Parity Verification
+
+To verify that the WASM backend draws pixel-for-pixel identical frames to the native desktop backend:
+
+```bash
+# Build native reference frame
+cargo run -p rui --example parity -- target/parity
+
+# Build and serve the WASM package
+wasm-pack build --target web --release --out-dir pkg
+python3 -m http.server 8731 --bind 127.0.0.1
+
+# Open http://127.0.0.1:8731/examples/parity.html
+# The page compares the browser render to the native PNG, showing:
+#   - Green: identical frames (0 differing pixels)
+#   - Red: differences (pixel count and region shown)
+```
+
+The parity test verifies both light and dark modes and confirms that the rendering pipeline (`src/paint.rs`, `src/canvas.rs`, `src/text.rs`) is truly platform-agnostic.
 
 ## Module Structure
 
