@@ -157,7 +157,17 @@ The synthetic font ensures widths are arithmetic (half an em per character). Ani
 
 ### Segmented Control Exemplar
 
-The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough (26 lines) to copy and modify immediately. This exemplar teaches:
+The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough (26 lines) to copy and modify immediately.
+
+**Pattern at a Glance:**
+```
+State:   struct App { selected: usize }
+View:    fn view(app: &App) -> El<App> { ... widget here ... }
+Handler: |app: &mut App, index| { app.selected = index; }
+```
+State describes your data. View turns data into UI. Handler modifies state on user input. That's the entire pattern.
+
+This exemplar teaches:
 - How state shapes the view (`app.selected` determines which button is highlighted)
 - How handlers update state (the closure on line 179–181 mutates `app`)
 - How to build custom controls from primitives (`row`, `on_click`, `Painter`)
