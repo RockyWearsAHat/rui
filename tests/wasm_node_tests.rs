@@ -6,7 +6,7 @@
 #![cfg(target_arch = "wasm32")]
 
 use rui::theme::Appearance;
-use rui::wasm::{init_counter, listen_counter, present_counter};
+use rui::wasm::{counter_frame_count, init_counter, listen_counter, present_counter};
 
 #[wasm_bindgen_test::wasm_bindgen_test]
 fn appearance_matches_system_preference() {
@@ -59,10 +59,26 @@ fn memory_persists_across_frames() {
     // Initialize the counter app
     init_counter();
 
+    // Get the starting frame count. On initialization, begin_frame has not yet
+    // been called, so the frame count starts at 0.
+    let mut previous_frame_count = counter_frame_count();
+
     // Call present_counter 5 times in sequence.
-    // This validates that Memory persists correctly across multiple render calls,
-    // detecting if state is being lost or allocated fresh each frame.
-    for _ in 0..5 {
+    // Each call to present_counter invokes draw_into, which calls memory.begin_frame(),
+    // incrementing the frame counter by 1. If Memory were reallocated fresh each frame,
+    // the frame counter would reset to a fresh Memory's count, which would not increment.
+    // By checking that the frame count increases, we verify that the same Memory object
+    // is being reused across frames.
+    for i in 0..5 {
         present_counter();
+        let new_frame_count = counter_frame_count();
+        assert!(
+            new_frame_count > previous_frame_count,
+            "Frame {} failed: frame count did not increment (was {}, is now {})",
+            i + 1,
+            previous_frame_count,
+            new_frame_count
+        );
+        previous_frame_count = new_frame_count;
     }
 }
