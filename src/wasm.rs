@@ -66,7 +66,7 @@ impl Default for CounterApp {
 pub fn start_counter() -> Result<(), JsValue> {
     let fonts =
         shell::load_system_fonts().map_err(|error| JsValue::from_str(&error.to_string()))?;
-    App::new("Counter", Counter { count: 0 }, counter_view)
+    demo::counter_app()
         .run_with_fonts(fonts)
         .map_err(|error| JsValue::from_str(&error.to_string()))
 }
