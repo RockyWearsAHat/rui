@@ -291,6 +291,14 @@ impl Memory {
         self.animating
     }
 
+    /// The current frame number, incremented each time a frame begins.
+    ///
+    /// Tests use this to verify that the same Memory object is being reused
+    /// across frames rather than being reallocated fresh each time.
+    pub fn frame_count(&self) -> u64 {
+        self.frame
+    }
+
     /// Eases the value held under `id` toward `target`, and answers where it got.
     ///
     /// `seconds` is the time constant: how long the value takes to close most of
