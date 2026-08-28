@@ -50,7 +50,7 @@ use crate::element::El;
 use crate::font::FontError;
 use crate::input::{Event, Input};
 use crate::memory::Memory;
-use crate::text::{FontId, Fonts};
+use crate::text::FontId;
 use crate::theme::{Appearance, Theme};
 use std::time::{Duration, Instant};
 
@@ -178,82 +178,6 @@ trait Backend: Sized {
     fn is_open(&self) -> bool;
 }
 
-/// Everything one frame is drawn from, apart from the window and the program.
-///
-/// Held together because a frame is drawn from two places — the loop below, and
-/// the backend itself while the platform has taken the loop away.
-struct Surface {
-    /// The frame being drawn.
-    drawn: Canvas,
-    /// The frame on screen, so an identical one is not sent again.
-    ///
-    /// A second canvas rather than a saved copy of the first: presenting swaps
-    /// the two, so recognising an unchanged frame costs one comparison and never
-    /// a copy of the surface.
-    presented: Canvas,
-    input: Input,
-    memory: Memory,
-    /// When the previous frame was drawn, so animation advances by elapsed time
-    /// rather than by a count of frames.
-    drawn_at: Instant,
-    ui_font: FontId,
-    mono_font: FontId,
-    /// A failure from a frame drawn inside the platform's own loop.
-    ///
-    /// There is nothing to return it to from in there, and dropping it would
-    /// turn a window that can no longer present into one that silently freezes.
-    failed: Option<Error>,
-}
-
-impl Surface {
-    /// Folds `events` in, draws the whole interface, and presents it if it came
-    /// out different from what is already on screen.
-    fn draw<B: Backend, S>(
-        &mut self,
-        window: &B,
-        fonts: &mut Fonts,
-        app: &mut App<S>,
-        events: &mut Vec<Event>,
-    ) -> Result<(), Error> {
-        let now = Instant::now();
-        self.memory
-            .begin_frame(now.saturating_duration_since(self.drawn_at));
-        self.drawn_at = now;
-
-        self.input.begin_frame();
-        for event in events.drain(..) {
-            self.input.apply(event);
-        }
-
-        let (width, height, scale) = window.surface();
-        if width != self.drawn.width()
-            || height != self.drawn.height()
-            || scale != self.drawn.scale()
-        {
-            self.drawn.resize(width, height, scale);
-        }
-        fonts.set_scale(scale);
-
-        let theme = Theme::new(window.appearance(), self.ui_font, self.mono_font);
-        self.drawn
-            .clear_vertical(theme.palette.background, theme.palette.background_deep);
-        app.frame(
-            &mut self.drawn,
-            fonts,
-            &self.input,
-            &mut self.memory,
-            &theme,
-        );
-        self.memory.end_frame(&self.input);
-
-        if self.drawn.pixels() != self.presented.pixels() {
-            window.present(&self.drawn)?;
-            std::mem::swap(&mut self.drawn, &mut self.presented);
-        }
-        Ok(())
-    }
-}
-
 /// Draws `canvas` into the page's `<canvas id="surface">`.
 ///
 /// The browser's way in, until it has a loop of its own. [`run`] below waits on
@@ -300,37 +224,20 @@ pub fn get_appearance() -> Appearance {
 pub(crate) fn run<S>(
     options: WindowOptions,
     loaded: LoadedFonts,
-    mut app: App<S>,
+    app: App<S>,
 ) -> Result<(), Error> {
-    let LoadedFonts {
-        mut fonts,
-        ui_font,
-        mono_font,
-    } = loaded;
     let mut window = platform::Window::open(&options)?;
-
     let (width, height, scale) = window.surface();
-    let mut surface = Surface {
-        drawn: Canvas::new(width, height, scale),
-        // Deliberately empty rather than the surface's size: nothing has been
-        // presented yet, and an empty canvas differs from every frame, so the
-        // first one is sent instead of being mistaken for a repeat.
-        presented: Canvas::new(0, 0, scale),
-        input: Input::new(),
-        memory: Memory::new(),
-        drawn_at: Instant::now(),
-        ui_font,
-        mono_font,
-        failed: None,
-    };
+
+    let mut driver = FrameDriver::from_parts(app, loaded, width, height, scale);
     let mut events = Vec::new();
 
-    while window.is_open() && app.is_running() {
+    while window.is_open() && driver.is_running() {
         events.clear();
-        let wait = if surface.memory.is_animating() {
+        let wait = if driver.is_animating() {
             FRAME
         } else {
-            app.idle()
+            driver.app_idle()
         };
 
         {
@@ -339,18 +246,28 @@ pub(crate) fn run<S>(
             // tracking is not one this program is being told about, and folding
             // the same click in twice would fire whatever it landed on twice.
             let mut redraw = |window: &platform::Window| {
-                if let Err(error) = surface.draw(window, &mut fonts, &mut app, &mut Vec::new()) {
-                    surface.failed = Some(error);
+                let (w, h, s) = window.surface();
+                driver.resize(w, h, s);
+                driver.set_appearance(window.appearance());
+                driver.apply_events(vec![]);
+                driver.step();
+                if driver.pixels_changed() {
+                    let _ = window.present(driver.canvas());
                 }
             };
             window.pump(wait, &mut events, &mut redraw)?;
         }
-        if let Some(error) = surface.failed.take() {
-            return Err(error);
+
+        let (w, h, s) = window.surface();
+        driver.resize(w, h, s);
+        driver.set_appearance(window.appearance());
+        driver.apply_events(std::mem::take(&mut events));
+        driver.step();
+        if driver.pixels_changed() {
+            window.present(driver.canvas())?;
         }
 
-        surface.draw(&window, &mut fonts, &mut app, &mut events)?;
-        if surface.input.close_requested() {
+        if driver.close_requested() {
             break;
         }
     }
@@ -366,11 +283,13 @@ pub(crate) fn run<S>(
 pub struct FrameDriver<S> {
     app: App<S>,
     fonts: LoadedFonts,
-    canvas: Canvas,
+    drawn: Canvas,
+    presented: Canvas,
     memory: Memory,
     input: Input,
     drawn_at: Instant,
     drawn_changed: bool,
+    appearance: Appearance,
 }
 
 impl<S: 'static> FrameDriver<S> {
@@ -387,13 +306,72 @@ impl<S: 'static> FrameDriver<S> {
 
         Self {
             app,
-            canvas: Canvas::new(WIDTH, HEIGHT, SCALE),
+            drawn: Canvas::new(WIDTH, HEIGHT, SCALE),
+            presented: Canvas::new(0, 0, SCALE),
             memory: Memory::new(),
             input: Input::new(),
             fonts,
             drawn_at: Instant::now(),
             drawn_changed: false,
+            appearance: Appearance::Dark,
         }
+    }
+}
+
+impl<S> FrameDriver<S> {
+    /// Creates a frame driver from an existing app and loaded fonts.
+    ///
+    /// Used by the native event loop to drive frames with real window backend.
+    pub fn from_parts(
+        app: App<S>,
+        fonts: LoadedFonts,
+        width: u32,
+        height: u32,
+        scale: f32,
+    ) -> Self {
+        Self {
+            app,
+            drawn: Canvas::new(width, height, scale),
+            presented: Canvas::new(0, 0, scale),
+            memory: Memory::new(),
+            input: Input::new(),
+            fonts,
+            drawn_at: Instant::now(),
+            drawn_changed: false,
+            appearance: Appearance::Light,
+        }
+    }
+
+    /// Applies events to the input state.
+    ///
+    /// Must be called before [`Self::step`] to have the events processed
+    /// in the next frame.
+    pub fn apply_events(&mut self, events: Vec<Event>) {
+        for event in events {
+            self.input.apply(event);
+        }
+    }
+
+    /// Resizes the canvas to the given dimensions if they differ.
+    ///
+    /// Should be called before [`Self::step`] if the window size changes.
+    pub fn resize(&mut self, width: u32, height: u32, scale: f32) {
+        if width != self.drawn.width()
+            || height != self.drawn.height()
+            || scale != self.drawn.scale()
+        {
+            self.drawn.resize(width, height, scale);
+        }
+    }
+
+    /// Whether the app or memory indicate animation is in progress.
+    pub fn is_animating(&self) -> bool {
+        self.memory.is_animating()
+    }
+
+    /// Sets the appearance (light/dark mode) for the next frame.
+    pub fn set_appearance(&mut self, appearance: Appearance) {
+        self.appearance = appearance;
     }
 
     /// Draws one frame with the accumulated input and animations.
@@ -410,17 +388,13 @@ impl<S: 'static> FrameDriver<S> {
 
         self.input.begin_frame();
 
-        self.fonts.fonts.set_scale(self.canvas.scale());
-        let theme = Theme::new(
-            crate::theme::Appearance::Dark,
-            self.fonts.ui_font,
-            self.fonts.mono_font,
-        );
-        self.canvas
+        self.fonts.fonts.set_scale(self.drawn.scale());
+        let theme = Theme::new(self.appearance, self.fonts.ui_font, self.fonts.mono_font);
+        self.drawn
             .clear_vertical(theme.palette.background, theme.palette.background_deep);
 
         self.app.frame(
-            &mut self.canvas,
+            &mut self.drawn,
             &self.fonts.fonts,
             &self.input,
             &mut self.memory,
@@ -441,5 +415,48 @@ impl<S: 'static> FrameDriver<S> {
         let changed = self.drawn_changed;
         self.drawn_changed = false;
         changed
+    }
+
+    /// The canvas that was just drawn.
+    pub fn canvas(&self) -> &Canvas {
+        &self.drawn
+    }
+
+    /// Checks if pixels changed and swaps the drawn and presented buffers.
+    ///
+    /// Returns true if the frame differs from the previously presented one,
+    /// indicating it should be sent to the display.
+    pub fn pixels_changed(&mut self) -> bool {
+        if self.drawn.pixels() != self.presented.pixels() {
+            std::mem::swap(&mut self.drawn, &mut self.presented);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// The UI font ID.
+    pub fn ui_font(&self) -> FontId {
+        self.fonts.ui_font
+    }
+
+    /// The monospace font ID.
+    pub fn mono_font(&self) -> FontId {
+        self.fonts.mono_font
+    }
+
+    /// Whether the application is still running.
+    pub fn is_running(&self) -> bool {
+        self.app.is_running()
+    }
+
+    /// The application's idle timeout.
+    pub fn app_idle(&self) -> Duration {
+        self.app.idle()
+    }
+
+    /// Whether close was requested.
+    pub fn close_requested(&self) -> bool {
+        self.input.close_requested()
     }
 }
