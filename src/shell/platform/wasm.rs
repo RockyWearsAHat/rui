@@ -171,6 +171,31 @@ fn listeners(
         all_listeners.push(listener);
     }
 
+    // Text input events: extract data field and filter control characters
+    {
+        let queue = Rc::clone(queue);
+        let listener = Listener::new(move |event: web_sys::Event| {
+            if let Ok(input_event) = event.dyn_into::<web_sys::InputEvent>() {
+                if let Some(data) = input_event.data() {
+                    let filtered: String = data
+                        .chars()
+                        .filter(|c| {
+                            let code = *c as u32;
+                            code >= 32 || *c == '\t' || *c == '\n'
+                        })
+                        .collect();
+                    if !filtered.is_empty() {
+                        queue.borrow_mut().push(Event::Text(filtered));
+                    }
+                }
+            }
+        });
+        surface
+            .add_event_listener_with_callback("textinput", listener.as_ref().unchecked_ref())
+            .map_err(platform("textinput"))?;
+        all_listeners.push(listener);
+    }
+
     Ok(all_listeners)
 }
 
