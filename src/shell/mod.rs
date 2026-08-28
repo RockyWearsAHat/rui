@@ -287,7 +287,7 @@ pub struct FrameDriver<S> {
     presented: Canvas,
     memory: Memory,
     input: Input,
-    drawn_at: Instant,
+    drawn_at: Option<Instant>,
     drawn_changed: bool,
     appearance: Appearance,
     pending_error: Option<Error>,
@@ -312,7 +312,7 @@ impl<S: 'static> FrameDriver<S> {
             memory: Memory::new(),
             input: Input::new(),
             fonts,
-            drawn_at: Instant::now(),
+            drawn_at: None,
             drawn_changed: false,
             appearance: Appearance::Dark,
             pending_error: None,
@@ -338,7 +338,7 @@ impl<S> FrameDriver<S> {
             memory: Memory::new(),
             input: Input::new(),
             fonts,
-            drawn_at: Instant::now(),
+            drawn_at: None,
             drawn_changed: false,
             appearance: Appearance::Light,
             pending_error: None,
@@ -392,9 +392,12 @@ impl<S> FrameDriver<S> {
         }
 
         let now = Instant::now();
-        self.memory
-            .begin_frame(now.saturating_duration_since(self.drawn_at));
-        self.drawn_at = now;
+        let elapsed = self
+            .drawn_at
+            .map(|then| now.saturating_duration_since(then))
+            .unwrap_or_default();
+        self.memory.begin_frame(elapsed);
+        self.drawn_at = Some(now);
 
         self.input.begin_frame();
 
