@@ -5,7 +5,6 @@
 //! the view function is called, the result is laid out and drawn to a canvas.
 
 use crate::shell;
-use crate::theme::Appearance;
 use crate::{App, Canvas, El};
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
