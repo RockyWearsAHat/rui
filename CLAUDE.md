@@ -213,9 +213,57 @@ The widget is built entirely from primitives; see `src/widgets.rs` line 333–36
 - Inspect the test: `tests/recipes.rs` line 386 shows `a_segmented_control_changes_selection_when_clicked`
 - Copy the entire pattern to build new controls: state type → view function → handler closure
 
+**Getting Started: Copy and Modify**
+
+To build your own widget from this exemplar:
+
+1. **Copy the example file:**
+   ```bash
+   cp examples/segmented.rs examples/my_control.rs
+   ```
+
+2. **Modify the state to fit your needs:**
+   ```rust
+   struct App {
+       size: String,  // Change from usize to fit your domain
+   }
+   ```
+
+3. **Update the view function to use your state:**
+   ```rust
+   fn view(app: &App) -> El<App> {
+       col((
+           text("My custom control:"),
+           // Replace segmented with your widget logic
+       ))
+   }
+   ```
+
+4. **Run your modified example:**
+   ```bash
+   cargo run -p rui --example my_control
+   ```
+
+5. **Write a test to verify it works (copy from `tests/recipes.rs` line 386):**
+   ```rust
+   #[test]
+   fn my_control_changes_state_when_clicked() {
+       let mut harness = Harness::new(App { size: "small".into() }, view);
+       harness.click_text("Large");
+       assert_eq!(harness.state().size, "large");
+   }
+   ```
+
+6. **Run your test:**
+   ```bash
+   cargo test my_control_changes_state_when_clicked
+   ```
+
+If your test passes, your custom widget works. If it fails, the failure message will guide you to the issue.
+
 **Next: Building Custom Controls**
 
-Once you understand this exemplar, copy it and modify. Here are common next steps:
+Once you understand this exemplar, here are common next steps:
 
 1. **Add more state fields:**
    ```rust
