@@ -39,7 +39,7 @@
 //! draw one, for a backend to call when the platform has taken over.
 
 pub mod embedded_fonts;
-mod event_mapping;
+pub mod event_mapping;
 pub mod fonts;
 mod platform;
 

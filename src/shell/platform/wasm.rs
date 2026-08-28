@@ -9,6 +9,8 @@
 //! No `unsafe`: the platform here is JavaScript rather than C, and every call
 //! into it goes through `wasm-bindgen`, which is safe on both sides.
 
+use crate::geom::Point;
+use crate::shell::event_mapping;
 use crate::theme::Appearance;
 use crate::{Canvas, Event};
 use std::cell::RefCell;
@@ -35,13 +37,10 @@ type EventQueue = Rc<RefCell<Vec<Event>>>;
 /// what [`listeners`] hands back and what [`Window`] keeps alive.
 type Listener = Closure<dyn FnMut(web_sys::Event)>;
 
-/// Which DOM events the page is listened to for, and what each one is in rui's
-/// own vocabulary.
+/// Which simple DOM events (no data extraction) the page is listened to for.
 ///
-/// A table rather than a function per event, because the mapping is the whole
-/// of the browser's contribution: nothing above [`pump`](Backend::pump) can
-/// tell a `pointerleave` from an `NSEvent` from an `XCrossingEvent`.
-const LISTENED_FOR: [(&str, Event); 1] = [("pointerleave", Event::PointerLeft)];
+/// These events map directly to rui Events without needing to extract data.
+const SIMPLE_EVENTS: [(&str, Event); 1] = [("pointerleave", Event::PointerLeft)];
 
 /// The page's canvas, and the context that writes pixels to it.
 pub(crate) struct Window {
@@ -61,8 +60,7 @@ fn platform(what: &str) -> impl FnOnce(wasm_bindgen::JsValue) -> Error + '_ {
     move |error| Error::Platform(format!("{what}: {error:?}"))
 }
 
-/// Puts a listener for every entry of [`LISTENED_FOR`] on `surface`, each one
-/// pushing its event into `queue`.
+/// Puts listeners on `surface` for pointer and keyboard events, each pushing to `queue`.
 ///
 /// Returns them rather than forgetting them: a listener should last exactly as
 /// long as the window it is filling the queue for, and one that outlives it is
@@ -71,19 +69,64 @@ fn listeners(
     surface: &web_sys::HtmlCanvasElement,
     queue: &EventQueue,
 ) -> Result<Vec<Listener>, Error> {
-    LISTENED_FOR
-        .into_iter()
-        .map(|(name, event)| {
-            let queue = Rc::clone(queue);
-            let listener = Listener::new(move |_: web_sys::Event| {
-                queue.borrow_mut().push(event.clone());
-            });
-            surface
-                .add_event_listener_with_callback(name, listener.as_ref().unchecked_ref())
-                .map_err(platform(name))?;
-            Ok(listener)
-        })
-        .collect()
+    let mut all_listeners = Vec::new();
+
+    // Simple events that map directly without data extraction
+    for (name, event) in &SIMPLE_EVENTS {
+        let queue = Rc::clone(queue);
+        let event = event.clone();
+        let listener = Listener::new(move |_: web_sys::Event| {
+            queue.borrow_mut().push(event.clone());
+        });
+        surface
+            .add_event_listener_with_callback(name, listener.as_ref().unchecked_ref())
+            .map_err(platform(name))?;
+        all_listeners.push(listener);
+    }
+
+    // Pointer down events: extract button and position
+    {
+        let queue = Rc::clone(queue);
+        let listener = Listener::new(move |event: web_sys::Event| {
+            if let Ok(mouse_event) = event.dyn_into::<web_sys::MouseEvent>() {
+                let button = mouse_event.button() as u16;
+                if let Some(button) = event_mapping::map_pointer_button(button) {
+                    let position =
+                        Point::new(mouse_event.client_x() as f32, mouse_event.client_y() as f32);
+                    queue
+                        .borrow_mut()
+                        .push(Event::PointerDown { position, button });
+                }
+            }
+        });
+        surface
+            .add_event_listener_with_callback("mousedown", listener.as_ref().unchecked_ref())
+            .map_err(platform("mousedown"))?;
+        all_listeners.push(listener);
+    }
+
+    // Pointer up events: extract button and position
+    {
+        let queue = Rc::clone(queue);
+        let listener = Listener::new(move |event: web_sys::Event| {
+            if let Ok(mouse_event) = event.dyn_into::<web_sys::MouseEvent>() {
+                let button = mouse_event.button() as u16;
+                if let Some(button) = event_mapping::map_pointer_button(button) {
+                    let position =
+                        Point::new(mouse_event.client_x() as f32, mouse_event.client_y() as f32);
+                    queue
+                        .borrow_mut()
+                        .push(Event::PointerUp { position, button });
+                }
+            }
+        });
+        surface
+            .add_event_listener_with_callback("mouseup", listener.as_ref().unchecked_ref())
+            .map_err(platform("mouseup"))?;
+        all_listeners.push(listener);
+    }
+
+    Ok(all_listeners)
 }
 
 impl Backend for Window {
