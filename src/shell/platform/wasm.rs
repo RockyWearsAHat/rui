@@ -38,10 +38,96 @@ type EventQueue = Rc<RefCell<Vec<Event>>>;
 /// what [`listeners`] hands back and what [`Window`] keeps alive.
 type Listener = Closure<dyn FnMut(web_sys::Event)>;
 
+/// Handler function type: takes an event and returns an Option<Event> if it can be processed.
+type EventHandler = fn(&web_sys::Event) -> Option<Event>;
+
+/// Handles a simple pointer down event: extracts button and position.
+fn handle_pointer_down(event: &web_sys::Event) -> Option<Event> {
+    event
+        .dyn_ref::<web_sys::MouseEvent>()
+        .and_then(|mouse_event| {
+            let button = event_mapping::map_pointer_button(mouse_event.button() as u16)?;
+            let position = Point::new(mouse_event.client_x() as f32, mouse_event.client_y() as f32);
+            Some(Event::PointerDown { position, button })
+        })
+}
+
+/// Handles a simple pointer up event: extracts button and position.
+fn handle_pointer_up(event: &web_sys::Event) -> Option<Event> {
+    event
+        .dyn_ref::<web_sys::MouseEvent>()
+        .and_then(|mouse_event| {
+            let button = event_mapping::map_pointer_button(mouse_event.button() as u16)?;
+            let position = Point::new(mouse_event.client_x() as f32, mouse_event.client_y() as f32);
+            Some(Event::PointerUp { position, button })
+        })
+}
+
+/// Handles a keyboard down event: extracts key and modifiers.
+fn handle_key_down(event: &web_sys::Event) -> Option<Event> {
+    event
+        .dyn_ref::<web_sys::KeyboardEvent>()
+        .and_then(|keyboard_event| {
+            let key = event_mapping::map_keyboard_code_to_key(&keyboard_event.code())?;
+            let modifiers = extract_modifiers(keyboard_event);
+            Some(Event::KeyDown { key, modifiers })
+        })
+}
+
+/// Handles a keyboard up event: extracts key and modifiers.
+fn handle_key_up(event: &web_sys::Event) -> Option<Event> {
+    event
+        .dyn_ref::<web_sys::KeyboardEvent>()
+        .and_then(|keyboard_event| {
+            let key = event_mapping::map_keyboard_code_to_key(&keyboard_event.code())?;
+            let modifiers = extract_modifiers(keyboard_event);
+            Some(Event::KeyUp { key, modifiers })
+        })
+}
+
+/// Handles a text input event: extracts and filters text data.
+fn handle_text_input(event: &web_sys::Event) -> Option<Event> {
+    event
+        .dyn_ref::<web_sys::InputEvent>()
+        .and_then(|input_event| {
+            let data = input_event.data()?;
+            let filtered = event_mapping::filter_text_input_data(&data);
+            if !filtered.is_empty() {
+                Some(Event::Text(filtered))
+            } else {
+                None
+            }
+        })
+}
+
+/// Handles a scroll wheel event: extracts and normalizes delta values.
+fn handle_scroll(event: &web_sys::Event) -> Option<Event> {
+    event
+        .dyn_ref::<web_sys::WheelEvent>()
+        .and_then(|wheel_event| {
+            let (x, y) = event_mapping::normalize_wheel_delta(
+                wheel_event.delta_x(),
+                wheel_event.delta_y(),
+                wheel_event.delta_mode(),
+            );
+            Some(Event::Scrolled { x, y })
+        })
+}
+
 /// Which simple DOM events (no data extraction) the page is listened to for.
 ///
 /// These events map directly to rui Events without needing to extract data.
 const SIMPLE_EVENTS: [(&str, Event); 1] = [("pointerleave", Event::PointerLeft)];
+
+/// Table of events that require data extraction and their handlers.
+const EXTRACTED_EVENTS: &[(&str, EventHandler)] = &[
+    ("mousedown", handle_pointer_down),
+    ("mouseup", handle_pointer_up),
+    ("keydown", handle_key_down),
+    ("keyup", handle_key_up),
+    ("textinput", handle_text_input),
+    ("wheel", handle_scroll),
+];
 
 /// The page's canvas, and the context that writes pixels to it.
 pub(crate) struct Window {
@@ -82,7 +168,7 @@ fn listeners(
 ) -> Result<Vec<Listener>, Error> {
     let mut all_listeners = Vec::new();
 
-    // Simple events that map directly without data extraction
+    // Register simple events that map directly without data extraction
     for (name, event) in &SIMPLE_EVENTS {
         let queue = Rc::clone(queue);
         let event = event.clone();
@@ -95,117 +181,17 @@ fn listeners(
         all_listeners.push(listener);
     }
 
-    // Pointer down events: extract button and position
-    {
+    // Register events that require data extraction from handler table
+    for (name, handler) in EXTRACTED_EVENTS {
         let queue = Rc::clone(queue);
         let listener = Listener::new(move |event: web_sys::Event| {
-            if let Ok(mouse_event) = event.dyn_into::<web_sys::MouseEvent>() {
-                let button = mouse_event.button() as u16;
-                if let Some(button) = event_mapping::map_pointer_button(button) {
-                    let position =
-                        Point::new(mouse_event.client_x() as f32, mouse_event.client_y() as f32);
-                    queue
-                        .borrow_mut()
-                        .push(Event::PointerDown { position, button });
-                }
+            if let Some(rui_event) = handler(&event) {
+                queue.borrow_mut().push(rui_event);
             }
         });
         surface
-            .add_event_listener_with_callback("mousedown", listener.as_ref().unchecked_ref())
-            .map_err(platform("mousedown"))?;
-        all_listeners.push(listener);
-    }
-
-    // Pointer up events: extract button and position
-    {
-        let queue = Rc::clone(queue);
-        let listener = Listener::new(move |event: web_sys::Event| {
-            if let Ok(mouse_event) = event.dyn_into::<web_sys::MouseEvent>() {
-                let button = mouse_event.button() as u16;
-                if let Some(button) = event_mapping::map_pointer_button(button) {
-                    let position =
-                        Point::new(mouse_event.client_x() as f32, mouse_event.client_y() as f32);
-                    queue
-                        .borrow_mut()
-                        .push(Event::PointerUp { position, button });
-                }
-            }
-        });
-        surface
-            .add_event_listener_with_callback("mouseup", listener.as_ref().unchecked_ref())
-            .map_err(platform("mouseup"))?;
-        all_listeners.push(listener);
-    }
-
-    // Keyboard down events: extract key and modifiers
-    {
-        let queue = Rc::clone(queue);
-        let listener = Listener::new(move |event: web_sys::Event| {
-            if let Ok(keyboard_event) = event.dyn_into::<web_sys::KeyboardEvent>() {
-                if let Some(key) = event_mapping::map_keyboard_code_to_key(&keyboard_event.code()) {
-                    let modifiers = extract_modifiers(&keyboard_event);
-                    queue.borrow_mut().push(Event::KeyDown { key, modifiers });
-                }
-            }
-        });
-        surface
-            .add_event_listener_with_callback("keydown", listener.as_ref().unchecked_ref())
-            .map_err(platform("keydown"))?;
-        all_listeners.push(listener);
-    }
-
-    // Keyboard up events: extract key and modifiers
-    {
-        let queue = Rc::clone(queue);
-        let listener = Listener::new(move |event: web_sys::Event| {
-            if let Ok(keyboard_event) = event.dyn_into::<web_sys::KeyboardEvent>() {
-                if let Some(key) = event_mapping::map_keyboard_code_to_key(&keyboard_event.code()) {
-                    let modifiers = extract_modifiers(&keyboard_event);
-                    queue.borrow_mut().push(Event::KeyUp { key, modifiers });
-                }
-            }
-        });
-        surface
-            .add_event_listener_with_callback("keyup", listener.as_ref().unchecked_ref())
-            .map_err(platform("keyup"))?;
-        all_listeners.push(listener);
-    }
-
-    // Text input events: extract data field and filter control characters
-    {
-        let queue = Rc::clone(queue);
-        let listener = Listener::new(move |event: web_sys::Event| {
-            if let Ok(input_event) = event.dyn_into::<web_sys::InputEvent>() {
-                if let Some(data) = input_event.data() {
-                    let filtered = super::super::event_mapping::filter_text_input_data(&data);
-                    if !filtered.is_empty() {
-                        queue.borrow_mut().push(Event::Text(filtered));
-                    }
-                }
-            }
-        });
-        surface
-            .add_event_listener_with_callback("textinput", listener.as_ref().unchecked_ref())
-            .map_err(platform("textinput"))?;
-        all_listeners.push(listener);
-    }
-
-    // Scroll wheel events: extract deltaX, deltaY, deltaMode
-    {
-        let queue = Rc::clone(queue);
-        let listener = Listener::new(move |event: web_sys::Event| {
-            if let Ok(wheel_event) = event.dyn_into::<web_sys::WheelEvent>() {
-                let (x, y) = event_mapping::normalize_wheel_delta(
-                    wheel_event.delta_x(),
-                    wheel_event.delta_y(),
-                    wheel_event.delta_mode(),
-                );
-                queue.borrow_mut().push(Event::Scrolled { x, y });
-            }
-        });
-        surface
-            .add_event_listener_with_callback("wheel", listener.as_ref().unchecked_ref())
-            .map_err(platform("wheel"))?;
+            .add_event_listener_with_callback(name, listener.as_ref().unchecked_ref())
+            .map_err(platform(name))?;
         all_listeners.push(listener);
     }
 
