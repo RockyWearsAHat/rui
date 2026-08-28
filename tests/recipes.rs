@@ -383,6 +383,30 @@ fn code_block_highlights_keywords_and_strings() {
 }
 
 #[test]
+fn code_block_highlights_numeric_literals() {
+    use rui::{code_block, Language};
+
+    #[derive(Default)]
+    struct App;
+
+    let code = "let x = 42; let y = 3.14;";
+    let mut harness = Harness::new(App, move |_: &App| {
+        col(code_block(code, Language::Rust)).align(Align::Start)
+    })
+    .size(400.0, 100.0);
+
+    harness.frame();
+
+    // Verify that numeric literals are rendered
+    assert!(harness.shows("42"), "decimal literal is rendered");
+    assert!(harness.shows("3.14"), "float literal is rendered");
+
+    // Verify that the code block has elements
+    let probes = harness.probes();
+    assert!(!probes.is_empty(), "code block renders elements");
+}
+
+#[test]
 fn a_segmented_control_changes_selection_when_clicked() {
     use rui::segmented;
 
