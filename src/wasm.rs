@@ -120,9 +120,7 @@ pub fn listen_counter() {
     if let Ok(events) = shell::listen() {
         COUNTER_APP.with(|state| {
             if let Some(counter) = state.borrow_mut().as_mut() {
-                for event in events {
-                    counter.input.apply(event);
-                }
+                counter.events.extend(events);
             }
         })
     }
