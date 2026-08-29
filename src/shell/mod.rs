@@ -281,7 +281,7 @@ impl Surface {
 /// the same code that draws every native frame.
 #[cfg(target_arch = "wasm32")]
 pub fn present(canvas: &Canvas) -> Result<(), Error> {
-    platform::Window::open(&WindowOptions::default())?.present(canvas)
+    platform::with_window(|window| window.present(canvas))
 }
 
 /// Listens to the page's `<canvas id="surface">` and collects what it caught.
@@ -294,11 +294,7 @@ pub fn present(canvas: &Canvas) -> Result<(), Error> {
 #[cfg(target_arch = "wasm32")]
 pub fn listen() -> Result<Vec<Event>, Error> {
     let mut events = Vec::new();
-    platform::Window::open(&WindowOptions::default())?.pump(
-        Duration::ZERO,
-        &mut events,
-        &mut |_| {},
-    )?;
+    platform::with_window(|window| window.pump(Duration::ZERO, &mut events, &mut |_| {}))?;
     Ok(events)
 }
 
@@ -309,9 +305,7 @@ pub fn listen() -> Result<Vec<Event>, Error> {
 /// `Appearance::Light` otherwise.
 #[cfg(target_arch = "wasm32")]
 pub fn get_appearance() -> Appearance {
-    platform::Window::open(&WindowOptions::default())
-        .map(|w| w.appearance())
-        .unwrap_or(Appearance::Light)
+    platform::with_window(|window| Ok(window.appearance())).unwrap_or(Appearance::Light)
 }
 
 /// One turn of the loop: collect what arrived, draw it, present it if it came

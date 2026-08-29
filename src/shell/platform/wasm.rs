@@ -257,6 +257,36 @@ fn listeners(
     Ok(all_listeners)
 }
 
+thread_local! {
+    /// The page's one [`Window`], created the first time anything asks for it.
+    ///
+    /// A browser page has no loop of its own to hold a `Window` for, the way
+    /// [`shell::run`](crate::shell::run) does natively — [`shell::present`],
+    /// [`shell::listen`], and [`shell::get_appearance`] are instead called
+    /// fresh from `requestAnimationFrame` on every frame. Opening a new
+    /// `Window` on each of those calls would register a fresh set of DOM
+    /// listeners on the canvas and then, at the end of that same call, drop
+    /// them along with the `Window` itself: `wasm-bindgen` invalidates a
+    /// `Closure` when it drops but does not unregister the JS function it
+    /// backed, so the very next event the browser delivers to that
+    /// now-dangling listener panics with "closure invoked recursively or
+    /// after being dropped". Caching the one `Window` here keeps its
+    /// listeners alive for the life of the page, the same as a `Window` a
+    /// native `run` loop holds for as long as it runs.
+    static WINDOW: RefCell<Option<Window>> = const { RefCell::new(None) };
+}
+
+/// Runs `f` against the page's cached [`Window`], opening it on first use.
+pub(crate) fn with_window<T>(f: impl FnOnce(&mut Window) -> Result<T, Error>) -> Result<T, Error> {
+    WINDOW.with(|cell| {
+        let mut slot = cell.borrow_mut();
+        if slot.is_none() {
+            *slot = Some(Window::open(&WindowOptions::default())?);
+        }
+        f(slot.as_mut().expect("just initialized"))
+    })
+}
+
 impl Backend for Window {
     fn open(_options: &WindowOptions) -> Result<Self, Error> {
         // The options describe a window to open, and there is none: a page has
