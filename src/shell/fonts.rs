@@ -65,14 +65,20 @@ const MONO_CANDIDATES: &[&str] = &[
 ///
 /// Unlike macOS and Windows, there is no fixed path: the file is found by name
 /// under whichever of these directories exists.
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 const FONT_DIRECTORIES: &[&str] = &[
     "/usr/share/fonts",
     "/usr/local/share/fonts",
     "/usr/share/fonts/truetype",
 ];
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 const UI_CANDIDATES: &[&str] = &[
     "DejaVuSans.ttf",
     "LiberationSans-Regular.ttf",
@@ -80,7 +86,10 @@ const UI_CANDIDATES: &[&str] = &[
     "FreeSans.ttf",
 ];
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 const MONO_CANDIDATES: &[&str] = &[
     "DejaVuSansMono.ttf",
     "LiberationMono-Regular.ttf",
@@ -92,7 +101,10 @@ const MONO_CANDIDATES: &[&str] = &[
 ///
 /// Font directories nest a few levels — vendor, then family. A bound stops a
 /// symbolic link cycle from turning the search into a hang at start-up.
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 const MAX_SEARCH_DEPTH: usize = 4;
 
 impl LoadedFonts {
@@ -160,6 +172,7 @@ pub fn load_system_fonts() -> Result<LoadedFonts, Error> {
 ///
 /// A candidate that is present but unreadable is skipped rather than fatal: the
 /// point of a list is that the next entry is tried.
+#[cfg(not(target_arch = "wasm32"))]
 fn first_usable(candidates: &[&str]) -> Option<Font> {
     candidates.iter().find_map(|candidate| {
         let path = locate(candidate)?;
@@ -176,7 +189,10 @@ fn locate(candidate: &str) -> Option<std::path::PathBuf> {
 }
 
 /// Searches the font directories for a file with this name.
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 fn locate(candidate: &str) -> Option<std::path::PathBuf> {
     FONT_DIRECTORIES
         .iter()
@@ -184,7 +200,10 @@ fn locate(candidate: &str) -> Option<std::path::PathBuf> {
 }
 
 /// Looks for `name` under `directory`, no deeper than [`MAX_SEARCH_DEPTH`].
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 fn find_named(directory: &std::path::Path, name: &str, depth: usize) -> Option<std::path::PathBuf> {
     if depth > MAX_SEARCH_DEPTH {
         return None;
@@ -213,6 +232,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn every_candidate_list_offers_a_fallback() {
         assert!(
             UI_CANDIDATES.len() > 1,
@@ -222,11 +242,13 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn a_missing_file_is_simply_not_located() {
         assert!(locate("/no/such/font/anywhere.ttf").is_none());
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn nothing_usable_in_a_list_answers_nothing() {
         assert!(first_usable(&["/no/such/font/anywhere.ttf"]).is_none());
     }
@@ -257,6 +279,7 @@ mod tests {
     /// property of the machine and not of the code — but it is reported, so a
     /// silent skip cannot be mistaken for a pass.
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn this_machine_has_the_faces_the_console_needs() {
         match load_system_fonts() {
             Ok(loaded) => {
@@ -292,6 +315,7 @@ mod tests {
     /// the first place a real face exists. Skipped and reported where no font is
     /// installed, exactly as the check above is.
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn tracking_opens_a_run_up_by_one_step_for_every_letter() {
         let Ok(loaded) = load_system_fonts() else {
             println!("skipped: no font on this machine");
