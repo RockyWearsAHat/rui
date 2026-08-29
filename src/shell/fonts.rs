@@ -344,4 +344,49 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn embedded_fonts_accessible_via_load_system_fonts() {
+        // Verify load_system_fonts returns fonts with actual glyph data.
+        // On WASM, this proves embedded fonts are bundled and accessible.
+        // On native platforms with fonts installed, this verifies the fallback works.
+        match load_system_fonts() {
+            Ok(loaded) => {
+                // Must have both UI and mono fonts loaded
+                assert!(loaded.fonts.len() >= 2);
+
+                let ui_font = loaded.fonts.font(loaded.ui_font).expect("ui font exists");
+                let mono_font = loaded
+                    .fonts
+                    .font(loaded.mono_font)
+                    .expect("mono font exists");
+
+                // Both fonts must have glyph data for common characters
+                for &char in &['A', 'a', '0'] {
+                    let ui_glyph = ui_font.glyph_for(char);
+                    let mono_glyph = mono_font.glyph_for(char);
+
+                    let ui_rendered = ui_font.render(ui_glyph, 16.0, 0.0);
+                    let mono_rendered = mono_font.render(mono_glyph, 16.0, 0.0);
+
+                    assert!(
+                        !ui_rendered.mask.is_empty(),
+                        "ui font must render glyph '{}'",
+                        char
+                    );
+                    assert!(
+                        !mono_rendered.mask.is_empty(),
+                        "mono font must render glyph '{}'",
+                        char
+                    );
+                }
+            }
+            Err(error) => {
+                #[cfg(target_arch = "wasm32")]
+                panic!("wasm should always load embedded fonts, but got: {}", error);
+                #[cfg(not(target_arch = "wasm32"))]
+                println!("skipped: no font on this machine ({error})");
+            }
+        }
+    }
 }
