@@ -233,3 +233,44 @@ fn window_backend_selector_gates_wasm_correctly() {
         "exactly 5 backend cfgs should each define 'mod backend;' (wasm, macos, windows, x11, unsupported)"
     );
 }
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn wasm_module_is_exported_from_lib_with_correct_guard() {
+    use std::fs;
+
+    let lib_rs = fs::read_to_string("src/lib.rs").expect("failed to read src/lib.rs");
+
+    // Find the line with `pub mod wasm;`
+    let wasm_pub_line = lib_rs
+        .lines()
+        .position(|line| line.contains("pub mod wasm;"))
+        .expect("wasm module must be exported as 'pub mod wasm;'");
+
+    // Check that the preceding lines contain the cfg guard
+    let context_start = wasm_pub_line.saturating_sub(2);
+    let context_end = wasm_pub_line + 1;
+    let context = lib_rs
+        .lines()
+        .skip(context_start)
+        .take(context_end - context_start)
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    assert!(
+        context.contains("target_arch = \"wasm32\""),
+        "wasm module must be guarded with #[cfg(target_arch = \"wasm32\")] before 'pub mod wasm;'\nContext:\n{}",
+        context
+    );
+
+    // Verify the guard is actually on the line immediately before pub mod wasm
+    let guard_line = lib_rs
+        .lines()
+        .nth(wasm_pub_line - 1)
+        .expect("there should be a line before pub mod wasm;");
+
+    assert!(
+        guard_line.contains("#[cfg") || (guard_line.is_empty() && wasm_pub_line >= 2),
+        "the line immediately before 'pub mod wasm;' should be the cfg attribute"
+    );
+}

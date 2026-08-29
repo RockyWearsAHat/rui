@@ -20,6 +20,24 @@ thread_local! {
     static COUNTER_DRIVER: RefCell<Option<FrameDriver<Counter>>> = const { RefCell::new(None) };
 }
 
+/// Starts the counter and lets the library drive its own frames.
+///
+/// The whole of what a page has to do. Everything below this is the same as it
+/// is on a desktop — the same `App`, the same view, the same loop body — and
+/// the call returns at once rather than when the interface is finished, because
+/// what it starts is a `requestAnimationFrame` loop and not a `while`.
+///
+/// The three functions below are the other way of doing this, for a page that
+/// already has a loop of its own and wants to draw one frame inside it.
+#[wasm_bindgen]
+pub fn start_counter() -> Result<(), JsValue> {
+    let fonts =
+        shell::load_system_fonts().map_err(|error| JsValue::from_str(&error.to_string()))?;
+    demo::counter_app()
+        .run_with_fonts(fonts)
+        .map_err(|error| JsValue::from_str(&error.to_string()))
+}
+
 /// Initialize the counter app and store it for use by present/listen.
 #[wasm_bindgen]
 pub fn init_counter() -> i32 {

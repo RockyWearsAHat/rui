@@ -137,7 +137,7 @@ pub use geom::{Insets, Point, Rect, Size};
 pub use input::{Drag, Event, Input, Key, Modifiers, Phase, PointerButton};
 pub use memory::{Id, Memory, Response};
 pub use paint::{Painter, Visual};
-pub use shell::{Error, FrameDriver, LoadedFonts, WindowOptions};
+pub use shell::{Error, LoadedFonts, WindowOptions};
 pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Radius, Style, Tone};
 pub use syntax::Language;
 pub use text::{FontId, Fonts, TextStyle};
