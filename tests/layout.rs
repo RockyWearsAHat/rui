@@ -6,7 +6,7 @@
 //! is arithmetic and not a measurement pasted back from a run.
 
 use rui::testing::Harness;
-use rui::{Align, Anchor, Justify, Length, El, col, panel, row, spacer, text};
+use rui::{Align, Anchor, El, Justify, Length, col, panel, row, spacer, text};
 
 /// Nothing to hold: these are about rectangles, not behaviour.
 #[derive(Default)]
@@ -37,8 +37,11 @@ fn a_run_of_text_is_as_wide_as_its_characters() {
 #[test]
 fn text_at_a_larger_size_is_larger_in_both_directions() {
     let mut harness = showing(400.0, 200.0, |_| {
-        col((text("ab").text_size(SIZE).key("small"), text("ab").text_size(SIZE * 2.0).key("big")))
-            .align(Align::Start)
+        col((
+            text("ab").text_size(SIZE).key("small"),
+            text("ab").text_size(SIZE * 2.0).key("big"),
+        ))
+        .align(Align::Start)
     });
     let small = harness.find_key("small").expect("the small run").rect;
     let big = harness.find_key("big").expect("the large run").rect;
@@ -49,7 +52,9 @@ fn text_at_a_larger_size_is_larger_in_both_directions() {
 #[test]
 fn a_size_set_on_a_container_reaches_the_text_inside_it() {
     let mut harness = showing(400.0, 200.0, |_| {
-        col(col(text("abcd")).align(Align::Start)).text_size(SIZE * 2.0).align(Align::Start)
+        col(col(text("abcd")).align(Align::Start))
+            .text_size(SIZE * 2.0)
+            .align(Align::Start)
     });
     assert_eq!(
         harness.rect_of("abcd").expect("the run is on screen").w,
@@ -65,22 +70,41 @@ fn a_paragraph_wraps_to_the_width_it_was_given() {
     // Nested one level: the root is always the size of the window, so a width
     // is only a width when something above it hands the room out.
     let mut harness = showing(400.0, 200.0, |_| {
-        col(col(text("aaaa bbbb cccc dddd eeee ffff gggg").wrap().text_size(SIZE)).w(100.0))
-            .align(Align::Start)
+        col(col(text("aaaa bbbb cccc dddd eeee ffff gggg")
+            .wrap()
+            .text_size(SIZE))
+        .w(100.0))
+        .align(Align::Start)
     });
-    let rect = harness.rect_of("aaaa bbbb cccc dddd eeee ffff gggg").expect("the paragraph");
-    assert!(rect.w <= 100.0, "it must not overrun the width it was given");
-    assert_eq!(rect.h, SIZE * 2.0, "thirty-four characters wrap onto two lines of twenty");
+    let rect = harness
+        .rect_of("aaaa bbbb cccc dddd eeee ffff gggg")
+        .expect("the paragraph");
+    assert!(
+        rect.w <= 100.0,
+        "it must not overrun the width it was given"
+    );
+    assert_eq!(
+        rect.h,
+        SIZE * 2.0,
+        "thirty-four characters wrap onto two lines of twenty"
+    );
 }
 
 #[test]
 fn a_run_too_long_for_its_box_is_cut_short_rather_than_overrunning_it() {
     let mut harness = showing(400.0, 200.0, |_| {
-        col(col(text("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").text_size(SIZE)).w(50.0).align(Align::Start))
-            .align(Align::Start)
+        col(col(text("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").text_size(SIZE))
+            .w(50.0)
+            .align(Align::Start))
+        .align(Align::Start)
     });
-    let rect = harness.rect_of("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").expect("the run");
-    assert!(rect.w <= 50.0, "a label must never be laid out wider than the box it was fitted to");
+    let rect = harness
+        .rect_of("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        .expect("the run");
+    assert!(
+        rect.w <= 50.0,
+        "a label must never be laid out wider than the box it was fitted to"
+    );
 }
 
 #[test]
@@ -94,7 +118,10 @@ fn the_room_left_over_is_divided_between_the_things_that_asked_for_it() {
     });
     assert_eq!(harness.find_key("one").expect("one").rect.w, 50.0);
     assert_eq!(harness.find_key("three").expect("three").rect.w, 150.0);
-    assert_eq!(harness.find_key("three").expect("three").rect.max_x(), 240.0);
+    assert_eq!(
+        harness.find_key("three").expect("three").rect.max_x(),
+        240.0
+    );
 }
 
 #[test]
@@ -102,7 +129,10 @@ fn a_fraction_is_a_share_of_what_the_parent_offered() {
     let mut harness = showing(400.0, 100.0, |_| {
         row(spacer().w(Length::Fraction(0.25)).key("quarter"))
     });
-    assert_eq!(harness.find_key("quarter").expect("the quarter").rect.w, 100.0);
+    assert_eq!(
+        harness.find_key("quarter").expect("the quarter").rect.w,
+        100.0
+    );
 }
 
 #[test]
@@ -117,7 +147,11 @@ fn room_that_runs_short_is_taken_off_what_was_sized_to_its_content() {
         ))
     });
     assert_eq!(
-        harness.find_key("stated").expect("the stated height").rect.h,
+        harness
+            .find_key("stated")
+            .expect("the stated height")
+            .rect
+            .h,
         200.0,
         "a stated height is not what gives way"
     );
@@ -142,7 +176,11 @@ fn a_flow_runs_onto_further_lines_when_its_children_do_not_fit() {
     assert_eq!(first.y, second.y, "two fit on the first line");
     assert!(third.y > first.y, "and the third runs onto the next");
     assert_eq!(third.x, first.x, "which starts back at the left");
-    assert_eq!(harness.find_key("bar").expect("the flow").rect.h, 30.0, "three lines of ten");
+    assert_eq!(
+        harness.find_key("bar").expect("the flow").rect.h,
+        30.0,
+        "three lines of ten"
+    );
 }
 
 #[test]
@@ -187,7 +225,11 @@ fn a_layer_hangs_off_its_anchor_and_takes_no_room_from_it() {
     let mut harness = showing(400.0, 300.0, |_| {
         col((
             col(text("Sort").h(24.0)).key("button").add(
-                panel(text("By name")).w(120.0).h(60.0).key("menu").layer(Anchor::Below),
+                panel(text("By name"))
+                    .w(120.0)
+                    .h(60.0)
+                    .key("menu")
+                    .layer(Anchor::Below),
             ),
             spacer().h(20.0).key("after"),
         ))
@@ -199,8 +241,15 @@ fn a_layer_hangs_off_its_anchor_and_takes_no_room_from_it() {
 
     assert_eq!(menu.y, button.max_y(), "it hangs off the bottom edge");
     assert_eq!(menu.x, button.x, "with their left edges in line");
-    assert_eq!(menu.w, 120.0, "and it is the width it asked for, not its anchor's");
-    assert_eq!(after.y, button.max_y(), "the layer took no room, so nothing moved for it");
+    assert_eq!(
+        menu.w, 120.0,
+        "and it is the width it asked for, not its anchor's"
+    );
+    assert_eq!(
+        after.y,
+        button.max_y(),
+        "the layer took no room, so nothing moved for it"
+    );
 }
 
 #[test]
@@ -208,24 +257,35 @@ fn a_layer_is_held_inside_the_window_rather_than_opening_off_the_edge() {
     let mut harness = showing(200.0, 200.0, |_| {
         row((
             spacer().grow(),
-            col(text("Sort").h(20.0))
-                .w(40.0)
-                .key("button")
-                .add(panel(text("By name")).w(120.0).h(60.0).key("menu").layer(Anchor::Below)),
+            col(text("Sort").h(20.0)).w(40.0).key("button").add(
+                panel(text("By name"))
+                    .w(120.0)
+                    .h(60.0)
+                    .key("menu")
+                    .layer(Anchor::Below),
+            ),
         ))
     });
 
     let menu = harness.find_key("menu").expect("the menu").rect;
-    assert!(menu.max_x() <= 200.0, "a menu near the right edge must not open past it");
-    assert_eq!(menu.max_x(), 200.0, "it is pushed back exactly as far as it had to be");
+    assert!(
+        menu.max_x() <= 200.0,
+        "a menu near the right edge must not open past it"
+    );
+    assert_eq!(
+        menu.max_x(),
+        200.0,
+        "it is pushed back exactly as far as it had to be"
+    );
 }
 
 #[test]
 fn a_layer_anchored_over_its_parent_covers_it_exactly() {
     let mut harness = showing(300.0, 200.0, |_| {
-        col(col(text("Contents")).h(80.0).key("pane").add(
-            col(text("Loading")).key("veil").layer(Anchor::Over),
-        ))
+        col(col(text("Contents"))
+            .h(80.0)
+            .key("pane")
+            .add(col(text("Loading")).key("veil").layer(Anchor::Over)))
     });
     let pane = harness.find_key("pane").expect("the pane").rect;
     assert_eq!(harness.find_key("veil").expect("the veil").rect, pane);
@@ -235,7 +295,10 @@ fn a_layer_anchored_over_its_parent_covers_it_exactly() {
 fn a_dialog_is_centred_on_the_window_and_not_on_whatever_opened_it() {
     let mut harness = showing(400.0, 300.0, |_| {
         col(col(text("Delete")).h(20.0).key("button").add(
-            panel(text("Are you sure")).size(200.0, 100.0).key("dialog").layer(Anchor::Center),
+            panel(text("Are you sure"))
+                .size(200.0, 100.0)
+                .key("dialog")
+                .layer(Anchor::Center),
         ))
     });
     let dialog = harness.find_key("dialog").expect("the dialog").rect;
@@ -245,7 +308,9 @@ fn a_dialog_is_centred_on_the_window_and_not_on_whatever_opened_it() {
 
 #[test]
 fn padding_is_taken_off_before_anything_is_placed_inside() {
-    let mut harness = showing(100.0, 100.0, |_| col(spacer().grow().key("inside")).pad(12.0));
+    let mut harness = showing(100.0, 100.0, |_| {
+        col(spacer().grow().key("inside")).pad(12.0)
+    });
     let inside = harness.find_key("inside").expect("what is inside").rect;
     assert_eq!(inside, rui::Rect::new(12.0, 12.0, 76.0, 76.0));
 }
@@ -262,7 +327,10 @@ fn spare_room_is_spread_between_children_rather_than_around_them() {
     });
     assert_eq!(harness.find_key("first").expect("first").rect.x, 0.0);
     assert_eq!(harness.find_key("second").expect("second").rect.x, 50.0);
-    assert_eq!(harness.find_key("third").expect("third").rect.max_x(), 120.0);
+    assert_eq!(
+        harness.find_key("third").expect("third").rect.max_x(),
+        120.0
+    );
 }
 
 #[test]
@@ -285,13 +353,17 @@ fn identity_follows_a_key_rather_than_a_position() {
 fn a_layout_holds_up_at_a_higher_pixel_density() {
     // Logical units are what a layout is written in; the scale only reaches the
     // canvas. A rectangle must therefore be the same at any density.
-    let plain = showing(200.0, 100.0, |_| col(text("abcd").text_size(SIZE)).align(Align::Start))
-        .rect_of("abcd")
-        .expect("the run");
-    let dense = showing(200.0, 100.0, |_| col(text("abcd").text_size(SIZE)).align(Align::Start))
-        .scale(2.0)
-        .rect_of("abcd")
-        .expect("the run");
+    let plain = showing(200.0, 100.0, |_| {
+        col(text("abcd").text_size(SIZE)).align(Align::Start)
+    })
+    .rect_of("abcd")
+    .expect("the run");
+    let dense = showing(200.0, 100.0, |_| {
+        col(text("abcd").text_size(SIZE)).align(Align::Start)
+    })
+    .scale(2.0)
+    .rect_of("abcd")
+    .expect("the run");
     assert_eq!(plain, dense);
 }
 
@@ -304,17 +376,27 @@ fn a_whole_element_stands_entire_or_is_not_laid_out_at_all() {
             text("STATE").text_size(SIZE).whole().key("state"),
         ))
     });
-    assert_eq!(roomy.rect_of("STATE").expect("the word stands").w, 25.0, "whole, at five units a character");
+    assert_eq!(
+        roomy.rect_of("STATE").expect("the word stands").w,
+        25.0,
+        "whole, at five units a character"
+    );
 
     // Room short by any amount: the word yields everything rather than an
     // ellipsis, and the room it held goes to the grower beside it.
     let mut short = showing(60.0, 40.0, |_| {
         row((
-            text("a-much-longer-name").text_size(SIZE).grow_from_content().key("name"),
+            text("a-much-longer-name")
+                .text_size(SIZE)
+                .grow_from_content()
+                .key("name"),
             text("STATE").text_size(SIZE).whole().key("state"),
         ))
     });
-    let state = short.find_key("state").expect("the element still exists").rect;
+    let state = short
+        .find_key("state")
+        .expect("the element still exists")
+        .rect;
     assert_eq!(state.w, 0.0, "never squeezed, only surrendered");
     let name = short.find_key("name").expect("the name").rect;
     assert_eq!(name.w, 60.0, "the surrendered room reaches the name");

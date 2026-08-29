@@ -104,7 +104,11 @@ impl LoadedFonts {
         let mut fonts = Fonts::new();
         let ui_font = fonts.add(Font::parse(std::fs::read(ui)?)?);
         let mono_font = fonts.add(Font::parse(std::fs::read(mono)?)?);
-        Ok(Self { fonts, ui_font, mono_font })
+        Ok(Self {
+            fonts,
+            ui_font,
+            mono_font,
+        })
     }
 }
 
@@ -120,13 +124,20 @@ pub fn load_system_fonts() -> Result<LoadedFonts, Error> {
         Some(font) => fonts.add(font),
         None => {
             return Err(Error::NoFont {
-                searched: UI_CANDIDATES.iter().map(|name| (*name).to_owned()).collect(),
+                searched: UI_CANDIDATES
+                    .iter()
+                    .map(|name| (*name).to_owned())
+                    .collect(),
             });
         }
     };
     let mono_font = first_usable(MONO_CANDIDATES).map_or(ui_font, |font| fonts.add(font));
 
-    Ok(LoadedFonts { fonts, ui_font, mono_font })
+    Ok(LoadedFonts {
+        fonts,
+        ui_font,
+        mono_font,
+    })
 }
 
 /// The first candidate that exists and parses.
@@ -158,11 +169,7 @@ fn locate(candidate: &str) -> Option<std::path::PathBuf> {
 
 /// Looks for `name` under `directory`, no deeper than [`MAX_SEARCH_DEPTH`].
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn find_named(
-    directory: &std::path::Path,
-    name: &str,
-    depth: usize,
-) -> Option<std::path::PathBuf> {
+fn find_named(directory: &std::path::Path, name: &str, depth: usize) -> Option<std::path::PathBuf> {
     if depth > MAX_SEARCH_DEPTH {
         return None;
     }
@@ -191,7 +198,10 @@ mod tests {
 
     #[test]
     fn every_candidate_list_offers_a_fallback() {
-        assert!(UI_CANDIDATES.len() > 1, "one candidate is not a fallback list");
+        assert!(
+            UI_CANDIDATES.len() > 1,
+            "one candidate is not a fallback list"
+        );
         assert!(MONO_CANDIDATES.len() > 1);
     }
 
@@ -234,7 +244,11 @@ mod tests {
     fn this_machine_has_the_faces_the_console_needs() {
         match load_system_fonts() {
             Ok(loaded) => {
-                assert_eq!(loaded.fonts.len(), 2, "the two faces should be distinct files");
+                assert_eq!(
+                    loaded.fonts.len(),
+                    2,
+                    "the two faces should be distinct files"
+                );
                 // Both faces, not just the proportional one. The fixed-width
                 // face draws the section labels and the log's own gutter, and a
                 // mark missing from it is just as blank.
@@ -267,11 +281,7 @@ mod tests {
             println!("skipped: no font on this machine");
             return;
         };
-        let solid = crate::TextStyle::new(
-            loaded.ui_font,
-            10.0,
-            crate::Color::WHITE,
-        );
+        let solid = crate::TextStyle::new(loaded.ui_font, 10.0, crate::Color::WHITE);
         let tracked = solid.tracked(2.0);
         let word = "SERVICES";
 

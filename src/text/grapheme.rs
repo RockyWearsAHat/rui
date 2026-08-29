@@ -74,8 +74,11 @@ impl<'a> Iterator for Clusters<'a> {
                 end = offset;
                 break;
             }
-            regional_run =
-                if next == Class::RegionalIndicator { regional_run + 1 } else { 0 };
+            regional_run = if next == Class::RegionalIndicator {
+                regional_run + 1
+            } else {
+                0
+            };
             previous = next;
         }
 
@@ -100,7 +103,10 @@ pub fn clusters(text: &str) -> Clusters<'_> {
 /// forward direction — the flag before a caret depends on how many indicators
 /// preceded *it*.
 pub fn before(text: &str, offset: usize) -> Option<usize> {
-    clusters(text).map(|(start, _)| start).take_while(|start| *start < offset).last()
+    clusters(text)
+        .map(|(start, _)| start)
+        .take_while(|start| *start < offset)
+        .last()
 }
 
 /// Where the cluster at `offset` ends, or `None` at the end of `text`.
@@ -128,7 +134,9 @@ pub fn is_boundary(text: &str, offset: usize) -> bool {
 /// One rather than zero so that a caller cutting a string it cannot otherwise
 /// break always makes progress instead of looping.
 pub fn first_cluster_len(text: &str) -> usize {
-    clusters(text).next().map_or(1, |(_, cluster)| cluster.len())
+    clusters(text)
+        .next()
+        .map_or(1, |(_, cluster)| cluster.len())
 }
 
 /// What a character does to the cluster it appears in.
@@ -207,27 +215,27 @@ fn is_extend(character: char) -> bool {
 /// deriving it would mean carrying the Unicode database and this crate carries
 /// no data it did not write.
 const EXTEND: [(u32, u32); 33] = [
-    (0x0300, 0x036f),   // combining diacritical marks
-    (0x0483, 0x0489),   // Cyrillic
-    (0x0591, 0x05bd),   // Hebrew points
+    (0x0300, 0x036f), // combining diacritical marks
+    (0x0483, 0x0489), // Cyrillic
+    (0x0591, 0x05bd), // Hebrew points
     (0x05bf, 0x05bf),
     (0x05c1, 0x05c2),
     (0x05c4, 0x05c5),
     (0x05c7, 0x05c7),
-    (0x0610, 0x061a),   // Arabic
+    (0x0610, 0x061a), // Arabic
     (0x064b, 0x065f),
     (0x0670, 0x0670),
     (0x06d6, 0x06dc),
     (0x06df, 0x06e4),
     (0x06e7, 0x06e8),
     (0x06ea, 0x06ed),
-    (0x0711, 0x0711),   // Syriac
+    (0x0711, 0x0711), // Syriac
     (0x0730, 0x074a),
-    (0x07a6, 0x07b0),   // Thaana
-    (0x0e31, 0x0e31),   // Thai
+    (0x07a6, 0x07b0), // Thaana
+    (0x0e31, 0x0e31), // Thai
     (0x0e34, 0x0e3a),
     (0x0e47, 0x0e4e),
-    (0x0eb1, 0x0eb1),   // Lao
+    (0x0eb1, 0x0eb1), // Lao
     (0x0eb4, 0x0ebc),
     (0x0ec8, 0x0ecd),
     (0x135d, 0x135f),   // Ethiopic
@@ -326,7 +334,11 @@ mod tests {
     #[test]
     fn a_caret_inside_a_cluster_is_moved_out_of_it() {
         let text = "e\u{301}";
-        assert_eq!(after(text, 1), Some(3), "forward, to the end of the cluster");
+        assert_eq!(
+            after(text, 1),
+            Some(3),
+            "forward, to the end of the cluster"
+        );
         assert_eq!(before(text, 2), Some(0), "back, to the start of it");
     }
 
