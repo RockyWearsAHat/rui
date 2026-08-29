@@ -8,7 +8,9 @@
 use rui::demo::{reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
 use rui::shell::pixel_conversion::convert_pixels_to_rgba;
 use rui::theme::Appearance;
-use rui::wasm::present_parity_frame;
+use rui::wasm::{
+    counter_frame_count, init_counter, listen_counter, present_counter, present_parity_frame,
+};
 use wasm_bindgen::JsCast;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
@@ -107,4 +109,51 @@ fn the_backend_presents_the_frame_it_was_given() {
             expected.len()
         );
     }
+}
+
+/// Verify that Memory state persists across multiple present_counter() calls.
+///
+/// The counter app owns its Memory instance across frames instead of allocating
+/// fresh memory each frame. This test verifies that hover effects, focus states,
+/// and animations survive the call to present_counter() by checking that the
+/// frame count in Memory increases monotonically — if Memory were reallocated
+/// fresh, the frame count would reset.
+#[wasm_bindgen_test::wasm_bindgen_test]
+fn memory_persists_across_present_counter_calls() {
+    let _ = surface(); // Ensure the canvas exists for rendering
+
+    // Initialize the counter app, which allocates Memory once.
+    init_counter();
+
+    // Present the first frame and record the frame count.
+    present_counter();
+    let frame_count_1 = counter_frame_count();
+    assert!(
+        frame_count_1 > 0,
+        "frame count should be positive after first present_counter()"
+    );
+
+    // Collect any events (though we won't send any for this test).
+    listen_counter();
+
+    // Present the second frame and check that frame count increased.
+    present_counter();
+    let frame_count_2 = counter_frame_count();
+    assert!(
+        frame_count_2 > frame_count_1,
+        "frame count should increase across present_counter() calls: {} -> {}",
+        frame_count_1,
+        frame_count_2
+    );
+
+    // Present a third frame to further verify persistence.
+    listen_counter();
+    present_counter();
+    let frame_count_3 = counter_frame_count();
+    assert!(
+        frame_count_3 > frame_count_2,
+        "frame count should continue increasing: {} -> {}",
+        frame_count_2,
+        frame_count_3
+    );
 }
