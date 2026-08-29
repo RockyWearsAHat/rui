@@ -93,3 +93,46 @@ fn theme_construction_with_loaded_font_ids() {
     assert!(theme_light.palette.background.r > 0);
     assert!(theme_dark.palette.background.r > 0);
 }
+
+#[test]
+fn embedded_fonts_render_glyphs_with_pixel_data() {
+    // Load the embedded fonts (or system fonts on native)
+    let loaded_fonts = load_system_fonts().expect("embedded fonts should load");
+
+    // Create a simple text view and render it
+    #[derive(Default)]
+    struct TextApp;
+
+    fn text_view(_state: &TextApp) -> El<TextApp> {
+        col((text("A"), text("B")))
+    }
+
+    let mut harness = Harness::with_fonts(TextApp, text_view, loaded_fonts);
+
+    // Verify that glyphs are actually rendered by checking pixel data exists
+    let frame = harness.frame();
+    let canvas = frame.canvas();
+
+    // Text should occupy some area; verify the canvas has the expected dimensions
+    assert!(canvas.width() > 0, "canvas should have width");
+    assert!(canvas.height() > 0, "canvas should have height");
+
+    // Verify pixels exist (non-transparent pixels where text was rendered)
+    // Canvas stores pixels as u32 RGBA values; check for any with alpha > 0
+    let pixels = canvas.pixels();
+    let mut found_text_pixels = false;
+
+    for &pixel in pixels {
+        // Extract alpha channel (top byte in RGBA)
+        let alpha = (pixel >> 24) & 0xFF;
+        if alpha > 0 {
+            found_text_pixels = true;
+            break;
+        }
+    }
+
+    assert!(
+        found_text_pixels,
+        "embedded fonts should render glyphs as visible pixels"
+    );
+}
