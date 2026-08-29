@@ -30,7 +30,9 @@ use crate::canvas::Canvas;
 /// `width * height * 4` bytes long, which is the one way a caller can get this
 /// wrong and the one thing that cannot be checked by looking at the result.
 pub fn png(width: u32, height: u32, rgba: &[u8]) -> Option<Vec<u8>> {
-    let expected = (width as usize).checked_mul(height as usize)?.checked_mul(4)?;
+    let expected = (width as usize)
+        .checked_mul(height as usize)?
+        .checked_mul(4)?;
     if rgba.len() != expected || width == 0 || height == 0 {
         return None;
     }
@@ -127,7 +129,11 @@ fn crc32(data: &[u8]) -> u32 {
         crc ^= byte as u32;
         for _ in 0..8 {
             // The reversed form of the polynomial, which is what PNG specifies.
-            crc = if crc & 1 != 0 { (crc >> 1) ^ 0xedb8_8320 } else { crc >> 1 };
+            crc = if crc & 1 != 0 {
+                (crc >> 1) ^ 0xedb8_8320
+            } else {
+                crc >> 1
+            };
         }
     }
     !crc
@@ -157,8 +163,16 @@ mod tests {
         // one — a wrong polynomial is self-consistent and rejected by every
         // reader.
         assert_eq!(crc32(b"123456789"), 0xcbf4_3926, "the CRC-32 check value");
-        assert_eq!(adler32(b"Wikipedia"), 0x11e6_0398, "the Adler-32 worked example");
-        assert_eq!(adler32(b""), 1, "the empty Adler-32 is the initial low word");
+        assert_eq!(
+            adler32(b"Wikipedia"),
+            0x11e6_0398,
+            "the Adler-32 worked example"
+        );
+        assert_eq!(
+            adler32(b""),
+            1,
+            "the empty Adler-32 is the initial low word"
+        );
     }
 
     #[test]
@@ -167,11 +181,22 @@ mod tests {
             .expect("two pixels of RGBA");
         assert_eq!(&image[..8], &PNG_SIGNATURE, "every PNG starts the same way");
         assert_eq!(&image[12..16], b"IHDR");
-        assert_eq!(&image[16..20], &2u32.to_be_bytes(), "the width it was given");
-        assert_eq!(&image[20..24], &1u32.to_be_bytes(), "the height it was given");
+        assert_eq!(
+            &image[16..20],
+            &2u32.to_be_bytes(),
+            "the width it was given"
+        );
+        assert_eq!(
+            &image[20..24],
+            &1u32.to_be_bytes(),
+            "the height it was given"
+        );
         assert_eq!(image[24], 8, "eight bits a channel");
         assert_eq!(image[25], 6, "colour type 6 is the one with alpha");
-        assert!(image.ends_with(b"IEND\xae\x42\x60\x82"), "and ends the same way");
+        assert!(
+            image.ends_with(b"IEND\xae\x42\x60\x82"),
+            "and ends the same way"
+        );
     }
 
     #[test]
@@ -200,12 +225,22 @@ mod tests {
             finals += usize::from(is_final);
             let length = u16::from_le_bytes([stream[at + 1], stream[at + 2]]) as usize;
             let complement = u16::from_le_bytes([stream[at + 3], stream[at + 4]]);
-            assert_eq!(complement, !(length as u16), "a block's length must be repeated inverted");
+            assert_eq!(
+                complement,
+                !(length as u16),
+                "a block's length must be repeated inverted"
+            );
             recovered.extend_from_slice(&stream[at + 5..at + 5 + length]);
             at += 5 + length;
-            assert!(!is_final || at == stream.len() - 4, "nothing may follow the final block");
+            assert!(
+                !is_final || at == stream.len() - 4,
+                "nothing may follow the final block"
+            );
         }
-        assert_eq!(recovered, data, "the blocks must reproduce the input exactly");
+        assert_eq!(
+            recovered, data,
+            "the blocks must reproduce the input exactly"
+        );
         assert_eq!(finals, 1, "exactly one block is the last one");
     }
 

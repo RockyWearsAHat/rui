@@ -110,7 +110,12 @@ pub struct TextStyle {
 impl TextStyle {
     /// A style, in the given face, size, and colour, set solid.
     pub const fn new(font: FontId, size: f32, color: Color) -> Self {
-        Self { font, size, color, tracking: 0.0 }
+        Self {
+            font,
+            size,
+            color,
+            tracking: 0.0,
+        }
     }
 
     /// The same style in a different colour.
@@ -167,7 +172,10 @@ struct Advance {
 
 impl Advance {
     /// What a character that marks nothing and moves nothing contributes.
-    const NOTHING: Self = Self { kern: 0.0, width: 0.0 };
+    const NOTHING: Self = Self {
+        kern: 0.0,
+        width: 0.0,
+    };
 }
 
 /// A pen walking one line of text.
@@ -190,7 +198,11 @@ struct Run {
 impl Run {
     /// A pen at the start of a line to be set at `device_size`.
     fn new(device_size: f32) -> Self {
-        Self { pen: 0.0, previous: None, device_size }
+        Self {
+            pen: 0.0,
+            previous: None,
+            device_size,
+        }
     }
 
     /// Moves the pen over one character, answering where its glyph belongs.
@@ -199,8 +211,7 @@ impl Run {
     /// glyph's own advance — which is why drawing calls this rather than
     /// summing widths itself.
     fn add(&mut self, fonts: &Fonts, style: &TextStyle, character: char) -> f32 {
-        let advance =
-            fonts.advance_of(style, self.previous, character, self.device_size, self.pen);
+        let advance = fonts.advance_of(style, self.previous, character, self.device_size, self.pen);
         self.pen += advance.kern;
         let at = self.pen;
         self.pen += advance.width;
@@ -224,12 +235,18 @@ pub struct Fonts {
 impl Fonts {
     /// A set of fonts with nothing loaded, at a scale of one.
     pub fn new() -> Self {
-        Self { faces: Vec::new(), scale: 1.0 }
+        Self {
+            faces: Vec::new(),
+            scale: 1.0,
+        }
     }
 
     /// Adds a face and answers the handle that selects it.
     pub fn add(&mut self, font: Font) -> FontId {
-        self.faces.push(Face { font, rendered: RefCell::new(HashMap::new()) });
+        self.faces.push(Face {
+            font,
+            rendered: RefCell::new(HashMap::new()),
+        });
         FontId(self.faces.len() - 1)
     }
 
@@ -266,7 +283,11 @@ impl Fonts {
     pub fn metrics(&self, style: &TextStyle) -> LineMetrics {
         match self.faces.get(style.font.0) {
             Some(face) => face.font.metrics(quantise(style.size)),
-            None => LineMetrics { ascent: 0.0, descent: 0.0, line_gap: 0.0 },
+            None => LineMetrics {
+                ascent: 0.0,
+                descent: 0.0,
+                line_gap: 0.0,
+            },
         }
     }
 
@@ -375,7 +396,13 @@ impl Fonts {
         let kept = self.fit(style, text, (max_width - ellipsis).max(0.0));
         let advance = self.draw(canvas, style, origin, &text[..kept], color);
         advance
-            + self.draw(canvas, style, origin.offset(advance, 0.0), &ELLIPSIS.to_string(), color)
+            + self.draw(
+                canvas,
+                style,
+                origin.offset(advance, 0.0),
+                &ELLIPSIS.to_string(),
+                color,
+            )
     }
 
     /// The size glyphs are rendered at, in quantised device pixels.
@@ -405,12 +432,17 @@ impl Fonts {
             return Advance::NOTHING;
         };
         if character == '\t' {
-            let stop = self.faces[face].font.advance(glyph_of(&self.faces[face].font, ' '), device_size)
+            let stop = self.faces[face]
+                .font
+                .advance(glyph_of(&self.faces[face].font, ' '), device_size)
                 * TAB_WIDTH as f32;
             if stop > 0.0 {
                 // A tab reaches an absolute stop, so nothing before it can
                 // move it: no kerning, whatever the pair.
-                return Advance { kern: 0.0, width: stop - pen.rem_euclid(stop) };
+                return Advance {
+                    kern: 0.0,
+                    width: stop - pen.rem_euclid(stop),
+                };
             }
         }
         Advance {
@@ -419,8 +451,7 @@ impl Fonts {
             // through, so measuring and drawing cannot disagree about how wide
             // a tracked run is. It is a logical measurement like the size, so
             // it is scaled to device pixels the same way.
-            width: self.faces[face].font.advance(glyph, device_size)
-                + style.tracking * self.scale,
+            width: self.faces[face].font.advance(glyph, device_size) + style.tracking * self.scale,
         }
     }
 
@@ -470,11 +501,10 @@ impl Fonts {
             cache.clear();
         }
         let rendered = cache.entry(key).or_insert_with(|| {
-            Rc::new(face.font.render(
-                glyph,
-                device_size,
-                phase as f32 / SUBPIXEL_PHASES as f32,
-            ))
+            Rc::new(
+                face.font
+                    .render(glyph, device_size, phase as f32 / SUBPIXEL_PHASES as f32),
+            )
         });
         (!rendered.mask.is_empty()).then(|| Rc::clone(rendered))
     }
@@ -600,7 +630,11 @@ fn split_lines(text: &str) -> Vec<(usize, usize)> {
     let mut start = 0;
     for (offset, character) in text.char_indices() {
         if character == '\n' {
-            let end = if text[..offset].ends_with('\r') { offset - 1 } else { offset };
+            let end = if text[..offset].ends_with('\r') {
+                offset - 1
+            } else {
+                offset
+            };
             lines.push((start, end));
             start = offset + 1;
         }
@@ -632,7 +666,11 @@ mod tests {
         let style = TextStyle::new(FontId::FIRST, 10.0, Color::WHITE);
         assert_eq!(style.tracking, 0.0);
         assert_eq!(style.tracked(0.8).tracking, 0.8);
-        assert_eq!(style.tracked(0.8).size, 10.0, "tracking must not disturb the size");
+        assert_eq!(
+            style.tracked(0.8).size,
+            10.0,
+            "tracking must not disturb the size"
+        );
     }
 
     #[test]
@@ -681,13 +719,23 @@ mod tests {
         let mut canvas = Canvas::new(20, 20, 1.0);
         canvas.clear(Color::BLACK);
         let style = TextStyle::new(FontId(0), 13.0, Color::WHITE);
-        fonts.draw(&mut canvas, &style, Point::new(0.0, 10.0), "hello", Color::WHITE);
+        fonts.draw(
+            &mut canvas,
+            &style,
+            Point::new(0.0, 10.0),
+            "hello",
+            Color::WHITE,
+        );
         assert!(canvas.pixels().iter().all(|&word| word == 0xff00_0000));
     }
 
     #[test]
     fn a_line_breaks_after_the_last_space_that_fits() {
-        assert_eq!(last_break("one two three", 7), Some(8), "a space at the limit still breaks");
+        assert_eq!(
+            last_break("one two three", 7),
+            Some(8),
+            "a space at the limit still breaks"
+        );
         assert_eq!(last_break("one two three", 6), Some(4));
         assert_eq!(last_break("unbreakable", 5), None);
         // A space that is more than one byte still leaves the break on a
@@ -708,8 +756,16 @@ mod tests {
         let (fonts, style) = loaded();
         assert_eq!(fonts.measure(&style, "AA"), 20.0);
         assert_eq!(fonts.measure(&style, "AV"), 18.0, "the pair the face kerns");
-        assert_eq!(fonts.measure(&style, "VA"), 20.0, "kerning is not symmetric");
-        assert_eq!(fonts.measure(&style, "AVA"), 28.0, "one pair in a longer run");
+        assert_eq!(
+            fonts.measure(&style, "VA"),
+            20.0,
+            "kerning is not symmetric"
+        );
+        assert_eq!(
+            fonts.measure(&style, "AVA"),
+            28.0,
+            "one pair in a longer run"
+        );
     }
 
     #[test]
@@ -720,7 +776,13 @@ mod tests {
         let (fonts, style) = loaded();
         let mut canvas = Canvas::new(200, 40, 1.0);
         for run in ["AV", "AVAV", "A V", "\tAV", "AVé…"] {
-            let drawn = fonts.draw(&mut canvas, &style, Point::new(0.0, 30.0), run, Color::WHITE);
+            let drawn = fonts.draw(
+                &mut canvas,
+                &style,
+                Point::new(0.0, 30.0),
+                run,
+                Color::WHITE,
+            );
             assert_eq!(drawn, fonts.measure(&style, run), "{run:?}");
         }
     }
@@ -740,11 +802,18 @@ mod tests {
         // `e` and a combining acute: one cluster, and in this face two
         // characters wide because the mark falls back to `.notdef`.
         let text = "e\u{301}x";
-        assert_eq!(fonts.fit(&style, text, 15.0), 0, "half a cluster is no cluster");
+        assert_eq!(
+            fonts.fit(&style, text, 15.0),
+            0,
+            "half a cluster is no cluster"
+        );
         assert_eq!(fonts.fit(&style, text, 20.0), 3, "the whole of it fits");
         for width in [0.0, 5.0, 12.0, 19.0, 25.0, 40.0] {
             let fits = fonts.fit(&style, text, width);
-            assert!(grapheme::is_boundary(text, fits), "cut at {fits} for width {width}");
+            assert!(
+                grapheme::is_boundary(text, fits),
+                "cut at {fits} for width {width}"
+            );
         }
     }
 
@@ -757,7 +826,11 @@ mod tests {
             assert!(grapheme::is_boundary(text, start), "line starts at {start}");
             assert!(grapheme::is_boundary(text, end), "line ends at {end}");
         }
-        assert_eq!(fonts.wrap(&style, text, 25.0).len(), 3, "one cluster to a line");
+        assert_eq!(
+            fonts.wrap(&style, text, 25.0).len(),
+            3,
+            "one cluster to a line"
+        );
     }
 
     #[test]
@@ -767,8 +840,11 @@ mod tests {
         // "levelup-ap" + "i"; broken at the joint the name carries, the hyphen
         // ends the first line and the word after it starts the next whole.
         let text = "levelup-api";
-        let lines: Vec<&str> =
-            fonts.wrap(&style, text, 100.0).into_iter().map(|(a, b)| &text[a..b]).collect();
+        let lines: Vec<&str> = fonts
+            .wrap(&style, text, 100.0)
+            .into_iter()
+            .map(|(a, b)| &text[a..b])
+            .collect();
         assert_eq!(lines, vec!["levelup-", "api"]);
     }
 
@@ -779,9 +855,16 @@ mod tests {
         // would break — it draws nothing — but a hyphen is ink, so with no
         // joint that fits the break falls back to the plain cut.
         let text = "levelup-api";
-        let lines: Vec<&str> =
-            fonts.wrap(&style, text, 70.0).into_iter().map(|(a, b)| &text[a..b]).collect();
-        assert_eq!(lines, vec!["levelup", "-api"], "the hyphen is not hung past the limit");
+        let lines: Vec<&str> = fonts
+            .wrap(&style, text, 70.0)
+            .into_iter()
+            .map(|(a, b)| &text[a..b])
+            .collect();
+        assert_eq!(
+            lines,
+            vec!["levelup", "-api"],
+            "the hyphen is not hung past the limit"
+        );
     }
 
     #[test]
@@ -791,7 +874,10 @@ mod tests {
         // the pairs the face says nothing about.
         let (fonts, style) = loaded();
         for word in ["abcd", "Increment", "one two three"] {
-            assert_eq!(fonts.measure(&style, word), word.chars().count() as f32 * 10.0);
+            assert_eq!(
+                fonts.measure(&style, word),
+                word.chars().count() as f32 * 10.0
+            );
         }
     }
 }

@@ -29,7 +29,10 @@ impl Point {
 
     /// This point moved by `dx` and `dy`.
     pub fn offset(self, dx: f32, dy: f32) -> Self {
-        Self { x: self.x + dx, y: self.y + dy }
+        Self {
+            x: self.x + dx,
+            y: self.y + dy,
+        }
     }
 }
 
@@ -68,17 +71,32 @@ pub struct Insets {
 impl Insets {
     /// The same inset on all four edges.
     pub const fn uniform(amount: f32) -> Self {
-        Self { left: amount, top: amount, right: amount, bottom: amount }
+        Self {
+            left: amount,
+            top: amount,
+            right: amount,
+            bottom: amount,
+        }
     }
 
     /// `horizontal` on the left and right, `vertical` on the top and bottom.
     pub const fn symmetric(horizontal: f32, vertical: f32) -> Self {
-        Self { left: horizontal, top: vertical, right: horizontal, bottom: vertical }
+        Self {
+            left: horizontal,
+            top: vertical,
+            right: horizontal,
+            bottom: vertical,
+        }
     }
 
     /// Insets given edge by edge.
     pub const fn new(left: f32, top: f32, right: f32, bottom: f32) -> Self {
-        Self { left, top, right, bottom }
+        Self {
+            left,
+            top,
+            right,
+            bottom,
+        }
     }
 
     /// Nothing on any edge.
@@ -120,7 +138,12 @@ impl Rect {
     /// A negative extent is clamped to zero rather than kept, so that every
     /// rectangle in the system satisfies `max >= min`.
     pub fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
-        Self { x, y, w: w.max(0.0), h: h.max(0.0) }
+        Self {
+            x,
+            y,
+            w: w.max(0.0),
+            h: h.max(0.0),
+        }
     }
 
     /// A rectangle from its top-left corner and its size.
@@ -139,7 +162,12 @@ impl Rect {
     }
 
     /// The empty rectangle at the origin.
-    pub const ZERO: Self = Self { x: 0.0, y: 0.0, w: 0.0, h: 0.0 };
+    pub const ZERO: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        w: 0.0,
+        h: 0.0,
+    };
 
     /// Left edge.
     pub fn min_x(self) -> f32 {
@@ -212,7 +240,11 @@ impl Rect {
 
     /// This rectangle moved by `dx` and `dy`.
     pub fn translate(self, dx: f32, dy: f32) -> Self {
-        Self { x: self.x + dx, y: self.y + dy, ..self }
+        Self {
+            x: self.x + dx,
+            y: self.y + dy,
+            ..self
+        }
     }
 
     /// The overlap of two rectangles, empty when they do not overlap.
@@ -234,7 +266,10 @@ impl Rect {
         }
         Self::from_corners(
             Point::new(self.x.min(other.x), self.y.min(other.y)),
-            Point::new(self.max_x().max(other.max_x()), self.max_y().max(other.max_y())),
+            Point::new(
+                self.max_x().max(other.max_x()),
+                self.max_y().max(other.max_y()),
+            ),
         )
     }
 
@@ -365,13 +400,19 @@ mod tests {
         let rect = Rect::new(0.0, 0.0, 100.0, 100.0);
 
         for (top, bottom) in [rect.split_top(30.0), rect.split_bottom(30.0)] {
-            assert!(top.min_y() < bottom.min_y(), "the top piece must come first");
+            assert!(
+                top.min_y() < bottom.min_y(),
+                "the top piece must come first"
+            );
             assert_eq!(top.max_y(), bottom.min_y());
             assert_eq!(top.h + bottom.h, rect.h);
         }
 
         for (left, right) in [rect.split_left(30.0), rect.split_right(30.0)] {
-            assert!(left.min_x() < right.min_x(), "the left piece must come first");
+            assert!(
+                left.min_x() < right.min_x(),
+                "the left piece must come first"
+            );
             assert_eq!(left.max_x(), right.min_x());
             assert_eq!(left.w + right.w, rect.w);
         }

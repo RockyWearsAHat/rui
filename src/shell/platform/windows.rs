@@ -464,8 +464,13 @@ impl Backend for Window {
             ShowWindow(handle, SW_SHOW);
             UpdateWindow(handle);
 
-            let mut window =
-                Self { handle, open: true, size: (1, 1), scale: 1.0, windowed: Cell::new(None) };
+            let mut window = Self {
+                handle,
+                open: true,
+                size: (1, 1),
+                scale: 1.0,
+                windowed: Cell::new(None),
+            };
             window.refresh_geometry();
             Ok(window)
         }
@@ -527,7 +532,11 @@ impl Backend for Window {
                 &mut size,
             )
         };
-        if result == 0 && data == 0 { Appearance::Dark } else { Appearance::Light }
+        if result == 0 && data == 0 {
+            Appearance::Dark
+        } else {
+            Appearance::Light
+        }
     }
 
     fn present(&self, canvas: &Canvas) -> Result<(), Error> {
@@ -619,7 +628,9 @@ impl Backend for Window {
                 return Ok(None);
             }
             if OpenClipboard(self.handle) == 0 {
-                return Err(Error::Platform("another program is holding the clipboard".into()));
+                return Err(Error::Platform(
+                    "another program is holding the clipboard".into(),
+                ));
             }
             let memory = GetClipboardData(CF_UNICODETEXT);
             if memory.is_null() {
@@ -638,19 +649,27 @@ impl Backend for Window {
         let bytes = std::mem::size_of_val(wide_text.as_slice());
         unsafe {
             if OpenClipboard(self.handle) == 0 {
-                return Err(Error::Platform("another program is holding the clipboard".into()));
+                return Err(Error::Platform(
+                    "another program is holding the clipboard".into(),
+                ));
             }
             // The clipboard takes ownership of the block handed to it, so it is
             // never freed here once `SetClipboardData` has accepted it — and it
             // has to be freed on every path where it has not.
             let memory = GlobalAlloc(GMEM_MOVEABLE, bytes);
-            let destination = if memory.is_null() { std::ptr::null_mut() } else { GlobalLock(memory) };
+            let destination = if memory.is_null() {
+                std::ptr::null_mut()
+            } else {
+                GlobalLock(memory)
+            };
             if destination.is_null() {
                 if !memory.is_null() {
                     GlobalFree(memory);
                 }
                 CloseClipboard();
-                return Err(Error::Platform("there was no memory for the copied text".into()));
+                return Err(Error::Platform(
+                    "there was no memory for the copied text".into(),
+                ));
             }
             std::ptr::copy_nonoverlapping(
                 wide_text.as_ptr(),
@@ -666,7 +685,9 @@ impl Backend for Window {
             CloseClipboard();
             if accepted.is_null() {
                 GlobalFree(memory);
-                return Err(Error::Platform("the clipboard would not take the text".into()));
+                return Err(Error::Platform(
+                    "the clipboard would not take the text".into(),
+                ));
             }
         }
         Ok(())
@@ -696,7 +717,9 @@ impl Backend for Window {
             let placed = ImmSetCompositionWindow(context, &form);
             ImmReleaseContext(self.handle, context);
             if placed == 0 {
-                return Err(Error::Platform("the input method refused a position".into()));
+                return Err(Error::Platform(
+                    "the input method refused a position".into(),
+                ));
             }
         }
         Ok(())
@@ -731,8 +754,10 @@ impl Window {
                 return Err(Error::Platform("GetWindowRect failed".into()));
             }
             let monitor = MonitorFromWindow(self.handle, MONITOR_DEFAULTTONEAREST);
-            let mut info =
-                MonitorInfo { size: std::mem::size_of::<MonitorInfo>() as u32, ..MonitorInfo::default() };
+            let mut info = MonitorInfo {
+                size: std::mem::size_of::<MonitorInfo>() as u32,
+                ..MonitorInfo::default()
+            };
             if GetMonitorInfoW(monitor, &mut info) == 0 {
                 return Err(Error::Platform("GetMonitorInfoW failed".into()));
             }
@@ -804,7 +829,11 @@ impl Window {
             ImmReleaseContext(self.handle, context);
 
             let text = String::from_utf16_lossy(&buffer);
-            let caret = if caret < 0 { buffer.len() } else { caret as usize };
+            let caret = if caret < 0 {
+                buffer.len()
+            } else {
+                caret as usize
+            };
             Some((text, caret))
         }
     }
@@ -829,7 +858,10 @@ impl Window {
             match self.composition_string(GCS_COMPSTR) {
                 Some((text, caret)) if !text.is_empty() => {
                     let at = utf16_offset(&text, caret);
-                    events.push(Event::Composing(Composition { text, selection: at..at }));
+                    events.push(Event::Composing(Composition {
+                        text,
+                        selection: at..at,
+                    }));
                 }
                 _ => events.push(Event::Composing(Composition::default())),
             }
@@ -869,28 +901,38 @@ impl Window {
                     events.push(Event::PointerMoved(at));
                 }
             }
-            WM_LBUTTONDOWN => {
-                events.push(Event::PointerDown { position: position(), button: PointerButton::Primary })
-            }
-            WM_LBUTTONUP => {
-                events.push(Event::PointerUp { position: position(), button: PointerButton::Primary })
-            }
-            WM_RBUTTONDOWN => events
-                .push(Event::PointerDown { position: position(), button: PointerButton::Secondary }),
-            WM_RBUTTONUP => events
-                .push(Event::PointerUp { position: position(), button: PointerButton::Secondary }),
-            WM_MBUTTONDOWN => {
-                events.push(Event::PointerDown { position: position(), button: PointerButton::Middle })
-            }
-            WM_MBUTTONUP => {
-                events.push(Event::PointerUp { position: position(), button: PointerButton::Middle })
-            }
-            WM_MOUSEWHEEL => {
-                events.push(Event::Scrolled { x: 0.0, y: wheel_amount(message.word) })
-            }
-            WM_MOUSEHWHEEL => {
-                events.push(Event::Scrolled { x: wheel_amount(message.word), y: 0.0 })
-            }
+            WM_LBUTTONDOWN => events.push(Event::PointerDown {
+                position: position(),
+                button: PointerButton::Primary,
+            }),
+            WM_LBUTTONUP => events.push(Event::PointerUp {
+                position: position(),
+                button: PointerButton::Primary,
+            }),
+            WM_RBUTTONDOWN => events.push(Event::PointerDown {
+                position: position(),
+                button: PointerButton::Secondary,
+            }),
+            WM_RBUTTONUP => events.push(Event::PointerUp {
+                position: position(),
+                button: PointerButton::Secondary,
+            }),
+            WM_MBUTTONDOWN => events.push(Event::PointerDown {
+                position: position(),
+                button: PointerButton::Middle,
+            }),
+            WM_MBUTTONUP => events.push(Event::PointerUp {
+                position: position(),
+                button: PointerButton::Middle,
+            }),
+            WM_MOUSEWHEEL => events.push(Event::Scrolled {
+                x: 0.0,
+                y: wheel_amount(message.word),
+            }),
+            WM_MOUSEHWHEEL => events.push(Event::Scrolled {
+                x: wheel_amount(message.word),
+                y: 0.0,
+            }),
             // Reported whether or not this library has a name for the key. The
             // virtual-key code is what the function row, the keypad, and the
             // left and right halves of a modifier pair have instead of a name,
@@ -929,7 +971,10 @@ impl Window {
 
     /// The client size in logical units.
     fn logical_size(&self) -> (f32, f32) {
-        (self.size.0 as f32 / self.scale, self.size.1 as f32 / self.scale)
+        (
+            self.size.0 as f32 / self.scale,
+            self.size.1 as f32 / self.scale,
+        )
     }
 
     /// The pointer position a mouse message carries, in logical units.
@@ -1080,7 +1125,11 @@ mod tests {
     fn named_keys_come_from_their_virtual_codes() {
         assert_eq!(key_for_code(VK_ESCAPE), Some(Key::Escape));
         assert_eq!(key_for_code(VK_UP), Some(Key::Up));
-        assert_eq!(key_for_code(0x41), Some(Key::Character('a')), "letters arrive uppercase");
+        assert_eq!(
+            key_for_code(0x41),
+            Some(Key::Character('a')),
+            "letters arrive uppercase"
+        );
         assert_eq!(key_for_code(0x35), Some(Key::Character('5')));
         assert_eq!(key_for_code(0xFF), None);
     }

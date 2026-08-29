@@ -182,7 +182,12 @@ pub struct Modifiers {
 
 impl Modifiers {
     /// No modifiers held.
-    pub const NONE: Self = Self { shift: false, control: false, alt: false, command: false };
+    pub const NONE: Self = Self {
+        shift: false,
+        control: false,
+        alt: false,
+        command: false,
+    };
 
     /// Whether Control and the accelerator are the same physical key here.
     ///
@@ -578,13 +583,31 @@ impl Input {
                 self.scroll.0 += x;
                 self.scroll.1 += y;
             }
-            Event::KeyDown { key, code, modifiers } => {
+            Event::KeyDown {
+                key,
+                code,
+                modifiers,
+            } => {
                 self.modifiers = modifiers;
-                self.take_stroke(KeyStroke { code, key, modifiers, phase: KeyPhase::Down });
+                self.take_stroke(KeyStroke {
+                    code,
+                    key,
+                    modifiers,
+                    phase: KeyPhase::Down,
+                });
             }
-            Event::KeyUp { key, code, modifiers } => {
+            Event::KeyUp {
+                key,
+                code,
+                modifiers,
+            } => {
                 self.modifiers = modifiers;
-                self.take_stroke(KeyStroke { code, key, modifiers, phase: KeyPhase::Up });
+                self.take_stroke(KeyStroke {
+                    code,
+                    key,
+                    modifiers,
+                    phase: KeyPhase::Up,
+                });
             }
             Event::Text(text) => self.text.push_str(&text),
             Event::Composing(composition) => self.composition = within_bounds(composition),
@@ -702,7 +725,8 @@ impl Input {
 
     /// Whether a key was pressed with exactly the platform accelerator held.
     pub fn shortcut(&self, key: Key) -> bool {
-        self.keys().any(|(pressed, modifiers)| pressed == key && modifiers.command_only())
+        self.keys()
+            .any(|(pressed, modifiers)| pressed == key && modifiers.command_only())
     }
 
     /// The named keys that moved one way this frame.
@@ -733,7 +757,11 @@ impl Input {
     /// Whatever has the keyboard draws this at its caret. Nothing else should
     /// act on it: it is not typed yet, and it may never be.
     pub fn composition(&self) -> Option<&Composition> {
-        if self.composition.is_empty() { None } else { Some(&self.composition) }
+        if self.composition.is_empty() {
+            None
+        } else {
+            Some(&self.composition)
+        }
     }
 
     /// Which modifiers were last seen held.
@@ -783,21 +811,33 @@ mod tests {
     #[test]
     fn a_press_is_reported_once_however_long_the_button_is_held() {
         let mut input = Input::new();
-        input.apply(Event::PointerDown { position: at(1.0, 1.0), button: PointerButton::Primary });
+        input.apply(Event::PointerDown {
+            position: at(1.0, 1.0),
+            button: PointerButton::Primary,
+        });
         assert!(input.pressed(PointerButton::Primary));
         assert!(input.held(PointerButton::Primary));
 
         input.begin_frame();
         assert!(!input.pressed(PointerButton::Primary), "the press repeated");
-        assert!(input.held(PointerButton::Primary), "the button is still down");
+        assert!(
+            input.held(PointerButton::Primary),
+            "the button is still down"
+        );
     }
 
     #[test]
     fn a_release_clears_the_hold_but_is_itself_reported_once() {
         let mut input = Input::new();
-        input.apply(Event::PointerDown { position: at(1.0, 1.0), button: PointerButton::Primary });
+        input.apply(Event::PointerDown {
+            position: at(1.0, 1.0),
+            button: PointerButton::Primary,
+        });
         input.begin_frame();
-        input.apply(Event::PointerUp { position: at(1.0, 1.0), button: PointerButton::Primary });
+        input.apply(Event::PointerUp {
+            position: at(1.0, 1.0),
+            button: PointerButton::Primary,
+        });
 
         assert!(input.released(PointerButton::Primary));
         assert!(!input.held(PointerButton::Primary));
@@ -809,7 +849,10 @@ mod tests {
     #[test]
     fn buttons_are_tracked_apart_from_one_another() {
         let mut input = Input::new();
-        input.apply(Event::PointerDown { position: at(0.0, 0.0), button: PointerButton::Secondary });
+        input.apply(Event::PointerDown {
+            position: at(0.0, 0.0),
+            button: PointerButton::Secondary,
+        });
         assert!(input.held(PointerButton::Secondary));
         assert!(!input.held(PointerButton::Primary));
         assert!(input.any_held());
@@ -818,10 +861,16 @@ mod tests {
     #[test]
     fn where_a_press_began_is_remembered_for_judging_a_drag() {
         let mut input = Input::new();
-        input.apply(Event::PointerDown { position: at(5.0, 5.0), button: PointerButton::Primary });
+        input.apply(Event::PointerDown {
+            position: at(5.0, 5.0),
+            button: PointerButton::Primary,
+        });
         input.apply(Event::PointerMoved(at(90.0, 90.0)));
 
-        assert_eq!(input.press_origin(PointerButton::Primary), Some(at(5.0, 5.0)));
+        assert_eq!(
+            input.press_origin(PointerButton::Primary),
+            Some(at(5.0, 5.0))
+        );
         assert_eq!(input.pointer(), at(90.0, 90.0));
     }
 
@@ -833,7 +882,11 @@ mod tests {
         assert_eq!(input.scroll(), (1.5, 5.0));
 
         input.begin_frame();
-        assert_eq!(input.scroll(), (0.0, 0.0), "scrolling carried into the next frame");
+        assert_eq!(
+            input.scroll(),
+            (0.0, 0.0),
+            "scrolling carried into the next frame"
+        );
     }
 
     #[test]
@@ -867,7 +920,10 @@ mod tests {
 
     /// The event an input method sends while it is still assembling something.
     fn composing(text: &str, selection: Range<usize>) -> Event {
-        Event::Composing(Composition { text: text.to_owned(), selection })
+        Event::Composing(Composition {
+            text: text.to_owned(),
+            selection,
+        })
     }
 
     #[test]
@@ -885,7 +941,10 @@ mod tests {
         let mut input = Input::new();
         input.apply(composing("にほ", 0..6));
         input.begin_frame();
-        assert!(input.composition().is_some(), "the composition vanished between frames");
+        assert!(
+            input.composition().is_some(),
+            "the composition vanished between frames"
+        );
     }
 
     #[test]
@@ -912,24 +971,45 @@ mod tests {
         // carelessly. The field slices by this range, so it has to hold.
         let mut input = Input::new();
         input.apply(composing("é", 1..99));
-        let composition = input.composition().expect("the composition should survive clamping");
-        assert_eq!(composition.selection, 0..2, "é is one character of two bytes");
+        let composition = input
+            .composition()
+            .expect("the composition should survive clamping");
+        assert_eq!(
+            composition.selection,
+            0..2,
+            "é is one character of two bytes"
+        );
     }
 
     /// A key going down with nothing held, as a platform reports it.
     fn down(key: Key, modifiers: Modifiers) -> Event {
-        Event::KeyDown { key: Some(key), code: None, modifiers }
+        Event::KeyDown {
+            key: Some(key),
+            code: None,
+            modifiers,
+        }
     }
 
     /// The same key coming up.
     fn up(key: Key, modifiers: Modifiers) -> Event {
-        Event::KeyUp { key: Some(key), code: None, modifiers }
+        Event::KeyUp {
+            key: Some(key),
+            code: None,
+            modifiers,
+        }
     }
 
     #[test]
     fn a_shortcut_needs_the_accelerator_and_nothing_else() {
-        let accelerator = Modifiers { command: true, ..Modifiers::NONE };
-        let with_shift = Modifiers { command: true, shift: true, ..Modifiers::NONE };
+        let accelerator = Modifiers {
+            command: true,
+            ..Modifiers::NONE
+        };
+        let with_shift = Modifiers {
+            command: true,
+            shift: true,
+            ..Modifiers::NONE
+        };
 
         let mut input = Input::new();
         input.apply(down(Key::Character('r'), accelerator));
@@ -938,8 +1018,14 @@ mod tests {
 
         input.begin_frame();
         input.apply(down(Key::Character('r'), with_shift));
-        assert!(!input.shortcut(Key::Character('r')), "shift should not match a bare shortcut");
-        assert!(input.key_pressed(Key::Character('r')), "but the key was still pressed");
+        assert!(
+            !input.shortcut(Key::Character('r')),
+            "shift should not match a bare shortcut"
+        );
+        assert!(
+            input.key_pressed(Key::Character('r')),
+            "but the key was still pressed"
+        );
     }
 
     #[test]
@@ -955,29 +1041,51 @@ mod tests {
         // What X11 and Windows both send for one press of Control. It has to
         // read as a bare accelerator, or a shortcut on either platform is
         // unpressable — which is exactly what it was.
-        let both = Modifiers { control: true, command: true, ..Modifiers::NONE };
+        let both = Modifiers {
+            control: true,
+            command: true,
+            ..Modifiers::NONE
+        };
         assert_eq!(both.command_only(), Modifiers::CONTROL_IS_ACCELERATOR);
 
         // Control alone, with no accelerator, is never a shortcut anywhere.
-        let control = Modifiers { control: true, ..Modifiers::NONE };
+        let control = Modifiers {
+            control: true,
+            ..Modifiers::NONE
+        };
         assert!(!control.command_only());
     }
 
     #[test]
     fn a_second_modifier_still_stops_it_being_a_bare_accelerator() {
         for extra in [
-            Modifiers { shift: true, ..Modifiers::NONE },
-            Modifiers { alt: true, ..Modifiers::NONE },
+            Modifiers {
+                shift: true,
+                ..Modifiers::NONE
+            },
+            Modifiers {
+                alt: true,
+                ..Modifiers::NONE
+            },
         ] {
-            let held = Modifiers { command: true, ..extra };
-            assert!(!held.command_only(), "{held:?} is the accelerator and something else");
+            let held = Modifiers {
+                command: true,
+                ..extra
+            };
+            assert!(
+                !held.command_only(),
+                "{held:?} is the accelerator and something else"
+            );
         }
     }
 
     #[test]
     fn releasing_a_modifier_updates_what_is_held() {
         let mut input = Input::new();
-        let shifted = Modifiers { shift: true, ..Modifiers::NONE };
+        let shifted = Modifiers {
+            shift: true,
+            ..Modifiers::NONE
+        };
         input.apply(down(Key::Character('a'), shifted));
         assert!(input.modifiers().shift);
 
@@ -992,12 +1100,18 @@ mod tests {
         let mut input = Input::new();
         input.apply(down(Key::Character('a'), Modifiers::NONE));
         assert!(input.key_pressed(Key::Character('a')));
-        assert!(!input.key_released(Key::Character('a')), "it has not come up yet");
+        assert!(
+            !input.key_released(Key::Character('a')),
+            "it has not come up yet"
+        );
 
         input.begin_frame();
         input.apply(up(Key::Character('a'), Modifiers::NONE));
         assert!(input.key_released(Key::Character('a')));
-        assert!(!input.key_pressed(Key::Character('a')), "a release is not a press");
+        assert!(
+            !input.key_pressed(Key::Character('a')),
+            "a release is not a press"
+        );
     }
 
     #[test]
@@ -1023,12 +1137,20 @@ mod tests {
 
         for code in codes {
             input.begin_frame();
-            input.apply(Event::KeyDown { key: None, code: Some(code), modifiers: Modifiers::NONE });
+            input.apply(Event::KeyDown {
+                key: None,
+                code: Some(code),
+                modifiers: Modifiers::NONE,
+            });
             held.extend(down_codes(&input));
         }
         for code in codes.into_iter().rev() {
             input.begin_frame();
-            input.apply(Event::KeyUp { key: None, code: Some(code), modifiers: Modifiers::NONE });
+            input.apply(Event::KeyUp {
+                key: None,
+                code: Some(code),
+                modifiers: Modifiers::NONE,
+            });
             for released in input.strokes().iter().filter(|stroke| !stroke.is_down()) {
                 let code = released.code.expect("a physical release carries its code");
                 let at = held
@@ -1063,7 +1185,11 @@ mod tests {
             modifiers: Modifiers::NONE,
         });
 
-        assert_eq!(input.keys().count(), 0, "it has no name, so no widget sees it");
+        assert_eq!(
+            input.keys().count(),
+            0,
+            "it has no name, so no widget sees it"
+        );
         assert_eq!(input.strokes().len(), 1);
         assert_eq!(input.strokes()[0].code, Some(KeyCode::new(96)));
         assert!(input.strokes()[0].is_down());
@@ -1074,7 +1200,11 @@ mod tests {
         // Neither a position nor a meaning describes nothing, and storing it
         // would make every reader check for it.
         let mut input = Input::new();
-        input.apply(Event::KeyDown { key: None, code: None, modifiers: Modifiers::NONE });
+        input.apply(Event::KeyDown {
+            key: None,
+            code: None,
+            modifiers: Modifiers::NONE,
+        });
         assert_eq!(input.strokes().len(), 0);
     }
 

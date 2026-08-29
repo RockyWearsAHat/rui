@@ -799,7 +799,11 @@ impl Backend for Window {
             message.window = self.window;
             message.message_type = self.atoms.window_state;
             message.format = 32;
-            message.data[0] = if filling { NET_WM_STATE_ADD } else { NET_WM_STATE_REMOVE };
+            message.data[0] = if filling {
+                NET_WM_STATE_ADD
+            } else {
+                NET_WM_STATE_REMOVE
+            };
             message.data[1] = self.atoms.state_fullscreen as c_long;
             // The second state is none, and the source is a normal application
             // rather than a pager — both are fields of the message the
@@ -891,11 +895,18 @@ impl Backend for Window {
     fn set_clipboard_text(&self, text: &str) -> Result<(), Error> {
         *self.owned.borrow_mut() = Some(text.to_owned());
         unsafe {
-            XSetSelectionOwner(self.display, self.atoms.clipboard, self.window, CURRENT_TIME);
+            XSetSelectionOwner(
+                self.display,
+                self.atoms.clipboard,
+                self.window,
+                CURRENT_TIME,
+            );
             XFlush(self.display);
             if XGetSelectionOwner(self.display, self.atoms.clipboard) != self.window {
                 *self.owned.borrow_mut() = None;
-                return Err(Error::Platform("the X server would not hand over the clipboard".into()));
+                return Err(Error::Platform(
+                    "the X server would not hand over the clipboard".into(),
+                ));
             }
         }
         Ok(())
@@ -1015,7 +1026,11 @@ impl Window {
     fn answer_selection_request(&self, request: &XSelectionRequestEvent) {
         // A requestor from before the conventions were written asks for the
         // answer under the target's own name. Honouring it costs one line.
-        let property = if request.property == 0 { request.target } else { request.property };
+        let property = if request.property == 0 {
+            request.target
+        } else {
+            request.property
+        };
         let supplied = self.supply_selection(request, property);
 
         unsafe {
@@ -1115,22 +1130,34 @@ impl Window {
                     match button.button {
                         4 => {
                             if event.kind == BUTTON_PRESS {
-                                events.push(Event::Scrolled { x: 0.0, y: WHEEL_STEP });
+                                events.push(Event::Scrolled {
+                                    x: 0.0,
+                                    y: WHEEL_STEP,
+                                });
                             }
                         }
                         5 => {
                             if event.kind == BUTTON_PRESS {
-                                events.push(Event::Scrolled { x: 0.0, y: -WHEEL_STEP });
+                                events.push(Event::Scrolled {
+                                    x: 0.0,
+                                    y: -WHEEL_STEP,
+                                });
                             }
                         }
                         6 => {
                             if event.kind == BUTTON_PRESS {
-                                events.push(Event::Scrolled { x: WHEEL_STEP, y: 0.0 });
+                                events.push(Event::Scrolled {
+                                    x: WHEEL_STEP,
+                                    y: 0.0,
+                                });
                             }
                         }
                         7 => {
                             if event.kind == BUTTON_PRESS {
-                                events.push(Event::Scrolled { x: -WHEEL_STEP, y: 0.0 });
+                                events.push(Event::Scrolled {
+                                    x: -WHEEL_STEP,
+                                    y: 0.0,
+                                });
                             }
                         }
                         other => {
@@ -1141,9 +1168,15 @@ impl Window {
                                 _ => return,
                             };
                             events.push(if event.kind == BUTTON_PRESS {
-                                Event::PointerDown { position, button: pointer }
+                                Event::PointerDown {
+                                    position,
+                                    button: pointer,
+                                }
                             } else {
-                                Event::PointerUp { position, button: pointer }
+                                Event::PointerUp {
+                                    position,
+                                    button: pointer,
+                                }
                             });
                         }
                     }
@@ -1189,9 +1222,17 @@ impl Window {
             let named = key_for_symbol(keysym);
             let code = Some(KeyCode::new(key.keycode));
             events.push(if event.kind == KEY_PRESS {
-                Event::KeyDown { key: named, code, modifiers }
+                Event::KeyDown {
+                    key: named,
+                    code,
+                    modifiers,
+                }
             } else {
-                Event::KeyUp { key: named, code, modifiers }
+                Event::KeyUp {
+                    key: named,
+                    code,
+                    modifiers,
+                }
             });
 
             // A key held with the accelerator is a command, not typing.
@@ -1288,7 +1329,9 @@ fn from_c(text: *const c_char) -> String {
     if text.is_null() {
         return String::new();
     }
-    unsafe { CStr::from_ptr(text) }.to_string_lossy().into_owned()
+    unsafe { CStr::from_ptr(text) }
+        .to_string_lossy()
+        .into_owned()
 }
 
 #[cfg(test)]
@@ -1299,7 +1342,11 @@ mod tests {
     fn named_keys_come_from_their_keysyms() {
         assert_eq!(key_for_symbol(0xff1b), Some(Key::Escape));
         assert_eq!(key_for_symbol(0xff52), Some(Key::Up));
-        assert_eq!(key_for_symbol(0xff8d), Some(Key::Enter), "the keypad's Enter");
+        assert_eq!(
+            key_for_symbol(0xff8d),
+            Some(Key::Enter),
+            "the keypad's Enter"
+        );
         assert_eq!(key_for_symbol(0x0041), Some(Key::Character('a')));
         assert_eq!(key_for_symbol(0x0035), Some(Key::Character('5')));
         assert_eq!(key_for_symbol(0xdeadbeef), None);

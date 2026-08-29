@@ -352,7 +352,9 @@ impl AccessTree {
 
     /// What is inside the node with this identity, in order.
     pub fn children_of(&self, parent: Id) -> impl Iterator<Item = &AccessNode> {
-        self.nodes.iter().filter(move |node| node.parent == Some(parent))
+        self.nodes
+            .iter()
+            .filter(move |node| node.parent == Some(parent))
     }
 
     /// What has the keyboard, if anything.
@@ -403,14 +405,22 @@ impl AccessTree {
         }
 
         let mut totals: HashMap<(Id, Role), usize> = HashMap::new();
-        for node in self.nodes.iter().filter(|node| node.role.container().is_some()) {
+        for node in self
+            .nodes
+            .iter()
+            .filter(|node| node.role.container().is_some())
+        {
             if let Some(parent) = node.parent {
                 *totals.entry((parent, node.role)).or_default() += 1;
             }
         }
 
         let mut seen: HashMap<(Id, Role), usize> = HashMap::new();
-        for node in self.nodes.iter_mut().filter(|node| node.role.container().is_some()) {
+        for node in self
+            .nodes
+            .iter_mut()
+            .filter(|node| node.role.container().is_some())
+        {
             let Some(parent) = node.parent else { continue };
             let position = seen.entry((parent, node.role)).or_default();
             *position += 1;
@@ -446,8 +456,12 @@ impl AccessTree {
         }
 
         let now: HashMap<Id, ()> = self.nodes.iter().map(|node| (node.id, ())).collect();
-        let removed: Vec<Id> =
-            previous.nodes.iter().map(|node| node.id).filter(|id| !now.contains_key(id)).collect();
+        let removed: Vec<Id> = previous
+            .nodes
+            .iter()
+            .map(|node| node.id)
+            .filter(|id| !now.contains_key(id))
+            .collect();
         structure_changed |= !removed.is_empty();
 
         AccessUpdate {
@@ -548,8 +562,13 @@ pub enum Fault {
 
 impl fmt::Display for Violation {
     fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let Self { role, name, bounds, .. } = self;
-        let at = format!("at {:.0},{:.0} {:.0}x{:.0}", bounds.x, bounds.y, bounds.w, bounds.h);
+        let Self {
+            role, name, bounds, ..
+        } = self;
+        let at = format!(
+            "at {:.0},{:.0} {:.0}x{:.0}",
+            bounds.x, bounds.y, bounds.w, bounds.h
+        );
         match &self.fault {
             Fault::NoRole => write!(
                 out,
@@ -631,7 +650,9 @@ fn has_ancestor(node: &AccessNode, wanted: Role, by_id: &HashMap<Id, &AccessNode
     // Bounded by the tree's own depth: every step moves to a parent, and a
     // parent was pushed before its child, so the walk cannot cycle.
     while let Some(id) = parent {
-        let Some(above) = by_id.get(&id) else { return false };
+        let Some(above) = by_id.get(&id) else {
+            return false;
+        };
         if above.role == wanted {
             return true;
         }
@@ -663,7 +684,10 @@ mod tests {
 
     /// A tree of the given nodes, settled.
     fn tree(nodes: Vec<AccessNode>) -> AccessTree {
-        let mut tree = AccessTree { nodes, focused: None };
+        let mut tree = AccessTree {
+            nodes,
+            focused: None,
+        };
         tree.finish(None);
         tree
     }
@@ -681,15 +705,22 @@ mod tests {
         assert_eq!(tabs[0].position_in_set, Some(1));
         assert_eq!(tabs[1].position_in_set, Some(2));
         assert!(tabs.iter().all(|tab| tab.set_size == Some(2)));
-        assert!(audit(&settled).is_empty(), "a tab inside its list breaks nothing");
+        assert!(
+            audit(&settled).is_empty(),
+            "a tab inside its list breaks nothing"
+        );
     }
 
     #[test]
     fn a_tab_with_no_list_above_it_is_reported() {
         let settled = tree(vec![node("stray", None, Role::Tab, "Overview")]);
         assert_eq!(
-            audit(&settled).first().map(|violation| violation.fault.clone()),
-            Some(Fault::OutsideContainer { wanted: Role::TabList })
+            audit(&settled)
+                .first()
+                .map(|violation| violation.fault.clone()),
+            Some(Fault::OutsideContainer {
+                wanted: Role::TabList
+            })
         );
     }
 
@@ -710,7 +741,10 @@ mod tests {
         let update = after.diff(&before);
         assert_eq!(update.removed, vec![Id::new("row")]);
         assert!(update.structure_changed);
-        assert!(update.changed.is_empty(), "what stayed the same is not worth saying again");
+        assert!(
+            update.changed.is_empty(),
+            "what stayed the same is not worth saying again"
+        );
     }
 
     #[test]
@@ -725,7 +759,10 @@ mod tests {
         let update = after.diff(&before);
         assert_eq!(update.changed.len(), 1);
         assert_eq!(update.changed[0].name, "2");
-        assert!(!update.structure_changed, "a word changed, not the shape of the tree");
+        assert!(
+            !update.structure_changed,
+            "a word changed, not the shape of the tree"
+        );
     }
 
     #[test]
