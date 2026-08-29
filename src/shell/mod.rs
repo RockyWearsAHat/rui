@@ -38,6 +38,7 @@
 //! not something only this loop can do: `Backend::pump` is handed a way to
 //! draw one, for a backend to call when the platform has taken over.
 
+mod clock;
 pub mod embedded_fonts;
 pub mod event_mapping;
 pub mod fonts;
@@ -46,13 +47,13 @@ mod platform;
 
 use crate::app::App;
 use crate::canvas::Canvas;
-use crate::element::El;
 use crate::font::FontError;
 use crate::input::{Event, Input};
 use crate::memory::Memory;
-use crate::text::FontId;
+use crate::text::{FontId, Fonts};
 use crate::theme::{Appearance, Theme};
-use std::time::{Duration, Instant};
+use clock::Moment;
+use std::time::Duration;
 
 pub use fonts::{load_system_fonts, LoadedFonts};
 
@@ -178,6 +179,99 @@ trait Backend: Sized {
     fn is_open(&self) -> bool;
 }
 
+/// Everything one frame is drawn from, apart from the window and the program.
+///
+/// Held together because a frame is drawn from two places — the loop below, and
+/// the backend itself while the platform has taken the loop away.
+struct Surface {
+    /// The frame being drawn.
+    drawn: Canvas,
+    /// The frame on screen, so an identical one is not sent again.
+    ///
+    /// A second canvas rather than a saved copy of the first: presenting swaps
+    /// the two, so recognising an unchanged frame costs one comparison and never
+    /// a copy of the surface.
+    presented: Canvas,
+    input: Input,
+    memory: Memory,
+    /// When the previous frame was drawn, so animation advances by elapsed time
+    /// rather than by a count of frames.
+    drawn_at: Moment,
+    ui_font: FontId,
+    mono_font: FontId,
+    /// A failure from a frame drawn inside the platform's own loop.
+    ///
+    /// There is nothing to return it to from in there, and dropping it would
+    /// turn a window that can no longer present into one that silently freezes.
+    failed: Option<Error>,
+}
+
+impl Surface {
+    /// The surface a window starts with: sized to it, with nothing on screen.
+    fn new<B: Backend>(window: &B, ui_font: FontId, mono_font: FontId) -> Self {
+        let (width, height, scale) = window.surface();
+        Self {
+            drawn: Canvas::new(width, height, scale),
+            // Deliberately empty rather than the surface's size: nothing has
+            // been presented yet, and an empty canvas differs from every frame,
+            // so the first one is sent instead of being mistaken for a repeat.
+            presented: Canvas::new(0, 0, scale),
+            input: Input::new(),
+            memory: Memory::new(),
+            drawn_at: Moment::now(),
+            ui_font,
+            mono_font,
+            failed: None,
+        }
+    }
+
+    /// Folds `events` in, draws the whole interface, and presents it if it came
+    /// out different from what is already on screen.
+    fn draw<B: Backend, S>(
+        &mut self,
+        window: &B,
+        fonts: &mut Fonts,
+        app: &mut App<S>,
+        events: &mut Vec<Event>,
+    ) -> Result<(), Error> {
+        let now = Moment::now();
+        self.memory.begin_frame(now.since(self.drawn_at));
+        self.drawn_at = now;
+
+        self.input.begin_frame();
+        for event in events.drain(..) {
+            self.input.apply(event);
+        }
+
+        let (width, height, scale) = window.surface();
+        if width != self.drawn.width()
+            || height != self.drawn.height()
+            || scale != self.drawn.scale()
+        {
+            self.drawn.resize(width, height, scale);
+        }
+        fonts.set_scale(scale);
+
+        let theme = Theme::new(window.appearance(), self.ui_font, self.mono_font);
+        self.drawn
+            .clear_vertical(theme.palette.background, theme.palette.background_deep);
+        app.frame(
+            &mut self.drawn,
+            fonts,
+            &self.input,
+            &mut self.memory,
+            &theme,
+        );
+        self.memory.end_frame(&self.input);
+
+        if self.drawn.pixels() != self.presented.pixels() {
+            window.present(&self.drawn)?;
+            std::mem::swap(&mut self.drawn, &mut self.presented);
+        }
+        Ok(())
+    }
+}
+
 /// Draws `canvas` into the page's `<canvas id="surface">`.
 ///
 /// The browser's way in, until it has a loop of its own. [`run`] below waits on
@@ -220,292 +314,215 @@ pub fn get_appearance() -> Appearance {
         .unwrap_or(Appearance::Light)
 }
 
+/// One turn of the loop: collect what arrived, draw it, present it if it came
+/// out different from the frame already on screen.
+///
+/// The whole of a frame, and everything the two drivers below have in common.
+/// They differ only in what asks for the next one — a wait on the platform, or
+/// the browser calling back — so this is deliberately the entire body of both.
+/// A frame drawn in a page and a frame drawn on a desktop are the same code,
+/// and there is nowhere for the two to drift apart.
+fn turn<S>(
+    window: &mut platform::Window,
+    surface: &mut Surface,
+    fonts: &mut Fonts,
+    app: &mut App<S>,
+    events: &mut Vec<Event>,
+) -> Result<(), Error> {
+    events.clear();
+    let wait = if surface.memory.is_animating() {
+        FRAME
+    } else {
+        app.idle()
+    };
+
+    {
+        // What the backend calls when the platform has taken the loop away.
+        // It draws with no events of its own: a gesture the platform is
+        // tracking is not one this program is being told about, and folding
+        // the same click in twice would fire whatever it landed on twice.
+        let mut redraw = |window: &platform::Window| {
+            if let Err(error) = surface.draw(window, fonts, app, &mut Vec::new()) {
+                surface.failed = Some(error);
+            }
+        };
+        window.pump(wait, events, &mut redraw)?;
+    }
+    if let Some(error) = surface.failed.take() {
+        return Err(error);
+    }
+
+    surface.draw(window, fonts, app, events)
+}
+
+/// Whether the loop should come back for another frame.
+fn continues<S>(window: &platform::Window, surface: &Surface, app: &App<S>) -> bool {
+    window.is_open() && app.is_running() && !surface.input.close_requested()
+}
+
 /// Opens a window and runs `app` in it until it is closed.
-pub(crate) fn run<S>(
+///
+/// The desktop driver: this thread belongs to the interface from here until the
+/// window goes away, which is what lets it wait — for input, or for the idle
+/// timeout — instead of spinning.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn run<S: 'static>(
     options: WindowOptions,
     loaded: LoadedFonts,
-    app: App<S>,
+    mut app: App<S>,
 ) -> Result<(), Error> {
+    let LoadedFonts {
+        mut fonts,
+        ui_font,
+        mono_font,
+    } = loaded;
     let mut window = platform::Window::open(&options)?;
-    let (width, height, scale) = window.surface();
-
-    let mut driver = FrameDriver::from_parts(app, loaded, width, height, scale);
+    let mut surface = Surface::new(&window, ui_font, mono_font);
     let mut events = Vec::new();
 
-    while window.is_open() && driver.is_running() {
-        events.clear();
-        let wait = if driver.is_animating() {
-            FRAME
-        } else {
-            driver.app_idle()
-        };
-
-        {
-            // What the backend calls when the platform has taken the loop away.
-            // It draws with no events of its own: a gesture the platform is
-            // tracking is not one this program is being told about, and folding
-            // the same click in twice would fire whatever it landed on twice.
-            let mut redraw = |window: &platform::Window| {
-                let (w, h, s) = window.surface();
-                driver.resize(w, h, s);
-                driver.set_appearance(window.appearance());
-                driver.apply_events(vec![]);
-                let _ = driver.step();
-                if driver.pixels_changed() {
-                    let _ = window.present(driver.canvas());
-                }
-            };
-            window.pump(wait, &mut events, &mut redraw)?;
-        }
-
-        let (w, h, s) = window.surface();
-        driver.resize(w, h, s);
-        driver.set_appearance(window.appearance());
-        driver.apply_events(std::mem::take(&mut events));
-        driver.step()?;
-        if driver.pixels_changed() {
-            window.present(driver.canvas())?;
-        }
-
-        if driver.close_requested() {
-            break;
-        }
+    while continues(&window, &surface, &app) {
+        turn(&mut window, &mut surface, &mut fonts, &mut app, &mut events)?;
     }
     Ok(())
 }
 
-/// Drives a frame loop one step at a time, without a window or platform backend.
+/// Draws `app` into the page, one frame per repaint, and returns immediately.
 ///
-/// Used to verify that the frame rendering pipeline can be driven by events
-/// without being tied to a blocking window loop. The same code path that a
-/// [`crate::run`] loop uses is called here with synthetic input, no display, and full
-/// control over timing.
-pub struct FrameDriver<S> {
+/// The browser driver, and the one place where the loop above cannot be the
+/// loop. A page has a single thread; it is the thread everything else on the
+/// page also runs on; and a program that never gives it back gives back nothing
+/// — no events, no timers, no repaint, and a tab the browser eventually offers
+/// to kill. So there is no `while` here. [`turn`] goes to
+/// `requestAnimationFrame` instead, and the browser calls it when it is about
+/// to repaint. Only the driving differs: the frame that comes out is drawn by
+/// the same code that draws every native one.
+///
+/// Returning before a single frame has been drawn is the honest answer rather
+/// than a shortcut. What this call can fail at is finding the page's canvas and
+/// asking for the first frame, and by the time it returns both have happened. A
+/// frame that fails later has no caller left to return to — the stack it is on
+/// belongs to the browser — so it is reported to the console and the loop stops
+/// asking for frames, rather than being dropped on the floor and leaving a
+/// surface that has quietly stopped repainting with nothing said.
+///
+/// Every repaint and no idle timeout, deliberately. `requestAnimationFrame` is
+/// the browser's own answer to when drawing is worth doing, and it already
+/// stops entirely for a tab nobody is looking at, which is the same bargain
+/// `App::idle_timeout` strikes on a desktop. A frame that comes out identical
+/// to the one on the canvas is still compared and still not presented, so the
+/// expensive half of an idle frame is not paid either way.
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn run<S: 'static>(
+    options: WindowOptions,
+    loaded: LoadedFonts,
     app: App<S>,
-    fonts: LoadedFonts,
-    drawn: Canvas,
-    presented: Canvas,
-    memory: Memory,
-    input: Input,
-    drawn_at: Option<Instant>,
-    drawn_changed: bool,
-    appearance: Appearance,
-    pending_error: Option<Error>,
-}
+) -> Result<(), Error> {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use wasm_bindgen::closure::Closure;
 
-impl<S: 'static> FrameDriver<S> {
-    /// A frame driver showing `state`, described by `view`.
+    /// Everything the page's loop owns between one frame and the next.
     ///
-    /// Draws at 800×600 logical units, scale 1.0, with the test font.
-    pub fn new(state: S, view: impl Fn(&S) -> El<S> + 'static) -> Self {
-        const WIDTH: u32 = 800;
-        const HEIGHT: u32 = 600;
-        const SCALE: f32 = 1.0;
-
-        let app = App::new("test", state, view);
-        let fonts = crate::testing::test_fonts();
-
-        Self {
-            app,
-            drawn: Canvas::new(WIDTH, HEIGHT, SCALE),
-            presented: Canvas::new(0, 0, SCALE),
-            memory: Memory::new(),
-            input: Input::new(),
-            fonts,
-            drawn_at: None,
-            drawn_changed: false,
-            appearance: Appearance::Dark,
-            pending_error: None,
-        }
-    }
-}
-
-impl<S> FrameDriver<S> {
-    /// Creates a frame driver from an existing app and loaded fonts.
-    ///
-    /// Used by the native event loop to drive frames with real window backend.
-    pub fn from_parts(
+    /// Held together in one cell because the callback owns all of it and the
+    /// browser owns the callback: there is no stack frame left to keep any of
+    /// it alive between repaints.
+    struct Page<S> {
+        window: platform::Window,
+        surface: Surface,
+        fonts: Fonts,
         app: App<S>,
-        fonts: LoadedFonts,
-        width: u32,
-        height: u32,
-        scale: f32,
-    ) -> Self {
-        Self {
-            app,
-            drawn: Canvas::new(width, height, scale),
-            presented: Canvas::new(0, 0, scale),
-            memory: Memory::new(),
-            input: Input::new(),
+        events: Vec<Event>,
+    }
+
+    let LoadedFonts {
+        fonts,
+        ui_font,
+        mono_font,
+    } = loaded;
+    let window = platform::Window::open(&options)?;
+    let surface = Surface::new(&window, ui_font, mono_font);
+    let page = Rc::new(RefCell::new(Some(Page {
+        window,
+        surface,
+        fonts,
+        app,
+        events: Vec::new(),
+    })));
+
+    // The one knot: the callback has to be able to ask for the frame after it,
+    // which means holding the very thing it is. It is built empty and then
+    // filled in with itself, and the cycle that makes is what keeps the loop
+    // alive without anything on the page having to remember it.
+    let next: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
+    let first = Rc::clone(&next);
+
+    *first.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+        let mut held = page.borrow_mut();
+        let Some(open) = held.as_mut() else {
+            return;
+        };
+        let Page {
+            window,
+            surface,
             fonts,
-            drawn_at: None,
-            drawn_changed: false,
-            appearance: Appearance::Light,
-            pending_error: None,
-        }
-    }
+            app,
+            events,
+        } = open;
 
-    /// Applies events to the input state.
-    ///
-    /// Must be called before [`Self::step`] to have the events processed
-    /// in the next frame.
-    pub fn apply_events(&mut self, events: Vec<Event>) {
-        for event in events {
-            self.input.apply(event);
-        }
-    }
+        let carry_on = match turn(window, surface, fonts, app, events) {
+            Ok(()) => continues(window, surface, app),
+            Err(error) => {
+                report(&error);
+                false
+            }
+        };
 
-    /// Resizes the canvas to the given dimensions if they differ.
-    ///
-    /// Should be called before [`Self::step`] if the window size changes.
-    pub fn resize(&mut self, width: u32, height: u32, scale: f32) {
-        if width != self.drawn.width()
-            || height != self.drawn.height()
-            || scale != self.drawn.scale()
-        {
-            self.drawn.resize(width, height, scale);
-        }
-    }
-
-    /// Whether the app or memory indicate animation is in progress.
-    pub fn is_animating(&self) -> bool {
-        self.memory.is_animating()
-    }
-
-    /// Sets the appearance (light/dark mode) for the next frame.
-    pub fn set_appearance(&mut self, appearance: Appearance) {
-        self.appearance = appearance;
-    }
-
-    /// Draws one frame with the accumulated input and animations.
-    ///
-    /// Applies all changes from event handlers to the state, and presents
-    /// the frame to the canvas. The canvas is updated whether or not pixels
-    /// changed — use [`Self::has_drawn`] to check if this step's output
-    /// differs from the last one.
-    ///
-    /// Returns any pending error from a previous step, preventing errors
-    /// from silently accumulating.
-    pub fn step(&mut self) -> Result<(), Error> {
-        if let Some(error) = self.pending_error.take() {
-            return Err(error);
-        }
-
-        let now = Instant::now();
-        let elapsed = self
-            .drawn_at
-            .map(|then| now.saturating_duration_since(then))
-            .unwrap_or_default();
-        self.memory.begin_frame(elapsed);
-        self.drawn_at = Some(now);
-
-        self.input.begin_frame();
-
-        self.fonts.fonts.set_scale(self.drawn.scale());
-        let theme = Theme::new(self.appearance, self.fonts.ui_font, self.fonts.mono_font);
-        self.drawn
-            .clear_vertical(theme.palette.background, theme.palette.background_deep);
-
-        self.app.frame(
-            &mut self.drawn,
-            &self.fonts.fonts,
-            &self.input,
-            &mut self.memory,
-            &theme,
-        );
-        self.memory.end_frame(&self.input);
-
-        self.drawn_changed = true;
-        Ok(())
-    }
-
-    /// The application's current state.
-    pub fn state(&self) -> &S {
-        self.app.state()
-    }
-
-    /// Whether a frame was drawn since this was last called.
-    pub fn has_drawn(&mut self) -> bool {
-        let changed = self.drawn_changed;
-        self.drawn_changed = false;
-        changed
-    }
-
-    /// The canvas that was just drawn.
-    pub fn canvas(&self) -> &Canvas {
-        &self.drawn
-    }
-
-    /// Checks if pixels changed and swaps the drawn and presented buffers.
-    ///
-    /// Returns true if the frame differs from the previously presented one,
-    /// indicating it should be sent to the display.
-    pub fn pixels_changed(&mut self) -> bool {
-        if self.drawn.pixels() != self.presented.pixels() {
-            std::mem::swap(&mut self.drawn, &mut self.presented);
-            true
+        if carry_on {
+            if let Some(callback) = next.borrow().as_ref() {
+                if let Err(error) = schedule(callback) {
+                    report(&error);
+                    *held = None;
+                }
+            }
         } else {
-            false
+            // Nothing will ask for another frame, so let go of the window, the
+            // fonts, and the state: everything the loop was holding is freed
+            // here. The callback itself outlives it — dropping a closure from
+            // inside the call the browser is making to it would free the frame
+            // that call is standing on — but an empty cell is all that is left.
+            *held = None;
         }
-    }
+    }) as Box<dyn FnMut()>));
 
-    /// The UI font ID.
-    pub fn ui_font(&self) -> FontId {
-        self.fonts.ui_font
-    }
+    // Bound rather than returned straight: the borrow has to be let go of
+    // before `first` is, and a tail expression would hold it past that.
+    let started = schedule(
+        first
+            .borrow()
+            .as_ref()
+            .expect("the callback was just put there"),
+    );
+    started
+}
 
-    /// The monospace font ID.
-    pub fn mono_font(&self) -> FontId {
-        self.fonts.mono_font
-    }
+/// Asks the browser to call `callback` before its next repaint.
+#[cfg(target_arch = "wasm32")]
+fn schedule(callback: &wasm_bindgen::closure::Closure<dyn FnMut()>) -> Result<(), Error> {
+    use wasm_bindgen::JsCast;
 
-    /// Whether the application is still running.
-    pub fn is_running(&self) -> bool {
-        self.app.is_running()
-    }
+    web_sys::window()
+        .ok_or_else(|| Error::Platform("no window to draw frames in".into()))?
+        .request_animation_frame(callback.as_ref().unchecked_ref())
+        .map(|_id| ())
+        .map_err(|error| Error::Platform(format!("requestAnimationFrame refused: {error:?}")))
+}
 
-    /// The application's idle timeout.
-    pub fn app_idle(&self) -> Duration {
-        self.app.idle()
-    }
-
-    /// Whether close was requested.
-    pub fn close_requested(&self) -> bool {
-        self.input.close_requested()
-    }
-
-    /// Sets a pending error to be returned on the next call to `step()`.
-    ///
-    /// Used for testing error recovery paths without requiring actual
-    /// window or drawing failures.
-    pub fn set_pending_error(&mut self, error: Result<(), Error>) {
-        if let Err(e) = error {
-            self.pending_error = Some(e);
-        }
-    }
-
-    /// The current frame count from memory.
-    ///
-    /// Increments each frame; used to verify memory persists across redraws.
-    pub fn frame_count(&self) -> u64 {
-        self.memory.frame_count()
-    }
-
-    /// Collects pending events from the platform.
-    ///
-    /// On WASM, calls the browser's event listener. On native platforms,
-    /// returns an empty vector (events are collected by the windowing system).
-    #[cfg(target_arch = "wasm32")]
-    pub fn collect_events(&mut self) -> Result<Vec<Event>, Error> {
-        listen()
-    }
-
-    /// Collects pending events from the platform.
-    ///
-    /// On WASM, calls the browser's event listener. On native platforms,
-    /// returns an empty vector (events are collected by the windowing system).
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn collect_events(&mut self) -> Result<Vec<Event>, Error> {
-        Ok(Vec::new())
-    }
+/// Says what went wrong somewhere the browser's own tools will show it.
+///
+/// The end of the line for a frame that failed inside a callback: there is no
+/// caller to hand an error back to, and a page that simply stopped repainting
+/// with nothing said would be indistinguishable from one that finished.
+#[cfg(target_arch = "wasm32")]
+fn report(error: &Error) {
+    web_sys::console::error_1(&wasm_bindgen::JsValue::from_str(&format!("rui: {error}")));
 }

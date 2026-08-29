@@ -123,13 +123,19 @@ impl<S> App<S> {
     ///
     /// Fonts are found on this machine rather than shipped, so an interface
     /// looks like the desktop it is running on.
-    pub fn run(self) -> Result<(), Error> {
+    pub fn run(self) -> Result<(), Error>
+    where
+        S: 'static,
+    {
         let fonts = shell::load_system_fonts()?;
         self.run_with_fonts(fonts)
     }
 
     /// The same, with the faces supplied rather than searched for.
-    pub fn run_with_fonts(self, fonts: LoadedFonts) -> Result<(), Error> {
+    pub fn run_with_fonts(self, fonts: LoadedFonts) -> Result<(), Error>
+    where
+        S: 'static,
+    {
         shell::run(self.options.clone(), fonts, self)
     }
 
