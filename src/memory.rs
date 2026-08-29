@@ -457,10 +457,17 @@ impl Memory {
     /// row scrolled into view would fade in as though it had just changed.
     pub fn ease(&mut self, id: Id, target: f32, seconds: f32) -> f32 {
         let frame = self.frame;
-        let entry = self.eased.entry(id).or_insert(Eased { value: target, seen: frame });
+        let entry = self.eased.entry(id).or_insert(Eased {
+            value: target,
+            seen: frame,
+        });
         entry.seen = frame;
 
-        let step = if seconds > 0.0 { 1.0 - (-self.delta / seconds).exp() } else { 1.0 };
+        let step = if seconds > 0.0 {
+            1.0 - (-self.delta / seconds).exp()
+        } else {
+            1.0
+        };
         let value = entry.value + (target - entry.value) * step;
 
         if (target - value).abs() <= SETTLED {
@@ -495,7 +502,10 @@ impl Memory {
             return 0.0;
         }
         let frame = self.frame;
-        let cycle = self.cycles.entry(id).or_insert(Cycle { value: 0.0, seen: frame });
+        let cycle = self.cycles.entry(id).or_insert(Cycle {
+            value: 0.0,
+            seen: frame,
+        });
         cycle.seen = frame;
         cycle.value = (cycle.value + self.delta / period).fract();
         self.animating = true;
@@ -523,7 +533,9 @@ impl Memory {
         }
 
         if self.pending_focus_step != 0 && !self.focus_order.is_empty() {
-            let position = self.focus.and_then(|id| self.focus_order.iter().position(|&f| f == id));
+            let position = self
+                .focus
+                .and_then(|id| self.focus_order.iter().position(|&f| f == id));
             let count = self.focus_order.len() as i32;
             let next = match position {
                 Some(current) => (current as i32 + self.pending_focus_step).rem_euclid(count),
@@ -606,10 +618,16 @@ mod tests {
         memory.offer_focus(Id::new("button"));
         memory.step_focus(1);
         memory.end_frame(&Input::new());
-        assert!(memory.focus_visible(), "keyboard focus is invisible without the ring");
+        assert!(
+            memory.focus_visible(),
+            "keyboard focus is invisible without the ring"
+        );
 
         memory.press(Id::new("button"));
-        assert!(!memory.focus_visible(), "the next click takes the ring back off");
+        assert!(
+            !memory.focus_visible(),
+            "the next click takes the ring back off"
+        );
     }
 
     #[test]
@@ -646,7 +664,11 @@ mod tests {
             memory.offer_focus(second);
             memory.step_focus(1);
             memory.end_frame(&Input::new());
-            assert_eq!(memory.focused(), Some(expected), "focus should advance and wrap");
+            assert_eq!(
+                memory.focused(),
+                Some(expected),
+                "focus should advance and wrap"
+            );
         }
     }
 
@@ -692,7 +714,10 @@ mod tests {
         let mut memory = Memory::new();
         stepped(&mut memory, 1.0 / 60.0);
         assert_eq!(memory.ease(Id::new("hover"), 1.0, 0.1), 1.0);
-        assert!(!memory.is_animating(), "nothing should animate on first sight");
+        assert!(
+            !memory.is_animating(),
+            "nothing should animate on first sight"
+        );
     }
 
     #[test]
@@ -704,11 +729,17 @@ mod tests {
 
         stepped(&mut memory, 1.0 / 60.0);
         let first = memory.ease(id, 1.0, 0.1);
-        assert!(first > 0.0 && first < 1.0, "expected a step along the way, got {first}");
+        assert!(
+            first > 0.0 && first < 1.0,
+            "expected a step along the way, got {first}"
+        );
         assert!(memory.is_animating());
 
         stepped(&mut memory, 1.0 / 60.0);
-        assert!(memory.ease(id, 1.0, 0.1) > first, "it should keep closing on its target");
+        assert!(
+            memory.ease(id, 1.0, 0.1) > first,
+            "it should keep closing on its target"
+        );
     }
 
     #[test]
@@ -725,7 +756,10 @@ mod tests {
             memory.ease(id, 1.0, 0.05);
         }
         assert_eq!(memory.ease(id, 1.0, 0.05), 1.0);
-        assert!(!memory.is_animating(), "a settled animation must not keep the loop awake");
+        assert!(
+            !memory.is_animating(),
+            "a settled animation must not keep the loop awake"
+        );
     }
 
     #[test]
@@ -746,7 +780,10 @@ mod tests {
 
         let fast = travel(20, 1.0 / 120.0);
         let slow = travel(10, 1.0 / 60.0);
-        assert!((fast - slow).abs() < 0.02, "{fast} and {slow} should agree after equal time");
+        assert!(
+            (fast - slow).abs() < 0.02,
+            "{fast} and {slow} should agree after equal time"
+        );
     }
 
     #[test]
@@ -791,7 +828,10 @@ mod tests {
             memory.phase(id, 1.0);
         }
         let after = memory.phase(id, 1.0);
-        assert!((after - 0.1).abs() < 0.02, "expected about a tenth round, got {after}");
+        assert!(
+            (after - 0.1).abs() < 0.02,
+            "expected about a tenth round, got {after}"
+        );
     }
 
     #[test]
@@ -801,7 +841,10 @@ mod tests {
         for _ in 0..300 {
             stepped(&mut memory, 1.0 / 60.0);
             let phase = memory.phase(id, 0.5);
-            assert!((0.0..1.0).contains(&phase), "a phase left its own turn: {phase}");
+            assert!(
+                (0.0..1.0).contains(&phase),
+                "a phase left its own turn: {phase}"
+            );
         }
     }
 
@@ -821,7 +864,10 @@ mod tests {
 
         let fast = travelled(40, 1.0 / 120.0);
         let slow = travelled(20, 1.0 / 60.0);
-        assert!((fast - slow).abs() < 0.01, "{fast} and {slow} should agree after equal time");
+        assert!(
+            (fast - slow).abs() < 0.01,
+            "{fast} and {slow} should agree after equal time"
+        );
     }
 
     #[test]
@@ -840,7 +886,10 @@ mod tests {
         let mut memory = Memory::new();
         stepped(&mut memory, 1.0 / 60.0);
         assert_eq!(memory.phase(Id::new("sweep"), 0.0), 0.0);
-        assert!(!memory.is_animating(), "a loop with no period must not spin the loop");
+        assert!(
+            !memory.is_animating(),
+            "a loop with no period must not spin the loop"
+        );
     }
 
     #[test]
@@ -883,7 +932,11 @@ mod tests {
         let request = memory.take_clipboard_request();
         assert_eq!(request.copy.as_deref(), Some("selfhost"));
         assert!(!request.paste, "copying is not also asking to paste");
-        assert_eq!(memory.take_clipboard_request().copy, None, "the copy was performed twice");
+        assert_eq!(
+            memory.take_clipboard_request().copy,
+            None,
+            "the copy was performed twice"
+        );
     }
 
     #[test]
@@ -893,7 +946,10 @@ mod tests {
         memory.request_paste();
 
         assert!(memory.take_clipboard_request().paste);
-        assert!(memory.is_animating(), "the paste would not appear until something else woke us");
+        assert!(
+            memory.is_animating(),
+            "the paste would not appear until something else woke us"
+        );
     }
 
     #[test]
@@ -922,7 +978,11 @@ mod tests {
         assert!(memory.caret_area().is_some());
 
         stepped(&mut memory, 1.0 / 60.0);
-        assert_eq!(memory.caret_area(), None, "a frame that drew no caret still reported one");
+        assert_eq!(
+            memory.caret_area(),
+            None,
+            "a frame that drew no caret still reported one"
+        );
     }
 
     #[test]

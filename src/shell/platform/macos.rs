@@ -338,10 +338,16 @@ const NOT_FOUND: usize = isize::MAX as usize;
 
 impl NsRange {
     /// The range that is not one.
-    const NONE: Self = Self { location: NOT_FOUND, length: 0 };
+    const NONE: Self = Self {
+        location: NOT_FOUND,
+        length: 0,
+    };
 
     /// A range starting at nothing and covering nothing.
-    const EMPTY: Self = Self { location: 0, length: 0 };
+    const EMPTY: Self = Self {
+        location: 0,
+        length: 0,
+    };
 }
 
 /// The class with this name.
@@ -404,7 +410,10 @@ struct ObjcSuper {
 /// other, and there is no way to hand one back but to ask the class we
 /// inherited it from.
 unsafe fn send1_super<R, A>(receiver: Object, superclass: Object, selector: Sel, a: A) -> R {
-    let mut owner = ObjcSuper { receiver, superclass };
+    let mut owner = ObjcSuper {
+        receiver,
+        superclass,
+    };
     let dispatch: unsafe extern "C" fn(*mut ObjcSuper, Sel, A) -> R =
         unsafe { std::mem::transmute(objc_msgSendSuper as *const ()) };
     unsafe { dispatch(&mut owner, selector, a) }
@@ -452,7 +461,13 @@ unsafe fn send1_rect(receiver: Object, selector: Sel, rect: CgRect) -> CgRect {
 
 /// An `NSString` holding `text`, valid until the pool is popped.
 fn ns_string(text: &CStr) -> Object {
-    unsafe { send1(class(c"NSString"), sel(c"stringWithUTF8String:"), text.as_ptr()) }
+    unsafe {
+        send1(
+            class(c"NSString"),
+            sel(c"stringWithUTF8String:"),
+            text.as_ptr(),
+        )
+    }
 }
 
 /// The Rust string behind an `NSString`, or empty when there is none.
@@ -464,7 +479,9 @@ fn from_ns_string(string: Object) -> String {
     if utf8.is_null() {
         return String::new();
     }
-    unsafe { CStr::from_ptr(utf8) }.to_string_lossy().into_owned()
+    unsafe { CStr::from_ptr(utf8) }
+        .to_string_lossy()
+        .into_owned()
 }
 
 // Window style bits, from `NSWindowStyleMask`.
@@ -662,15 +679,20 @@ impl Backend for Window {
                         .into(),
                 ));
             }
-            let _: bool =
-                send1(application, sel(c"setActivationPolicy:"), ACTIVATION_REGULAR);
+            let _: bool = send1(
+                application,
+                sel(c"setActivationPolicy:"),
+                ACTIVATION_REGULAR,
+            );
 
             let content = CgRect {
                 origin: CgPoint { x: 0.0, y: 0.0 },
-                size: CgSize { width: options.width as f64, height: options.height as f64 },
+                size: CgSize {
+                    width: options.width as f64,
+                    height: options.height as f64,
+                },
             };
-            let style =
-                STYLE_TITLED | STYLE_CLOSABLE | STYLE_MINIATURIZABLE | STYLE_RESIZABLE;
+            let style = STYLE_TITLED | STYLE_CLOSABLE | STYLE_MINIATURIZABLE | STYLE_RESIZABLE;
 
             let window: Object = send(class(c"NSWindow"), sel(c"alloc"));
             let window: Object = send4(
@@ -696,7 +718,10 @@ impl Backend for Window {
             let _: () = send1(
                 window,
                 sel(c"setContentMinSize:"),
-                CgSize { width: options.min_width as f64, height: options.min_height as f64 },
+                CgSize {
+                    width: options.min_width as f64,
+                    height: options.min_height as f64,
+                },
             );
             // Mouse movement is not reported unless it is asked for, and hover
             // states are most of what makes an interface feel alive.
@@ -762,7 +787,11 @@ impl Backend for Window {
             }
 
             let _: () = send(application, sel(c"finishLaunching"));
-            let _: () = send1(window, sel(c"makeKeyAndOrderFront:"), std::ptr::null_mut::<c_void>());
+            let _: () = send1(
+                window,
+                sel(c"makeKeyAndOrderFront:"),
+                std::ptr::null_mut::<c_void>(),
+            );
             let _: () = send1(application, sel(c"activateIgnoringOtherApps:"), true);
 
             objc_autoreleasePoolPop(pool);
@@ -797,7 +826,9 @@ impl Backend for Window {
         // come back until a drag ends, and the observer firing inside it is the
         // only reason the window keeps drawing while that happens.
         self.live.window.set(std::ptr::from_ref(self));
-        self.live.redraw.set(std::ptr::from_mut(&mut redraw).cast::<c_void>());
+        self.live
+            .redraw
+            .set(std::ptr::from_mut(&mut redraw).cast::<c_void>());
         let result = self.pump_events(timeout, events);
         self.live.window.set(std::ptr::null());
         self.live.redraw.set(std::ptr::null_mut());
@@ -807,7 +838,11 @@ impl Backend for Window {
     fn surface(&self) -> (u32, u32, f32) {
         let (width, height) = self.size.get();
         let scale = self.scale.get();
-        ((width * scale).max(1.0) as u32, (height * scale).max(1.0) as u32, scale as f32)
+        (
+            (width * scale).max(1.0) as u32,
+            (height * scale).max(1.0) as u32,
+            scale as f32,
+        )
     }
 
     fn appearance(&self) -> Appearance {
@@ -907,8 +942,11 @@ impl Backend for Window {
             return Ok(());
         }
         unsafe {
-            let _: () =
-                send1(self.window, sel(c"toggleFullScreen:"), std::ptr::null_mut::<c_void>());
+            let _: () = send1(
+                self.window,
+                sel(c"toggleFullScreen:"),
+                std::ptr::null_mut::<c_void>(),
+            );
         }
         Ok(())
     }
@@ -921,11 +959,18 @@ impl Backend for Window {
                 objc_autoreleasePoolPop(pool);
                 return Err(Error::Platform("there is no general pasteboard".into()));
             }
-            let string: Object =
-                send1(pasteboard, sel(c"stringForType:"), ns_string(PASTEBOARD_TYPE_STRING));
+            let string: Object = send1(
+                pasteboard,
+                sel(c"stringForType:"),
+                ns_string(PASTEBOARD_TYPE_STRING),
+            );
             // Null is a pasteboard holding an image, a file, or nothing — all of
             // which are "there is no text to paste" rather than a failure.
-            let text = if string.is_null() { None } else { Some(from_ns_string(string)) };
+            let text = if string.is_null() {
+                None
+            } else {
+                Some(from_ns_string(string))
+            };
             objc_autoreleasePoolPop(pool);
             Ok(text)
         }
@@ -957,7 +1002,9 @@ impl Backend for Window {
             if written {
                 Ok(())
             } else {
-                Err(Error::Platform("the pasteboard would not take the text".into()))
+                Err(Error::Platform(
+                    "the pasteboard would not take the text".into(),
+                ))
             }
         }
     }
@@ -1116,11 +1163,17 @@ impl Window {
             match kind {
                 EVENT_LEFT_DOWN | EVENT_RIGHT_DOWN | EVENT_OTHER_DOWN => {
                     let position = self.pointer_position(event);
-                    events.push(Event::PointerDown { position, button: button_of(kind, event) });
+                    events.push(Event::PointerDown {
+                        position,
+                        button: button_of(kind, event),
+                    });
                 }
                 EVENT_LEFT_UP | EVENT_RIGHT_UP | EVENT_OTHER_UP => {
                     let position = self.pointer_position(event);
-                    events.push(Event::PointerUp { position, button: button_of(kind, event) });
+                    events.push(Event::PointerUp {
+                        position,
+                        button: button_of(kind, event),
+                    });
                 }
                 EVENT_MOUSE_MOVED | EVENT_LEFT_DRAGGED | EVENT_RIGHT_DRAGGED
                 | EVENT_OTHER_DRAGGED => {
@@ -1170,7 +1223,8 @@ impl Window {
             let was_composing = self.composer.is_composing();
             // A key held with the accelerator is a command, not typing: Command-R
             // must not also insert an "r" into whatever field has the keyboard.
-            let offered = kind == EVENT_KEY_DOWN && !modifiers.command && self.interpret(event, events);
+            let offered =
+                kind == EVENT_KEY_DOWN && !modifiers.command && self.interpret(event, events);
 
             // While a composition is in progress the keyboard belongs to the
             // input method: an arrow key is moving through its candidate list and
@@ -1198,9 +1252,17 @@ impl Window {
             // `key_for_code` is the meaning; `keyCode` is the key.
             let code = Some(KeyCode::new(u32::from(code)));
             events.push(if kind == EVENT_KEY_DOWN {
-                Event::KeyDown { key, code, modifiers }
+                Event::KeyDown {
+                    key,
+                    code,
+                    modifiers,
+                }
             } else {
-                Event::KeyUp { key, code, modifiers }
+                Event::KeyUp {
+                    key,
+                    code,
+                    modifiers,
+                }
             });
 
             // What is left is the case where there is no input method to ask —
@@ -1432,7 +1494,12 @@ struct Accessibility {
 impl Accessibility {
     /// An empty mirror, whose elements will be of `elements`.
     fn new(elements: Object) -> Self {
-        Self { nodes: RefCell::default(), seen: Cell::default(), inbox: Box::default(), elements }
+        Self {
+            nodes: RefCell::default(),
+            seen: Cell::default(),
+            inbox: Box::default(),
+            elements,
+        }
     }
 
     /// Applies one frame's difference to the mirror.
@@ -1456,13 +1523,22 @@ impl Accessibility {
                     inbox: Cell::new(std::ptr::from_ref(&*self.inbox)),
                 });
                 let element = new_element(self.elements, &activation);
-                Mirror { element, activation, parent: node.parent, position: None, seen }
+                Mirror {
+                    element,
+                    activation,
+                    parent: node.parent,
+                    position: None,
+                    seen,
+                }
             });
             mirror.parent = node.parent;
             mirror.position = node.position_in_set;
             // A disabled control does not answer a press, so neither does its
             // object: what a person is offered has to be what would happen.
-            mirror.activation.pressable.set(node.actions.press && !node.state.disabled);
+            mirror
+                .activation
+                .pressable
+                .set(node.actions.press && !node.state.disabled);
             describe(mirror.element, node, view);
         }
         relink(view, &nodes);
@@ -1521,7 +1597,11 @@ impl Drop for Accessibility {
 fn forget(mirror: &Mirror) {
     mirror.activation.inbox.set(std::ptr::null());
     unsafe {
-        object_setInstanceVariable(mirror.element, ACTIVATION_IVAR.as_ptr(), std::ptr::null_mut())
+        object_setInstanceVariable(
+            mirror.element,
+            ACTIVATION_IVAR.as_ptr(),
+            std::ptr::null_mut(),
+        )
     };
 }
 
@@ -1631,7 +1711,12 @@ fn attributes_of(node: &AccessNode) -> Attributes {
         // for the reasons in `accessibility`'s invariant.
         actions: _,
     } = node;
-    let AccessState { disabled, focusable: _, focused, selected } = state;
+    let AccessState {
+        disabled,
+        focusable: _,
+        focused,
+        selected,
+    } = state;
 
     let chosen = *selected;
     Attributes {
@@ -1659,19 +1744,35 @@ fn attributes_of(node: &AccessNode) -> Attributes {
 fn describe(element: Object, node: &AccessNode, view: Object) {
     let attributes = attributes_of(node);
     unsafe {
-        let _: () = send1(element, sel(c"setAccessibilityRole:"), ns_string(attributes.role));
-        let _: () = send1(element, sel(c"setAccessibilityLabel:"), text(&attributes.label));
+        let _: () = send1(
+            element,
+            sel(c"setAccessibilityRole:"),
+            ns_string(attributes.role),
+        );
+        let _: () = send1(
+            element,
+            sel(c"setAccessibilityLabel:"),
+            text(&attributes.label),
+        );
         let value: Object = match &attributes.value {
             Value::None => std::ptr::null_mut(),
             Value::Words(words) => text(words),
             Value::Toggle(on) => send1(class(c"NSNumber"), sel(c"numberWithBool:"), *on),
         };
         let _: () = send1(element, sel(c"setAccessibilityValue:"), value);
-        let _: () = send1(element, sel(c"setAccessibilityEnabled:"), attributes.enabled);
+        let _: () = send1(
+            element,
+            sel(c"setAccessibilityEnabled:"),
+            attributes.enabled,
+        );
         // Set from the node rather than only when focus moves, so that the one
         // walk of the frame is the only thing this reads: a fact applied in two
         // places is a fact that can be applied in one of them and not the other.
-        let _: () = send1(element, sel(c"setAccessibilityFocused:"), attributes.focused);
+        let _: () = send1(
+            element,
+            sel(c"setAccessibilityFocused:"),
+            attributes.focused,
+        );
         // Sent even when selection means nothing here, which collapses `None`
         // and `Some(false)` — `AXSelected` is a boolean and has no third state
         // to collapse them into anything else. Writing it unconditionally is
@@ -1684,7 +1785,11 @@ fn describe(element: Object, node: &AccessNode, view: Object) {
             sel(c"setAccessibilitySelected:"),
             attributes.selected.unwrap_or(false),
         );
-        let _: () = send1(element, sel(c"setAccessibilityFrame:"), on_screen(view, node.bounds));
+        let _: () = send1(
+            element,
+            sel(c"setAccessibilityFrame:"),
+            on_screen(view, node.bounds),
+        );
     }
 }
 
@@ -1717,7 +1822,9 @@ fn relink(view: Object, nodes: &HashMap<Id, Mirror>) {
         // order it first appeared. See [`Mirror::seen`].
         group.sort_by_key(|mirror| (mirror.position.unwrap_or(usize::MAX), mirror.seen));
 
-        let owner = parent.and_then(|id| nodes.get(&id)).map_or(view, |mirror| mirror.element);
+        let owner = parent
+            .and_then(|id| nodes.get(&id))
+            .map_or(view, |mirror| mirror.element);
         unsafe {
             let list: Object = send(class(c"NSMutableArray"), sel(c"array"));
             for mirror in group {
@@ -1780,11 +1887,15 @@ fn content_view_class() -> Result<Object, Error> {
 
     let superclass = class(c"NSView");
     if superclass.is_null() {
-        return Err(Error::Platform("AppKit is not loaded: there is no NSView".into()));
+        return Err(Error::Platform(
+            "AppKit is not loaded: there is no NSView".into(),
+        ));
     }
     let built = unsafe { objc_allocateClassPair(superclass, VIEW_CLASS.as_ptr(), 0) };
     if built.is_null() {
-        return Err(Error::Platform("a content view class could not be created".into()));
+        return Err(Error::Platform(
+            "a content view class could not be created".into(),
+        ));
     }
 
     let pointer_size = std::mem::size_of::<*mut c_void>();
@@ -1798,7 +1909,9 @@ fn content_view_class() -> Result<Object, Error> {
         )
     };
     if !added {
-        return Err(Error::Platform("the content view would not take its instance variable".into()));
+        return Err(Error::Platform(
+            "the content view would not take its instance variable".into(),
+        ));
     }
 
     // The ten methods of `NSTextInputClient`, plus the one that lets the view
@@ -1833,8 +1946,20 @@ fn content_view_class() -> Result<Object, Error> {
         set_marked_text as *const c_void,
         c"v@:@{_NSRange=QQ}{_NSRange=QQ}",
     )?;
-    add_method(built, VIEW_OWNER, c"unmarkText", unmark_text as *const c_void, c"v@:")?;
-    add_method(built, VIEW_OWNER, c"hasMarkedText", has_marked_text as *const c_void, c"B@:")?;
+    add_method(
+        built,
+        VIEW_OWNER,
+        c"unmarkText",
+        unmark_text as *const c_void,
+        c"v@:",
+    )?;
+    add_method(
+        built,
+        VIEW_OWNER,
+        c"hasMarkedText",
+        has_marked_text as *const c_void,
+        c"B@:",
+    )?;
     add_method(
         built,
         VIEW_OWNER,
@@ -1883,7 +2008,9 @@ fn content_view_class() -> Result<Object, Error> {
     // that can never be typed into in any language but this one.
     let protocol = unsafe { objc_getProtocol(c"NSTextInputClient".as_ptr()) };
     if protocol.is_null() || !unsafe { class_addProtocol(built, protocol) } {
-        return Err(Error::Platform("the content view could not be made an input client".into()));
+        return Err(Error::Platform(
+            "the content view could not be made an input client".into(),
+        ));
     }
 
     unsafe { objc_registerClassPair(built) };
@@ -1904,7 +2031,10 @@ fn add_method(
     if unsafe { class_addMethod(class, sel(name), implementation, types.as_ptr()) } {
         return Ok(());
     }
-    Err(Error::Platform(format!("the {owner} would not take {}", name.to_string_lossy())))
+    Err(Error::Platform(format!(
+        "the {owner} would not take {}",
+        name.to_string_lossy()
+    )))
 }
 
 /// The name of the accessibility-element class this backend builds at run time.
@@ -1940,7 +2070,9 @@ fn element_class() -> Result<Object, Error> {
     }
     let built = unsafe { objc_allocateClassPair(superclass, ELEMENT_CLASS.as_ptr(), 0) };
     if built.is_null() {
-        return Err(Error::Platform("an accessibility element class could not be created".into()));
+        return Err(Error::Platform(
+            "an accessibility element class could not be created".into(),
+        ));
     }
 
     let pointer_size = std::mem::size_of::<*mut c_void>();
@@ -2052,10 +2184,8 @@ fn wake() {
             ) -> Object = std::mem::transmute(objc_msgSend as *const ());
             let event = build(
                 class(c"NSEvent"),
-                sel(
-                    c"otherEventWithType:location:modifierFlags:timestamp:\
-                       windowNumber:context:subtype:data1:data2:",
-                ),
+                sel(c"otherEventWithType:location:modifierFlags:timestamp:\
+                       windowNumber:context:subtype:data1:data2:"),
                 EVENT_APPLICATION_DEFINED,
                 CgPoint::default(),
                 0,
@@ -2090,8 +2220,11 @@ fn wake() {
 /// header. A refusal is a gap somebody can find; an accepted write that does
 /// nothing is a bug report from a person who thought their screen reader was
 /// broken.
-const UNROUTED_WRITES: [&CStr; 3] =
-    [c"setAccessibilityValue:", c"setAccessibilityFocused:", c"setAccessibilitySelected:"];
+const UNROUTED_WRITES: [&CStr; 3] = [
+    c"setAccessibilityValue:",
+    c"setAccessibilityFocused:",
+    c"setAccessibilitySelected:",
+];
 
 /// `-isAccessibilitySelectorAllowed:`: whether this element answers that.
 ///
@@ -2209,9 +2342,10 @@ extern "C" fn has_marked_text(view: Object, _selector: Sel) -> bool {
 /// always the whole of it starting at zero.
 extern "C" fn marked_range(view: Object, _selector: Sel) -> NsRange {
     match composer_of(view) {
-        Some(composer) if composer.is_composing() => {
-            NsRange { location: 0, length: utf16_len(&composer.marked.borrow().text) }
-        }
+        Some(composer) if composer.is_composing() => NsRange {
+            location: 0,
+            length: utf16_len(&composer.marked.borrow().text),
+        },
         _ => NsRange::NONE,
     }
 }
@@ -2224,7 +2358,10 @@ extern "C" fn selected_range(view: Object, _selector: Sel) -> NsRange {
     let marked = composer.marked.borrow();
     let start = utf16_len(&marked.text[..marked.selection.start]);
     let length = utf16_len(&marked.text[marked.selection.clone()]);
-    NsRange { location: start, length }
+    NsRange {
+        location: start,
+        length,
+    }
 }
 
 /// `-validAttributesForMarkedText`: none — a composition is drawn our way.
@@ -2286,7 +2423,10 @@ fn on_screen(view: Object, area: Rect) -> CgRect {
             x: f64::from(area.x),
             y: frame.size.height - f64::from(area.y + area.h),
         },
-        size: CgSize { width: f64::from(area.w), height: f64::from(area.h) },
+        size: CgSize {
+            width: f64::from(area.w),
+            height: f64::from(area.h),
+        },
     };
 
     let window: Object = unsafe { send(view, sel(c"window")) };
@@ -2323,7 +2463,11 @@ fn text_of(string: Object) -> String {
         return String::new();
     }
     let attributed: bool = unsafe { send1(string, sel(c"respondsToSelector:"), sel(c"string")) };
-    let plain: Object = if attributed { unsafe { send(string, sel(c"string")) } } else { string };
+    let plain: Object = if attributed {
+        unsafe { send(string, sel(c"string")) }
+    } else {
+        string
+    };
     from_ns_string(plain)
 }
 
@@ -2356,7 +2500,11 @@ fn button_of(kind: u64, event: Object) -> PointerButton {
             // "Other" covers the middle button and everything past it; only the
             // middle one has a meaning here.
             let number: u64 = unsafe { send(event, sel(c"buttonNumber")) };
-            if number == 2 { PointerButton::Middle } else { PointerButton::Primary }
+            if number == 2 {
+                PointerButton::Middle
+            } else {
+                PointerButton::Primary
+            }
         }
     }
 }
@@ -2440,11 +2588,15 @@ fn application_delegate() -> Result<Object, Error> {
         _ => {
             let superclass = class(c"NSObject");
             if superclass.is_null() {
-                return Err(Error::Platform("the Objective-C runtime has no NSObject".into()));
+                return Err(Error::Platform(
+                    "the Objective-C runtime has no NSObject".into(),
+                ));
             }
             let built = unsafe { objc_allocateClassPair(superclass, DELEGATE_CLASS.as_ptr(), 0) };
             if built.is_null() {
-                return Err(Error::Platform("a delegate class could not be created".into()));
+                return Err(Error::Platform(
+                    "a delegate class could not be created".into(),
+                ));
             }
             // `Q@:@` — returns an unsigned word, takes the receiver, the
             // selector, and the application asking.
@@ -2476,11 +2628,7 @@ fn application_delegate() -> Result<Object, Error> {
 /// # Safety
 ///
 /// Called by the Objective-C runtime with an `NSApplication` as `application`.
-unsafe extern "C" fn should_terminate(
-    _self: Object,
-    _selector: Sel,
-    application: Object,
-) -> usize {
+unsafe extern "C" fn should_terminate(_self: Object, _selector: Sel, application: Object) -> usize {
     unsafe {
         let windows: Object = send(application, sel(c"windows"));
         let count: usize = send(windows, sel(c"count"));
@@ -2505,8 +2653,8 @@ fn install_menu(application: Object, title: &str) {
         let _: () = send1(bar, sel(c"addItem:"), item);
 
         let submenu: Object = send(send(class(c"NSMenu"), sel(c"alloc")), sel(c"init"));
-        let label = std::ffi::CString::new(format!("Quit {title}"))
-            .unwrap_or_else(|_| c"Quit".to_owned());
+        let label =
+            std::ffi::CString::new(format!("Quit {title}")).unwrap_or_else(|_| c"Quit".to_owned());
         let quit: Object = send3(
             send(class(c"NSMenuItem"), sel(c"alloc")),
             sel(c"initWithTitle:action:keyEquivalent:"),
@@ -2525,8 +2673,11 @@ fn install_menu(application: Object, title: &str) {
         // whichever window is key — which is how AppKit's own is written.
         let view_item: Object = send(send(class(c"NSMenuItem"), sel(c"alloc")), sel(c"init"));
         let _: () = send1(bar, sel(c"addItem:"), view_item);
-        let view_menu: Object =
-            send1(send(class(c"NSMenu"), sel(c"alloc")), sel(c"initWithTitle:"), ns_string(c"View"));
+        let view_menu: Object = send1(
+            send(class(c"NSMenu"), sel(c"alloc")),
+            sel(c"initWithTitle:"),
+            ns_string(c"View"),
+        );
         let full_screen: Object = send3(
             send(class(c"NSMenuItem"), sel(c"alloc")),
             sel(c"initWithTitle:action:keyEquivalent:"),
@@ -2554,8 +2705,16 @@ mod tests {
     fn named_keys_come_from_positions_not_characters() {
         assert_eq!(key_for_code(53), Some(Key::Escape));
         assert_eq!(key_for_code(126), Some(Key::Up));
-        assert_eq!(key_for_code(76), Some(Key::Enter), "the numeric keypad's Enter");
-        assert_eq!(key_for_code(0), None, "an ordinary letter is not a named key");
+        assert_eq!(
+            key_for_code(76),
+            Some(Key::Enter),
+            "the numeric keypad's Enter"
+        );
+        assert_eq!(
+            key_for_code(0),
+            None,
+            "an ordinary letter is not a named key"
+        );
     }
 
     #[test]
@@ -2567,14 +2726,18 @@ mod tests {
 
     #[test]
     fn every_modifier_is_recognised_separately() {
-        let all = modifiers_of(MODIFIER_SHIFT | MODIFIER_CONTROL | MODIFIER_OPTION | MODIFIER_COMMAND);
+        let all =
+            modifiers_of(MODIFIER_SHIFT | MODIFIER_CONTROL | MODIFIER_OPTION | MODIFIER_COMMAND);
         assert!(all.shift && all.control && all.alt && all.command);
         assert!(modifiers_of(0).is_empty());
     }
 
     #[test]
     fn function_key_code_points_are_not_treated_as_text() {
-        assert!(is_function_key('\u{f700}'), "the up arrow's private-use code point");
+        assert!(
+            is_function_key('\u{f700}'),
+            "the up arrow's private-use code point"
+        );
         assert!(!is_function_key('a'));
         assert!(!is_function_key('é'));
     }
@@ -2612,7 +2775,10 @@ mod tests {
     static TURNS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
     extern "C" fn count_a_turn(_observer: *mut c_void, _activity: u64, info: *mut c_void) {
-        assert!(!info.is_null(), "the context's info pointer should arrive intact");
+        assert!(
+            !info.is_null(),
+            "the context's info pointer should arrive intact"
+        );
         TURNS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
@@ -2645,7 +2811,10 @@ mod tests {
                 count_a_turn,
                 &mut context,
             );
-            assert!(!observer.is_null(), "CFRunLoopObserverCreate refused the arguments");
+            assert!(
+                !observer.is_null(),
+                "CFRunLoopObserverCreate refused the arguments"
+            );
             CFRunLoopAddObserver(CFRunLoopGetCurrent(), observer, kCFRunLoopCommonModes);
 
             let timer = CFRunLoopTimerCreate(
@@ -2657,7 +2826,10 @@ mod tests {
                 tick,
                 &mut context,
             );
-            assert!(!timer.is_null(), "CFRunLoopTimerCreate refused the arguments");
+            assert!(
+                !timer.is_null(),
+                "CFRunLoopTimerCreate refused the arguments"
+            );
             CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
 
             // Long enough for the loop to run out of work and be about to
@@ -2679,8 +2851,15 @@ mod tests {
         let live = LiveResize::default();
         let info = std::ptr::from_ref(&live).cast_mut().cast::<c_void>();
         draw_during_live_resize(std::ptr::null_mut(), RUN_LOOP_BEFORE_WAITING, info);
-        draw_during_live_resize(std::ptr::null_mut(), RUN_LOOP_BEFORE_WAITING, std::ptr::null_mut());
-        assert!(!live.drawing.get(), "a firing with nothing set should not have drawn");
+        draw_during_live_resize(
+            std::ptr::null_mut(),
+            RUN_LOOP_BEFORE_WAITING,
+            std::ptr::null_mut(),
+        );
+        assert!(
+            !live.drawing.get(),
+            "a firing with nothing set should not have drawn"
+        );
     }
 
     /// A node carrying one fact, so a test can say which fact it is asserting.
@@ -2717,8 +2896,15 @@ mod tests {
             let mut checked = node(role);
             checked.state.selected = Some(true);
             let attributes = attributes_of(&checked);
-            assert_eq!(attributes.value, Value::Toggle(true), "{role:?} reports its state");
-            assert_eq!(attributes.selected, None, "{role:?} does not also claim AXSelected");
+            assert_eq!(
+                attributes.value,
+                Value::Toggle(true),
+                "{role:?} reports its state"
+            );
+            assert_eq!(
+                attributes.selected, None,
+                "{role:?} does not also claim AXSelected"
+            );
 
             let mut unchecked = node(role);
             unchecked.state.selected = Some(false);
@@ -2732,8 +2918,16 @@ mod tests {
             let mut chosen = node(role);
             chosen.state.selected = Some(true);
             let attributes = attributes_of(&chosen);
-            assert_eq!(attributes.selected, Some(true), "{role:?} reports AXSelected");
-            assert_eq!(attributes.value, Value::None, "{role:?} does not also claim a value");
+            assert_eq!(
+                attributes.selected,
+                Some(true),
+                "{role:?} reports AXSelected"
+            );
+            assert_eq!(
+                attributes.value,
+                Value::None,
+                "{role:?} does not also claim a value"
+            );
         }
     }
 
@@ -2774,7 +2968,10 @@ mod tests {
         assert_eq!(attributes.role, c"AXButton");
         assert_eq!(attributes.label, "Notify on failure");
         assert!(!attributes.enabled, "AXEnabled is the inverse of disabled");
-        assert!(attributes.focused, "AXFocused comes from the node, not from the diff");
+        assert!(
+            attributes.focused,
+            "AXFocused comes from the node, not from the diff"
+        );
     }
 
     #[test]

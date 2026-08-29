@@ -58,6 +58,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
 
+#[cfg(feature = "reload")]
+use crate::reload::run as run_windowed;
 /// What running an application in a window amounts to.
 ///
 /// Ordinarily the window loop and nothing else. With developer reload compiled
@@ -67,8 +69,6 @@ use std::time::Duration;
 /// than a branch in [`App::run_with_fonts`].
 #[cfg(not(feature = "reload"))]
 use crate::shell::run as run_windowed;
-#[cfg(feature = "reload")]
-use crate::reload::run as run_windowed;
 
 /// An application: some state, and a function from that state to a description.
 ///
@@ -247,15 +247,14 @@ const DEFAULT_IDLE: Duration = Duration::from_millis(250);
 
 impl<S> App<S> {
     /// An application showing `state`, described by `view`.
-    pub fn new(
-        title: impl Into<String>,
-        state: S,
-        view: impl Fn(&S) -> El<S> + 'static,
-    ) -> Self {
+    pub fn new(title: impl Into<String>, state: S, view: impl Fn(&S) -> El<S> + 'static) -> Self {
         Self {
             state,
             view: Box::new(view),
-            options: WindowOptions { title: title.into(), ..WindowOptions::default() },
+            options: WindowOptions {
+                title: title.into(),
+                ..WindowOptions::default()
+            },
             idle: DEFAULT_IDLE,
             running: Box::new(|_| true),
             theme: Box::new(Theme::new),
@@ -368,10 +367,7 @@ impl<S> App<S> {
     /// [`App::render`] and [`Harness`](crate::testing::Harness) honour it as a
     /// window does, so a screenshot, a test, and the running program cannot
     /// disagree about what the interface looks like.
-    pub fn theme(
-        mut self,
-        theme: impl Fn(Appearance, FontId, FontId) -> Theme + 'static,
-    ) -> Self {
+    pub fn theme(mut self, theme: impl Fn(Appearance, FontId, FontId) -> Theme + 'static) -> Self {
         self.set_theme(Box::new(theme));
         self
     }
@@ -461,7 +457,9 @@ impl<S> App<S> {
     /// `None` from an application that never bound it, which is the answer the
     /// loop reads as "ask the window nothing".
     pub(crate) fn wants_fullscreen(&self) -> Option<bool> {
-        self.fullscreen.as_ref().map(|(wanted, _)| wanted(&self.state))
+        self.fullscreen
+            .as_ref()
+            .map(|(wanted, _)| wanted(&self.state))
     }
 
     /// Writes down that the window is, or is no longer, filling the screen.
@@ -542,8 +540,11 @@ impl<S> App<S> {
         appearance: Appearance,
         fonts: &mut LoadedFonts,
     ) -> Canvas {
-        let mut canvas =
-            Canvas::new((width as f32 * scale) as u32, (height as f32 * scale) as u32, scale);
+        let mut canvas = Canvas::new(
+            (width as f32 * scale) as u32,
+            (height as f32 * scale) as u32,
+            scale,
+        );
         let mut memory = Memory::new();
         self.draw_into(&mut canvas, fonts, appearance, &mut memory);
         canvas
@@ -623,10 +624,21 @@ impl<S> App<S> {
         observe: &mut dyn FnMut(&El<S>, Option<Id>),
     ) {
         let mut tree = (self.view)(&self.state);
-        let ctx = Ctx { fonts, theme, bounds: canvas.bounds() };
+        let ctx = Ctx {
+            fonts,
+            theme,
+            bounds: canvas.bounds(),
+        };
         layout::solve(&mut tree, canvas.bounds(), &ctx, memory);
 
-        let mut frame = Frame { canvas, fonts, theme, input, memory, hit: paint::Hit::default() };
+        let mut frame = Frame {
+            canvas,
+            fonts,
+            theme,
+            input,
+            memory,
+            hit: paint::Hit::default(),
+        };
         let actions = paint::render(&tree, &mut frame);
 
         let mut access = AccessTree::new();
@@ -697,7 +709,11 @@ impl<S> App<S> {
         // process where it stands, so the window is taken down properly and the
         // new build is started from outside the loop that drew the last frame.
         #[cfg(feature = "reload")]
-        if self.reload.as_ref().is_some_and(|reload| reload.is_restarting()) {
+        if self
+            .reload
+            .as_ref()
+            .is_some_and(|reload| reload.is_restarting())
+        {
             return false;
         }
         (self.running)(&self.state)
@@ -708,11 +724,7 @@ impl<S> App<S> {
 ///
 /// Parents before their children, so anything rebuilding the tree from this can
 /// do it in one pass.
-fn visit<S>(
-    el: &El<S>,
-    parent: Option<Id>,
-    observe: &mut dyn FnMut(&El<S>, Option<Id>),
-) {
+fn visit<S>(el: &El<S>, parent: Option<Id>, observe: &mut dyn FnMut(&El<S>, Option<Id>)) {
     observe(el, parent);
     for child in el.children() {
         visit(child, Some(el.id), observe);
@@ -764,10 +776,18 @@ mod tests {
 
         redraw.within(Duration::from_millis(16));
         assert_eq!(app.wait(), Duration::from_millis(16));
-        assert_eq!(app.idle(), Duration::from_millis(500), "the timeout is the application's");
+        assert_eq!(
+            app.idle(),
+            Duration::from_millis(500),
+            "the timeout is the application's"
+        );
 
         redraw.within(Duration::ZERO);
-        assert_eq!(app.wait(), Duration::from_millis(500), "the window went back to sleep");
+        assert_eq!(
+            app.wait(),
+            Duration::from_millis(500),
+            "the window went back to sleep"
+        );
     }
 
     #[test]
@@ -788,7 +808,10 @@ mod tests {
         redraw.request();
         redraw.request();
         assert!(app.take_redraw_request());
-        assert!(!app.take_redraw_request(), "the request outlived the frame that answered it");
+        assert!(
+            !app.take_redraw_request(),
+            "the request outlived the frame that answered it"
+        );
     }
 
     #[test]

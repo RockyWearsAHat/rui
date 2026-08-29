@@ -84,7 +84,10 @@ impl Kerning {
     /// Subtables accumulate, as the `kern` table's own rules require and as
     /// successive `GPOS` lookups do.
     pub(super) fn adjustment(&self, left: u16, right: u16) -> i32 {
-        self.subtables.iter().map(|pairs| pairs.adjustment(left, right)).sum()
+        self.subtables
+            .iter()
+            .map(|pairs| pairs.adjustment(left, right))
+            .sum()
     }
 }
 
@@ -114,7 +117,13 @@ impl Pairs {
     fn adjustment(&self, left: u16, right: u16) -> i32 {
         match self {
             Self::Listed(pairs) => pairs.get(&(left, right)).copied().unwrap_or(0) as i32,
-            Self::Classed { covered, first, second, second_classes, values } => {
+            Self::Classed {
+                covered,
+                first,
+                second,
+                second_classes,
+                values,
+            } => {
                 if covered.binary_search(&left).is_err() {
                     return 0;
                 }
@@ -123,7 +132,10 @@ impl Pairs {
                 if column >= *second_classes {
                     return 0;
                 }
-                values.get(row * second_classes + column).copied().unwrap_or(0) as i32
+                values
+                    .get(row * second_classes + column)
+                    .copied()
+                    .unwrap_or(0) as i32
             }
         }
     }
@@ -214,7 +226,7 @@ fn read_lookup(data: &[u8], table: usize, out: &mut Vec<Pairs>) -> Option<()> {
     let mut reader = Reader::at(data, table);
     let kind = reader.u16()?;
     reader.skip(2)?; // lookupFlag: mark filtering, which needs `GDEF` and no
-                     // kerning pair depends on it
+    // kerning pair depends on it
     let count = reader.u16()? as usize;
     let offsets: Vec<u16> = (0..count).map(|_| reader.u16()).collect::<Option<_>>()?;
 
@@ -333,7 +345,13 @@ fn read_classed_pairs(
     }
 
     if values.iter().any(|value| *value != 0) {
-        out.push(Pairs::Classed { covered, first, second, second_classes, values });
+        out.push(Pairs::Classed {
+            covered,
+            first,
+            second,
+            second_classes,
+            values,
+        });
     }
     Some(())
 }
@@ -517,7 +535,10 @@ mod tests {
     use super::*;
 
     fn u16s(values: &[u16]) -> Vec<u8> {
-        values.iter().flat_map(|value| value.to_be_bytes()).collect()
+        values
+            .iter()
+            .flat_map(|value| value.to_be_bytes())
+            .collect()
     }
 
     /// A font file holding one table, and the directory that finds it.
@@ -534,7 +555,8 @@ mod tests {
 
     fn kerning_of(tag: &[u8; 4], body: Vec<u8>) -> Kerning {
         let data = font_with(tag, body);
-        let directory = Directory::read(&data, 0).expect("the assembled file must have a directory");
+        let directory =
+            Directory::read(&data, 0).expect("the assembled file must have a directory");
         Kerning::read(&data, &directory)
     }
 
@@ -564,8 +586,16 @@ mod tests {
         assert!(!kerning.is_empty());
         assert_eq!(kerning.adjustment(3, 7), -80);
         assert_eq!(kerning.adjustment(7, 3), 25);
-        assert_eq!(kerning.adjustment(3, 3), 0, "a pair the font says nothing about");
-        assert_eq!(kerning.adjustment(999, 999), 0, "glyphs the font does not have");
+        assert_eq!(
+            kerning.adjustment(3, 3),
+            0,
+            "a pair the font says nothing about"
+        );
+        assert_eq!(
+            kerning.adjustment(999, 999),
+            0,
+            "glyphs the font does not have"
+        );
     }
 
     #[test]
@@ -638,7 +668,11 @@ mod tests {
 
         let kerning = kerning_of(b"GPOS", gpos(subtable));
         assert_eq!(kerning.adjustment(3, 7), -120);
-        assert_eq!(kerning.adjustment(4, 7), -120, "the class covers both glyphs");
+        assert_eq!(
+            kerning.adjustment(4, 7),
+            -120,
+            "the class covers both glyphs"
+        );
         assert_eq!(kerning.adjustment(3, 8), 0, "class zero on the right");
         assert_eq!(kerning.adjustment(5, 7), 0, "a glyph outside the coverage");
     }
@@ -649,8 +683,15 @@ mod tests {
         // and the cursor must land after all three.
         let bytes = u16s(&[1, (-40i16) as u16, 9, 0xffff]);
         let mut reader = Reader::at(&bytes, 0);
-        assert_eq!(read_value_record(&mut reader, 0x0001 | X_ADVANCE | 0x0010), Some(-40));
-        assert_eq!(reader.u16(), Some(0xffff), "the cursor must be past the record");
+        assert_eq!(
+            read_value_record(&mut reader, 0x0001 | X_ADVANCE | 0x0010),
+            Some(-40)
+        );
+        assert_eq!(
+            reader.u16(),
+            Some(0xffff),
+            "the cursor must be past the record"
+        );
     }
 
     #[test]

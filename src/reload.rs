@@ -172,14 +172,20 @@ pub(crate) fn begin<S>(
     save: Save<S>,
     restore: &dyn Fn(&[u8]) -> Result<S, String>,
 ) -> Result<(Reload<S>, Option<S>), Error> {
-    let mut reload =
-        Reload { save, pending: None, watch: None, restarting: false };
+    let mut reload = Reload {
+        save,
+        pending: None,
+        watch: None,
+        restarting: false,
+    };
     let Some(path) = std::env::var_os(HANDOFF) else {
         return Ok((reload, None));
     };
     let (interaction, saved) = take_handoff(Path::new(&path))?;
     let state = restore(&saved).map_err(|message| {
-        malformed(format!("the application could not read its own saved state: {message}"))
+        malformed(format!(
+            "the application could not read its own saved state: {message}"
+        ))
     })?;
     reload.pending = Some(interaction);
     Ok((reload, Some(state)))
@@ -224,8 +230,12 @@ impl<S> Reload<S> {
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => return Err(Error::Io(error)),
         }
-        self.watch =
-            Some(Watch { exe: exe.clone(), handoff: handoff.clone(), stamp, settling: None });
+        self.watch = Some(Watch {
+            exe: exe.clone(),
+            handoff: handoff.clone(),
+            stamp,
+            settling: None,
+        });
         Ok(Relaunch { exe, handoff })
     }
 
@@ -309,7 +319,10 @@ impl Stamp {
     /// What the file at `path` currently is.
     fn of(path: &Path) -> io::Result<Self> {
         let file = std::fs::metadata(path)?;
-        Ok(Self { modified: file.modified().ok(), len: file.len() })
+        Ok(Self {
+            modified: file.modified().ok(),
+            len: file.len(),
+        })
     }
 }
 
@@ -323,7 +336,9 @@ impl Relaunch {
             return Ok(());
         }
         let mut command = Command::new(&self.exe);
-        command.args(std::env::args_os().skip(1)).env(HANDOFF, &self.handoff);
+        command
+            .args(std::env::args_os().skip(1))
+            .env(HANDOFF, &self.handoff);
         start(command)
     }
 }
@@ -437,15 +452,20 @@ fn parse_handoff(bytes: &[u8]) -> Result<(Interaction, Vec<u8>), Error> {
         .position(|pair| pair == b"\n\n")
         .ok_or_else(|| malformed("no blank line between the two halves of the handoff"))?;
     let (header, payload) = bytes.split_at(blank);
-    let header = std::str::from_utf8(header)
-        .map_err(|_| malformed("the interaction state is not text"))?;
+    let header =
+        std::str::from_utf8(header).map_err(|_| malformed("the interaction state is not text"))?;
 
     let mut lines = header.lines();
     if lines.next() != Some(MAGIC) {
-        return Err(malformed(format!("not a handoff file: expected {MAGIC:?} on its first line")));
+        return Err(malformed(format!(
+            "not a handoff file: expected {MAGIC:?} on its first line"
+        )));
     }
 
-    let mut interaction = Interaction { focus: None, scroll: Vec::new() };
+    let mut interaction = Interaction {
+        focus: None,
+        scroll: Vec::new(),
+    };
     for line in lines {
         let mut words = line.split(' ');
         match (words.next(), words.next(), words.next()) {
@@ -456,7 +476,11 @@ fn parse_handoff(bytes: &[u8]) -> Result<(Interaction, Vec<u8>), Error> {
                     .map_err(|_| malformed(format!("{offset:?} is not a scroll offset")))?;
                 interaction.scroll.push((index_of(index)?, offset));
             }
-            _ => return Err(malformed(format!("{line:?} is not a line of a handoff file"))),
+            _ => {
+                return Err(malformed(format!(
+                    "{line:?} is not a line of a handoff file"
+                )));
+            }
         }
     }
     Ok((interaction, payload[2..].to_vec()))
@@ -464,7 +488,8 @@ fn parse_handoff(bytes: &[u8]) -> Result<(Interaction, Vec<u8>), Error> {
 
 /// A position in a frame's traversal, as written in a handoff file.
 fn index_of(word: &str) -> Result<usize, Error> {
-    word.parse().map_err(|_| malformed(format!("{word:?} is not a position in a frame")))
+    word.parse()
+        .map_err(|_| malformed(format!("{word:?} is not a position in a frame")))
 }
 
 /// A handoff file that could not be understood.
@@ -481,8 +506,10 @@ mod tests {
     /// What is written comes back, which is the whole contract of the file.
     #[test]
     fn a_handoff_round_trips() {
-        let interaction =
-            Interaction { focus: Some(7), scroll: vec![(2, -120.5), (9, 33.25)] };
+        let interaction = Interaction {
+            focus: Some(7),
+            scroll: vec![(2, -120.5), (9, 33.25)],
+        };
         let mut bytes = Vec::new();
         let path = std::env::temp_dir().join("rui-reload-round-trip.state");
         write_handoff(&path, &interaction, b"count=3\nname=\xffnot utf8").unwrap();
@@ -499,7 +526,15 @@ mod tests {
     #[test]
     fn an_empty_interaction_round_trips() {
         let path = std::env::temp_dir().join("rui-reload-empty.state");
-        write_handoff(&path, &Interaction { focus: None, scroll: Vec::new() }, b"").unwrap();
+        write_handoff(
+            &path,
+            &Interaction {
+                focus: None,
+                scroll: Vec::new(),
+            },
+            b"",
+        )
+        .unwrap();
         let bytes = std::fs::read(&path).unwrap();
         std::fs::remove_file(&path).unwrap();
 
@@ -539,7 +574,10 @@ mod tests {
 
         std::fs::write(&exe, b"the second build, which is longer").unwrap();
         reload.after_frame(&3, &mut memory, &order);
-        assert!(!reload.is_restarting(), "a change is given a frame to settle");
+        assert!(
+            !reload.is_restarting(),
+            "a change is given a frame to settle"
+        );
         reload.after_frame(&3, &mut memory, &order);
         assert!(reload.is_restarting(), "and is acted on once it has");
 

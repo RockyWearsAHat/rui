@@ -54,26 +54,25 @@ use rui::{
 /// The whole control is one `draw` for the box, one `text` for the label, and
 /// one handler on the row that holds them — which is what makes the label
 /// clickable too, without either half knowing about the other.
-fn checkbox<S: 'static>(
-    label: &str,
-    checked: bool,
-    toggle: impl Fn(&mut S) + 'static,
-) -> El<S> {
+fn checkbox<S: 'static>(label: &str, checked: bool, toggle: impl Fn(&mut S) + 'static) -> El<S> {
     row((
-        draw(Size::new(15.0, 15.0), move |painter: &mut Painter<'_>, rect: Rect| {
-            let lit = painter.visual().lit;
-            let fill = if checked { Tone::Accent } else { Tone::Sunken };
-            painter.fill(rect, Radius::Units(4.0), fill);
-            painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
-            if checked {
-                painter.fill(tick(rect), Radius::Units(1.0), Tone::OnAccent);
-            }
-            // The eased hover, so this animates on the same curve everything
-            // else in the interface does.
-            if lit > 0.0 {
-                painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Focus);
-            }
-        })
+        draw(
+            Size::new(15.0, 15.0),
+            move |painter: &mut Painter<'_>, rect: Rect| {
+                let lit = painter.visual().lit;
+                let fill = if checked { Tone::Accent } else { Tone::Sunken };
+                painter.fill(rect, Radius::Units(4.0), fill);
+                painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
+                if checked {
+                    painter.fill(tick(rect), Radius::Units(1.0), Tone::OnAccent);
+                }
+                // The eased hover, so this animates on the same curve everything
+                // else in the interface does.
+                if lit > 0.0 {
+                    painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Focus);
+                }
+            },
+        )
         .size(15.0, 15.0),
         text(label),
     ))
@@ -100,14 +99,29 @@ fn tick(box_rect: Rect) -> Rect {
 
 /// A switch: a track, and a knob that slides along it.
 fn switch<S: 'static>(on: bool, flip: impl Fn(&mut S) + 'static) -> El<S> {
-    draw(Size::new(34.0, 20.0), move |painter: &mut Painter<'_>, rect: Rect| {
-        painter.fill(rect, Radius::Pill, if on { Tone::Accent } else { Tone::Sunken });
-        painter.stroke(rect, Radius::Pill, 1.0, Tone::Border);
+    draw(
+        Size::new(34.0, 20.0),
+        move |painter: &mut Painter<'_>, rect: Rect| {
+            painter.fill(
+                rect,
+                Radius::Pill,
+                if on { Tone::Accent } else { Tone::Sunken },
+            );
+            painter.stroke(rect, Radius::Pill, 1.0, Tone::Border);
 
-        let knob = rect.h - 6.0;
-        let x = if on { rect.max_x() - knob - 3.0 } else { rect.x + 3.0 };
-        painter.fill(Rect::new(x, rect.y + 3.0, knob, knob), Radius::Pill, Tone::Surface);
-    })
+            let knob = rect.h - 6.0;
+            let x = if on {
+                rect.max_x() - knob - 3.0
+            } else {
+                rect.x + 3.0
+            };
+            painter.fill(
+                Rect::new(x, rect.y + 3.0, knob, knob),
+                Radius::Pill,
+                Tone::Surface,
+            );
+        },
+    )
     .size(34.0, 20.0)
     // A switch is a checkbox that is drawn differently, and has no words of its
     // own — so the one thing it cannot work out for itself is its name, which
@@ -127,17 +141,32 @@ fn slider<S: 'static>(value: f32, set: impl Fn(&mut S, f32) + Copy + 'static) ->
     const STEP: f32 = 0.05;
 
     let value = value.clamp(0.0, 1.0);
-    draw(Size::new(160.0, 18.0), move |painter: &mut Painter<'_>, rect: Rect| {
-        let track = Rect::new(rect.x, rect.center().y - 3.0, rect.w, 6.0);
-        painter.fill(track, Radius::Pill, Tone::Sunken);
-        painter.fill(Rect::new(track.x, track.y, track.w * value, track.h), Radius::Pill, Tone::Accent);
+    draw(
+        Size::new(160.0, 18.0),
+        move |painter: &mut Painter<'_>, rect: Rect| {
+            let track = Rect::new(rect.x, rect.center().y - 3.0, rect.w, 6.0);
+            painter.fill(track, Radius::Pill, Tone::Sunken);
+            painter.fill(
+                Rect::new(track.x, track.y, track.w * value, track.h),
+                Radius::Pill,
+                Tone::Accent,
+            );
 
-        let knob = rect.h;
-        let x = rect.x + (rect.w - knob) * value;
-        painter.fill(Rect::new(x, rect.y, knob, knob), Radius::Pill, Tone::Surface);
-        let edge = if painter.visual().focused { Tone::Focus } else { Tone::Border };
-        painter.stroke(Rect::new(x, rect.y, knob, knob), Radius::Pill, 1.0, edge);
-    })
+            let knob = rect.h;
+            let x = rect.x + (rect.w - knob) * value;
+            painter.fill(
+                Rect::new(x, rect.y, knob, knob),
+                Radius::Pill,
+                Tone::Surface,
+            );
+            let edge = if painter.visual().focused {
+                Tone::Focus
+            } else {
+                Tone::Border
+            };
+            painter.stroke(Rect::new(x, rect.y, knob, knob), Radius::Pill, 1.0, edge);
+        },
+    )
     .h(18.0)
     .w(160.0)
     .role(Role::Slider)
@@ -164,15 +193,18 @@ fn radio_group<S: 'static>(
         .map(|(index, label)| {
             let taken = index == chosen;
             row((
-                draw(Size::new(15.0, 15.0), move |painter: &mut Painter<'_>, rect: Rect| {
-                    painter.fill(rect, Radius::Pill, Tone::Sunken);
-                    painter.stroke(rect, Radius::Pill, 1.0, Tone::Border);
-                    if taken {
-                        let inset = rect.w * 0.27;
-                        let dot = rect.inset(rui::Insets::uniform(inset));
-                        painter.fill(dot, Radius::Pill, Tone::Accent);
-                    }
-                })
+                draw(
+                    Size::new(15.0, 15.0),
+                    move |painter: &mut Painter<'_>, rect: Rect| {
+                        painter.fill(rect, Radius::Pill, Tone::Sunken);
+                        painter.stroke(rect, Radius::Pill, 1.0, Tone::Border);
+                        if taken {
+                            let inset = rect.w * 0.27;
+                            let dot = rect.inset(rui::Insets::uniform(inset));
+                            painter.fill(dot, Radius::Pill, Tone::Accent);
+                        }
+                    },
+                )
                 .size(15.0, 15.0),
                 text(*label),
             ))
@@ -220,9 +252,9 @@ fn with_tip<S: 'static>(
     showing: bool,
     hover: impl Fn(&mut S, bool) + 'static,
 ) -> El<S> {
-    anchor.on_hover(hover).add(showing.then(|| {
-        panel(caption(note)).pad(8.0).layer(Anchor::Below)
-    }))
+    anchor
+        .on_hover(hover)
+        .add(showing.then(|| panel(caption(note)).pad(8.0).layer(Anchor::Below)))
 }
 
 // ---------------------------------------------------------------------------
@@ -241,55 +273,72 @@ pub struct Panel {
 
 /// What the example opens showing.
 pub fn demo() -> Panel {
-    Panel { notify: true, dark: true, volume: 0.62, format: 1, workers: 8, tip: false }
+    Panel {
+        notify: true,
+        dark: true,
+        volume: 0.62,
+        format: 1,
+        workers: 8,
+        tip: false,
+    }
 }
 
 /// The whole example, as one description.
 pub fn view(panel_state: &Panel) -> El<Panel> {
     col((
         heading("CONTROLS THIS LIBRARY DOES NOT SHIP"),
-        panel(col((
-            labelled(
-                "Checkbox",
-                checkbox("Notify on failure", panel_state.notify, |panel: &mut Panel| {
-                    panel.notify = !panel.notify
-                }),
-            ),
-            labelled(
-                "Switch",
-                switch(panel_state.dark, |panel: &mut Panel| panel.dark = !panel.dark)
-                    .label("Dark appearance"),
-            ),
-            labelled(
-                "Slider",
-                row((
-                    slider(panel_state.volume, |panel: &mut Panel, value| panel.volume = value)
-                        .label("Volume"),
-                    caption(format!("{:.0}%", panel_state.volume * 100.0)),
-                ))
-                .gap(12.0)
-                .align(Align::Center),
-            ),
-            labelled(
-                "Radio",
-                radio_group(&["Plain", "JSON", "Binary"], panel_state.format, |panel: &mut Panel, index| {
-                    panel.format = index
-                }),
-            ),
-            labelled(
-                "Stepper",
-                with_tip(
-                    stepper(panel_state.workers, |panel: &mut Panel, by| {
-                        panel.workers = (panel.workers + by).clamp(1, 64)
-                    })
-                    .label("Workers"),
-                    "The wheel turns it, and so do the arrow keys.",
-                    panel_state.tip,
-                    |panel: &mut Panel, over| panel.tip = over,
+        panel(
+            col((
+                labelled(
+                    "Checkbox",
+                    checkbox(
+                        "Notify on failure",
+                        panel_state.notify,
+                        |panel: &mut Panel| panel.notify = !panel.notify,
+                    ),
                 ),
-            ),
-        ))
-        .gap(14.0)),
+                labelled(
+                    "Switch",
+                    switch(panel_state.dark, |panel: &mut Panel| {
+                        panel.dark = !panel.dark
+                    })
+                    .label("Dark appearance"),
+                ),
+                labelled(
+                    "Slider",
+                    row((
+                        slider(panel_state.volume, |panel: &mut Panel, value| {
+                            panel.volume = value
+                        })
+                        .label("Volume"),
+                        caption(format!("{:.0}%", panel_state.volume * 100.0)),
+                    ))
+                    .gap(12.0)
+                    .align(Align::Center),
+                ),
+                labelled(
+                    "Radio",
+                    radio_group(
+                        &["Plain", "JSON", "Binary"],
+                        panel_state.format,
+                        |panel: &mut Panel, index| panel.format = index,
+                    ),
+                ),
+                labelled(
+                    "Stepper",
+                    with_tip(
+                        stepper(panel_state.workers, |panel: &mut Panel, by| {
+                            panel.workers = (panel.workers + by).clamp(1, 64)
+                        })
+                        .label("Workers"),
+                        "The wheel turns it, and so do the arrow keys.",
+                        panel_state.tip,
+                        |panel: &mut Panel, over| panel.tip = over,
+                    ),
+                ),
+            ))
+            .gap(14.0),
+        ),
         caption("Every one of them is a `draw` and a handler. None of them is a widget."),
     ))
     .pad(20.0)
@@ -298,7 +347,10 @@ pub fn view(panel_state: &Panel) -> El<Panel> {
 
 /// A row that names a control and puts it beside its name.
 fn labelled(name: &str, control: El<Panel>) -> El<Panel> {
-    row((heading(name).w(84.0), control)).gap(12.0).align(Align::Center).min_h(24.0)
+    row((heading(name).w(84.0), control))
+        .gap(12.0)
+        .align(Align::Center)
+        .min_h(24.0)
 }
 
 fn main() -> Result<(), rui::Error> {
@@ -309,12 +361,14 @@ fn main() -> Result<(), rui::Error> {
     if let Some(directory) = std::env::args().nth(1) {
         let mut fonts = rui::shell::load_system_fonts()?;
         let mut app = App::new("Controls", state, view).size(520.0, 460.0);
-        for (appearance, name) in
-            [(Appearance::Light, "controls-light.png"), (Appearance::Dark, "controls-dark.png")]
-        {
+        for (appearance, name) in [
+            (Appearance::Light, "controls-light.png"),
+            (Appearance::Dark, "controls-dark.png"),
+        ] {
             let canvas = app.render(520, 460, 2.0, appearance, &mut fonts);
-            let bytes = rui::image::png(canvas.width(), canvas.height(), &rui::image::rgba(&canvas))
-                .expect("the frame should encode");
+            let bytes =
+                rui::image::png(canvas.width(), canvas.height(), &rui::image::rgba(&canvas))
+                    .expect("the frame should encode");
             std::fs::write(std::path::Path::new(&directory).join(name), bytes)?;
         }
         return Ok(());

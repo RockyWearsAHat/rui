@@ -52,7 +52,14 @@ impl Transform {
     /// coordinates grow upward from the baseline and pixels grow downward.
     /// `origin` is where the glyph's baseline origin lands on the mask.
     pub(super) fn for_glyph(scale: f32, origin: (f32, f32)) -> Self {
-        Self { a: scale, b: 0.0, c: 0.0, d: -scale, dx: origin.0, dy: origin.1 }
+        Self {
+            a: scale,
+            b: 0.0,
+            c: 0.0,
+            d: -scale,
+            dx: origin.0,
+            dy: origin.1,
+        }
     }
 
     /// A component's own map, in font units, before its parent's is applied.
@@ -62,7 +69,10 @@ impl Transform {
 
     /// Where a point in this transform's input space lands.
     fn apply(self, x: f32, y: f32) -> (f32, f32) {
-        (self.a * x + self.c * y + self.dx, self.b * x + self.d * y + self.dy)
+        (
+            self.a * x + self.c * y + self.dx,
+            self.b * x + self.d * y + self.dy,
+        )
     }
 
     /// This transform followed by `outer`.
@@ -109,7 +119,11 @@ pub(super) struct Edges {
 impl Edges {
     /// An empty collection.
     pub(super) fn new() -> Self {
-        Self { segments: Vec::new(), start: None, current: (0.0, 0.0) }
+        Self {
+            segments: Vec::new(),
+            start: None,
+            current: (0.0, 0.0),
+        }
     }
 
     /// The bounding box of every edge collected, or `None` when there are none.
@@ -311,11 +325,19 @@ fn append_composite(
         // ordinary use does it, so the component is placed at the origin rather
         // than at a guess: a visibly misplaced accent is easier to diagnose than
         // one silently offset by whatever the arguments happened to be.
-        let (dx, dy) = if flags & ARGUMENTS_ARE_OFFSETS != 0 { (dx, dy) } else { (0.0, 0.0) };
+        let (dx, dy) = if flags & ARGUMENTS_ARE_OFFSETS != 0 {
+            (dx, dy)
+        } else {
+            (0.0, 0.0)
+        };
 
         let component_transform = if flags & HAS_TWO_BY_TWO != 0 {
-            let (a, b, c, d) =
-                (reader.f2dot14()?, reader.f2dot14()?, reader.f2dot14()?, reader.f2dot14()?);
+            let (a, b, c, d) = (
+                reader.f2dot14()?,
+                reader.f2dot14()?,
+                reader.f2dot14()?,
+                reader.f2dot14()?,
+            );
             Transform::component(a, b, c, d, dx, dy)
         } else if flags & HAS_XY_SCALE != 0 {
             let (x, y) = (reader.f2dot14()?, reader.f2dot14()?);
@@ -327,7 +349,13 @@ fn append_composite(
             Transform::component(1.0, 0.0, 0.0, 1.0, dx, dy)
         };
 
-        append_glyph(source, component, component_transform.then(transform), edges, depth + 1)?;
+        append_glyph(
+            source,
+            component,
+            component_transform.then(transform),
+            edges,
+            depth + 1,
+        )?;
 
         if flags & HAS_MORE == 0 {
             return Some(());
@@ -356,7 +384,10 @@ fn append_contour(points: &[Point], edges: &mut Edges) {
     for (index, &point) in points.iter().enumerate() {
         let previous = points[(index + points.len() - 1) % points.len()];
         if !previous.on_curve && !point.on_curve {
-            expanded.push(Point { position: midpoint(previous.position, point.position), on_curve: true });
+            expanded.push(Point {
+                position: midpoint(previous.position, point.position),
+                on_curve: true,
+            });
         }
         expanded.push(point);
     }
@@ -364,12 +395,22 @@ fn append_contour(points: &[Point], edges: &mut Edges) {
     // A contour can legally have no on-curve point at all — a circle drawn from
     // four control points. Starting from an implied midpoint gives the walk the
     // on-curve start it needs without changing the shape.
-    let Some(start) = expanded.iter().position(|point| point.on_curve).or_else(|| {
-        let first = expanded.first().copied()?;
-        let last = expanded.last().copied()?;
-        expanded.insert(0, Point { position: midpoint(last.position, first.position), on_curve: true });
-        Some(0)
-    }) else {
+    let Some(start) = expanded
+        .iter()
+        .position(|point| point.on_curve)
+        .or_else(|| {
+            let first = expanded.first().copied()?;
+            let last = expanded.last().copied()?;
+            expanded.insert(
+                0,
+                Point {
+                    position: midpoint(last.position, first.position),
+                    on_curve: true,
+                },
+            );
+            Some(0)
+        })
+    else {
         return;
     };
 
@@ -451,11 +492,17 @@ mod tests {
     }
 
     fn on(x: f32, y: f32) -> Point {
-        Point { position: (x, y), on_curve: true }
+        Point {
+            position: (x, y),
+            on_curve: true,
+        }
     }
 
     fn off(x: f32, y: f32) -> Point {
-        Point { position: (x, y), on_curve: false }
+        Point {
+            position: (x, y),
+            on_curve: false,
+        }
     }
 
     #[test]
@@ -478,7 +525,10 @@ mod tests {
     #[test]
     fn a_square_contour_becomes_four_edges() {
         let mut edges = Edges::new();
-        append_contour(&[on(0.0, 0.0), on(10.0, 0.0), on(10.0, 10.0), on(0.0, 10.0)], &mut edges);
+        append_contour(
+            &[on(0.0, 0.0), on(10.0, 0.0), on(10.0, 10.0), on(0.0, 10.0)],
+            &mut edges,
+        );
         assert_eq!(edges.segments.len(), 4);
         assert_eq!(edges.bounds(), Some(((0.0, 0.0), (10.0, 10.0))));
     }
@@ -496,16 +546,25 @@ mod tests {
         // Two control points in a row: the curve passes through their midpoint,
         // so the outline must reach y = 5 even though no point says so.
         let mut edges = Edges::new();
-        append_contour(&[on(0.0, 0.0), off(0.0, 10.0), off(10.0, 0.0), on(10.0, 10.0)], &mut edges);
+        append_contour(
+            &[on(0.0, 0.0), off(0.0, 10.0), off(10.0, 0.0), on(10.0, 10.0)],
+            &mut edges,
+        );
         let (_, max) = edges.bounds().expect("bounds");
-        assert!(max.1 >= 9.0, "the curve did not reach the far point: {max:?}");
+        assert!(
+            max.1 >= 9.0,
+            "the curve did not reach the far point: {max:?}"
+        );
         assert!(edges.segments.len() > 4, "curves were not flattened");
     }
 
     #[test]
     fn a_contour_with_no_on_curve_point_still_produces_a_closed_shape() {
         let mut edges = Edges::new();
-        append_contour(&[off(0.0, 5.0), off(5.0, 10.0), off(10.0, 5.0), off(5.0, 0.0)], &mut edges);
+        append_contour(
+            &[off(0.0, 5.0), off(5.0, 10.0), off(10.0, 5.0), off(5.0, 0.0)],
+            &mut edges,
+        );
         assert!(!edges.segments.is_empty());
         let bounds = edges.bounds().expect("bounds");
         assert!(bounds.1.0 > bounds.0.0 && bounds.1.1 > bounds.0.1);
@@ -534,7 +593,10 @@ mod tests {
         // One flag with the repeat bit, repeated three more times, then another.
         let bytes = [0x09, 0x03, 0x01];
         let mut reader = Reader::at(&bytes, 0);
-        assert_eq!(read_flags(&mut reader, 5), Some(vec![0x09, 0x09, 0x09, 0x09, 0x01]));
+        assert_eq!(
+            read_flags(&mut reader, 5),
+            Some(vec![0x09, 0x09, 0x09, 0x09, 0x01])
+        );
     }
 
     #[test]
@@ -550,7 +612,10 @@ mod tests {
         let flags = [0x02 | 0x10, 0x02];
         let bytes = [10, 4];
         let mut reader = Reader::at(&bytes, 0);
-        assert_eq!(read_coordinates(&mut reader, &flags, 0x02, 0x10), Some(vec![10.0, 6.0]));
+        assert_eq!(
+            read_coordinates(&mut reader, &flags, 0x02, 0x10),
+            Some(vec![10.0, 6.0])
+        );
     }
 
     #[test]
@@ -559,7 +624,10 @@ mod tests {
         let flags = [0x00, 0x10];
         let bytes = [0x01, 0x00];
         let mut reader = Reader::at(&bytes, 0);
-        assert_eq!(read_coordinates(&mut reader, &flags, 0x02, 0x10), Some(vec![256.0, 256.0]));
+        assert_eq!(
+            read_coordinates(&mut reader, &flags, 0x02, 0x10),
+            Some(vec![256.0, 256.0])
+        );
     }
 
     #[test]
@@ -569,7 +637,10 @@ mod tests {
         bytes.extend_from_slice(&100i16.to_be_bytes());
         bytes.extend_from_slice(&(-30i16).to_be_bytes());
         let mut reader = Reader::at(&bytes, 0);
-        assert_eq!(read_coordinates(&mut reader, &flags, 0x02, 0x10), Some(vec![100.0, 70.0]));
+        assert_eq!(
+            read_coordinates(&mut reader, &flags, 0x02, 0x10),
+            Some(vec![100.0, 70.0])
+        );
     }
 
     #[test]
@@ -583,7 +654,10 @@ mod tests {
         let doubled = Transform::component(2.0, 0.0, 0.0, 2.0, 1.0, 1.0);
         let points: Vec<Point> = [(0.0, 0.0), (5.0, 0.0), (5.0, 5.0)]
             .iter()
-            .map(|&(x, y)| Point { position: doubled.apply(x, y), on_curve: true })
+            .map(|&(x, y)| Point {
+                position: doubled.apply(x, y),
+                on_curve: true,
+            })
             .collect();
         append_contour(&points, &mut edges);
         assert_eq!(edges.bounds(), Some(((1.0, 1.0), (11.0, 11.0))));
