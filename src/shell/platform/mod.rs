@@ -33,3 +33,6 @@ mod backend;
 mod backend;
 
 pub(crate) use backend::Window;
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) use backend::with_window;
