@@ -23,6 +23,7 @@
 //! The examples are included as modules rather than copied, so what is checked
 //! is the code that actually runs.
 
+use rui::Size;
 use rui::accessibility::{Role, audit};
 use rui::testing::Harness;
 use rui::{
@@ -30,7 +31,6 @@ use rui::{
     figure, heading, meter, micro, panel, paragraph, row, section, segmented, spacer, tabs, tag,
     text, title,
 };
-use rui::Size;
 
 #[path = "../examples/controls.rs"]
 #[allow(dead_code)]
@@ -64,8 +64,8 @@ fn the_controls_example_is_reachable_named_and_ordered() {
 
 #[test]
 fn the_gallery_example_is_reachable_named_and_ordered() {
-    let mut harness = Harness::new(gallery_example::demo(), gallery_example::view)
-        .size(1000.0, 640.0);
+    let mut harness =
+        Harness::new(gallery_example::demo(), gallery_example::view).size(1000.0, 640.0);
     harness.assert_accessible();
     harness.assert_tab_order();
 }
@@ -84,9 +84,7 @@ struct Everything {
 
 /// One of each element the library ships.
 fn everything(state: &Everything) -> El<Everything> {
-    col((words(), marks(), controls(state)))
-        .pad(12.0)
-        .gap(8.0)
+    col((words(), marks(), controls(state))).pad(12.0).gap(8.0)
 }
 
 /// Everything on the type scale.
@@ -109,7 +107,12 @@ fn marks() -> El<Everything> {
     col((
         divider(),
         section("SECTION", Some("note".into())),
-        row((dot(Status::Ok, 3.0), tag(Status::Bad, "failed"), spacer().grow())).gap(6.0),
+        row((
+            dot(Status::Ok, 3.0),
+            tag(Status::Bad, "failed"),
+            spacer().grow(),
+        ))
+        .gap(6.0),
         field_row("MEMORY", meter(0.62, Tone::Accent)),
     ))
     .gap(4.0)
@@ -124,15 +127,23 @@ fn controls(state: &Everything) -> El<Everything> {
                 .placeholder("a service's name")
                 .on_input(|state: &mut Everything, name| state.name = name),
         ),
-        tabs(&["Overview", "Output"], state.tab, |state: &mut Everything, tab| state.tab = tab),
-        segmented(&["Manual", "At boot"], state.mode, |state: &mut Everything, mode| {
-            state.mode = mode
-        }),
-        panel(row((
-            button("Start").primary().on_click(|_| {}),
-            button("Unavailable").disabled(true),
-        ))
-        .gap(6.0)),
+        tabs(
+            &["Overview", "Output"],
+            state.tab,
+            |state: &mut Everything, tab| state.tab = tab,
+        ),
+        segmented(
+            &["Manual", "At boot"],
+            state.mode,
+            |state: &mut Everything, mode| state.mode = mode,
+        ),
+        panel(
+            row((
+                button("Start").primary().on_click(|_| {}),
+                button("Unavailable").disabled(true),
+            ))
+            .gap(6.0),
+        ),
     ))
     .gap(6.0)
 }
@@ -143,7 +154,12 @@ fn every_widget_the_library_ships_carries_its_own_role() {
     harness.assert_accessible();
     harness.assert_tab_order();
 
-    let roles: Vec<Role> = harness.accessibility().nodes().iter().map(|node| node.role).collect();
+    let roles: Vec<Role> = harness
+        .accessibility()
+        .nodes()
+        .iter()
+        .map(|node| node.role)
+        .collect();
     for expected in [
         Role::Heading,
         Role::Text,
@@ -156,7 +172,10 @@ fn every_widget_the_library_ships_carries_its_own_role() {
         Role::Radio,
         Role::Button,
     ] {
-        assert!(roles.contains(&expected), "nothing in the widget set is a {expected:?}");
+        assert!(
+            roles.contains(&expected),
+            "nothing in the widget set is a {expected:?}"
+        );
     }
 }
 
@@ -170,7 +189,11 @@ struct Nothing;
 #[test]
 fn a_control_is_named_by_the_words_inside_it() {
     let button: El<Nothing> = button("Restart").on_click(|_| {});
-    assert_eq!(button.accessible_name(), "Restart", "no author effort at the call site");
+    assert_eq!(
+        button.accessible_name(),
+        "Restart",
+        "no author effort at the call site"
+    );
 
     let compound: El<Nothing> =
         row((dot(Status::Ok, 3.0), text("mongod"), text("running"))).on_click(|_| {});
@@ -184,10 +207,16 @@ fn a_control_is_named_by_the_words_inside_it() {
 #[test]
 fn a_control_with_no_words_is_named_by_its_label() {
     let unnamed: El<Nothing> = draw(Size::new(16.0, 16.0), |_, _| {}).on_click(|_| {});
-    assert_eq!(unnamed.accessible_name(), "", "nothing inside it, so nothing to be named after");
+    assert_eq!(
+        unnamed.accessible_name(),
+        "",
+        "nothing inside it, so nothing to be named after"
+    );
 
-    let named: El<Nothing> =
-        draw(Size::new(16.0, 16.0), |_, _| {}).role(Role::Checkbox).label("Notify").on_click(|_| {});
+    let named: El<Nothing> = draw(Size::new(16.0, 16.0), |_, _| {})
+        .role(Role::Checkbox)
+        .label("Notify")
+        .on_click(|_| {});
     assert_eq!(named.accessible_name(), "Notify");
 }
 
@@ -200,7 +229,11 @@ fn a_label_overrides_the_words_inside() {
 #[test]
 fn a_field_is_named_by_its_row_and_valued_by_its_text() {
     let mut harness = Harness::new(Nothing, |_: &Nothing| {
-        col(field_row("NAME", field("mongod").on_input(|_: &mut Nothing, _| {}))).align(Align::Start)
+        col(field_row(
+            "NAME",
+            field("mongod").on_input(|_: &mut Nothing, _| {}),
+        ))
+        .align(Align::Start)
     });
     harness.frame();
 
@@ -212,14 +245,22 @@ fn a_field_is_named_by_its_row_and_valued_by_its_text() {
         .expect("the field is on screen")
         .clone();
     assert_eq!(node.name, "NAME", "the row that names it is what names it");
-    assert_eq!(node.value.as_deref(), Some("mongod"), "and what it holds is its value");
+    assert_eq!(
+        node.value.as_deref(),
+        Some("mongod"),
+        "and what it holds is its value"
+    );
 }
 
 #[test]
 fn a_row_does_not_rename_a_value_that_already_says_what_it_is() {
     let element: El<Nothing> = field_row("ACTION", button("Restart").on_click(|_| {}));
     let button = element.child(1).expect("the value sits beside the label");
-    assert_eq!(button.accessible_name(), "Restart", "its own words outrank the row's heading");
+    assert_eq!(
+        button.accessible_name(),
+        "Restart",
+        "its own words outrank the row's heading"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -229,9 +270,11 @@ fn a_row_does_not_rename_a_value_that_already_says_what_it_is() {
 #[test]
 fn a_tab_list_gives_its_tabs_their_place_without_being_told() {
     let mut harness = Harness::new(0usize, |tab: &usize| {
-        col(tabs(&["Overview", "Definition", "Output"], *tab, |tab: &mut usize, chosen| {
-            *tab = chosen
-        }))
+        col(tabs(
+            &["Overview", "Definition", "Output"],
+            *tab,
+            |tab: &mut usize, chosen| *tab = chosen,
+        ))
     });
     harness.frame();
 
@@ -244,10 +287,18 @@ fn a_tab_list_gives_its_tabs_their_place_without_being_told() {
         .collect();
     assert_eq!(tabs.len(), 3);
     for (index, tab) in tabs.iter().enumerate() {
-        assert_eq!(tab.set_size, Some(3), "the parent already knows how many there are");
+        assert_eq!(
+            tab.set_size,
+            Some(3),
+            "the parent already knows how many there are"
+        );
         assert_eq!(tab.position_in_set, Some(index + 1));
     }
-    assert_eq!(tabs[0].state.selected, Some(true), "which one is chosen is state, not colour");
+    assert_eq!(
+        tabs[0].state.selected,
+        Some(true),
+        "which one is chosen is state, not colour"
+    );
     assert_eq!(tabs[1].state.selected, Some(false));
 }
 
@@ -282,8 +333,16 @@ fn a_chosen_row_of_a_list_says_so_and_an_unchosen_one_says_so_too() {
         .collect();
 
     assert_eq!(rows.len(), 3);
-    assert_eq!(rows[0].state.selected, Some(false), "a row nobody chose says it was not chosen");
-    assert_eq!(rows[1].state.selected, Some(true), "and the chosen one says it was");
+    assert_eq!(
+        rows[0].state.selected,
+        Some(false),
+        "a row nobody chose says it was not chosen"
+    );
+    assert_eq!(
+        rows[1].state.selected,
+        Some(true),
+        "and the chosen one says it was"
+    );
     assert!(
         harness
             .accessibility()
@@ -306,20 +365,28 @@ fn a_chosen_row_of_a_list_says_so_and_an_unchosen_one_says_so_too() {
         .filter(|node| node.role == Role::ListItem)
         .cloned()
         .collect();
-    assert_eq!(rows[1].state.selected, Some(false), "and it moves when the interface says so");
+    assert_eq!(
+        rows[1].state.selected,
+        Some(false),
+        "and it moves when the interface says so"
+    );
     assert_eq!(rows[2].state.selected, Some(true));
 }
 
 #[test]
 fn a_tab_outside_a_tab_list_is_a_failure() {
     let mut harness = Harness::new(Nothing, |_: &Nothing| {
-        col(text("Overview").role(Role::Tab).on_click(|_: &mut Nothing| {}))
+        col(text("Overview")
+            .role(Role::Tab)
+            .on_click(|_: &mut Nothing| {}))
     });
     harness.frame();
 
     let violations = audit(harness.accessibility());
     assert!(
-        violations.iter().any(|violation| violation.to_string().contains("TabList")),
+        violations
+            .iter()
+            .any(|violation| violation.to_string().contains("TabList")),
         "a tab with no tab list around it must be reported, got {violations:?}"
     );
 }
@@ -327,13 +394,17 @@ fn a_tab_outside_a_tab_list_is_a_failure() {
 #[test]
 fn a_list_item_outside_a_list_is_a_failure() {
     let mut harness = Harness::new(Nothing, |_: &Nothing| {
-        col(text("mongod").role(Role::ListItem).on_click(|_: &mut Nothing| {}))
+        col(text("mongod")
+            .role(Role::ListItem)
+            .on_click(|_: &mut Nothing| {}))
     });
     harness.frame();
 
     let violations = audit(harness.accessibility());
     assert!(
-        violations.iter().any(|violation| violation.to_string().contains("List")),
+        violations
+            .iter()
+            .any(|violation| violation.to_string().contains("List")),
         "a list item with no list around it must be reported, got {violations:?}"
     );
 }
@@ -359,19 +430,26 @@ fn a_clickable_thing_with_no_role_is_a_failure() {
 #[test]
 fn an_interactive_thing_with_no_name_is_a_failure() {
     let mut harness = Harness::new(Nothing, |_: &Nothing| {
-        col(draw(Size::new(16.0, 16.0), |_, _| {}).role(Role::Checkbox).on_click(|_: &mut Nothing| {}))
+        col(draw(Size::new(16.0, 16.0), |_, _| {})
+            .role(Role::Checkbox)
+            .on_click(|_: &mut Nothing| {}))
     });
     harness.frame();
 
     let violations = audit(harness.accessibility());
-    assert!(!violations.is_empty(), "an unnamed control is unusable without sight of it");
+    assert!(
+        !violations.is_empty(),
+        "an unnamed control is unusable without sight of it"
+    );
 }
 
 #[test]
 fn two_siblings_sharing_a_key_are_a_failure() {
     let mut harness = Harness::new(Nothing, |_: &Nothing| {
         col((
-            button("Restart").key("action").on_click(|_: &mut Nothing| {}),
+            button("Restart")
+                .key("action")
+                .on_click(|_: &mut Nothing| {}),
             button("Stop").key("action").on_click(|_: &mut Nothing| {}),
         ))
     });
@@ -423,7 +501,11 @@ fn an_assistive_activation_runs_the_same_handler_a_click_would() {
         *clicked.state(),
         "a screen reader's press and a click must leave the interface in one state"
     );
-    assert_eq!(clicked.state().presses, 1, "and it must be the state the handler produces");
+    assert_eq!(
+        clicked.state().presses,
+        1,
+        "and it must be the state the handler produces"
+    );
 }
 
 #[test]
@@ -432,7 +514,10 @@ fn an_assistive_activation_reaches_the_element_it_names() {
     harness.activate_named("Dismiss");
     assert_eq!(
         *harness.state(),
-        Counted { presses: 0, dismissals: 1 },
+        Counted {
+            presses: 0,
+            dismissals: 1
+        },
         "an activation is aimed by identity, and must reach nothing else"
     );
 }
@@ -445,12 +530,18 @@ fn an_assistive_activation_says_so_before_it_is_offered() {
     let mut harness = Harness::new(Counted::default(), counted);
     let nodes = harness.accessibility().nodes().to_vec();
 
-    let button = nodes.iter().find(|node| node.name == "Restart").expect("the button is drawn");
+    let button = nodes
+        .iter()
+        .find(|node| node.name == "Restart")
+        .expect("the button is drawn");
     assert_eq!(button.role, Role::Button);
     assert!(button.actions.press, "a button says it can be pressed");
 
     assert!(
-        nodes.iter().filter(|node| node.role == Role::Text).all(|node| !node.actions.press),
+        nodes
+            .iter()
+            .filter(|node| node.role == Role::Text)
+            .all(|node| !node.actions.press),
         "a run of words answers no press, and must not claim to"
     );
 }
@@ -464,7 +555,11 @@ fn an_assistive_activation_of_something_that_is_gone_does_nothing() {
     harness.frame();
 
     harness.activate(rui::Id::new("nothing has ever been called this"));
-    assert_eq!(*harness.state(), Counted::default(), "an identity nobody has is a no-op");
+    assert_eq!(
+        *harness.state(),
+        Counted::default(),
+        "an identity nobody has is a no-op"
+    );
 }
 
 #[test]
@@ -521,8 +616,12 @@ fn a_screen_carrying_a_greyed_control_still_passes_the_tab_audit() {
             button("Start").on_click(|counted: &mut Counted| counted.presses += 1),
             // Both orders, because the audit and the walk must agree about the
             // same greyed button however it was written.
-            button("Restart").on_click(|_: &mut Counted| {}).disabled(true),
-            button("Uninstall").disabled(true).on_click(|_: &mut Counted| {}),
+            button("Restart")
+                .on_click(|_: &mut Counted| {})
+                .disabled(true),
+            button("Uninstall")
+                .disabled(true)
+                .on_click(|_: &mut Counted| {}),
         ))
         .gap(6.0)
         .align(Align::Start)
@@ -534,7 +633,11 @@ fn a_screen_carrying_a_greyed_control_still_passes_the_tab_audit() {
     harness.tab();
     let focused = harness.focused();
     harness.tab();
-    assert_eq!(harness.focused(), focused, "Tab found somewhere else to go among two greyed keys");
+    assert_eq!(
+        harness.focused(),
+        focused,
+        "Tab found somewhere else to go among two greyed keys"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -613,7 +716,10 @@ fn only_what_changed_is_emitted() {
     harness.frame();
 
     let update = harness.accessibility_update().clone();
-    assert!(!update.is_empty(), "the number changed, so something must be said about it");
+    assert!(
+        !update.is_empty(),
+        "the number changed, so something must be said about it"
+    );
     assert!(
         update.changed.iter().all(|node| node.name != "Unchanging"),
         "what did not change is not worth the assistive technology's time, got {update:?}"

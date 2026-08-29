@@ -61,10 +61,17 @@ struct Screen {
 /// A box that answers the pointer, and a word beside it.
 fn checkbox<S: 'static>(label: &str, checked: bool, toggle: impl Fn(&mut S) + 'static) -> El<S> {
     row((
-        draw(Size::new(15.0, 15.0), move |painter: &mut Painter<'_>, rect: Rect| {
-            painter.fill(rect, Radius::Units(4.0), if checked { Tone::Accent } else { Tone::Sunken });
-            painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
-        })
+        draw(
+            Size::new(15.0, 15.0),
+            move |painter: &mut Painter<'_>, rect: Rect| {
+                painter.fill(
+                    rect,
+                    Radius::Units(4.0),
+                    if checked { Tone::Accent } else { Tone::Sunken },
+                );
+                painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
+            },
+        )
         .size(15.0, 15.0),
         text(label),
     ))
@@ -78,12 +85,27 @@ fn checkbox<S: 'static>(label: &str, checked: bool, toggle: impl Fn(&mut S) + 's
 
 /// A track, and a knob that slides along it.
 fn switch<S: 'static>(on: bool, flip: impl Fn(&mut S) + 'static) -> El<S> {
-    draw(Size::new(34.0, 20.0), move |painter: &mut Painter<'_>, rect: Rect| {
-        painter.fill(rect, Radius::Pill, if on { Tone::Accent } else { Tone::Sunken });
-        let knob = rect.h - 6.0;
-        let x = if on { rect.max_x() - knob - 3.0 } else { rect.x + 3.0 };
-        painter.fill(Rect::new(x, rect.y + 3.0, knob, knob), Radius::Pill, Tone::Surface);
-    })
+    draw(
+        Size::new(34.0, 20.0),
+        move |painter: &mut Painter<'_>, rect: Rect| {
+            painter.fill(
+                rect,
+                Radius::Pill,
+                if on { Tone::Accent } else { Tone::Sunken },
+            );
+            let knob = rect.h - 6.0;
+            let x = if on {
+                rect.max_x() - knob - 3.0
+            } else {
+                rect.x + 3.0
+            };
+            painter.fill(
+                Rect::new(x, rect.y + 3.0, knob, knob),
+                Radius::Pill,
+                Tone::Surface,
+            );
+        },
+    )
     .size(34.0, 20.0)
     .role(Role::Checkbox)
     .selected(on)
@@ -95,10 +117,17 @@ fn switch<S: 'static>(on: bool, flip: impl Fn(&mut S) + 'static) -> El<S> {
 fn slider<S: 'static>(value: f32, set: impl Fn(&mut S, f32) + Copy + 'static) -> El<S> {
     const STEP: f32 = 0.05;
     let value = value.clamp(0.0, 1.0);
-    draw(Size::new(160.0, 18.0), move |painter: &mut Painter<'_>, rect: Rect| {
-        painter.fill(rect, Radius::Pill, Tone::Sunken);
-        painter.fill(Rect::new(rect.x, rect.y, rect.w * value, rect.h), Radius::Pill, Tone::Accent);
-    })
+    draw(
+        Size::new(160.0, 18.0),
+        move |painter: &mut Painter<'_>, rect: Rect| {
+            painter.fill(rect, Radius::Pill, Tone::Sunken);
+            painter.fill(
+                Rect::new(rect.x, rect.y, rect.w * value, rect.h),
+                Radius::Pill,
+                Tone::Accent,
+            );
+        },
+    )
     .size(160.0, 18.0)
     .role(Role::Slider)
     .label("Volume")
@@ -123,9 +152,16 @@ fn radio_group<S: 'static>(
         .map(|(index, label)| {
             let taken = index == chosen;
             row((
-                draw(Size::new(15.0, 15.0), move |painter: &mut Painter<'_>, rect: Rect| {
-                    painter.fill(rect, Radius::Pill, if taken { Tone::Accent } else { Tone::Sunken });
-                })
+                draw(
+                    Size::new(15.0, 15.0),
+                    move |painter: &mut Painter<'_>, rect: Rect| {
+                        painter.fill(
+                            rect,
+                            Radius::Pill,
+                            if taken { Tone::Accent } else { Tone::Sunken },
+                        );
+                    },
+                )
                 .size(15.0, 15.0),
                 text(*label),
             ))
@@ -179,14 +215,19 @@ fn viewport<S: 'static>(
 #[test]
 fn a_checkbox_answers_a_click_on_its_label_as_well_as_on_its_box() {
     let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
-        col(checkbox("Notify on failure", settings.notify, |settings: &mut Settings| {
-            settings.notify = !settings.notify
-        }))
+        col(checkbox(
+            "Notify on failure",
+            settings.notify,
+            |settings: &mut Settings| settings.notify = !settings.notify,
+        ))
         .align(Align::Start)
     });
 
     harness.click_text("Notify on failure");
-    assert!(harness.state().notify, "clicking the word is clicking the control");
+    assert!(
+        harness.state().notify,
+        "clicking the word is clicking the control"
+    );
 
     harness.click_text("Notify on failure");
     assert!(!harness.state().notify, "and it is a toggle, not a latch");
@@ -201,14 +242,24 @@ fn a_checkbox_draws_differently_once_it_is_ticked() {
         col(checkbox("Notify", settings.notify, |_: &mut Settings| {})).align(Align::Start)
     })
     .size(200.0, 60.0);
-    let mut on = Harness::new(Settings { notify: true, ..Settings::default() }, |settings: &Settings| {
-        col(checkbox("Notify", settings.notify, |_: &mut Settings| {})).align(Align::Start)
-    })
+    let mut on = Harness::new(
+        Settings {
+            notify: true,
+            ..Settings::default()
+        },
+        |settings: &Settings| {
+            col(checkbox("Notify", settings.notify, |_: &mut Settings| {})).align(Align::Start)
+        },
+    )
     .size(200.0, 60.0);
 
     off.frame();
     on.frame();
-    assert_ne!(off.canvas().pixels(), on.canvas().pixels(), "a state nobody can see is not a state");
+    assert_ne!(
+        off.canvas().pixels(),
+        on.canvas().pixels(),
+        "a state nobody can see is not a state"
+    );
 
     on.assert_accessible();
 }
@@ -216,20 +267,29 @@ fn a_checkbox_draws_differently_once_it_is_ticked() {
 #[test]
 fn a_switch_flips_and_moves_its_knob_when_it_does() {
     let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
-        col(switch(settings.dark, |settings: &mut Settings| settings.dark = !settings.dark)
-            .key("switch"))
+        col(switch(settings.dark, |settings: &mut Settings| {
+            settings.dark = !settings.dark
+        })
+        .key("switch"))
         .align(Align::Start)
     })
     .size(200.0, 60.0);
 
     harness.frame();
-    let rect = harness.find_key("switch").expect("the switch is on screen").rect;
+    let rect = harness
+        .find_key("switch")
+        .expect("the switch is on screen")
+        .rect;
     let before: Vec<u32> = harness.canvas().pixels().to_vec();
 
     harness.click(rect.center());
     assert!(harness.state().dark);
     harness.frame();
-    assert_ne!(before, harness.canvas().pixels(), "the knob should have moved");
+    assert_ne!(
+        before,
+        harness.canvas().pixels(),
+        "the knob should have moved"
+    );
 
     harness.assert_accessible();
     harness.assert_tab_order();
@@ -238,14 +298,25 @@ fn a_switch_flips_and_moves_its_knob_when_it_does() {
 #[test]
 fn a_slider_follows_the_pointer_and_the_arrow_keys_alike() {
     let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
-        col(slider(settings.volume, |settings: &mut Settings, value| settings.volume = value)
-            .key("volume"))
+        col(slider(settings.volume, |settings: &mut Settings, value| {
+            settings.volume = value
+        })
+        .key("volume"))
         .align(Align::Start)
     });
 
-    let rect = harness.find_key("volume").expect("the slider is on screen").rect;
-    harness.drag(Point::new(rect.x + 40.0, rect.center().y), Point::new(rect.x + 120.0, rect.center().y));
-    assert!((harness.state().volume - 0.75).abs() < 0.001, "it ends where the pointer let go");
+    let rect = harness
+        .find_key("volume")
+        .expect("the slider is on screen")
+        .rect;
+    harness.drag(
+        Point::new(rect.x + 40.0, rect.center().y),
+        Point::new(rect.x + 120.0, rect.center().y),
+    );
+    assert!(
+        (harness.state().volume - 0.75).abs() < 0.001,
+        "it ends where the pointer let go"
+    );
 
     // Pressing it gave it the keyboard, so the arrows step it from there.
     harness.key(Key::Left);
@@ -259,12 +330,17 @@ fn a_slider_follows_the_pointer_and_the_arrow_keys_alike() {
 #[test]
 fn a_slider_can_be_used_from_the_keyboard_without_ever_being_clicked() {
     let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
-        col(slider(settings.volume, |settings: &mut Settings, value| settings.volume = value))
+        col(slider(settings.volume, |settings: &mut Settings, value| {
+            settings.volume = value
+        }))
     });
 
     harness.tab();
     harness.key(Key::Right);
-    assert!((harness.state().volume - 0.05).abs() < 0.001, "tab reached it and the arrow moved it");
+    assert!(
+        (harness.state().volume - 0.05).abs() < 0.001,
+        "tab reached it and the arrow moved it"
+    );
 
     harness.assert_accessible();
     harness.assert_tab_order();
@@ -273,9 +349,11 @@ fn a_slider_can_be_used_from_the_keyboard_without_ever_being_clicked() {
 #[test]
 fn a_group_of_choices_takes_exactly_one_of_them() {
     let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
-        col(radio_group(&["Plain", "JSON", "Binary"], settings.format, |settings: &mut Settings, index| {
-            settings.format = index
-        }))
+        col(radio_group(
+            &["Plain", "JSON", "Binary"],
+            settings.format,
+            |settings: &mut Settings, index| settings.format = index,
+        ))
         .align(Align::Start)
     });
 
@@ -283,7 +361,11 @@ fn a_group_of_choices_takes_exactly_one_of_them() {
     assert_eq!(harness.state().format, 2);
 
     harness.click_text("Plain");
-    assert_eq!(harness.state().format, 0, "choosing one is unchoosing the others");
+    assert_eq!(
+        harness.state().format,
+        0,
+        "choosing one is unchoosing the others"
+    );
 
     harness.assert_accessible();
     harness.assert_tab_order();
@@ -299,22 +381,34 @@ fn a_note_appears_when_the_pointer_arrives_and_goes_when_it_leaves() {
                     settings.tip = over.then(|| "How many at once".to_owned())
                 })
                 .add(settings.tip.as_ref().map(|note| {
-                    panel(caption(note.clone())).w(160.0).key("tip").layer(Anchor::Below)
+                    panel(caption(note.clone()))
+                        .w(160.0)
+                        .key("tip")
+                        .layer(Anchor::Below)
                 })),
             text("Elsewhere").h(24.0),
         ))
         .align(Align::Start)
     });
 
-    assert!(!harness.shows("How many at once"), "nothing is hovered, so there is no note");
+    assert!(
+        !harness.shows("How many at once"),
+        "nothing is hovered, so there is no note"
+    );
 
     harness.hover_text("Workers");
     harness.frame();
-    assert!(harness.shows("How many at once"), "the pointer arriving brought it up");
+    assert!(
+        harness.shows("How many at once"),
+        "the pointer arriving brought it up"
+    );
 
     harness.hover_text("Elsewhere");
     harness.frame();
-    assert!(!harness.shows("How many at once"), "and leaving took it away again");
+    assert!(
+        !harness.shows("How many at once"),
+        "and leaving took it away again"
+    );
 
     harness.assert_accessible();
 }
@@ -330,18 +424,22 @@ fn a_note_that_is_up_does_not_come_up_again_every_frame() {
     }
 
     let mut harness = Harness::new(Counted::default(), |_: &Counted| {
-        col(text("Workers").h(24.0).on_hover(|counted: &mut Counted, _| counted.changes += 1))
-            .align(Align::Start)
+        col(text("Workers")
+            .h(24.0)
+            .on_hover(|counted: &mut Counted, _| counted.changes += 1))
+        .align(Align::Start)
     });
 
     harness.hover_text("Workers");
     assert_eq!(harness.state().changes, 1);
 
     harness.frames(10);
-    assert_eq!(harness.state().changes, 1, "the pointer has not moved, so nothing has changed");
+    assert_eq!(
+        harness.state().changes,
+        1,
+        "the pointer has not moved, so nothing has changed"
+    );
 }
-
-
 
 #[test]
 fn a_viewport_shows_another_machines_screen_and_sends_it_the_keyboard() {
@@ -367,7 +465,10 @@ fn a_viewport_shows_another_machines_screen_and_sends_it_the_keyboard() {
         .align(Align::Start)
     });
 
-    let rect = harness.find_key("screen").expect("the pane is on screen").rect;
+    let rect = harness
+        .find_key("screen")
+        .expect("the pane is on screen")
+        .rect;
     let inside = rect.center();
     assert_ne!(
         harness.pixel(inside.x as u32, inside.y as u32),
@@ -387,10 +488,17 @@ fn a_viewport_shows_another_machines_screen_and_sends_it_the_keyboard() {
     harness.click(inside);
     let function_key = KeyCode::new(96);
     harness.raw_key(function_key, None);
-    assert_eq!(harness.state().held, [function_key], "the far machine was told nothing");
+    assert_eq!(
+        harness.state().held,
+        [function_key],
+        "the far machine was told nothing"
+    );
 
     harness.raw_key_up(function_key, None);
-    assert!(harness.state().held.is_empty(), "left held down on the far machine");
+    assert!(
+        harness.state().held.is_empty(),
+        "left held down on the far machine"
+    );
 
     harness.assert_accessible();
 }
@@ -402,7 +510,10 @@ fn a_hand_moving_over_the_viewport_moves_the_far_pointer_without_pressing_anythi
     // `on_pointer_move` a remote screen could be clicked but not *pointed at* —
     // the far cursor stood still until something was dragged.
     let mut harness = pointing();
-    let rect = harness.find_key("screen").expect("the pane is on screen").rect;
+    let rect = harness
+        .find_key("screen")
+        .expect("the pane is on screen")
+        .rect;
 
     harness.move_pointer(Point::new(rect.x + 10.0, rect.y + 20.0));
     harness.move_pointer(Point::new(rect.x + 30.0, rect.y + 40.0));
@@ -412,7 +523,10 @@ fn a_hand_moving_over_the_viewport_moves_the_far_pointer_without_pressing_anythi
         [Point::new(10.0, 20.0), Point::new(30.0, 40.0)],
         "the far machine is told where in its own screen the pointer is, not where in this window"
     );
-    assert!(harness.state().held.is_empty(), "nothing was pressed to make that happen");
+    assert!(
+        harness.state().held.is_empty(),
+        "nothing was pressed to make that happen"
+    );
 }
 
 #[test]
@@ -422,24 +536,74 @@ fn a_pointer_resting_on_the_viewport_sends_nothing_at_all() {
     // socket for as long as a hand rested on the picture, and — because writing
     // to the state is what asks for the next frame — would never stop drawing.
     let mut harness = pointing();
-    let rect = harness.find_key("screen").expect("the pane is on screen").rect;
+    let rect = harness
+        .find_key("screen")
+        .expect("the pane is on screen")
+        .rect;
 
     harness.move_pointer(rect.center());
     assert_eq!(harness.state().pointed.len(), 1);
 
     harness.frames(10);
-    assert_eq!(harness.state().pointed.len(), 1, "ten frames of a hand holding still");
+    assert_eq!(
+        harness.state().pointed.len(),
+        1,
+        "ten frames of a hand holding still"
+    );
 }
 
 #[test]
 fn the_pointer_leaving_the_viewport_stops_the_far_pointer_rather_than_dragging_it_along() {
     let mut harness = pointing();
-    let rect = harness.find_key("screen").expect("the pane is on screen").rect;
+    let rect = harness
+        .find_key("screen")
+        .expect("the pane is on screen")
+        .rect;
 
     harness.move_pointer(rect.center());
     harness.move_pointer(Point::new(rect.x + rect.w + 40.0, rect.y + rect.h + 40.0));
 
-    assert_eq!(harness.state().pointed.len(), 1, "a position outside the pane is not the pane's");
+    assert_eq!(
+        harness.state().pointed.len(),
+        1,
+        "a position outside the pane is not the pane's"
+    );
+}
+
+#[test]
+fn a_star_rating_updates_when_clicked() {
+    use rui::star_rating;
+
+    let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
+        col(star_rating(
+            settings.format,
+            |settings: &mut Settings, r| settings.format = r,
+        ))
+        .align(Align::Start)
+    });
+
+    // Initially, rating is 0
+    assert_eq!(harness.state().format, 0);
+
+    // Click on star 3 (each star is 16px wide with 4px gap: 20 units per star)
+    harness.click(Point::new(48.0, 8.0));
+    assert_eq!(harness.state().format, 3, "clicking a star sets the rating");
+
+    // Click on star 5
+    harness.click(Point::new(88.0, 8.0));
+    assert_eq!(
+        harness.state().format,
+        5,
+        "clicking a higher star updates the rating"
+    );
+
+    // Click on star 1 to set minimum rating
+    harness.click(Point::new(8.0, 8.0));
+    assert_eq!(
+        harness.state().format,
+        1,
+        "clicking the first star sets rating to 1"
+    );
 }
 
 /// A window holding nothing but the viewport, for the pointer tests.
@@ -466,5 +630,10 @@ fn captured(width: u32, height: u32, color: Color) -> Screen {
         }
         bytes.extend(std::iter::repeat_n(0x7f, padding));
     }
-    Screen { width, height, stride, bytes }
+    Screen {
+        width,
+        height,
+        stride,
+        bytes,
+    }
 }
