@@ -232,7 +232,12 @@ impl<'a> Bgra<'a> {
                 return None;
             }
         }
-        Some(Self { width, height, stride, bytes })
+        Some(Self {
+            width,
+            height,
+            stride,
+            bytes,
+        })
     }
 
     /// The same, for a picture whose rows have no padding between them.
@@ -339,7 +344,12 @@ impl Canvas {
             width: 0,
             height: 0,
             scale: 1.0,
-            clip: PixelBounds { left: 0, top: 0, right: 0, bottom: 0 },
+            clip: PixelBounds {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+            },
         };
         canvas.resize(width, height, scale);
         canvas
@@ -360,11 +370,20 @@ impl Canvas {
     pub fn resize(&mut self, width: u32, height: u32, scale: f32) {
         self.width = width;
         self.height = height;
-        self.scale = if scale.is_finite() { scale.clamp(MIN_SCALE, MAX_SCALE) } else { 1.0 };
-        self.clip =
-            PixelBounds { left: 0, top: 0, right: width as i32, bottom: height as i32 };
+        self.scale = if scale.is_finite() {
+            scale.clamp(MIN_SCALE, MAX_SCALE)
+        } else {
+            1.0
+        };
+        self.clip = PixelBounds {
+            left: 0,
+            top: 0,
+            right: width as i32,
+            bottom: height as i32,
+        };
         self.pixels.clear();
-        self.pixels.resize((width as usize) * (height as usize), OPAQUE_BLACK);
+        self.pixels
+            .resize((width as usize) * (height as usize), OPAQUE_BLACK);
     }
 
     /// Width in device pixels.
@@ -384,7 +403,12 @@ impl Canvas {
 
     /// The whole surface, in logical units.
     pub fn bounds(&self) -> Rect {
-        Rect::new(0.0, 0.0, self.width as f32 / self.scale, self.height as f32 / self.scale)
+        Rect::new(
+            0.0,
+            0.0,
+            self.width as f32 / self.scale,
+            self.height as f32 / self.scale,
+        )
     }
 
     /// The pixels, for a backend to present.
@@ -415,8 +439,13 @@ impl Canvas {
 
     /// Restores a clip taken from [`Canvas::push_clip`].
     pub fn pop_clip(&mut self, previous: Rect) {
-        self.clip = PixelBounds { left: 0, top: 0, right: self.width as i32, bottom: self.height as i32 }
-            .intersect(self.device_bounds(previous));
+        self.clip = PixelBounds {
+            left: 0,
+            top: 0,
+            right: self.width as i32,
+            bottom: self.height as i32,
+        }
+        .intersect(self.device_bounds(previous));
     }
 
     /// Whether anything drawn inside `rect` could be visible.
@@ -503,8 +532,12 @@ impl Canvas {
         let device = self.device_rect(rect);
         let corner = self.device_corner(corner, device);
         let mid_y = device.y + device.h / 2.0;
-        let shade =
-            Shade::linear((device.min_x(), mid_y), (device.max_x(), mid_y), left, right);
+        let shade = Shade::linear(
+            (device.min_x(), mid_y),
+            (device.max_x(), mid_y),
+            left,
+            right,
+        );
         self.fill_shaded(device, corner, shade);
     }
 
@@ -551,14 +584,7 @@ impl Canvas {
     /// of light taken away from it. Which of the two an element casts is said
     /// once, in the theme's own language, by [`El::shadow`](crate::El::shadow)
     /// and [`El::glow`](crate::El::glow).
-    pub fn shadow(
-        &mut self,
-        rect: Rect,
-        corner: Corner,
-        blur: f32,
-        spread: f32,
-        color: Color,
-    ) {
+    pub fn shadow(&mut self, rect: Rect, corner: Corner, blur: f32, spread: f32, color: Color) {
         if !color.is_visible() || rect.is_empty() || blur <= 0.0 {
             return;
         }
@@ -660,8 +686,19 @@ impl Canvas {
         let r = radius * self.scale;
         // A disc is a rounded square of corner radius half its side, so the same
         // distance field that antialiases a panel's corners antialiases its rim.
-        let device = Rect { x: cx - r, y: cy - r, w: 2.0 * r, h: 2.0 * r };
-        let shade = Shade::Radial { inner, outer, cx, cy, inv_radius: 1.0 / r.max(SHADE_EPS) };
+        let device = Rect {
+            x: cx - r,
+            y: cy - r,
+            w: 2.0 * r,
+            h: 2.0 * r,
+        };
+        let shade = Shade::Radial {
+            inner,
+            outer,
+            cx,
+            cy,
+            inv_radius: 1.0 / r.max(SHADE_EPS),
+        };
         self.fill_shaded(device, Corner::Round(r), shade);
     }
 
@@ -776,8 +813,9 @@ impl Canvas {
                 Sculpt::Stroke { width } => width.max(0.0) / 2.0,
                 Sculpt::Glow { radius, .. } => radius.max(0.0),
             };
-        let bounds =
-            self.clip.intersect(self.device_bounds(shape.bbox().expand(Insets::uniform(margin))));
+        let bounds = self
+            .clip
+            .intersect(self.device_bounds(shape.bbox().expand(Insets::uniform(margin))));
         if bounds.is_empty() {
             return;
         }
@@ -799,8 +837,11 @@ impl Canvas {
                             continue;
                         }
                         let color = paint.at(shape, p, d);
-                        self.pixels[index] =
-                            blend_over(self.pixels[index], color, (coverage.min(1.0) * 255.0) as u8);
+                        self.pixels[index] = blend_over(
+                            self.pixels[index],
+                            color,
+                            (coverage.min(1.0) * 255.0) as u8,
+                        );
                     }
                     Sculpt::Stroke { width } => {
                         let folded = d_device.abs() - width.max(0.0) * scale / 2.0;
@@ -809,8 +850,11 @@ impl Canvas {
                             continue;
                         }
                         let color = paint.at(shape, p, d);
-                        self.pixels[index] =
-                            blend_over(self.pixels[index], color, (coverage.min(1.0) * 255.0) as u8);
+                        self.pixels[index] = blend_over(
+                            self.pixels[index],
+                            color,
+                            (coverage.min(1.0) * 255.0) as u8,
+                        );
                     }
                     Sculpt::Glow { radius, intensity } => {
                         let blur = radius.max(0.0) * scale;
@@ -944,16 +988,22 @@ impl Canvas {
         // moment it crossed the top-left corner of the window.
         let left = device.min_x().round() as i32;
         let top = device.min_y().round() as i32;
-        let (Some(right), Some(bottom)) =
-            (left.checked_add_unsigned(source.width()), top.checked_add_unsigned(source.height()))
-        else {
+        let (Some(right), Some(bottom)) = (
+            left.checked_add_unsigned(source.width()),
+            top.checked_add_unsigned(source.height()),
+        ) else {
             return;
         };
 
         let bounds = self
             .clip
             .intersect(self.device_bounds(dest))
-            .intersect(PixelBounds { left, top, right, bottom });
+            .intersect(PixelBounds {
+                left,
+                top,
+                right,
+                bottom,
+            });
         if bounds.is_empty() {
             return;
         }
@@ -1178,8 +1228,11 @@ impl Canvas {
                 continue;
             }
             let index = row + x as usize;
-            self.pixels[index] =
-                blend_over(self.pixels[index], shade.at(fx, sample_y), (coverage.min(1.0) * 255.0) as u8);
+            self.pixels[index] = blend_over(
+                self.pixels[index],
+                shade.at(fx, sample_y),
+                (coverage.min(1.0) * 255.0) as u8,
+            );
         }
     }
 
@@ -1210,10 +1263,34 @@ impl Canvas {
             let row = (y as usize) * self.width as usize;
 
             if sample_y > straight_top && sample_y < straight_bottom && right_edge > left_edge {
-                self.glow_span(row, bounds.left, left_edge.min(bounds.right), sample_y, &field, blur, color);
-                self.glow_span(row, right_edge.max(bounds.left), bounds.right, sample_y, &field, blur, color);
+                self.glow_span(
+                    row,
+                    bounds.left,
+                    left_edge.min(bounds.right),
+                    sample_y,
+                    &field,
+                    blur,
+                    color,
+                );
+                self.glow_span(
+                    row,
+                    right_edge.max(bounds.left),
+                    bounds.right,
+                    sample_y,
+                    &field,
+                    blur,
+                    color,
+                );
             } else {
-                self.glow_span(row, bounds.left, bounds.right, sample_y, &field, blur, color);
+                self.glow_span(
+                    row,
+                    bounds.left,
+                    bounds.right,
+                    sample_y,
+                    &field,
+                    blur,
+                    color,
+                );
             }
         }
     }
@@ -1251,10 +1328,34 @@ impl Canvas {
             let row = (y as usize) * self.width as usize;
 
             if sample_y > straight_top && sample_y < straight_bottom && right_edge > left_edge {
-                self.stroke_span(row, bounds.left, left_edge.min(bounds.right), sample_y, &field, thickness, color);
-                self.stroke_span(row, right_edge.max(bounds.left), bounds.right, sample_y, &field, thickness, color);
+                self.stroke_span(
+                    row,
+                    bounds.left,
+                    left_edge.min(bounds.right),
+                    sample_y,
+                    &field,
+                    thickness,
+                    color,
+                );
+                self.stroke_span(
+                    row,
+                    right_edge.max(bounds.left),
+                    bounds.right,
+                    sample_y,
+                    &field,
+                    thickness,
+                    color,
+                );
             } else {
-                self.stroke_span(row, bounds.left, bounds.right, sample_y, &field, thickness, color);
+                self.stroke_span(
+                    row,
+                    bounds.left,
+                    bounds.right,
+                    sample_y,
+                    &field,
+                    thickness,
+                    color,
+                );
             }
         }
     }
@@ -1305,8 +1406,11 @@ impl Canvas {
             }
             let remaining = 1.0 - distance / blur;
             let index = row + x as usize;
-            self.pixels[index] =
-                blend_over(self.pixels[index], color, (remaining * remaining * 255.0) as u8);
+            self.pixels[index] = blend_over(
+                self.pixels[index],
+                color,
+                (remaining * remaining * 255.0) as u8,
+            );
         }
     }
 
@@ -1494,7 +1598,12 @@ struct Paint {
 impl Paint {
     /// One colour everywhere.
     fn solid(color: Color) -> Self {
-        Self { top: color, bottom: color, y: 0.0, inverse_height: 0.0 }
+        Self {
+            top: color,
+            bottom: color,
+            y: 0.0,
+            inverse_height: 0.0,
+        }
     }
 
     /// Shading from `top` at the rectangle's top edge to `bottom` at its bottom.
@@ -1512,7 +1621,8 @@ impl Paint {
         if self.inverse_height == 0.0 {
             return self.top;
         }
-        self.top.mix(self.bottom, (y - self.y) * self.inverse_height)
+        self.top
+            .mix(self.bottom, (y - self.y) * self.inverse_height)
     }
 }
 
@@ -1531,10 +1641,23 @@ enum Shade {
     /// `c0` at `t = 0`, `c1` at `t = 1`, where `t` is the clamped projection of
     /// the pixel onto the gradient axis. `gx, gy` is the axis vector divided by
     /// its own squared length, so the projection is `(x-ox)*gx + (y-oy)*gy`.
-    Linear { c0: Color, c1: Color, ox: f32, oy: f32, gx: f32, gy: f32 },
+    Linear {
+        c0: Color,
+        c1: Color,
+        ox: f32,
+        oy: f32,
+        gx: f32,
+        gy: f32,
+    },
     /// `inner` at the centre, `outer` at `radius` and beyond; `inv_radius` is
     /// `1.0 / radius` so the falloff is a multiply.
-    Radial { inner: Color, outer: Color, cx: f32, cy: f32, inv_radius: f32 },
+    Radial {
+        inner: Color,
+        outer: Color,
+        cx: f32,
+        cy: f32,
+        inv_radius: f32,
+    },
 }
 
 impl Shade {
@@ -1543,17 +1666,37 @@ impl Shade {
     fn linear(a: (f32, f32), b: (f32, f32), c0: Color, c1: Color) -> Self {
         let (dx, dy) = (b.0 - a.0, b.1 - a.1);
         let inv = 1.0 / (dx * dx + dy * dy).max(SHADE_EPS);
-        Shade::Linear { c0, c1, ox: a.0, oy: a.1, gx: dx * inv, gy: dy * inv }
+        Shade::Linear {
+            c0,
+            c1,
+            ox: a.0,
+            oy: a.1,
+            gx: dx * inv,
+            gy: dy * inv,
+        }
     }
 
     /// The colour at device pixel centre `(x, y)`.
     fn at(&self, x: f32, y: f32) -> Color {
         match *self {
-            Shade::Linear { c0, c1, ox, oy, gx, gy } => {
+            Shade::Linear {
+                c0,
+                c1,
+                ox,
+                oy,
+                gx,
+                gy,
+            } => {
                 let t = ((x - ox) * gx + (y - oy) * gy).clamp(0.0, 1.0);
                 c0.mix(c1, t)
             }
-            Shade::Radial { inner, outer, cx, cy, inv_radius } => {
+            Shade::Radial {
+                inner,
+                outer,
+                cx,
+                cy,
+                inv_radius,
+            } => {
                 let (dx, dy) = (x - cx, y - cy);
                 let t = ((dx * dx + dy * dy).sqrt() * inv_radius).clamp(0.0, 1.0);
                 inner.mix(outer, t)
@@ -1711,11 +1854,26 @@ impl Band {
         // A backwards sweep is the same band read the other way, so it is
         // turned round here and nothing below has to know a sweep can be
         // negative.
-        let (start, sweep) = if sweep < 0.0 { (start + sweep, -sweep) } else { (start, sweep) };
+        let (start, sweep) = if sweep < 0.0 {
+            (start + sweep, -sweep)
+        } else {
+            (start, sweep)
+        };
         let ends = (sweep < TAU).then(|| {
-            [on_circle(center, radius, start), on_circle(center, radius, start + sweep)]
+            [
+                on_circle(center, radius, start),
+                on_circle(center, radius, start + sweep),
+            ]
         });
-        Self { center_x: center.0, center_y: center.1, radius, half, start, sweep, ends }
+        Self {
+            center_x: center.0,
+            center_y: center.1,
+            radius,
+            half,
+            start,
+            sweep,
+            ends,
+        }
     }
 
     /// The distance from `(x, y)` to the band's edge.
@@ -1863,10 +2021,7 @@ impl Segment {
 }
 
 /// The whole pixels a row's spans come to, clipped and dropped when empty.
-fn runs(
-    spans: [Option<(f32, f32)>; 2],
-    bounds: PixelBounds,
-) -> impl Iterator<Item = (i32, i32)> {
+fn runs(spans: [Option<(f32, f32)>; 2], bounds: PixelBounds) -> impl Iterator<Item = (i32, i32)> {
     let (left, right) = (bounds.left as f32, bounds.right as f32);
     spans.into_iter().flatten().filter_map(move |(from, to)| {
         let from = from.floor().clamp(left, right) as i32;
@@ -1921,7 +2076,11 @@ mod tests {
 
         assert_eq!(pixel_at(&canvas, 2, 2), Color::WHITE);
         assert_eq!(pixel_at(&canvas, 4, 4), Color::WHITE);
-        assert_eq!(pixel_at(&canvas, 5, 5), Color::BLACK, "right/bottom edge is exclusive");
+        assert_eq!(
+            pixel_at(&canvas, 5, 5),
+            Color::BLACK,
+            "right/bottom edge is exclusive"
+        );
         assert_eq!(pixel_at(&canvas, 1, 1), Color::BLACK);
     }
 
@@ -1931,14 +2090,38 @@ mod tests {
         // one: the corner pixel is gone, the pixel just inside the diagonal is
         // painted, and the middle of every edge is untouched by the cut.
         let mut canvas = blank(40, 40, 1.0);
-        canvas.fill(Rect::new(0.0, 0.0, 40.0, 40.0), Corner::Cut(10.0), Color::WHITE);
+        canvas.fill(
+            Rect::new(0.0, 0.0, 40.0, 40.0),
+            Corner::Cut(10.0),
+            Color::WHITE,
+        );
 
-        assert_eq!(pixel_at(&canvas, 0, 0), Color::BLACK, "the corner should be cut away");
-        assert_eq!(pixel_at(&canvas, 2, 2), Color::BLACK, "still outside the diagonal");
+        assert_eq!(
+            pixel_at(&canvas, 0, 0),
+            Color::BLACK,
+            "the corner should be cut away"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 2, 2),
+            Color::BLACK,
+            "still outside the diagonal"
+        );
         assert_eq!(pixel_at(&canvas, 8, 8), Color::WHITE, "inside the diagonal");
-        assert_eq!(pixel_at(&canvas, 20, 0), Color::WHITE, "the top edge is not cut");
-        assert_eq!(pixel_at(&canvas, 0, 20), Color::WHITE, "the left edge is not cut");
-        assert_eq!(pixel_at(&canvas, 39, 39), Color::BLACK, "every corner is cut, not just one");
+        assert_eq!(
+            pixel_at(&canvas, 20, 0),
+            Color::WHITE,
+            "the top edge is not cut"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 0, 20),
+            Color::WHITE,
+            "the left edge is not cut"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 39, 39),
+            Color::BLACK,
+            "every corner is cut, not just one"
+        );
     }
 
     #[test]
@@ -1947,7 +2130,11 @@ mod tests {
         // outward from the chord between its ends; a cut one *is* that chord, so
         // every pixel along it sits at the same coverage.
         let mut canvas = blank(60, 60, 1.0);
-        canvas.fill(Rect::new(0.0, 0.0, 60.0, 60.0), Corner::Cut(20.0), Color::WHITE);
+        canvas.fill(
+            Rect::new(0.0, 0.0, 60.0, 60.0),
+            Corner::Cut(20.0),
+            Color::WHITE,
+        );
 
         // Points on the diagonal x + y = 20: all just inside, none filled solid.
         for (x, y) in [(4u32, 15u32), (10, 9), (15, 4)] {
@@ -1980,13 +2167,29 @@ mod tests {
         // Asking for more than the shape can hold yields a diamond, not a
         // rectangle turned inside out by a negative straight section.
         let mut canvas = blank(20, 20, 1.0);
-        canvas.fill(Rect::new(0.0, 0.0, 20.0, 20.0), Corner::Cut(999.0), Color::WHITE);
+        canvas.fill(
+            Rect::new(0.0, 0.0, 20.0, 20.0),
+            Corner::Cut(999.0),
+            Color::WHITE,
+        );
 
-        assert_eq!(pixel_at(&canvas, 10, 10), Color::WHITE, "the centre is still filled");
-        assert_eq!(pixel_at(&canvas, 1, 1), Color::BLACK, "the corners are gone entirely");
+        assert_eq!(
+            pixel_at(&canvas, 10, 10),
+            Color::WHITE,
+            "the centre is still filled"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 1, 1),
+            Color::BLACK,
+            "the corners are gone entirely"
+        );
         // The diamond's points sit exactly at the middle of each edge, so the
         // pixel astride one is half covered and the pixel inside it is solid.
-        assert_eq!(pixel_at(&canvas, 10, 2), Color::WHITE, "the points of the diamond survive");
+        assert_eq!(
+            pixel_at(&canvas, 10, 2),
+            Color::WHITE,
+            "the points of the diamond survive"
+        );
     }
 
     #[test]
@@ -2018,14 +2221,22 @@ mod tests {
         canvas.fill_rect(Rect::new(2.5, 0.0, 5.0, 10.0), Color::WHITE);
 
         let edge = pixel_at(&canvas, 2, 5);
-        assert!(edge.r > 0 && edge.r < 255, "expected a partly covered pixel, got {edge:?}");
+        assert!(
+            edge.r > 0 && edge.r < 255,
+            "expected a partly covered pixel, got {edge:?}"
+        );
     }
 
     #[test]
     fn drawing_outside_the_surface_is_clipped_not_wrapped() {
         let mut canvas = blank(8, 8, 1.0);
         canvas.fill_rect(Rect::new(-100.0, -100.0, 1000.0, 1000.0), Color::WHITE);
-        assert!(canvas.pixels().iter().all(|&word| Color::from_argb(word) == Color::WHITE));
+        assert!(
+            canvas
+                .pixels()
+                .iter()
+                .all(|&word| Color::from_argb(word) == Color::WHITE)
+        );
     }
 
     #[test]
@@ -2049,7 +2260,11 @@ mod tests {
         canvas.pop_clip(outer);
 
         assert_eq!(pixel_at(&canvas, 3, 5), Color::WHITE);
-        assert_eq!(pixel_at(&canvas, 5, 5), Color::BLACK, "the inner clip widened the outer one");
+        assert_eq!(
+            pixel_at(&canvas, 5, 5),
+            Color::BLACK,
+            "the inner clip widened the outer one"
+        );
     }
 
     #[test]
@@ -2073,10 +2288,18 @@ mod tests {
     #[test]
     fn a_rounded_corner_is_lighter_than_the_middle() {
         let mut canvas = blank(20, 20, 1.0);
-        canvas.fill(Rect::new(0.0, 0.0, 20.0, 20.0), Corner::Round(8.0), Color::WHITE);
+        canvas.fill(
+            Rect::new(0.0, 0.0, 20.0, 20.0),
+            Corner::Round(8.0),
+            Color::WHITE,
+        );
 
         assert_eq!(pixel_at(&canvas, 10, 10), Color::WHITE);
-        assert_eq!(pixel_at(&canvas, 0, 0), Color::BLACK, "the corner should be cut away");
+        assert_eq!(
+            pixel_at(&canvas, 0, 0),
+            Color::BLACK,
+            "the corner should be cut away"
+        );
     }
 
     #[test]
@@ -2085,7 +2308,11 @@ mod tests {
         // pixel. If those two disagree by even one step, a panel gets a visible
         // vertical line down each side.
         let mut canvas = blank(200, 120, 1.0);
-        canvas.fill(Rect::new(10.0, 10.0, 180.0, 100.0), Corner::Round(12.0), Color::WHITE);
+        canvas.fill(
+            Rect::new(10.0, 10.0, 180.0, 100.0),
+            Corner::Round(12.0),
+            Color::WHITE,
+        );
 
         for x in 24..176 {
             assert_eq!(
@@ -2095,7 +2322,11 @@ mod tests {
             );
         }
         for y in 24..96 {
-            assert_eq!(pixel_at(&canvas, 100, y), Color::WHITE, "a seam appeared at y = {y}");
+            assert_eq!(
+                pixel_at(&canvas, 100, y),
+                Color::WHITE,
+                "a seam appeared at y = {y}"
+            );
         }
     }
 
@@ -2111,7 +2342,10 @@ mod tests {
         let middle = pixel_at(&canvas, 60, 40);
         let near_edge = pixel_at(&canvas, 20, 40);
         assert_eq!(middle, near_edge, "the interior is not one even shade");
-        assert!(middle.r > 100 && middle.r < 160, "expected about half, got {middle:?}");
+        assert!(
+            middle.r > 100 && middle.r < 160,
+            "expected about half, got {middle:?}"
+        );
     }
 
     #[test]
@@ -2119,47 +2353,100 @@ mod tests {
         // Tall enough that the straight section is scanned by the banded path
         // rather than the whole-row one.
         let mut canvas = blank(60, 200, 1.0);
-        canvas.stroke(Rect::new(10.0, 10.0, 40.0, 180.0), Corner::Round(8.0), 1.0, Color::WHITE);
+        canvas.stroke(
+            Rect::new(10.0, 10.0, 40.0, 180.0),
+            Corner::Round(8.0),
+            1.0,
+            Color::WHITE,
+        );
 
-        assert!(pixel_at(&canvas, 10, 100).r > 100, "the left edge should be drawn");
-        assert!(pixel_at(&canvas, 49, 100).r > 100, "the right edge should be drawn");
+        assert!(
+            pixel_at(&canvas, 10, 100).r > 100,
+            "the left edge should be drawn"
+        );
+        assert!(
+            pixel_at(&canvas, 49, 100).r > 100,
+            "the right edge should be drawn"
+        );
         for x in 13..47 {
-            assert_eq!(pixel_at(&canvas, x, 100), Color::BLACK, "x = {x} should be untouched");
+            assert_eq!(
+                pixel_at(&canvas, x, 100),
+                Color::BLACK,
+                "x = {x} should be untouched"
+            );
         }
-        assert!(pixel_at(&canvas, 30, 10).r > 100, "the top edge should be drawn");
-        assert!(pixel_at(&canvas, 30, 189).r > 100, "the bottom edge should be drawn");
+        assert!(
+            pixel_at(&canvas, 30, 10).r > 100,
+            "the top edge should be drawn"
+        );
+        assert!(
+            pixel_at(&canvas, 30, 189).r > 100,
+            "the bottom edge should be drawn"
+        );
     }
 
     #[test]
     fn a_stroked_corner_joins_the_edges_that_meet_there() {
         let mut canvas = blank(80, 80, 1.0);
-        canvas.stroke(Rect::new(10.0, 10.0, 60.0, 60.0), Corner::Round(20.0), 2.0, Color::WHITE);
+        canvas.stroke(
+            Rect::new(10.0, 10.0, 60.0, 60.0),
+            Corner::Round(20.0),
+            2.0,
+            Color::WHITE,
+        );
 
         // On the arc of the top-left corner, at forty-five degrees.
         let offset = 20.0 - (20.0f32 / std::f32::consts::SQRT_2);
         let x = (10.0 + offset).round() as u32;
         let y = (10.0 + offset).round() as u32;
-        assert!(pixel_at(&canvas, x, y).r > 80, "the corner arc should be drawn");
-        assert_eq!(pixel_at(&canvas, 40, 40), Color::BLACK, "the middle stays empty");
+        assert!(
+            pixel_at(&canvas, x, y).r > 80,
+            "the corner arc should be drawn"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 40, 40),
+            Color::BLACK,
+            "the middle stays empty"
+        );
     }
 
     #[test]
     fn an_oversized_radius_becomes_a_capsule_not_an_inverted_corner() {
         let mut canvas = blank(40, 20, 1.0);
-        canvas.fill(Rect::new(0.0, 0.0, 40.0, 20.0), Corner::Round(999.0), Color::WHITE);
+        canvas.fill(
+            Rect::new(0.0, 0.0, 40.0, 20.0),
+            Corner::Round(999.0),
+            Color::WHITE,
+        );
 
         assert_eq!(pixel_at(&canvas, 20, 10), Color::WHITE);
-        assert_eq!(pixel_at(&canvas, 20, 0), Color::WHITE, "the flat top should survive");
+        assert_eq!(
+            pixel_at(&canvas, 20, 0),
+            Color::WHITE,
+            "the flat top should survive"
+        );
         assert_eq!(pixel_at(&canvas, 0, 0), Color::BLACK);
     }
 
     #[test]
     fn a_stroke_marks_the_edge_and_leaves_the_middle_alone() {
         let mut canvas = blank(20, 20, 1.0);
-        canvas.stroke(Rect::new(2.0, 2.0, 16.0, 16.0), Corner::Square, 1.0, Color::WHITE);
+        canvas.stroke(
+            Rect::new(2.0, 2.0, 16.0, 16.0),
+            Corner::Square,
+            1.0,
+            Color::WHITE,
+        );
 
-        assert!(pixel_at(&canvas, 10, 2).r > 100, "the top edge should be drawn");
-        assert_eq!(pixel_at(&canvas, 10, 10), Color::BLACK, "the middle should be untouched");
+        assert!(
+            pixel_at(&canvas, 10, 2).r > 100,
+            "the top edge should be drawn"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 10, 10),
+            Color::BLACK,
+            "the middle should be untouched"
+        );
     }
 
     #[test]
@@ -2175,9 +2462,18 @@ mod tests {
         let top = pixel_at(&canvas, 10, 0);
         let middle = pixel_at(&canvas, 10, 50);
         let bottom = pixel_at(&canvas, 10, 99);
-        assert!(top.r < 8, "the top should be near the top colour, got {top:?}");
-        assert!((120..=136).contains(&middle.r), "the middle should be halfway, got {middle:?}");
-        assert!(bottom.r > 247, "the bottom should be near the bottom colour, got {bottom:?}");
+        assert!(
+            top.r < 8,
+            "the top should be near the top colour, got {top:?}"
+        );
+        assert!(
+            (120..=136).contains(&middle.r),
+            "the middle should be halfway, got {middle:?}"
+        );
+        assert!(
+            bottom.r > 247,
+            "the bottom should be near the bottom colour, got {bottom:?}"
+        );
     }
 
     #[test]
@@ -2195,7 +2491,11 @@ mod tests {
 
         let expected = pixel_at(&canvas, 60, 30);
         for x in 0..120 {
-            assert_eq!(pixel_at(&canvas, x, 30), expected, "the row is not even at x = {x}");
+            assert_eq!(
+                pixel_at(&canvas, x, 30),
+                expected,
+                "the row is not even at x = {x}"
+            );
         }
     }
 
@@ -2208,27 +2508,58 @@ mod tests {
             Color::WHITE,
             Color::WHITE,
         );
-        assert!(canvas.pixels().iter().all(|&word| Color::from_argb(word) == Color::WHITE));
+        assert!(
+            canvas
+                .pixels()
+                .iter()
+                .all(|&word| Color::from_argb(word) == Color::WHITE)
+        );
     }
 
     #[test]
     fn a_glow_surrounds_a_shape_without_touching_its_inside() {
         let mut canvas = blank(80, 80, 1.0);
-        canvas.shadow(Rect::new(30.0, 30.0, 20.0, 20.0), Corner::Round(4.0), 10.0, 0.0, Color::WHITE);
+        canvas.shadow(
+            Rect::new(30.0, 30.0, 20.0, 20.0),
+            Corner::Round(4.0),
+            10.0,
+            0.0,
+            Color::WHITE,
+        );
 
-        assert_eq!(pixel_at(&canvas, 40, 40), Color::BLACK, "the inside must be left for the caster");
-        assert!(pixel_at(&canvas, 40, 28).r > 0, "the halo should reach just outside the edge");
-        assert_eq!(pixel_at(&canvas, 40, 5), Color::BLACK, "the halo should not reach past its blur");
+        assert_eq!(
+            pixel_at(&canvas, 40, 40),
+            Color::BLACK,
+            "the inside must be left for the caster"
+        );
+        assert!(
+            pixel_at(&canvas, 40, 28).r > 0,
+            "the halo should reach just outside the edge"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 40, 5),
+            Color::BLACK,
+            "the halo should not reach past its blur"
+        );
     }
 
     #[test]
     fn a_glow_fades_with_distance_from_the_edge() {
         let mut canvas = blank(80, 80, 1.0);
-        canvas.shadow(Rect::new(30.0, 30.0, 20.0, 20.0), Corner::Round(0.0), 12.0, 0.0, Color::WHITE);
+        canvas.shadow(
+            Rect::new(30.0, 30.0, 20.0, 20.0),
+            Corner::Round(0.0),
+            12.0,
+            0.0,
+            Color::WHITE,
+        );
 
         let near = pixel_at(&canvas, 40, 28).r;
         let far = pixel_at(&canvas, 40, 22).r;
-        assert!(near > far, "expected the halo to fade outward, got {near} then {far}");
+        assert!(
+            near > far,
+            "expected the halo to fade outward, got {near} then {far}"
+        );
         assert!(far > 0, "the halo should still be present further out");
     }
 
@@ -2241,7 +2572,9 @@ mod tests {
         let topmost = |spread: f32| {
             let mut canvas = blank(80, 80, 1.0);
             canvas.shadow(cast, Corner::Round(0.0), 8.0, spread, Color::WHITE);
-            (0..30).find(|&y| pixel_at(&canvas, 40, y).r > 0).expect("the halo should be drawn")
+            (0..30)
+                .find(|&y| pixel_at(&canvas, 40, y).r > 0)
+                .expect("the halo should be drawn")
         };
         assert!(
             topmost(6.0) < topmost(0.0),
@@ -2266,7 +2599,11 @@ mod tests {
     #[test]
     fn a_mask_paints_its_coverage() {
         let mut canvas = blank(8, 8, 1.0);
-        let mask = Mask { width: 2, height: 1, coverage: vec![255, 0] };
+        let mask = Mask {
+            width: 2,
+            height: 1,
+            coverage: vec![255, 0],
+        };
         canvas.fill_mask(3, 3, &mask, Color::WHITE);
 
         assert_eq!(pixel_at(&canvas, 3, 3), Color::WHITE);
@@ -2276,12 +2613,20 @@ mod tests {
     #[test]
     fn a_mask_hanging_off_the_edge_is_clipped_not_wrapped() {
         let mut canvas = blank(4, 4, 1.0);
-        let mask = Mask { width: 4, height: 4, coverage: vec![255; 16] };
+        let mask = Mask {
+            width: 4,
+            height: 4,
+            coverage: vec![255; 16],
+        };
         canvas.fill_mask(-2, -2, &mask, Color::WHITE);
 
         assert_eq!(pixel_at(&canvas, 0, 0), Color::WHITE);
         assert_eq!(pixel_at(&canvas, 2, 2), Color::BLACK);
-        assert_eq!(pixel_at(&canvas, 3, 0), Color::BLACK, "the mask wrapped onto the next row");
+        assert_eq!(
+            pixel_at(&canvas, 3, 0),
+            Color::BLACK,
+            "the mask wrapped onto the next row"
+        );
     }
 
     // ----- a picture from somewhere else -------------------------------------
@@ -2316,7 +2661,11 @@ mod tests {
 
         assert_eq!(pixel_at(&canvas, 3, 3), Color::WHITE);
         assert_eq!(pixel_at(&canvas, 4, 4), Color::WHITE);
-        assert_eq!(pixel_at(&canvas, 5, 3), Color::BLACK, "right edge is exclusive");
+        assert_eq!(
+            pixel_at(&canvas, 5, 3),
+            Color::BLACK,
+            "right edge is exclusive"
+        );
         assert_eq!(pixel_at(&canvas, 2, 3), Color::BLACK);
     }
 
@@ -2332,8 +2681,16 @@ mod tests {
 
         assert_eq!(pixel_at(&canvas, 2, 2), Color::WHITE);
         assert_eq!(pixel_at(&canvas, 3, 3), Color::WHITE);
-        assert_eq!(pixel_at(&canvas, 0, 3), Color::BLACK, "the picture wrapped onto the next row");
-        assert_eq!(pixel_at(&canvas, 1, 1), Color::BLACK, "nothing above or left of it");
+        assert_eq!(
+            pixel_at(&canvas, 0, 3),
+            Color::BLACK,
+            "the picture wrapped onto the next row"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 1, 1),
+            Color::BLACK,
+            "nothing above or left of it"
+        );
     }
 
     #[test]
@@ -2352,10 +2709,18 @@ mod tests {
         let source = Bgra::packed(4, 4, &bytes).expect("the buffer describes the picture");
         canvas.blit_bgra(Rect::new(-2.0, -2.0, 4.0, 4.0), &source);
 
-        assert_eq!(pixel_at(&canvas, 0, 0).b, 2 * 4 + 2, "the pixel at (2, 2) of the picture");
+        assert_eq!(
+            pixel_at(&canvas, 0, 0).b,
+            2 * 4 + 2,
+            "the pixel at (2, 2) of the picture"
+        );
         assert_eq!(pixel_at(&canvas, 1, 0).b, 2 * 4 + 3);
         assert_eq!(pixel_at(&canvas, 0, 1).b, 3 * 4 + 2);
-        assert_eq!(pixel_at(&canvas, 2, 2), Color::BLACK, "past the picture's own extent");
+        assert_eq!(
+            pixel_at(&canvas, 2, 2),
+            Color::BLACK,
+            "past the picture's own extent"
+        );
     }
 
     #[test]
@@ -2366,16 +2731,27 @@ mod tests {
         // the last, which is a picture that leans.
         let mut canvas = blank(8, 8, 1.0);
         let (bytes, stride) = picture(3, 3, Color::WHITE, 20);
-        assert_eq!(stride, 32, "three pixels padded out to a multiple of sixteen");
+        assert_eq!(
+            stride, 32,
+            "three pixels padded out to a multiple of sixteen"
+        );
         let source = Bgra::new(3, 3, stride, &bytes).expect("the buffer describes the picture");
         canvas.blit_bgra(Rect::new(0.0, 0.0, 3.0, 3.0), &source);
 
         for y in 0..3 {
             for x in 0..3 {
-                assert_eq!(pixel_at(&canvas, x, y), Color::WHITE, "({x}, {y}) came out wrong");
+                assert_eq!(
+                    pixel_at(&canvas, x, y),
+                    Color::WHITE,
+                    "({x}, {y}) came out wrong"
+                );
             }
         }
-        assert_eq!(pixel_at(&canvas, 3, 0), Color::BLACK, "the padding was drawn");
+        assert_eq!(
+            pixel_at(&canvas, 3, 0),
+            Color::BLACK,
+            "the padding was drawn"
+        );
     }
 
     #[test]
@@ -2388,7 +2764,11 @@ mod tests {
         canvas.blit_bgra(Rect::new(1.0, 1.0, 3.0, 3.0), &source);
 
         assert_eq!(pixel_at(&canvas, 3, 3), Color::WHITE);
-        assert_eq!(pixel_at(&canvas, 4, 3), Color::BLACK, "drawn outside its destination");
+        assert_eq!(
+            pixel_at(&canvas, 4, 3),
+            Color::BLACK,
+            "drawn outside its destination"
+        );
         assert_eq!(pixel_at(&canvas, 3, 4), Color::BLACK);
     }
 
@@ -2402,7 +2782,11 @@ mod tests {
         canvas.pop_clip(previous);
 
         assert_eq!(pixel_at(&canvas, 3, 4), Color::WHITE);
-        assert_eq!(pixel_at(&canvas, 4, 4), Color::BLACK, "the clip was ignored");
+        assert_eq!(
+            pixel_at(&canvas, 4, 4),
+            Color::BLACK,
+            "the clip was ignored"
+        );
     }
 
     #[test]
@@ -2415,7 +2799,11 @@ mod tests {
         let source = Bgra::packed(1, 1, &bytes).expect("the buffer describes the picture");
         canvas.blit_bgra(Rect::new(0.0, 0.0, 1.0, 1.0), &source);
         assert_eq!(pixel_at(&canvas, 0, 0), Color::WHITE);
-        assert_eq!(canvas.pixels()[0] >> 24, 0xff, "the surface stopped being opaque");
+        assert_eq!(
+            canvas.pixels()[0] >> 24,
+            0xff,
+            "the surface stopped being opaque"
+        );
     }
 
     #[test]
@@ -2424,9 +2812,16 @@ mod tests {
         // what keeps the blit itself free of a length it has to re-check.
         let bytes = [0u8; 15];
         assert_eq!(Bgra::packed(2, 2, &bytes), None, "sixteen bytes are needed");
-        assert_eq!(Bgra::new(4, 1, 8, &bytes), None, "a stride narrower than the row");
+        assert_eq!(
+            Bgra::new(4, 1, 8, &bytes),
+            None,
+            "a stride narrower than the row"
+        );
         assert!(Bgra::new(2, 2, 8, &[0u8; 16]).is_some());
-        assert!(Bgra::packed(0, 0, &[]).is_some(), "an empty picture is describable");
+        assert!(
+            Bgra::packed(0, 0, &[]).is_some(),
+            "an empty picture is describable"
+        );
     }
 
     #[test]
@@ -2439,8 +2834,16 @@ mod tests {
         let source = Bgra::new(4, 4, stride, &bytes).expect("the buffer describes the picture");
         canvas.blit_bgra(Rect::new(1.0, 1.0, 3.0, 3.0), &source);
 
-        assert_eq!(pixel_at(&canvas, 2, 2), Color::WHITE, "logical (1, 1) is device (2, 2)");
-        assert_eq!(pixel_at(&canvas, 5, 5), Color::WHITE, "four device pixels across");
+        assert_eq!(
+            pixel_at(&canvas, 2, 2),
+            Color::WHITE,
+            "logical (1, 1) is device (2, 2)"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 5, 5),
+            Color::WHITE,
+            "four device pixels across"
+        );
         assert_eq!(pixel_at(&canvas, 1, 1), Color::BLACK);
     }
 
@@ -2457,10 +2860,21 @@ mod tests {
         canvas.ring(MIDDLE, 12.0, 2.0, Color::WHITE);
 
         for (x, y) in [(20u32, 8u32), (20, 32), (8, 20), (32, 20)] {
-            assert!(pixel_at(&canvas, x, y).r > 200, "the band is missing at ({x}, {y})");
+            assert!(
+                pixel_at(&canvas, x, y).r > 200,
+                "the band is missing at ({x}, {y})"
+            );
         }
-        assert_eq!(pixel_at(&canvas, 20, 20), Color::BLACK, "the middle is not filled");
-        assert_eq!(pixel_at(&canvas, 20, 1), Color::BLACK, "and nothing is drawn outside it");
+        assert_eq!(
+            pixel_at(&canvas, 20, 20),
+            Color::BLACK,
+            "the middle is not filled"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 20, 1),
+            Color::BLACK,
+            "and nothing is drawn outside it"
+        );
     }
 
     #[test]
@@ -2483,11 +2897,25 @@ mod tests {
         // Clockwise from the direction of the positive x axis, because y grows
         // downward: a quarter turn from there is the bottom, never the top.
         let mut canvas = blank(40, 40, 1.0);
-        canvas.arc(MIDDLE, 12.0, 2.0, 0.0, std::f32::consts::FRAC_PI_2, Color::WHITE);
+        canvas.arc(
+            MIDDLE,
+            12.0,
+            2.0,
+            0.0,
+            std::f32::consts::FRAC_PI_2,
+            Color::WHITE,
+        );
 
-        assert!(pixel_at(&canvas, 32, 20).r > 200, "the sweep starts at the right");
+        assert!(
+            pixel_at(&canvas, 32, 20).r > 200,
+            "the sweep starts at the right"
+        );
         assert!(pixel_at(&canvas, 20, 32).r > 200, "and ends at the bottom");
-        assert_eq!(pixel_at(&canvas, 20, 8), Color::BLACK, "the top is outside it");
+        assert_eq!(
+            pixel_at(&canvas, 20, 8),
+            Color::BLACK,
+            "the top is outside it"
+        );
         assert_eq!(pixel_at(&canvas, 8, 20), Color::BLACK, "and so is the left");
     }
 
@@ -2501,7 +2929,10 @@ mod tests {
         assert_eq!(ring.pixels(), swept.pixels());
         // And it has no seam where the sweep would have begun and ended, which
         // is why a closed ring is not capped at all.
-        assert!(pixel_at(&ring, 32, 20).r > 200, "a crack opened where the sweep closes");
+        assert!(
+            pixel_at(&ring, 32, 20).r > 200,
+            "a crack opened where the sweep closes"
+        );
     }
 
     #[test]
@@ -2520,22 +2951,52 @@ mod tests {
         // A lit line lights what is inside the ring as well as what is outside
         // it, and leaves the band itself for whatever casts the halo.
         let mut canvas = blank(40, 40, 1.0);
-        canvas.arc_glow(MIDDLE, 12.0, 2.0, 0.0, std::f32::consts::TAU, 5.0, Color::WHITE);
+        canvas.arc_glow(
+            MIDDLE,
+            12.0,
+            2.0,
+            0.0,
+            std::f32::consts::TAU,
+            5.0,
+            Color::WHITE,
+        );
 
-        assert_eq!(pixel_at(&canvas, 20, 8), Color::BLACK, "the band is left for its caster");
-        assert!(pixel_at(&canvas, 20, 6).r > 0, "the halo should reach outward");
+        assert_eq!(
+            pixel_at(&canvas, 20, 8),
+            Color::BLACK,
+            "the band is left for its caster"
+        );
+        assert!(
+            pixel_at(&canvas, 20, 6).r > 0,
+            "the halo should reach outward"
+        );
         assert!(pixel_at(&canvas, 20, 12).r > 0, "and inward");
-        assert_eq!(pixel_at(&canvas, 20, 0), Color::BLACK, "and no further than its blur");
+        assert_eq!(
+            pixel_at(&canvas, 20, 0),
+            Color::BLACK,
+            "and no further than its blur"
+        );
     }
 
     #[test]
     fn a_halo_fades_with_distance_from_the_band() {
         let mut canvas = blank(40, 40, 1.0);
-        canvas.arc_glow(MIDDLE, 12.0, 2.0, 0.0, std::f32::consts::TAU, 6.0, Color::WHITE);
+        canvas.arc_glow(
+            MIDDLE,
+            12.0,
+            2.0,
+            0.0,
+            std::f32::consts::TAU,
+            6.0,
+            Color::WHITE,
+        );
 
         let near = pixel_at(&canvas, 20, 6).r;
         let far = pixel_at(&canvas, 20, 3).r;
-        assert!(near > far, "expected the halo to fade outward, got {near} then {far}");
+        assert!(
+            near > far,
+            "expected the halo to fade outward, got {near} then {far}"
+        );
         assert!(far > 0, "the halo should still be there further out");
     }
 
@@ -2549,26 +3010,51 @@ mod tests {
         for (x, y) in [(32u32, 20u32), (20, 32), (8, 20), (20, 8)] {
             assert!(pixel_at(&canvas, x, y).r > 200, "no tick at ({x}, {y})");
         }
-        assert_eq!(pixel_at(&canvas, 28, 28), Color::BLACK, "a tick appeared between two");
-        assert_eq!(pixel_at(&canvas, 20, 20), Color::BLACK, "the ticks reached the centre");
+        assert_eq!(
+            pixel_at(&canvas, 28, 28),
+            Color::BLACK,
+            "a tick appeared between two"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 20, 20),
+            Color::BLACK,
+            "the ticks reached the centre"
+        );
     }
 
     #[test]
     fn a_tick_ring_of_none_draws_nothing() {
         let mut canvas = blank(40, 40, 1.0);
         canvas.ticks(MIDDLE, 10.0, 14.0, 2.0, 0, 0.0, Color::WHITE);
-        assert!(canvas.pixels().iter().all(|&word| Color::from_argb(word) == Color::BLACK));
+        assert!(
+            canvas
+                .pixels()
+                .iter()
+                .all(|&word| Color::from_argb(word) == Color::BLACK)
+        );
     }
 
     #[test]
     fn a_line_marks_the_run_between_its_ends_and_stops_there() {
         let mut canvas = blank(20, 10, 1.0);
-        canvas.line(Point::new(2.0, 5.0), Point::new(18.0, 5.0), 2.0, Color::WHITE);
+        canvas.line(
+            Point::new(2.0, 5.0),
+            Point::new(18.0, 5.0),
+            2.0,
+            Color::WHITE,
+        );
 
         assert!(pixel_at(&canvas, 10, 5).r > 200, "the middle of the line");
-        assert!(pixel_at(&canvas, 10, 4).r > 200, "which is two pixels thick");
+        assert!(
+            pixel_at(&canvas, 10, 4).r > 200,
+            "which is two pixels thick"
+        );
         assert_eq!(pixel_at(&canvas, 10, 2), Color::BLACK, "and no thicker");
-        assert_eq!(pixel_at(&canvas, 0, 5), Color::BLACK, "nothing before it begins");
+        assert_eq!(
+            pixel_at(&canvas, 0, 5),
+            Color::BLACK,
+            "nothing before it begins"
+        );
         assert_eq!(pixel_at(&canvas, 19, 5), Color::BLACK, "nor after it ends");
     }
 
@@ -2577,7 +3063,12 @@ mod tests {
         // A line at an angle is the case a plotted one gets wrong: every pixel
         // along it sits a different fraction of the way across the edge.
         let mut canvas = blank(24, 24, 1.0);
-        canvas.line(Point::new(2.0, 2.0), Point::new(22.0, 20.0), 1.5, Color::WHITE);
+        canvas.line(
+            Point::new(2.0, 2.0),
+            Point::new(22.0, 20.0),
+            1.5,
+            Color::WHITE,
+        );
 
         let marked = (0..24)
             .flat_map(|y| (0..24).map(move |x| (x, y)))
@@ -2591,7 +3082,10 @@ mod tests {
                 value > 0 && value < 255
             })
             .count();
-        assert!(partial > 10, "a diagonal drawn without antialiasing is a staircase");
+        assert!(
+            partial > 10,
+            "a diagonal drawn without antialiasing is a staircase"
+        );
     }
 
     #[test]
@@ -2600,7 +3094,12 @@ mod tests {
         // length has no direction, and dividing by that length would draw a
         // window full of nothing.
         let mut canvas = blank(20, 20, 1.0);
-        canvas.line(Point::new(10.0, 10.0), Point::new(10.0, 10.0), 4.0, Color::WHITE);
+        canvas.line(
+            Point::new(10.0, 10.0),
+            Point::new(10.0, 10.0),
+            4.0,
+            Color::WHITE,
+        );
 
         assert!(pixel_at(&canvas, 10, 10).r > 200, "the dot should be drawn");
         assert_eq!(pixel_at(&canvas, 16, 10), Color::BLACK);
@@ -2609,14 +3108,24 @@ mod tests {
     #[test]
     fn a_polyline_draws_every_pair_in_turn() {
         let mut canvas = blank(20, 20, 1.0);
-        let bracket =
-            [Point::new(2.0, 8.0), Point::new(2.0, 2.0), Point::new(8.0, 2.0)];
+        let bracket = [
+            Point::new(2.0, 8.0),
+            Point::new(2.0, 2.0),
+            Point::new(8.0, 2.0),
+        ];
         canvas.polyline(&bracket, 2.0, Color::WHITE);
 
         assert!(pixel_at(&canvas, 2, 6).r > 100, "the arm running down");
         assert!(pixel_at(&canvas, 6, 2).r > 100, "the arm running across");
-        assert!(pixel_at(&canvas, 2, 2).r > 100, "and the corner they meet at");
-        assert_eq!(pixel_at(&canvas, 10, 10), Color::BLACK, "and nothing between the ends");
+        assert!(
+            pixel_at(&canvas, 2, 2).r > 100,
+            "and the corner they meet at"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 10, 10),
+            Color::BLACK,
+            "and nothing between the ends"
+        );
     }
 
     #[test]
@@ -2625,11 +3134,26 @@ mod tests {
         // for the rectangular ones.
         let mut canvas = blank(40, 40, 2.0);
         canvas.ring(Point::new(10.0, 10.0), 6.0, 1.0, Color::WHITE);
-        canvas.line(Point::new(1.0, 0.0), Point::new(1.0, 20.0), 1.0, Color::WHITE);
+        canvas.line(
+            Point::new(1.0, 0.0),
+            Point::new(1.0, 20.0),
+            1.0,
+            Color::WHITE,
+        );
 
-        assert!(pixel_at(&canvas, 20, 8).r > 200, "logical 10 across and 4 up is device 20, 8");
-        assert_eq!(pixel_at(&canvas, 20, 20), Color::BLACK, "the hole is scaled too");
-        assert!(pixel_at(&canvas, 1, 20).r > 200, "a one-unit line is two pixels wide");
+        assert!(
+            pixel_at(&canvas, 20, 8).r > 200,
+            "logical 10 across and 4 up is device 20, 8"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 20, 20),
+            Color::BLACK,
+            "the hole is scaled too"
+        );
+        assert!(
+            pixel_at(&canvas, 1, 20).r > 200,
+            "a one-unit line is two pixels wide"
+        );
         assert!(pixel_at(&canvas, 2, 20).r > 200);
         assert_eq!(pixel_at(&canvas, 3, 20), Color::BLACK);
     }
@@ -2639,13 +3163,26 @@ mod tests {
         let mut canvas = blank(40, 40, 1.0);
         let previous = canvas.push_clip(Rect::new(0.0, 0.0, 20.0, 40.0));
         canvas.ring(MIDDLE, 12.0, 2.0, Color::WHITE);
-        canvas.line(Point::new(0.0, 4.0), Point::new(40.0, 4.0), 2.0, Color::WHITE);
+        canvas.line(
+            Point::new(0.0, 4.0),
+            Point::new(40.0, 4.0),
+            2.0,
+            Color::WHITE,
+        );
         canvas.pop_clip(previous);
 
         assert!(pixel_at(&canvas, 8, 20).r > 200, "inside the clip");
-        assert_eq!(pixel_at(&canvas, 32, 20), Color::BLACK, "the band escaped its clip");
+        assert_eq!(
+            pixel_at(&canvas, 32, 20),
+            Color::BLACK,
+            "the band escaped its clip"
+        );
         assert!(pixel_at(&canvas, 10, 4).r > 200);
-        assert_eq!(pixel_at(&canvas, 30, 4), Color::BLACK, "the line escaped its clip");
+        assert_eq!(
+            pixel_at(&canvas, 30, 4),
+            Color::BLACK,
+            "the line escaped its clip"
+        );
     }
 
     #[test]
@@ -2657,9 +3194,24 @@ mod tests {
         canvas.ring(MIDDLE, -12.0, 2.0, Color::WHITE);
         canvas.ring(MIDDLE, 12.0, -2.0, Color::WHITE);
         canvas.arc(MIDDLE, 12.0, 2.0, 0.0, 0.0, Color::WHITE);
-        canvas.line(Point::new(0.0, 0.0), Point::new(40.0, 40.0), 0.0, Color::WHITE);
-        canvas.line(Point::new(0.0, 0.0), Point::new(40.0, 40.0), -1.0, Color::WHITE);
-        assert!(canvas.pixels().iter().all(|&word| Color::from_argb(word) == Color::BLACK));
+        canvas.line(
+            Point::new(0.0, 0.0),
+            Point::new(40.0, 40.0),
+            0.0,
+            Color::WHITE,
+        );
+        canvas.line(
+            Point::new(0.0, 0.0),
+            Point::new(40.0, 40.0),
+            -1.0,
+            Color::WHITE,
+        );
+        assert!(
+            canvas
+                .pixels()
+                .iter()
+                .all(|&word| Color::from_argb(word) == Color::BLACK)
+        );
     }
 
     #[test]
@@ -2667,7 +3219,12 @@ mod tests {
         let mut canvas = blank(20, 20, 1.0);
         canvas.polyline(&[], 2.0, Color::WHITE);
         canvas.polyline(&[Point::new(10.0, 10.0)], 2.0, Color::WHITE);
-        assert!(canvas.pixels().iter().all(|&word| Color::from_argb(word) == Color::BLACK));
+        assert!(
+            canvas
+                .pixels()
+                .iter()
+                .all(|&word| Color::from_argb(word) == Color::BLACK)
+        );
     }
 
     #[test]
@@ -2679,7 +3236,10 @@ mod tests {
         canvas.arc_glow(MIDDLE, 12.0, 2.0, 0.0, std::f32::consts::TAU, 5.0, cyan);
 
         let halo = pixel_at(&canvas, 20, 6);
-        assert!(halo.b > halo.r, "the halo lost the hue it was cast in: {halo:?}");
+        assert!(
+            halo.b > halo.r,
+            "the halo lost the hue it was cast in: {halo:?}"
+        );
     }
 
     // ----- neon-HUD primitives: shaded fills and glowing beams ---------------
@@ -2697,9 +3257,18 @@ mod tests {
         let left = pixel_at(&canvas, 0, 10);
         let middle = pixel_at(&canvas, 50, 10);
         let right = pixel_at(&canvas, 99, 10);
-        assert!(left.r < 8, "the left should be near the left colour, got {left:?}");
-        assert!((120..=136).contains(&middle.r), "the middle should be halfway, got {middle:?}");
-        assert!(right.r > 247, "the right should be near the right colour, got {right:?}");
+        assert!(
+            left.r < 8,
+            "the left should be near the left colour, got {left:?}"
+        );
+        assert!(
+            (120..=136).contains(&middle.r),
+            "the middle should be halfway, got {middle:?}"
+        );
+        assert!(
+            right.r > 247,
+            "the right should be near the right colour, got {right:?}"
+        );
     }
 
     #[test]
@@ -2716,7 +3285,11 @@ mod tests {
         );
         let expected = pixel_at(&canvas, 30, 20);
         for y in 0..40 {
-            assert_eq!(pixel_at(&canvas, 30, y), expected, "the column is not even at y = {y}");
+            assert_eq!(
+                pixel_at(&canvas, 30, y),
+                expected,
+                "the column is not even at y = {y}"
+            );
         }
     }
 
@@ -2731,7 +3304,12 @@ mod tests {
             Color::WHITE,
             Color::WHITE,
         );
-        assert!(canvas.pixels().iter().all(|&word| Color::from_argb(word) == Color::WHITE));
+        assert!(
+            canvas
+                .pixels()
+                .iter()
+                .all(|&word| Color::from_argb(word) == Color::WHITE)
+        );
     }
 
     #[test]
@@ -2748,8 +3326,16 @@ mod tests {
             Color::BLACK,
             Color::WHITE,
         );
-        assert_eq!(pixel_at(&canvas, 5, 5), Color::BLACK, "behind the axis stays c0");
-        assert_eq!(pixel_at(&canvas, 55, 5), Color::WHITE, "past the axis stays c1");
+        assert_eq!(
+            pixel_at(&canvas, 5, 5),
+            Color::BLACK,
+            "behind the axis stays c0"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 55, 5),
+            Color::WHITE,
+            "past the axis stays c1"
+        );
     }
 
     #[test]
@@ -2760,9 +3346,19 @@ mod tests {
         let center = pixel_at(&canvas, 20, 20).r;
         let mid = pixel_at(&canvas, 20, 12).r;
         let edge = pixel_at(&canvas, 20, 7).r;
-        assert!(center > 235, "the centre is near the inner colour, got {center}");
-        assert!(center > mid && mid > edge, "expected a falloff, got {center}, {mid}, {edge}");
-        assert_eq!(pixel_at(&canvas, 20, 2), Color::BLACK, "and nothing beyond the radius");
+        assert!(
+            center > 235,
+            "the centre is near the inner colour, got {center}"
+        );
+        assert!(
+            center > mid && mid > edge,
+            "expected a falloff, got {center}, {mid}, {edge}"
+        );
+        assert_eq!(
+            pixel_at(&canvas, 20, 2),
+            Color::BLACK,
+            "and nothing beyond the radius"
+        );
     }
 
     #[test]
@@ -2770,11 +3366,22 @@ mod tests {
         // An outer colour with zero alpha leaves the background showing at the
         // rim rather than drawing a hard disc edge.
         let mut canvas = blank(40, 40, 1.0);
-        canvas.fill_radial(Point::new(20.0, 20.0), 15.0, Color::WHITE, Color::WHITE.with_alpha(0));
+        canvas.fill_radial(
+            Point::new(20.0, 20.0),
+            15.0,
+            Color::WHITE,
+            Color::WHITE.with_alpha(0),
+        );
 
-        assert!(pixel_at(&canvas, 20, 20).r > 235, "near-solid at the centre");
+        assert!(
+            pixel_at(&canvas, 20, 20).r > 235,
+            "near-solid at the centre"
+        );
         let rim = pixel_at(&canvas, 20, 8).r;
-        assert!(rim > 0 && rim < 255, "the aura is part-lit near its rim, got {rim}");
+        assert!(
+            rim > 0 && rim < 255,
+            "the aura is part-lit near its rim, got {rim}"
+        );
     }
 
     #[test]
@@ -2800,15 +3407,28 @@ mod tests {
     #[test]
     fn a_beams_halo_reaches_beyond_its_core_and_stops_at_the_blur() {
         let mut canvas = blank(40, 40, 1.0);
-        canvas.beam(Point::new(0.0, 20.0), Point::new(40.0, 20.0), 2.0, 6.0, Color::WHITE);
+        canvas.beam(
+            Point::new(0.0, 20.0),
+            Point::new(40.0, 20.0),
+            2.0,
+            6.0,
+            Color::WHITE,
+        );
 
         let core = pixel_at(&canvas, 20, 20).r;
         let near = pixel_at(&canvas, 20, 23).r;
         let far = pixel_at(&canvas, 20, 25).r;
         assert_eq!(core, 255, "the core is fully lit");
-        assert!(near > 0 && near < 255, "the halo is present but dimmer, got {near}");
+        assert!(
+            near > 0 && near < 255,
+            "the halo is present but dimmer, got {near}"
+        );
         assert!(near > far, "and fades outward, got {near} then {far}");
-        assert_eq!(pixel_at(&canvas, 20, 30), Color::BLACK, "and stops at the blur");
+        assert_eq!(
+            pixel_at(&canvas, 20, 30),
+            Color::BLACK,
+            "and stops at the blur"
+        );
     }
 
     #[test]

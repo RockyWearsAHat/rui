@@ -21,11 +21,21 @@ pub fn demo() -> Counter {
 /// What should be on screen, given that.
 pub fn view(counter: &Counter) -> El<Counter> {
     col((
-        title(format!("{}", counter.count)).text_size(56.0).bold().center_text(),
+        title(format!("{}", counter.count))
+            .text_size(56.0)
+            .bold()
+            .center_text(),
         row((
-            button("−").w(56.0).on_click(|counter: &mut Counter| counter.count -= 1),
-            button("Reset").w(80.0).on_click(|counter: &mut Counter| counter.count = 0),
-            button("+").primary().w(56.0).on_click(|counter: &mut Counter| counter.count += 1),
+            button("−")
+                .w(56.0)
+                .on_click(|counter: &mut Counter| counter.count -= 1),
+            button("Reset")
+                .w(80.0)
+                .on_click(|counter: &mut Counter| counter.count = 0),
+            button("+")
+                .primary()
+                .w(56.0)
+                .on_click(|counter: &mut Counter| counter.count += 1),
         ))
         .gap(8.0),
     ))
@@ -47,7 +57,10 @@ fn save(counter: &Counter) -> Vec<u8> {
 #[cfg(feature = "reload")]
 fn restore(saved: &[u8]) -> Result<Counter, String> {
     let text = std::str::from_utf8(saved).map_err(|error| error.to_string())?;
-    let count = text.trim().parse().map_err(|error: std::num::ParseIntError| error.to_string())?;
+    let count = text
+        .trim()
+        .parse()
+        .map_err(|error: std::num::ParseIntError| error.to_string())?;
     Ok(Counter { count })
 }
 

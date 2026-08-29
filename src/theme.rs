@@ -225,21 +225,66 @@ impl Palette {
 
         let holds = |ink: Color, ground: Color, floor: f32, what: &str| {
             let ratio = ink.contrast_ratio(ground);
-            assert!(ratio >= floor, "{name}: {what} carries {ratio:.2}:1 and needs {floor}:1");
+            assert!(
+                ratio >= floor,
+                "{name}: {what} carries {ratio:.2}:1 and needs {floor}:1"
+            );
         };
-        holds(self.text, self.background, TEXT, "primary text on the window");
-        holds(self.text_muted, self.background, MUTED, "secondary text on the window");
+        holds(
+            self.text,
+            self.background,
+            TEXT,
+            "primary text on the window",
+        );
+        holds(
+            self.text_muted,
+            self.background,
+            MUTED,
+            "secondary text on the window",
+        );
         holds(self.ok, self.ok_tint, STATUS, "the ok ink on its own tint");
-        holds(self.warn, self.warn_tint, STATUS, "the warn ink on its own tint");
-        holds(self.bad, self.bad_tint, STATUS, "the bad ink on its own tint");
-        holds(self.idle, self.idle_tint, IDLE, "the idle ink on its own tint");
-        holds(self.border_focus, self.surface, FOCUS, "the focus ring on a surface");
+        holds(
+            self.warn,
+            self.warn_tint,
+            STATUS,
+            "the warn ink on its own tint",
+        );
+        holds(
+            self.bad,
+            self.bad_tint,
+            STATUS,
+            "the bad ink on its own tint",
+        );
+        holds(
+            self.idle,
+            self.idle_tint,
+            IDLE,
+            "the idle ink on its own tint",
+        );
+        holds(
+            self.border_focus,
+            self.surface,
+            FOCUS,
+            "the focus ring on a surface",
+        );
 
         if self.background.luminance() < 0.5 {
             let ladder = [
-                (self.background_deep, self.background, "the background is not above its deep end"),
-                (self.background, self.surface, "a surface is not above the background"),
-                (self.surface, self.raised, "raised is not above the surface it lifts from"),
+                (
+                    self.background_deep,
+                    self.background,
+                    "the background is not above its deep end",
+                ),
+                (
+                    self.background,
+                    self.surface,
+                    "a surface is not above the background",
+                ),
+                (
+                    self.surface,
+                    self.raised,
+                    "raised is not above the surface it lifts from",
+                ),
             ];
             for (below, above, what) in ladder {
                 assert!(below.luminance() < above.luminance(), "{name}: {what}");
@@ -626,7 +671,10 @@ mod tests {
             for status in [Status::Ok, Status::Warn, Status::Bad] {
                 let (ink, fill) = theme.status(status);
                 let ratio = ink.contrast_ratio(fill);
-                assert!(ratio >= 4.5, "{appearance:?} {status:?} is {ratio:.2}:1 on its tint");
+                assert!(
+                    ratio >= 4.5,
+                    "{appearance:?} {status:?} is {ratio:.2}:1 on its tint"
+                );
             }
         }
     }
@@ -645,7 +693,10 @@ mod tests {
     fn the_battery_rejects_an_illegible_palette() {
         // The law only guards anything if breaking it fails: a palette whose
         // muted ink is its own background must not pass.
-        let broken = Palette { text_muted: Palette::DARK.background, ..Palette::DARK };
+        let broken = Palette {
+            text_muted: Palette::DARK.background,
+            ..Palette::DARK
+        };
         let failed = std::panic::catch_unwind(|| broken.assert_legible("broken"));
         assert!(failed.is_err(), "an illegible palette passed the battery");
     }
@@ -654,8 +705,7 @@ mod tests {
     fn accent_text_is_legible_on_the_accent() {
         for appearance in [Appearance::Light, Appearance::Dark] {
             let palette = theme(appearance).palette;
-            let contrast =
-                (palette.text_on_accent.luminance() - palette.accent.luminance()).abs();
+            let contrast = (palette.text_on_accent.luminance() - palette.accent.luminance()).abs();
             assert!(contrast > 0.3, "{appearance:?} accent text is illegible");
         }
     }
@@ -717,7 +767,10 @@ mod tests {
                 shadow.luminance() < 0.1,
                 "{appearance:?} casts a shadow that is not a black"
             );
-            assert!(shadow.a < 0x60, "{appearance:?} casts a shadow hard enough to be seen as one");
+            assert!(
+                shadow.a < 0x60,
+                "{appearance:?} casts a shadow hard enough to be seen as one"
+            );
         }
     }
 
@@ -741,8 +794,14 @@ mod tests {
     #[test]
     fn motion_is_quick_enough_to_feel_attached_to_the_pointer() {
         let metrics = Metrics::DEFAULT;
-        assert!(metrics.motion > 0.0, "a zero would make every animation a jump");
-        assert!(metrics.motion < 0.2, "past a fifth of a second a hover reads as lag");
+        assert!(
+            metrics.motion > 0.0,
+            "a zero would make every animation a jump"
+        );
+        assert!(
+            metrics.motion < 0.2,
+            "past a fifth of a second a hover reads as lag"
+        );
     }
 
     #[test]
@@ -766,8 +825,16 @@ mod tests {
         for style in [theme.mono(), theme.micro()] {
             assert_eq!(style.font, theme.mono_font);
         }
-        for style in [theme.title(), theme.heading(), theme.figure(), theme.state()] {
-            assert_eq!(style.font, theme.ui_font, "interface chrome is not machine output");
+        for style in [
+            theme.title(),
+            theme.heading(),
+            theme.figure(),
+            theme.state(),
+        ] {
+            assert_eq!(
+                style.font, theme.ui_font,
+                "interface chrome is not machine output"
+            );
         }
         assert_eq!(theme.body().font, theme.ui_font);
     }
@@ -783,10 +850,18 @@ mod tests {
         for style in [theme.heading(), theme.state()] {
             assert!(style.tracking > 0.0, "small capitals pack without it");
         }
-        for style in
-            [theme.title(), theme.figure(), theme.body(), theme.body_strong(), theme.caption(), theme.mono()]
-        {
-            assert_eq!(style.tracking, 0.0, "mixed case and running text are set solid");
+        for style in [
+            theme.title(),
+            theme.figure(),
+            theme.body(),
+            theme.body_strong(),
+            theme.caption(),
+            theme.mono(),
+        ] {
+            assert_eq!(
+                style.tracking, 0.0,
+                "mixed case and running text are set solid"
+            );
         }
         assert!(
             theme.heading().tracking > theme.state().tracking,
@@ -826,7 +901,10 @@ mod tests {
         // the colours are its, and the sizes, the corner shape, and the faces
         // are still the ones it did not restate.
         let library = theme(Appearance::Dark);
-        let own = Palette { accent: Color::rgb(0x5f, 0xd9, 0xf2), ..Palette::DARK };
+        let own = Palette {
+            accent: Color::rgb(0x5f, 0xd9, 0xf2),
+            ..Palette::DARK
+        };
         let supplied = library.with_palette(own);
 
         assert_eq!(supplied.palette.accent, own.accent);
@@ -867,10 +945,15 @@ mod tests {
         for appearance in [Appearance::Light, Appearance::Dark] {
             let palette = theme(appearance).palette;
             let step = (palette.surface.luminance() - palette.background.luminance()).abs();
-            assert!(step > 0.02, "{appearance:?} lays its panels on an identical ground");
-            let outline =
-                (palette.border.luminance() - palette.surface.luminance()).abs();
-            assert!(outline > 0.02, "{appearance:?} outlines its panels in their own fill");
+            assert!(
+                step > 0.02,
+                "{appearance:?} lays its panels on an identical ground"
+            );
+            let outline = (palette.border.luminance() - palette.surface.luminance()).abs();
+            assert!(
+                outline > 0.02,
+                "{appearance:?} outlines its panels in their own fill"
+            );
         }
     }
 }

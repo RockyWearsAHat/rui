@@ -164,9 +164,10 @@ impl Font {
     /// zero.
     pub fn parse_face(data: Vec<u8>, index: usize) -> Result<Self, FontError> {
         let offsets = sfnt::face_offsets(&data).ok_or(FontError::NotAFont)?;
-        let offset = *offsets
-            .get(index)
-            .ok_or(FontError::NoSuchFace { wanted: index, available: offsets.len() })?;
+        let offset = *offsets.get(index).ok_or(FontError::NoSuchFace {
+            wanted: index,
+            available: offsets.len(),
+        })?;
 
         let directory = Directory::read(&data, offset).ok_or(FontError::NotAFont)?;
         if directory.find(b"glyf").is_none() && directory.find(b"CFF ").is_some() {
@@ -214,8 +215,7 @@ impl Font {
         let mut reader = Reader::at(&data, maxp.offset + 4);
         let glyph_count = reader.u16().ok_or(FontError::MalformedTable("maxp"))?;
 
-        let character_map =
-            CharMap::read(&data, cmap).ok_or(FontError::MalformedTable("cmap"))?;
+        let character_map = CharMap::read(&data, cmap).ok_or(FontError::MalformedTable("cmap"))?;
         // Kerning is optional and answers nothing when the font has none, so
         // it cannot fail the load the way a missing `cmap` does.
         let kerning = Kerning::read(&data, &directory);
@@ -309,7 +309,11 @@ impl Font {
     /// A glyph that marks nothing — a space, or one the font leaves blank —
     /// renders to an empty mask rather than failing.
     pub fn render(&self, glyph: GlyphId, size: f32, subpixel_x: f32) -> RenderedGlyph {
-        let blank = RenderedGlyph { mask: Mask::empty(), left: 0, top: 0 };
+        let blank = RenderedGlyph {
+            mask: Mask::empty(),
+            left: 0,
+            top: 0,
+        };
         if size <= 0.0 || !size.is_finite() {
             return blank;
         }
@@ -400,14 +404,22 @@ mod tests {
         assert!(FontError::PostScriptOutlines.to_string().contains("CFF"));
         assert!(FontError::MissingTable("glyf").to_string().contains("glyf"));
         assert_eq!(
-            FontError::NoSuchFace { wanted: 9, available: 2 }.to_string(),
+            FontError::NoSuchFace {
+                wanted: 9,
+                available: 2
+            }
+            .to_string(),
             "asked for face 9 of a collection that holds 2"
         );
     }
 
     #[test]
     fn line_height_is_the_sum_of_the_three_measurements() {
-        let metrics = LineMetrics { ascent: 10.0, descent: 3.0, line_gap: 2.0 };
+        let metrics = LineMetrics {
+            ascent: 10.0,
+            descent: 3.0,
+            line_gap: 2.0,
+        };
         assert_eq!(metrics.line_height(), 15.0);
     }
 }

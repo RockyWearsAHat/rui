@@ -31,8 +31,11 @@ use std::time::{Duration, Instant};
 
 /// The window sizes the console's own frame-cost table is quoted at, in device
 /// pixels — a logical size at the scale it is usually shown at.
-const WINDOWS: [(&str, u32, u32); 3] =
-    [("560 × 420", 1120, 840), ("980 × 680", 1960, 1360), ("1180 × 760", 2360, 1520)];
+const WINDOWS: [(&str, u32, u32); 3] = [
+    ("560 × 420", 1120, 840),
+    ("980 × 680", 1960, 1360),
+    ("1180 × 760", 2360, 1520),
+];
 
 /// How many times each measurement is repeated.
 ///
@@ -46,7 +49,9 @@ fn main() {
         return;
     }
 
-    println!("| window | pixels | blit a full-window frame | compare (same) | compare (differs) | copy the surface |");
+    println!(
+        "| window | pixels | blit a full-window frame | compare (same) | compare (differs) | copy the surface |"
+    );
     println!("|---|---|---|---|---|---|");
     for (name, width, height) in WINDOWS {
         let pixels = (width as usize) * (height as usize);
@@ -87,7 +92,10 @@ fn main() {
     let mut canvas = Canvas::new(2360, 1520, 2.0);
     let pane = Rect::new(20.0, 20.0, 560.0, 320.0);
     let cropped = median(|| canvas.blit_bgra(pane, &frame));
-    println!("  1920 × 1080 into a 560 × 320 logical pane at 2×: {}", milliseconds(cropped));
+    println!(
+        "  1920 × 1080 into a 560 × 320 logical pane at 2×: {}",
+        milliseconds(cropped)
+    );
 }
 
 /// A picture with something different in every pixel, as a capture would be.

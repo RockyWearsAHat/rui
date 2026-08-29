@@ -78,10 +78,10 @@ mod platform;
 use crate::accessibility::AccessUpdate;
 use crate::app::App;
 use crate::canvas::Canvas;
+use crate::font::FontError;
 use crate::geom::Rect;
 use crate::input::{Event, Input};
 use crate::memory::Memory;
-use crate::font::FontError;
 use crate::text::{FontId, Fonts};
 use crate::theme::Appearance;
 use std::time::{Duration, Instant};
@@ -112,7 +112,13 @@ pub struct WindowOptions {
 
 impl Default for WindowOptions {
     fn default() -> Self {
-        Self { title: "rui".into(), width: 960.0, height: 640.0, min_width: 420.0, min_height: 320.0 }
+        Self {
+            title: "rui".into(),
+            width: 960.0,
+            height: 640.0,
+            min_width: 420.0,
+            min_height: 320.0,
+        }
     }
 }
 
@@ -138,7 +144,11 @@ impl std::fmt::Display for Error {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NoFont { searched } => {
-                write!(formatter, "no usable font found; looked for {}", searched.join(", "))
+                write!(
+                    formatter,
+                    "no usable font found; looked for {}",
+                    searched.join(", ")
+                )
             }
             Self::Font(error) => write!(formatter, "the font could not be read: {error}"),
             Self::Io(error) => write!(formatter, "{error}"),
@@ -300,7 +310,8 @@ impl Surface {
         events: &mut Vec<Event>,
     ) -> Result<(), Error> {
         let now = Instant::now();
-        self.memory.begin_frame(now.saturating_duration_since(self.drawn_at));
+        self.memory
+            .begin_frame(now.saturating_duration_since(self.drawn_at));
         self.drawn_at = now;
 
         self.input.begin_frame();
@@ -309,7 +320,9 @@ impl Surface {
         }
 
         let (width, height, scale) = window.surface();
-        if width != self.drawn.width() || height != self.drawn.height() || scale != self.drawn.scale()
+        if width != self.drawn.width()
+            || height != self.drawn.height()
+            || scale != self.drawn.scale()
         {
             self.drawn.resize(width, height, scale);
         }
@@ -320,7 +333,13 @@ impl Surface {
         // the interface looks like. See [`App::theme`].
         let theme = app.theme_for(window.appearance(), self.ui_font, self.mono_font);
         app.paint_ground(&mut self.drawn, &theme);
-        app.frame(&mut self.drawn, fonts, &self.input, &mut self.memory, &theme);
+        app.frame(
+            &mut self.drawn,
+            fonts,
+            &self.input,
+            &mut self.memory,
+            &theme,
+        );
         self.memory.end_frame(&self.input);
         self.serve_requests(window)?;
 
@@ -448,7 +467,10 @@ struct FullscreenSync {
 impl FullscreenSync {
     /// A window that is not filling the screen and has been asked for nothing.
     fn new(filling: bool) -> Self {
-        Self { mirrored: filling, awaiting: None }
+        Self {
+            mirrored: filling,
+            awaiting: None,
+        }
     }
 
     /// What to do, given what the window says and what the application wants.
@@ -487,7 +509,11 @@ pub(crate) fn run<S>(
     loaded: LoadedFonts,
     mut app: App<S>,
 ) -> Result<(), Error> {
-    let LoadedFonts { mut fonts, ui_font, mono_font } = loaded;
+    let LoadedFonts {
+        mut fonts,
+        ui_font,
+        mono_font,
+    } = loaded;
     let mut window = platform::Window::open(&options)?;
 
     let (width, height, scale) = window.surface();
@@ -515,7 +541,11 @@ pub(crate) fn run<S>(
 
     while window.is_open() && app.is_running() {
         events.clear();
-        let wait = if surface.memory.is_animating() { FRAME } else { app.wait() };
+        let wait = if surface.memory.is_animating() {
+            FRAME
+        } else {
+            app.wait()
+        };
 
         {
             // What the backend calls when the platform has taken the loop away.
@@ -573,8 +603,12 @@ mod tests {
     use super::*;
 
     /// A turn on which nothing at all happened.
-    const QUIET: Turn =
-        Turn { requested: false, had_events: false, animating: false, idle_elapsed: false };
+    const QUIET: Turn = Turn {
+        requested: false,
+        had_events: false,
+        animating: false,
+        idle_elapsed: false,
+    };
 
     #[test]
     fn a_wake_that_nothing_asked_for_draws_nothing() {
@@ -588,10 +622,22 @@ mod tests {
     #[test]
     fn any_one_of_the_four_reasons_is_enough_on_its_own() {
         for turn in [
-            Turn { requested: true, ..QUIET },
-            Turn { had_events: true, ..QUIET },
-            Turn { animating: true, ..QUIET },
-            Turn { idle_elapsed: true, ..QUIET },
+            Turn {
+                requested: true,
+                ..QUIET
+            },
+            Turn {
+                had_events: true,
+                ..QUIET
+            },
+            Turn {
+                animating: true,
+                ..QUIET
+            },
+            Turn {
+                idle_elapsed: true,
+                ..QUIET
+            },
         ] {
             assert!(turn.is_due(), "{turn:?} should have drawn");
         }
@@ -601,12 +647,21 @@ mod tests {
     fn a_toggle_in_the_interface_is_asked_of_the_window_once() {
         let mut sync = FullscreenSync::new(false);
         let now = Instant::now();
-        assert_eq!(sync.settle(false, true, now), Some(FullscreenMove::AskWindow(true)));
+        assert_eq!(
+            sync.settle(false, true, now),
+            Some(FullscreenMove::AskWindow(true))
+        );
         // The whole of a macOS transition, during which the window still says
         // it is not filling the screen. Asking again would be ignored, and
         // reporting back would undo the toggle the person just pressed.
-        assert_eq!(sync.settle(false, true, now + Duration::from_millis(500)), None);
-        assert_eq!(sync.settle(true, true, now + Duration::from_millis(900)), None);
+        assert_eq!(
+            sync.settle(false, true, now + Duration::from_millis(500)),
+            None
+        );
+        assert_eq!(
+            sync.settle(true, true, now + Duration::from_millis(900)),
+            None
+        );
         // And once it has arrived, nothing more is owed either way.
         assert_eq!(sync.settle(true, true, now + Duration::from_secs(30)), None);
     }
@@ -617,8 +672,15 @@ mod tests {
         // interface has to be told so it can lay itself out for a window again.
         let mut sync = FullscreenSync::new(true);
         let now = Instant::now();
-        assert_eq!(sync.settle(false, true, now), Some(FullscreenMove::TellApp(false)));
-        assert_eq!(sync.settle(false, false, now), None, "the application agreed");
+        assert_eq!(
+            sync.settle(false, true, now),
+            Some(FullscreenMove::TellApp(false))
+        );
+        assert_eq!(
+            sync.settle(false, false, now),
+            None,
+            "the application agreed"
+        );
     }
 
     #[test]
@@ -628,8 +690,14 @@ mod tests {
         // got, with the control that would undo it hidden inside that layout.
         let mut sync = FullscreenSync::new(false);
         let now = Instant::now();
-        assert_eq!(sync.settle(false, true, now), Some(FullscreenMove::AskWindow(true)));
-        assert_eq!(sync.settle(false, true, now + FULLSCREEN_PATIENCE / 2), None);
+        assert_eq!(
+            sync.settle(false, true, now),
+            Some(FullscreenMove::AskWindow(true))
+        );
+        assert_eq!(
+            sync.settle(false, true, now + FULLSCREEN_PATIENCE / 2),
+            None
+        );
         assert_eq!(
             sync.settle(false, true, now + FULLSCREEN_PATIENCE),
             Some(FullscreenMove::TellApp(false))
@@ -648,6 +716,12 @@ mod tests {
         // consider, and the promise an application makes with
         // `App::idle_timeout`: a machine that changed on its own is on screen
         // within that long, whether or not anything thought to ask.
-        assert!(Turn { idle_elapsed: true, ..QUIET }.is_due());
+        assert!(
+            Turn {
+                idle_elapsed: true,
+                ..QUIET
+            }
+            .is_due()
+        );
     }
 }

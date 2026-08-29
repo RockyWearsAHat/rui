@@ -57,6 +57,7 @@
 
 pub mod font;
 
+use crate::accessibility::Role;
 use crate::accessibility::{AccessTree, AccessUpdate, audit};
 use crate::app::App;
 use crate::canvas::Canvas;
@@ -64,7 +65,6 @@ use crate::color::Color;
 use crate::element::El;
 use crate::geom::{Point, Rect};
 use crate::input::{Event, Input, Key, KeyCode, Modifiers, PointerButton};
-use crate::accessibility::Role;
 use crate::memory::{Id, Memory};
 use crate::shell::LoadedFonts;
 use crate::text::{FontId, Fonts};
@@ -176,7 +176,8 @@ impl<S: 'static> Harness<S> {
     /// Draws at this size, in logical units.
     pub fn size(mut self, width: f32, height: f32) -> Self {
         let scale = self.canvas.scale();
-        self.canvas.resize((width * scale) as u32, (height * scale) as u32, scale);
+        self.canvas
+            .resize((width * scale) as u32, (height * scale) as u32, scale);
         self
     }
 
@@ -187,7 +188,8 @@ impl<S: 'static> Harness<S> {
     /// only stay in step because exactly one place multiplies.
     pub fn scale(mut self, scale: f32) -> Self {
         let bounds = self.canvas.bounds();
-        self.canvas.resize((bounds.w * scale) as u32, (bounds.h * scale) as u32, scale);
+        self.canvas
+            .resize((bounds.w * scale) as u32, (bounds.h * scale) as u32, scale);
         self
     }
 
@@ -204,10 +206,7 @@ impl<S: 'static> Harness<S> {
     /// its own theme in already, which is the point: a test drives the theme the
     /// program actually runs with, so a window and a test cannot disagree about
     /// what the interface looks like.
-    pub fn theme(
-        mut self,
-        theme: impl Fn(Appearance, FontId, FontId) -> Theme + 'static,
-    ) -> Self {
+    pub fn theme(mut self, theme: impl Fn(Appearance, FontId, FontId) -> Theme + 'static) -> Self {
         self.app.set_theme(Box::new(theme));
         self
     }
@@ -281,21 +280,37 @@ impl<S: 'static> Harness<S> {
 
     /// Presses and releases at a point, and draws the frame that answers.
     pub fn click(&mut self, at: Point) -> &mut Self {
-        self.event(Event::PointerDown { position: at, button: PointerButton::Primary })
-            .event(Event::PointerUp { position: at, button: PointerButton::Primary })
-            .frame()
+        self.event(Event::PointerDown {
+            position: at,
+            button: PointerButton::Primary,
+        })
+        .event(Event::PointerUp {
+            position: at,
+            button: PointerButton::Primary,
+        })
+        .frame()
     }
 
     /// The same with the secondary button.
     pub fn secondary_click(&mut self, at: Point) -> &mut Self {
-        self.event(Event::PointerDown { position: at, button: PointerButton::Secondary })
-            .event(Event::PointerUp { position: at, button: PointerButton::Secondary })
-            .frame()
+        self.event(Event::PointerDown {
+            position: at,
+            button: PointerButton::Secondary,
+        })
+        .event(Event::PointerUp {
+            position: at,
+            button: PointerButton::Secondary,
+        })
+        .frame()
     }
 
     /// Presses the pointer down and holds it, without releasing.
     pub fn press(&mut self, at: Point) -> &mut Self {
-        self.event(Event::PointerDown { position: at, button: PointerButton::Primary }).frame()
+        self.event(Event::PointerDown {
+            position: at,
+            button: PointerButton::Primary,
+        })
+        .frame()
     }
 
     /// Moves the pointer while it is held down: one frame of a drag.
@@ -306,7 +321,11 @@ impl<S: 'static> Harness<S> {
     /// Lets go where the pointer now is.
     pub fn release(&mut self) -> &mut Self {
         let at = self.input.pointer();
-        self.event(Event::PointerUp { position: at, button: PointerButton::Primary }).frame()
+        self.event(Event::PointerUp {
+            position: at,
+            button: PointerButton::Primary,
+        })
+        .frame()
     }
 
     /// A whole drag: press at `from`, move to `to`, and let go.
@@ -334,12 +353,22 @@ impl<S: 'static> Harness<S> {
 
     /// Presses a key with modifiers held.
     pub fn key_with(&mut self, key: Key, modifiers: Modifiers) -> &mut Self {
-        self.event(Event::KeyDown { key: Some(key), code: None, modifiers }).frame()
+        self.event(Event::KeyDown {
+            key: Some(key),
+            code: None,
+            modifiers,
+        })
+        .frame()
     }
 
     /// Releases a key, with nothing held with it.
     pub fn key_up(&mut self, key: Key) -> &mut Self {
-        self.event(Event::KeyUp { key: Some(key), code: None, modifiers: Modifiers::NONE }).frame()
+        self.event(Event::KeyUp {
+            key: Some(key),
+            code: None,
+            modifiers: Modifiers::NONE,
+        })
+        .frame()
     }
 
     /// A whole keystroke: down on one frame, up on the next.
@@ -358,12 +387,22 @@ impl<S: 'static> Harness<S> {
     /// [`KeyCode`] are the only ones anything forwards, because
     /// a key with no position is not a key another machine can be told about.
     pub fn raw_key(&mut self, code: KeyCode, key: Option<Key>) -> &mut Self {
-        self.event(Event::KeyDown { key, code: Some(code), modifiers: Modifiers::NONE }).frame()
+        self.event(Event::KeyDown {
+            key,
+            code: Some(code),
+            modifiers: Modifiers::NONE,
+        })
+        .frame()
     }
 
     /// Releases a physical key.
     pub fn raw_key_up(&mut self, code: KeyCode, key: Option<Key>) -> &mut Self {
-        self.event(Event::KeyUp { key, code: Some(code), modifiers: Modifiers::NONE }).frame()
+        self.event(Event::KeyUp {
+            key,
+            code: Some(code),
+            modifiers: Modifiers::NONE,
+        })
+        .frame()
     }
 
     /// Moves the keyboard on to the next thing that can take it.
@@ -433,8 +472,12 @@ impl<S: 'static> Harness<S> {
     /// If no node is named that, listing the names that are there — a test that
     /// silently activated nothing would pass for the wrong reason.
     pub fn activate_named(&mut self, name: &str) -> &mut Self {
-        let found =
-            self.accessibility().nodes().iter().find(|node| node.name == name).map(|node| node.id);
+        let found = self
+            .accessibility()
+            .nodes()
+            .iter()
+            .find(|node| node.name == name)
+            .map(|node| node.id);
         match found {
             Some(id) => self.activate(id),
             None => panic!(
@@ -468,13 +511,19 @@ impl<S: 'static> Harness<S> {
     /// The whole record of whatever shows this text.
     pub fn find(&mut self, text: &str) -> Option<Probe> {
         self.ensure_drawn();
-        self.probes.iter().find(|probe| probe.text.as_deref() == Some(text)).cloned()
+        self.probes
+            .iter()
+            .find(|probe| probe.text.as_deref() == Some(text))
+            .cloned()
     }
 
     /// The record of whatever was named with this key.
     pub fn find_key(&mut self, key: &str) -> Option<Probe> {
         self.ensure_drawn();
-        self.probes.iter().find(|probe| probe.key.as_deref() == Some(key)).cloned()
+        self.probes
+            .iter()
+            .find(|probe| probe.key.as_deref() == Some(key))
+            .cloned()
     }
 
     /// Whether anything on screen shows this text.
@@ -489,7 +538,10 @@ impl<S: 'static> Harness<S> {
     /// which should not be there is not.
     pub fn text(&mut self) -> Vec<String> {
         self.ensure_drawn();
-        self.probes.iter().filter_map(|probe| probe.text.clone()).collect()
+        self.probes
+            .iter()
+            .filter_map(|probe| probe.text.clone())
+            .collect()
     }
 
     /// Every element the last frame drew, in the order it drew them.
@@ -599,8 +651,15 @@ impl<S: 'static> Harness<S> {
             seen.len()
         );
 
-        let in_flow: Vec<Id> = walked.iter().copied().filter(|id| !out_of_flow.contains(id)).collect();
-        assert_eq!(in_flow, expected, "Tab did not travel the order the interface is written in");
+        let in_flow: Vec<Id> = walked
+            .iter()
+            .copied()
+            .filter(|id| !out_of_flow.contains(id))
+            .collect();
+        assert_eq!(
+            in_flow, expected,
+            "Tab did not travel the order the interface is written in"
+        );
 
         let first_layer = walked.iter().position(|id| out_of_flow.contains(id));
         if let Some(first_layer) = first_layer {
@@ -649,7 +708,10 @@ impl<S: 'static> Harness<S> {
             return None;
         }
         let index = (y * self.canvas.width() + x) as usize;
-        self.canvas.pixels().get(index).map(|&word| Color::from_argb(word))
+        self.canvas
+            .pixels()
+            .get(index)
+            .map(|&word| Color::from_argb(word))
     }
 
     /// Whether anything was drawn inside a rectangle, over the window's own
@@ -663,7 +725,12 @@ impl<S: 'static> Harness<S> {
     pub fn marked(&self, rect: Rect) -> bool {
         let ground = self.ground();
         let scale = self.canvas.scale();
-        let device = Rect::new(rect.x * scale, rect.y * scale, rect.w * scale, rect.h * scale);
+        let device = Rect::new(
+            rect.x * scale,
+            rect.y * scale,
+            rect.w * scale,
+            rect.h * scale,
+        );
 
         for y in device.y.max(0.0) as u32..(device.max_y() as u32).min(self.canvas.height()) {
             for x in device.x.max(0.0) as u32..(device.max_x() as u32).min(self.canvas.width()) {
@@ -705,7 +772,10 @@ impl<S: 'static> Harness<S> {
             &crate::image::rgba(&self.canvas),
         )
         .ok_or_else(|| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, "the frame could not be encoded")
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "the frame could not be encoded",
+            )
         })?;
         std::fs::write(path, bytes)
     }
@@ -735,7 +805,8 @@ impl<S: 'static> Harness<S> {
     /// measures against — the ground [`Harness::marked`] compares to — is the
     /// same theme the frame was drawn from.
     fn theme_in_force(&self) -> Theme {
-        self.app.theme_for(self.appearance, self.fonts.ui_font, self.fonts.mono_font)
+        self.app
+            .theme_for(self.appearance, self.fonts.ui_font, self.fonts.mono_font)
     }
 
     /// Draws a frame if nothing has been drawn yet.
@@ -804,7 +875,11 @@ pub fn test_fonts() -> LoadedFonts {
     let mut fonts = Fonts::new();
     let ui_font = fonts.add(font::test_font());
     let mono_font = fonts.add(font::test_font());
-    LoadedFonts { fonts, ui_font, mono_font }
+    LoadedFonts {
+        fonts,
+        ui_font,
+        mono_font,
+    }
 }
 
 #[cfg(test)]
@@ -836,8 +911,15 @@ mod tests {
     fn clicking_by_name_runs_the_handler_and_the_next_frame_shows_it() {
         let mut harness = Harness::new(Counter::default(), counter);
         harness.click_text("Increment");
-        assert_eq!(harness.state().count, 1, "the handler runs within the frame that delivered it");
-        assert!(harness.frame().shows("1"), "and the next frame draws what it changed");
+        assert_eq!(
+            harness.state().count,
+            1,
+            "the handler runs within the frame that delivered it"
+        );
+        assert!(
+            harness.frame().shows("1"),
+            "and the next frame draws what it changed"
+        );
     }
 
     #[test]
@@ -862,10 +944,17 @@ mod tests {
     #[test]
     fn the_focus_ring_marks_keyboard_focus_and_never_a_click() {
         let mut harness = Harness::new(Counter::default(), |_: &Counter| {
-            crate::col(crate::button("Start").key("go").on_click(|_: &mut Counter| {}))
-                .pad(20.0)
+            crate::col(
+                crate::button("Start")
+                    .key("go")
+                    .on_click(|_: &mut Counter| {}),
+            )
+            .pad(20.0)
         });
-        let rect = harness.find_key("go").expect("the button is on screen").rect;
+        let rect = harness
+            .find_key("go")
+            .expect("the button is on screen")
+            .rect;
 
         harness.click(rect.center());
         assert_eq!(harness.focused(), Some(harness.find_key("go").unwrap().id));
@@ -875,10 +964,16 @@ mod tests {
         );
 
         harness.tab();
-        assert!(harness.marked(ring_strip(rect)), "keyboard focus is invisible without the ring");
+        assert!(
+            harness.marked(ring_strip(rect)),
+            "keyboard focus is invisible without the ring"
+        );
 
         harness.click(rect.center());
-        assert!(!harness.marked(ring_strip(rect)), "the next click takes the ring back off");
+        assert!(
+            !harness.marked(ring_strip(rect)),
+            "the next click takes the ring back off"
+        );
     }
 
     #[test]
@@ -888,10 +983,16 @@ mod tests {
         let mut harness = Harness::new(Counter::default(), |_: &Counter| {
             crate::col(crate::field("").key("name")).pad(20.0)
         });
-        let rect = harness.find_key("name").expect("the field is on screen").rect;
+        let rect = harness
+            .find_key("name")
+            .expect("the field is on screen")
+            .rect;
 
         harness.click(rect.center());
-        assert!(harness.marked(ring_strip(rect)), "a clicked field is still ringed");
+        assert!(
+            harness.marked(ring_strip(rect)),
+            "a clicked field is still ringed"
+        );
     }
 
     /// A line being typed into, for the caret tests.
@@ -911,7 +1012,10 @@ mod tests {
             .pad(20.0)
         })
         .frame_time(Duration::from_millis(66));
-        let rect = harness.find_key("name").expect("the field is on screen").rect;
+        let rect = harness
+            .find_key("name")
+            .expect("the field is on screen")
+            .rect;
 
         // A device pixel inside the caret's column: eight units of the field's
         // own padding in, at its vertical middle. Its resting colour is the
@@ -928,8 +1032,14 @@ mod tests {
                 false => lit = true,
             }
         }
-        assert!(lit && dark, "two seconds of a focused caret must both show and hide it");
-        assert!(harness.is_animating(), "the blink is a live loop while the field is focused");
+        assert!(
+            lit && dark,
+            "two seconds of a focused caret must both show and hide it"
+        );
+        assert!(
+            harness.is_animating(),
+            "the blink is a live loop while the field is focused"
+        );
 
         // Step to a frame where the caret is dark, then type: the keystroke
         // resets the blink, so the caret is solid at its new place from the

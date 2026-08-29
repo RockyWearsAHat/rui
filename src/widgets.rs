@@ -96,7 +96,9 @@ pub fn text<S>(text: impl Into<String>) -> El<S> {
 
 /// The name of a window, a pane, or the thing a screen is about.
 pub fn title<S>(text: impl Into<String>) -> El<S> {
-    El::of(Node::Text(text.into())).text_size(TITLE_SIZE).role(Role::Heading)
+    El::of(Node::Text(text.into()))
+        .text_size(TITLE_SIZE)
+        .role(Role::Heading)
 }
 
 /// The label that introduces a block: small, muted, opened up.
@@ -114,12 +116,17 @@ pub fn heading<S>(text: impl Into<String>) -> El<S> {
 
 /// An aside: a unit, an explanation, a timestamp.
 pub fn caption<S>(text: impl Into<String>) -> El<S> {
-    El::of(Node::Text(text.into())).text_size(CAPTION_SIZE).color(Tone::Muted)
+    El::of(Node::Text(text.into()))
+        .text_size(CAPTION_SIZE)
+        .color(Tone::Muted)
 }
 
 /// The smallest annotation there is, set in the fixed-width face.
 pub fn micro<S>(text: impl Into<String>) -> El<S> {
-    El::of(Node::Text(text.into())).text_size(MICRO_SIZE).color(Tone::Muted).mono()
+    El::of(Node::Text(text.into()))
+        .text_size(MICRO_SIZE)
+        .color(Tone::Muted)
+        .mono()
 }
 
 /// A figure worth reading across a room: a count, a total.
@@ -154,7 +161,10 @@ pub fn panel<S>(children: impl Children<S>) -> El<S> {
 
 /// A hairline across whatever contains it.
 pub fn divider<S>() -> El<S> {
-    El::of(Node::Stack).h(1.0).fill(Tone::Border).role(Role::Separator)
+    El::of(Node::Stack)
+        .h(1.0)
+        .fill(Tone::Border)
+        .role(Role::Separator)
 }
 
 /// A button: an outlined surface that lightens under the pointer.
@@ -189,16 +199,19 @@ pub fn button<S>(label: impl Into<String>) -> El<S> {
 /// argument — and it is the face that makes `l` and `1`, or `rn` and `m`, tell
 /// each other apart in a string somebody has to check.
 pub fn field<S>(value: impl Into<String>) -> El<S> {
-    El::of(Node::Field { value: value.into(), placeholder: String::new() })
-        .h(28.0)
-        .pad_x(8.0)
-        .text_size(CODE_SIZE)
-        .mono()
-        .fill(Tone::Sunken)
-        .border(1.0, Tone::Border)
-        .round(Radius::Control)
-        .focusable()
-        .role(Role::Field)
+    El::of(Node::Field {
+        value: value.into(),
+        placeholder: String::new(),
+    })
+    .h(28.0)
+    .pad_x(8.0)
+    .text_size(CODE_SIZE)
+    .mono()
+    .fill(Tone::Sunken)
+    .border(1.0, Tone::Border)
+    .round(Radius::Control)
+    .focusable()
+    .role(Role::Field)
 }
 
 /// A tag: a status's own word, on a tint of its own colour.
@@ -229,12 +242,22 @@ pub fn tag<S>(status: Status, label: impl Into<String>) -> El<S> {
 /// the caller, since the caller can see it.
 pub fn dot<S>(status: Status, radius: f32) -> El<S> {
     let tone = Tone::ink(status);
-    draw(Size::new(radius * 2.0, radius * 2.0), move |painter, rect| {
-        let color = painter.color(tone);
-        let center = rect.center();
-        let bounds = Rect::new(center.x - radius, center.y - radius, radius * 2.0, radius * 2.0);
-        painter.canvas().fill(bounds, crate::canvas::Corner::Round(radius), color);
-    })
+    draw(
+        Size::new(radius * 2.0, radius * 2.0),
+        move |painter, rect| {
+            let color = painter.color(tone);
+            let center = rect.center();
+            let bounds = Rect::new(
+                center.x - radius,
+                center.y - radius,
+                radius * 2.0,
+                radius * 2.0,
+            );
+            painter
+                .canvas()
+                .fill(bounds, crate::canvas::Corner::Round(radius), color);
+        },
+    )
     .role(Role::Status)
     .label(word_for(status))
 }
@@ -290,11 +313,11 @@ pub fn meter<S>(fraction: f32, tone: impl Into<Tone>) -> El<S> {
 ///
 /// The way out of the widget set, for a sparkline, a logo, or a diagram.
 /// `intrinsic` is the size it asks for before the layout has its say.
-pub fn draw<S>(
-    intrinsic: Size,
-    paint: impl Fn(&mut Painter<'_>, Rect) + 'static,
-) -> El<S> {
-    El::of(Node::Draw { intrinsic, paint: Box::new(paint) })
+pub fn draw<S>(intrinsic: Size, paint: impl Fn(&mut Painter<'_>, Rect) + 'static) -> El<S> {
+    El::of(Node::Draw {
+        intrinsic,
+        paint: Box::new(paint),
+    })
 }
 
 /// A row of tabs, and what to do when one is chosen.
@@ -351,17 +374,20 @@ pub fn segmented<S: 'static>(
         .enumerate()
         .map(|(index, label)| {
             let chosen = index == selected;
-            row(text(*label).grow().text_align(Align::Center).text_size(12.0))
-                .key(*label)
+            row(text(*label)
                 .grow()
-                .h(22.0)
-                .round(Radius::Units(4.0))
-                .fill(if chosen { Tone::Surface } else { Tone::Clear })
-                .color(if chosen { Tone::Text } else { Tone::Muted })
-                .hover_color(Tone::Text)
-                .role(Role::Radio)
-                .selected(chosen)
-                .on_click(move |state: &mut S| choose(state, index))
+                .text_align(Align::Center)
+                .text_size(12.0))
+            .key(*label)
+            .grow()
+            .h(22.0)
+            .round(Radius::Units(4.0))
+            .fill(if chosen { Tone::Surface } else { Tone::Clear })
+            .color(if chosen { Tone::Text } else { Tone::Muted })
+            .hover_color(Tone::Text)
+            .role(Role::Radio)
+            .selected(chosen)
+            .on_click(move |state: &mut S| choose(state, index))
         })
         .collect();
 
@@ -372,6 +398,28 @@ pub fn segmented<S: 'static>(
         .fill(Tone::Sunken)
         .border(1.0, Tone::Border)
         .round(Radius::Control)
+}
+
+/// A 1–5 star rating widget. Click stars to set the rating.
+pub fn star_rating<S: 'static>(
+    rating: usize,
+    set_rating: impl Fn(&mut S, usize) + Copy + 'static,
+) -> El<S> {
+    row((1..=5)
+        .map(move |i| {
+            let filled = i <= rating;
+            draw(
+                Size::new(16.0, 16.0),
+                move |painter: &mut Painter<'_>, rect: Rect| {
+                    let color = if filled { Tone::Accent } else { Tone::Muted };
+                    painter.fill(rect, Radius::None, painter.color(color));
+                },
+            )
+            .key(format!("star-{}", i))
+            .on_click(move |state: &mut S| set_rating(state, i))
+        })
+        .collect::<Vec<_>>())
+    .gap(4.0)
 }
 
 impl<S> El<S> {
@@ -395,7 +443,9 @@ impl<S> El<S> {
     /// should reach for by accident — which outshines the primary action, and is
     /// exactly backwards.
     pub fn danger(self) -> Self {
-        self.gradient(Tone::BadTint, Tone::BadTint).color(Tone::Bad).border(1.0, Tone::Bad)
+        self.gradient(Tone::BadTint, Tone::BadTint)
+            .color(Tone::Bad)
+            .border(1.0, Tone::Bad)
     }
 
     /// Takes this button's chrome away until the pointer is over it.
@@ -403,7 +453,9 @@ impl<S> El<S> {
     /// For an action that repeats down a list, where a bordered button on every
     /// row would be a column of boxes rather than a column of rows.
     pub fn ghost(self) -> Self {
-        self.fill(Tone::Clear).border(0.0, Tone::Clear).hover_fill(Tone::Raised)
+        self.fill(Tone::Clear)
+            .border(0.0, Tone::Clear)
+            .hover_fill(Tone::Raised)
     }
 
     /// What a field shows, dimmed, while it holds nothing.
@@ -429,7 +481,6 @@ impl<S> El<S> {
     pub fn center_text(self) -> Self {
         self.text_align(Align::Center)
     }
-
 }
 
 /// A section label with a rule running from it to the far edge.
@@ -469,7 +520,9 @@ pub fn field_row<S>(label: impl Into<String>, value: El<S>) -> El<S> {
     } else {
         value
     };
-    row((heading(label).w(78.0), value.grow())).gap(8.0).min_h(20.0)
+    row((heading(label).w(78.0), value.grow()))
+        .gap(8.0)
+        .min_h(20.0)
 }
 
 /// A row that names a stack of values rather than one line of them.
@@ -486,9 +539,12 @@ pub fn field_group<S>(label: impl Into<String>, value: El<S>) -> El<S> {
     // The label's box matches a control's height so its word centres on the
     // first entry's own centre line, exactly as `field_row` centres against a
     // single control.
-    row((heading(label).w(78.0).h(28.0).align_self(Align::Start), value.grow()))
-        .gap(8.0)
-        .min_h(20.0)
+    row((
+        heading(label).w(78.0).h(28.0).align_self(Align::Start),
+        value.grow(),
+    ))
+    .gap(8.0)
+    .min_h(20.0)
 }
 
 #[cfg(test)]
@@ -528,7 +584,11 @@ mod tests {
         assert_eq!(ordinary.style().radius, primary.style().radius);
         assert_ne!(ordinary.style().fill, primary.style().fill);
         assert_eq!(ghost.style().fill, Some(Tone::Clear));
-        assert_eq!(ghost.style().hover.fill, Some(Tone::Raised), "chrome arrives on hover");
+        assert_eq!(
+            ghost.style().hover.fill,
+            Some(Tone::Raised),
+            "chrome arrives on hover"
+        );
     }
 
     #[test]

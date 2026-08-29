@@ -127,7 +127,11 @@ impl Color {
     fn relative_luminance(self) -> f32 {
         let channel = |value: u8| {
             let c = value as f32 / 255.0;
-            if c <= 0.03928 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+            if c <= 0.03928 {
+                c / 12.92
+            } else {
+                ((c + 0.055) / 1.055).powf(2.4)
+            }
         };
         0.2126 * channel(self.r) + 0.7152 * channel(self.g) + 0.0722 * channel(self.b)
     }
@@ -155,7 +159,8 @@ pub fn blend_over(destination: u32, source: Color, coverage: u8) -> u32 {
     }
 
     let inverse = 255 - alpha;
-    let channel = |src: u8, dst: u32| mul_255(src, alpha) as u32 + mul_255(dst as u8, inverse) as u32;
+    let channel =
+        |src: u8, dst: u32| mul_255(src, alpha) as u32 + mul_255(dst as u8, inverse) as u32;
 
     let r = channel(source.r, (destination >> 16) & 0xff);
     let g = channel(source.g, (destination >> 8) & 0xff);
@@ -214,7 +219,10 @@ mod tests {
 
     #[test]
     fn a_transparent_colour_never_draws_however_covered() {
-        assert_eq!(blend_over(0xff12_3456, Color::TRANSPARENT, 255), 0xff12_3456);
+        assert_eq!(
+            blend_over(0xff12_3456, Color::TRANSPARENT, 255),
+            0xff12_3456
+        );
     }
 
     #[test]
@@ -235,7 +243,10 @@ mod tests {
         // Half-transparent paint at half coverage is a quarter of a pixel.
         let half = Color::rgba(255, 255, 255, 128);
         let quarter = blend_over(0xff00_0000, half, 128) & 0xff;
-        assert!((62..=66).contains(&quarter), "expected about a quarter, got {quarter}");
+        assert!(
+            (62..=66).contains(&quarter),
+            "expected about a quarter, got {quarter}"
+        );
     }
 
     #[test]
@@ -270,7 +281,10 @@ mod tests {
         // The two ends the formula is defined by: black against white is 21:1,
         // and a colour against itself is 1:1.
         let extreme = Color::BLACK.contrast_ratio(Color::WHITE);
-        assert!((extreme - 21.0).abs() < 0.01, "expected 21:1, got {extreme}");
+        assert!(
+            (extreme - 21.0).abs() < 0.01,
+            "expected 21:1, got {extreme}"
+        );
         let none = Color::rgb(0x80, 0x80, 0x80).contrast_ratio(Color::rgb(0x80, 0x80, 0x80));
         assert_eq!(none, 1.0);
     }
@@ -287,7 +301,10 @@ mod tests {
         // own examples sit at. Quick luma lands somewhere else entirely, so
         // hitting this number is what says the linearisation is really there.
         let ratio = Color::rgb(0x76, 0x76, 0x76).contrast_ratio(Color::WHITE);
-        assert!((ratio - 4.54).abs() < 0.01, "expected about 4.54:1, got {ratio}");
+        assert!(
+            (ratio - 4.54).abs() < 0.01,
+            "expected about 4.54:1, got {ratio}"
+        );
     }
 
     #[test]
@@ -295,7 +312,10 @@ mod tests {
         // A translucent ink's landing depends on what it lands on, which the
         // ratio of two colours cannot know; it answers for the colours as told.
         let faint = Color::rgba(0xff, 0xff, 0xff, 10);
-        assert_eq!(faint.contrast_ratio(Color::BLACK), Color::WHITE.contrast_ratio(Color::BLACK));
+        assert_eq!(
+            faint.contrast_ratio(Color::BLACK),
+            Color::WHITE.contrast_ratio(Color::BLACK)
+        );
     }
 
     #[test]
@@ -313,7 +333,10 @@ mod tests {
         let half = Color::rgb(140, 140, 140);
         let once = blend_add(0xff00_0000, half, 255);
         let twice = blend_add(once, half, 255);
-        assert!((twice & 0xff) > (once & 0xff), "adding a second light must brighten");
+        assert!(
+            (twice & 0xff) > (once & 0xff),
+            "adding a second light must brighten"
+        );
 
         // Two lights that would sum past 255 clamp rather than wrap.
         let bright = Color::rgb(200, 200, 200);
@@ -324,7 +347,11 @@ mod tests {
     #[test]
     fn adding_nothing_leaves_the_pixel_exactly() {
         let light = Color::rgb(90, 90, 90);
-        assert_eq!(blend_add(0xff12_3456, light, 0), 0xff12_3456, "zero coverage adds nothing");
+        assert_eq!(
+            blend_add(0xff12_3456, light, 0),
+            0xff12_3456,
+            "zero coverage adds nothing"
+        );
         assert_eq!(
             blend_add(0xff12_3456, Color::TRANSPARENT, 255),
             0xff12_3456,
