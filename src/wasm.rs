@@ -12,10 +12,10 @@
 use crate::app::App;
 use crate::canvas::Canvas;
 use crate::demo::{self, Counter};
-use crate::input::Input;
+use crate::input::{Event, Input};
 use crate::memory::Memory;
-use crate::shell;
-use crate::text::{FontId, Fonts};
+use crate::shell::{self, LoadedFonts};
+use crate::text::Fonts;
 use crate::theme::{Appearance, Theme};
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
@@ -27,11 +27,12 @@ thread_local! {
 struct CounterState {
     app: App<Counter>,
     fonts: Fonts,
-    ui_font: FontId,
-    mono_font: FontId,
     canvas: Canvas,
     memory: Memory,
     input: Input,
+    events: Vec<Event>,
+    ui_font: crate::text::FontId,
+    mono_font: crate::text::FontId,
 }
 
 /// Starts the counter and lets the library drive its own frames.
@@ -57,7 +58,7 @@ pub fn start_counter() -> Result<(), JsValue> {
 pub fn init_counter() -> i32 {
     COUNTER_APP.with(|state| {
         let app = demo::counter_app();
-        let shell::LoadedFonts {
+        let LoadedFonts {
             fonts,
             ui_font,
             mono_font,
@@ -66,11 +67,12 @@ pub fn init_counter() -> i32 {
         *state.borrow_mut() = Some(CounterState {
             app,
             fonts,
-            ui_font,
-            mono_font,
             canvas,
             memory: Memory::new(),
             input: Input::new(),
+            events: Vec::new(),
+            ui_font,
+            mono_font,
         });
     });
     0
@@ -84,23 +86,26 @@ pub fn present_counter() {
     COUNTER_APP.with(|state| {
         if let Some(counter) = state.borrow_mut().as_mut() {
             let appearance = shell::get_appearance();
-            let theme = Theme::new(
-                appearance,
-                counter.fonts.ui_font(),
-                counter.fonts.mono_font(),
-            );
+            let theme = Theme::new(appearance, counter.ui_font, counter.mono_font);
 
             counter
                 .canvas
                 .clear_vertical(theme.palette.background, theme.palette.background_deep);
 
+            counter.input.begin_frame();
+            for event in counter.events.drain(..) {
+                counter.input.apply(event);
+            }
+
             counter.app.frame(
                 &mut counter.canvas,
                 &mut counter.fonts,
-                &crate::input::Input::new(),
+                &counter.input,
                 &mut counter.memory,
                 &theme,
             );
+
+            counter.memory.end_frame(&counter.input);
 
             let _ = shell::present(&counter.canvas);
         }
@@ -116,7 +121,7 @@ pub fn listen_counter() {
         COUNTER_APP.with(|state| {
             if let Some(counter) = state.borrow_mut().as_mut() {
                 for event in events {
-                    counter.app.handle_event(event);
+                    counter.input.apply(event);
                 }
             }
         })
