@@ -119,6 +119,17 @@ impl<S> App<S> {
         &self.state
     }
 
+    /// The state, mutably, for a caller driving its own frames.
+    ///
+    /// [`App::run`] needs no such thing: state only ever changes from inside a
+    /// click handler, which [`App::frame`] already applies. This exists for the
+    /// other caller — one that owns its own surface and its own loop (a page
+    /// with an async fetch to fold in between frames, say) and has nowhere else
+    /// to hand new data to the app it is driving.
+    pub fn state_mut(&mut self) -> &mut S {
+        &mut self.state
+    }
+
     /// Opens a window and runs until it is closed.
     ///
     /// Fonts are found on this machine rather than shipped, so an interface
@@ -188,7 +199,12 @@ impl<S> App<S> {
 
     /// Describes, lays out, draws, and then applies whatever was interacted
     /// with.
-    pub(crate) fn frame(
+    ///
+    /// `pub` (rather than the crate-private visibility every other backend
+    /// reaches this through) for the same reason as [`App::state_mut`]: a
+    /// caller driving its own surface and its own loop needs the one step a
+    /// frame actually is, not a second implementation of it.
+    pub fn frame(
         &mut self,
         canvas: &mut Canvas,
         fonts: &Fonts,
