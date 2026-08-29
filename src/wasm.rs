@@ -9,15 +9,25 @@
 //! draws to a PNG — one function, three drivers, so "the same frame everywhere"
 //! is something that can be checked rather than only asserted.
 
+use crate::app::App;
+use crate::canvas::Canvas;
 use crate::demo::{self, Counter};
+use crate::memory::Memory;
 use crate::shell;
-use crate::theme::Appearance;
-use crate::FrameDriver;
+use crate::text::Fonts;
+use crate::theme::{Appearance, Theme};
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 
 thread_local! {
-    static COUNTER_DRIVER: RefCell<Option<FrameDriver<Counter>>> = const { RefCell::new(None) };
+    static COUNTER_APP: RefCell<Option<CounterState>> = const { RefCell::new(None) };
+}
+
+struct CounterState {
+    app: App<Counter>,
+    fonts: Fonts,
+    canvas: Canvas,
+    memory: Memory,
 }
 
 /// Starts the counter and lets the library drive its own frames.
@@ -41,17 +51,16 @@ pub fn start_counter() -> Result<(), JsValue> {
 /// Initialize the counter app and store it for use by present/listen.
 #[wasm_bindgen]
 pub fn init_counter() -> i32 {
-    COUNTER_DRIVER.with(|driver| {
+    COUNTER_APP.with(|state| {
         let app = demo::counter_app();
         let fonts = shell::load_system_fonts().expect("fonts should load in wasm");
-        let frame_driver = FrameDriver::from_parts(
+        let canvas = Canvas::new(demo::REFERENCE_WIDTH, demo::REFERENCE_HEIGHT, 1.0);
+        *state.borrow_mut() = Some(CounterState {
             app,
             fonts,
-            demo::REFERENCE_WIDTH,
-            demo::REFERENCE_HEIGHT,
-            1.0,
-        );
-        *driver.borrow_mut() = Some(frame_driver);
+            canvas,
+            memory: Memory::new(),
+        });
     });
     0
 }
@@ -61,15 +70,28 @@ pub fn init_counter() -> i32 {
 /// Called by JavaScript after events have been collected via `listen_counter`.
 #[wasm_bindgen]
 pub fn present_counter() {
-    COUNTER_DRIVER.with(|driver| {
-        let mut driver_borrow = driver.borrow_mut();
-        if let Some(driver) = driver_borrow.as_mut() {
+    COUNTER_APP.with(|state| {
+        if let Some(counter) = state.borrow_mut().as_mut() {
             let appearance = shell::get_appearance();
-            driver.set_appearance(appearance);
-            let _ = driver.step();
-            if driver.pixels_changed() {
-                let _ = shell::present(driver.canvas());
-            }
+            let theme = Theme::new(
+                appearance,
+                counter.fonts.ui_font(),
+                counter.fonts.mono_font(),
+            );
+
+            counter
+                .canvas
+                .clear_vertical(theme.palette.background, theme.palette.background_deep);
+
+            counter.app.frame(
+                &mut counter.canvas,
+                &mut counter.fonts,
+                &crate::input::Input::new(),
+                &mut counter.memory,
+                &theme,
+            );
+
+            let _ = shell::present(&counter.canvas);
         }
     })
 }
@@ -79,13 +101,15 @@ pub fn present_counter() {
 /// Called by JavaScript before each `present_counter` to apply user input.
 #[wasm_bindgen]
 pub fn listen_counter() {
-    COUNTER_DRIVER.with(|driver| {
-        if let Some(d) = driver.borrow_mut().as_mut() {
-            if let Ok(events) = d.collect_events() {
-                d.apply_events(events);
+    if let Ok(events) = shell::listen() {
+        COUNTER_APP.with(|state| {
+            if let Some(counter) = state.borrow_mut().as_mut() {
+                for event in events {
+                    counter.app.handle_event(event);
+                }
             }
-        }
-    })
+        })
+    }
 }
 
 /// Get the current frame count of the counter app's memory.
@@ -96,10 +120,9 @@ pub fn listen_counter() {
 /// reallocated fresh each frame, the counter would reset to 1 each time.
 #[wasm_bindgen]
 pub fn counter_frame_count() -> u64 {
-    COUNTER_DRIVER.with(|driver| {
-        let driver_borrow = driver.borrow();
-        if let Some(d) = driver_borrow.as_ref() {
-            d.frame_count()
+    COUNTER_APP.with(|state| {
+        if let Some(counter) = state.borrow().as_ref() {
+            counter.memory.frame_count()
         } else {
             0
         }
