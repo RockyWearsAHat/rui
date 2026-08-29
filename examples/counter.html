@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,33 +28,10 @@
 
         canvas {
             border: 1px solid #ccc;
-            background-color: white;
             display: block;
             margin: 0 auto;
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        button {
-            padding: 8px 16px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            background-color: white;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        button:hover {
-            background-color: #f0f0f0;
-        }
-
-        button:active {
-            background-color: #e0e0e0;
+            width: 960px;
+            height: 640px;
         }
 
         .info {
@@ -63,90 +41,37 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>rui Counter Example</h1>
-        <canvas id="surface" width="960" height="640"></canvas>
-        <div class="controls">
-            <button onclick="manualRedraw()">Redraw</button>
-            <button onclick="resetCounter()">Reset App</button>
-        </div>
-        <div class="info" id="status">Loading wasm module...</div>
+        <canvas id="surface"></canvas>
+        <div class="info" id="status">Loading wasm module…</div>
     </div>
 
     <script type="module">
-        // Import the wasm module
+        // The page's whole part in this: give the canvas a drawing buffer at the
+        // display's own resolution, and start the interface. There is no frame
+        // loop here — `start_counter` asks the browser for frames itself, the
+        // same way `run()` asks the platform for them on a desktop, and it
+        // returns as soon as the first one is scheduled.
         import init, * as rui from '/pkg/rui.js';
 
-        let wasmReady = false;
+        const surface = document.getElementById('surface');
+        const status = document.getElementById('status');
+        const scale = window.devicePixelRatio || 1;
+        surface.width = 960 * scale;
+        surface.height = 640 * scale;
 
-        async function initWasm() {
-            try {
-                await init();
-                wasmReady = true;
-
-                // Initialize the counter app
-                rui.init_counter();
-
-                document.getElementById('status').textContent = 'Counter initialized. Click buttons in canvas.';
-
-                // Start the frame loop
-                startFrameLoop();
-            } catch (error) {
-                console.error('Failed to initialize wasm:', error);
-                document.getElementById('status').textContent = 'Error: ' + error.message;
-            }
+        try {
+            await init();
+            rui.start_counter();
+            status.textContent = 'Running. The buttons are drawn by rui — click them.';
+        } catch (error) {
+            console.error('rui failed to start:', error);
+            status.textContent = 'Error: ' + error;
         }
-
-        function startFrameLoop() {
-            function frameLoop() {
-                if (!wasmReady) {
-                    requestAnimationFrame(frameLoop);
-                    return;
-                }
-
-                try {
-                    // Collect events from the browser
-                    rui.listen_counter();
-
-                    // Render and present the frame
-                    rui.present_counter();
-                } catch (error) {
-                    console.error('Frame loop error:', error);
-                    document.getElementById('status').textContent = 'Error: ' + error.message;
-                }
-
-                requestAnimationFrame(frameLoop);
-            }
-
-            requestAnimationFrame(frameLoop);
-        }
-
-        window.manualRedraw = function() {
-            if (!wasmReady) return;
-            try {
-                rui.listen_counter();
-                rui.present_counter();
-                console.log('Manual redraw completed');
-            } catch (error) {
-                console.error('Redraw error:', error);
-            }
-        };
-
-        window.resetCounter = function() {
-            if (!wasmReady) return;
-            try {
-                rui.init_counter();
-                rui.listen_counter();
-                rui.present_counter();
-                console.log('Counter reset');
-            } catch (error) {
-                console.error('Reset error:', error);
-            }
-        };
-
-        // Initialize wasm on page load
-        initWasm();
     </script>
 </body>
+
 </html>
