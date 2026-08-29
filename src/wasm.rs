@@ -12,9 +12,10 @@
 use crate::app::App;
 use crate::canvas::Canvas;
 use crate::demo::{self, Counter};
+use crate::input::Input;
 use crate::memory::Memory;
 use crate::shell;
-use crate::text::Fonts;
+use crate::text::{FontId, Fonts};
 use crate::theme::{Appearance, Theme};
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
@@ -26,8 +27,11 @@ thread_local! {
 struct CounterState {
     app: App<Counter>,
     fonts: Fonts,
+    ui_font: FontId,
+    mono_font: FontId,
     canvas: Canvas,
     memory: Memory,
+    input: Input,
 }
 
 /// Starts the counter and lets the library drive its own frames.
@@ -53,13 +57,20 @@ pub fn start_counter() -> Result<(), JsValue> {
 pub fn init_counter() -> i32 {
     COUNTER_APP.with(|state| {
         let app = demo::counter_app();
-        let fonts = shell::load_system_fonts().expect("fonts should load in wasm");
+        let shell::LoadedFonts {
+            fonts,
+            ui_font,
+            mono_font,
+        } = shell::load_system_fonts().expect("fonts should load in wasm");
         let canvas = Canvas::new(demo::REFERENCE_WIDTH, demo::REFERENCE_HEIGHT, 1.0);
         *state.borrow_mut() = Some(CounterState {
             app,
             fonts,
+            ui_font,
+            mono_font,
             canvas,
             memory: Memory::new(),
+            input: Input::new(),
         });
     });
     0
