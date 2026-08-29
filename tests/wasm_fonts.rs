@@ -6,6 +6,7 @@
 
 use rui::shell::load_system_fonts;
 use rui::testing::Harness;
+use rui::theme::{Appearance, Theme};
 use rui::{col, text, El};
 
 #[derive(Default)]
@@ -67,4 +68,28 @@ fn embedded_fonts_work_with_control_patterns() {
 
     // Verify we can identify dynamic content
     assert!(harness.shows("Settings"));
+}
+
+#[test]
+fn theme_construction_with_loaded_font_ids() {
+    // Load the embedded fonts via the shell module (WASM uses embedded, native uses system)
+    let loaded_fonts = load_system_fonts().expect("fonts should load");
+
+    // Verify that ui_font and mono_font FontIds can be used to construct a Theme
+    // This is what present_counter() does: Theme::new(appearance, counter.ui_font, counter.mono_font)
+    let theme_light = Theme::new(
+        Appearance::Light,
+        loaded_fonts.ui_font,
+        loaded_fonts.mono_font,
+    );
+    let theme_dark = Theme::new(
+        Appearance::Dark,
+        loaded_fonts.ui_font,
+        loaded_fonts.mono_font,
+    );
+
+    // Verify themes were constructed successfully with valid FontIds
+    // Both themes should be initialized with non-zero color values
+    assert!(theme_light.palette.background.r > 0);
+    assert!(theme_dark.palette.background.r > 0);
 }
