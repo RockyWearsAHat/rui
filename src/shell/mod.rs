@@ -7,6 +7,15 @@
 //! new platform is a few hundred lines against that surface and why a defect in
 //! a widget can never be a platform defect.
 //!
+//! # Coordinate System
+//!
+//! All coordinate events ([`Event`]) report positions in **window-logical units**,
+//! not device pixels or CSS pixels. Logical units are scaled by the display's DPI
+//! factor (obtained from [`Backend::surface`]'s scale factor), making coordinates
+//! platform-independent and consistent across different screen densities. Backends
+//! must apply DPI scaling before reporting any coordinate event to ensure the
+//! interface layer receives DPI-adjusted values.
+//!
 //! # The loop
 //!
 //! Wait for input, fold it into the frame's [`Input`], draw the whole interface,
@@ -149,6 +158,15 @@ impl From<FontError> for Error {
 /// Every method is about the platform rather than about the interface. Anything
 /// a backend could decide for itself — what a click means, where an element is —
 /// is decided above it.
+///
+/// # Coordinate System Contract
+///
+/// All events reported through [`Backend::pump`] must express coordinate values
+/// in **window-logical units**, accounting for the display's scale factor. This
+/// means coordinates are DPI-adjusted and platform-independent. The scale factor
+/// returned by [`Backend::surface`] converts between device pixels (the actual
+/// screen pixels) and logical units (what the interface layer sees). Backends
+/// must apply this conversion before reporting any coordinate event.
 trait Backend: Sized {
     /// Opens the window.
     fn open(options: &WindowOptions) -> Result<Self, Error>;
