@@ -1,9 +1,10 @@
 //! Verify that Recipe 1 documentation is accurate against the actual codebase.
 //!
 //! This test ensures that:
-//! - All commits mentioned in CLAUDE.md Recipe 1 exist
+//! - All commits mentioned in CLAUDE.md Recipe 1 exist (phase 1: clock abstraction, phase 2: frame driver, phase 3: WASM)
 //! - All files mentioned exist and are accessible
-//! - Key architectural elements (Backend trait, turn() function, run() implementations) exist at expected locations
+//! - Key architectural elements exist: Backend trait (6 methods), turn() function, continues() helper, Page struct, run() implementations, clock abstraction (Moment), WASM exports and backend implementation
+//! - Line number references in CLAUDE.md match current code locations
 
 use std::fs;
 use std::path::Path;
@@ -241,5 +242,25 @@ fn recipe_1_line_numbers_accurate() {
     assert!(
         lines[411..414].iter().any(|l| l.contains("wasm32")),
         "WASM run() at line 415 should be preceded by wasm32 cfg attribute"
+    );
+}
+
+#[test]
+fn recipe_1_continues_helper_exists() {
+    let content = fs::read_to_string("src/shell/mod.rs").expect("Failed to read src/shell/mod.rs");
+
+    assert!(
+        content.contains("fn continues<S>"),
+        "continues() helper function not found in src/shell/mod.rs"
+    );
+}
+
+#[test]
+fn recipe_1_page_struct_exists() {
+    let content = fs::read_to_string("src/shell/mod.rs").expect("Failed to read src/shell/mod.rs");
+
+    assert!(
+        content.contains("struct Page<S>"),
+        "Page struct not found in src/shell/mod.rs"
     );
 }
