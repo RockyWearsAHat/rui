@@ -68,6 +68,41 @@ All examples can be run with `cargo run -p rui --example <name>`. Each example d
 
 **Learning Path:** Start with `counter`, then `segmented` (to understand handlers), then `meter` (to understand passive widgets). Explore other examples as needed.
 
+## Test Suite
+
+All tests can be run with `cargo test`. The project includes 12 test files covering different aspects:
+
+| Test File | Purpose |
+|-----------|---------|
+| `setup.rs` | Verifies Rust version (1.85+) and pre-commit hook configuration. Run with `cargo test --test setup`. |
+| `layout.rs` | Unit tests for the flexbox-like layout engine; tests spacing, alignment, sizing. Run with `cargo test --test layout`. |
+| `rendering.rs` | Tests the rendering pipeline: colors, shapes, text layout, transformations. Run with `cargo test --test rendering`. |
+| `recipes.rs` | Widget examples and integration tests: checkbox, switch, slider, radio, tooltip, segmented control, meter. Run specific: `cargo test --test recipes -- slider` (tests all slider-related tests). |
+| `interaction.rs` | Event handling tests: clicks, drags, keyboard input, focus management. Run with `cargo test --test interaction -- --nocapture` to see output. |
+| `integration.rs` | End-to-end integration tests combining layout, rendering, and interaction. Run with `cargo test --test integration`. |
+| `external_driving.rs` | Frame-stepping tests without an event loop; verifies the frame driver abstraction. Used to test WASM compatibility. Run with `cargo test --test external_driving`. |
+| `recipe_1_verification.rs` | Verification gates for Recipe 1 (WASM Backend implementation). Confirms memory persistence and parity. Run with `cargo test --test recipe_1_verification`. |
+| `wasm_integration.rs` | Browser integration tests for WASM backend; run in Firefox with `wasm-pack test --headless --firefox`. |
+| `wasm_events.rs` | WASM-specific event handling tests (DOM events, mousemove, wheel, keyboard). Run with `wasm-pack test --headless --firefox`. |
+| `wasm_fonts.rs` | WASM font loading and text rendering tests. Run with `wasm-pack test --headless --firefox`. |
+| `wasm_parity.rs` | Pixel-perfect parity tests: compares WASM rendering to native reference frames (light and dark modes). Run with `cargo test --test wasm_parity`. |
+
+**Test Strategy:**
+
+- **Unit tests** (`cargo test --lib`): Fast, isolated tests of individual modules (layout, color, text, geom).
+- **Integration tests** (`tests/*.rs`): Full-stack tests using the `Harness` testing framework. Tests typically create a `Harness` with an app state and view function, then simulate user interactions (clicks, drags, keystrokes) and assert state changes.
+- **Platform tests** (`wasm_*.rs`): Browser-specific tests for WASM backend. Require Firefox and `wasm-pack`.
+- **Verification gates** (`recipe_1_verification.rs`): Ensure major features (WASM integration, platform backends) remain correct after changes.
+
+**Example: Running a single test**
+
+```bash
+cargo test --lib geometry                        # Run geometry unit tests
+cargo test --test recipes -- meter               # Run meter widget tests
+cargo test --test wasm_parity                    # Run WASM parity verification
+wasm-pack test --headless --firefox --test wasm_integration  # Run browser tests
+```
+
 ## WASM Backend
 
 **rui** includes a WebAssembly backend (`src/shell/platform/wasm.rs`), allowing the same UI code to run in a browser with no changes. The backend implements the `Backend` trait using DOM canvas rendering and `wasm-bindgen` for JavaScript interop.
@@ -771,6 +806,31 @@ Done. The widget is ready to use anywhere state is a Rust struct with a `rating`
 - **Verify the example exists:** Run `ls examples/` to list all examples. Spelling must match exactly.
 - **Run with output:** Use `cargo run -p rui --example counter 2>&1` to see stderr if anything goes wrong.
 - **Check platform requirements:** macOS examples need macOS, X11 examples need an X11 server, WASM examples need a browser and wasm-pack.
+
+### Platform-Specific Setup
+
+**macOS**
+
+- No additional setup required beyond Rust and Xcode Command Line Tools.
+- Verify Cocoa backend with: `cargo build` (native build defaults to macOS on Cocoa systems).
+
+**Windows**
+
+- No additional setup required beyond Rust (WinAPI is part of Windows SDK, linked by MSVC toolchain).
+- Verify WinAPI backend with: `cargo build` (native build defaults to Windows on Windows systems).
+
+**Linux (X11)**
+
+- **Requires X11 server:** Verify with `echo $DISPLAY`. If empty, X11 is not running. Start it or ensure you're in an X11 session (not Wayland, yet).
+- **X11 development headers:** Some distributions require X11 development headers. Install with `sudo apt-get install libx11-dev` (Ubuntu/Debian) or `sudo yum install libX11-devel` (RHEL/Fedora).
+- **Verify X11 backend builds:** `cargo build --target x86_64-unknown-linux-gnu` should succeed. If compilation fails with "X11 library not found", install development headers above.
+- **Cannot open display:** If you get `Error: cannot open display: (nil)`, ensure you're in an X11 session or set `DISPLAY=:0` before running examples.
+
+**Problem:** "cannot open display" or "X connection broken" errors on Linux
+
+- **Check X11 is running:** Run `echo $DISPLAY`. Should output `:0`, `:1`, etc. If empty, X11 is not available.
+- **Verify XServer installation:** On headless systems, install Xvfb (X Virtual Framebuffer) with `sudo apt-get install xvfb` (Ubuntu/Debian).
+- **Run in Xvfb:** `xvfb-run -a cargo run -p rui --example counter` to run without a physical display.
 
 ### WASM Backend
 
