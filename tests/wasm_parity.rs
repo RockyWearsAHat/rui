@@ -32,6 +32,26 @@ fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
 }
 
 #[test]
+fn reference_frames_generate_successfully() {
+    let light = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("light reference frame should render successfully");
+    let dark = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
+        .expect("dark reference frame should render successfully");
+
+    println!("Light frame: {}x{}", REFERENCE_WIDTH, REFERENCE_HEIGHT);
+    println!("Dark frame: {}x{}", REFERENCE_WIDTH, REFERENCE_HEIGHT);
+
+    assert!(
+        !light.pixels().is_empty(),
+        "light frame should contain pixels"
+    );
+    assert!(
+        !dark.pixels().is_empty(),
+        "dark frame should contain pixels"
+    );
+}
+
+#[test]
 fn parity_frames_available() {
     let frames = parity_frames();
     assert!(
