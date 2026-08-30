@@ -167,3 +167,36 @@ macro_rules! code {
         $crate::code(::std::format!($($argument)*))
     };
 }
+
+#[cfg(test)]
+mod wasm_parity_tests {
+    use crate::demo::{reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+    use crate::image;
+    use crate::Appearance;
+    use std::fs;
+    use std::path::PathBuf;
+
+    #[test]
+    fn wasm_parity_generates_reference() {
+        let temp_dir = PathBuf::from("/tmp/rui-wasm-parity");
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).expect("Failed to create temp directory");
+
+        for (name, appearance) in &[("light", Appearance::Light), ("dark", Appearance::Dark)] {
+            let canvas = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, *appearance)
+                .expect("Failed to generate reference frame");
+            let rgba = image::rgba(&canvas);
+            let png =
+                image::png(canvas.width(), canvas.height(), &rgba).expect("Failed to encode PNG");
+
+            let rgba_path = temp_dir.join(format!("parity-{}.rgba", name));
+            let png_path = temp_dir.join(format!("parity-{}.png", name));
+
+            fs::write(&rgba_path, rgba).expect("Failed to write RGBA file");
+            fs::write(&png_path, png).expect("Failed to write PNG file");
+
+            assert!(rgba_path.exists(), "RGBA file not created for {}", name);
+            assert!(png_path.exists(), "PNG file not created for {}", name);
+        }
+    }
+}
