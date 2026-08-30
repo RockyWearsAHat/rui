@@ -107,21 +107,33 @@ impl<'a> Painter<'a> {
         tone.into().resolve(self.theme)
     }
 
-    /// Fills a rectangle.
+    /// Fills a rectangle with a color.
+    ///
+    /// The rectangle coordinates are in **window-logical units** (DPI-adjusted,
+    /// not device pixels). The canvas will multiply by the display scale factor
+    /// when rendering to pixels.
     pub fn fill(&mut self, rect: Rect, radius: Radius, tone: impl Into<Tone>) {
         let color = self.color(tone);
         let corner = corner_of(radius, rect, self.theme);
         self.canvas.fill(rect, corner, color);
     }
 
-    /// Outlines one.
+    /// Outlines a rectangle with a stroke.
+    ///
+    /// The rectangle coordinates and thickness are in **window-logical units**
+    /// (DPI-adjusted, not device pixels). The canvas will multiply by the display
+    /// scale factor when rendering to pixels.
     pub fn stroke(&mut self, rect: Rect, radius: Radius, thickness: f32, tone: impl Into<Tone>) {
         let color = self.color(tone);
         let corner = corner_of(radius, rect, self.theme);
         self.canvas.stroke(rect, corner, thickness, color);
     }
 
-    /// Draws one line of text inside `rect`, cut short if it does not fit.
+    /// Draws one line of text inside a rectangle, cut short if it does not fit.
+    ///
+    /// The rectangle coordinates are in **window-logical units** (DPI-adjusted,
+    /// not device pixels). Text is automatically scaled by the display scale
+    /// factor when rendering.
     pub fn text(&mut self, rect: Rect, ink: Ink, align: Align, text: &str) {
         let style = ink.style(self.theme);
         draw_line(self.canvas, self.fonts, &style, rect, align, text, ink.bold);
