@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Rust 1.85+** (Edition 2021), verified by `tests/setup.rs`. Use `rustup update` if needed.
 - **No external dependencies**—the full renderer, font handling, and window management are in this crate.
 - **Platforms:** macOS (Cocoa), Windows (WinAPI), X11/Wayland (via X11 server).
-- **Pre-commit hook:** Runs `cargo fmt --check` and `cargo clippy` (`.git/hooks/pre-commit`). Executable after first git setup.
+- **Pre-commit hook:** Runs `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` (`.git/hooks/pre-commit`). Prevents commits with formatting issues or lint warnings. Executable after first git setup.
 
 ## Common Commands
 
@@ -765,7 +765,7 @@ Done. The widget is ready to use anywhere state is a Rust struct with a `rating`
 
 ## Git & CI
 
-- **Hook:** Pre-commit runs `cargo fmt --check` and `cargo clippy`. Bypass with `git commit --no-verify` only for emergencies (then fix the hook cause).
+- **Hook:** Pre-commit runs `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings`. Bypass with `git commit --no-verify` only for emergencies (then fix the hook cause).
 - **Cache/state files ignored:** `.cache/`, `.doc/index.db`, `.engine/` (build artifacts) are in `.gitignore`; working directory must stay clean.
 - **Commits:** Prefix with the platform or feature touched (e.g., "Add X11 input handling", "Refactor layout engine", "Improve text rendering").
 
@@ -790,7 +790,7 @@ Done. The widget is ready to use anywhere state is a Rust struct with a `rating`
 
 - **Read the failure message:** Each test includes an `assert!()` or assertion that tells you exactly what is failing.
 - **Run a single test:** Use `cargo test --lib test_name` to isolate and debug one test in detail.
-- **Example:** `cargo test --lib geometry --lib` runs only geometry-related unit tests.
+- **Example:** `cargo test --lib geometry` runs only geometry-related unit tests.
 
 **Problem:** `cargo test --test setup` fails
 
