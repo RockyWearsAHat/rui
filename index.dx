@@ -683,6 +683,46 @@ fn counter_increments_on_click() {
 
 ---
 
+## Developer Glossary
+
+**Backend** — Platform-specific window and event handler. Implements six methods: `open()`, `pump()`, `surface()`, `appearance()`, `present()`, `is_open()`. One per OS (macOS, Windows, X11, WASM). The shell event loop calls only these methods; everything above is platform-agnostic.
+
+**Canvas** — In-memory pixel buffer. Holds the current frame as RGBA pixels. `Canvas::draw()` is the root drawing operation. Tests create a canvas with no window via `Harness::new()`.
+
+**Element** (`El<S>`) — A UI element tree node. Describes structure, style, and behavior. Immutable; rebuilt every frame from state. Builders: `col()`, `row()`, `.on_click()`, `.fill()`, `.pad()`, etc.
+
+**Frame** — One rendered image. The entire cycle: collect input → call view → layout → paint → present to screen. Happens 60 times per second; every frame rebuilds the element tree from state.
+
+**Handler** — A function that mutates state in response to user input. Signature: `|app: &mut S| { … }`. Handlers receive mutable state as an argument, not closures. Called *after* the frame is rendered, so no re-entrancy.
+
+**Harness** — Test driver that renders a frame to a buffer without a window. `Harness::new(state, view)` creates a testable app. Methods: `click_text()`, `drag()`, `frame()`, `save_png()`. Used in `tests/recipes.rs`.
+
+**Identity** — An element's position in the tree. Preserved across frame rebuilds. Used to maintain hover/focus/scroll state. Can be explicit via `.key(&id)` or implicit from tree position.
+
+**Input** — The module that translates raw `Event` stream (platform events) into per-frame immediate-mode queries. `Input::on_frame()` is called once per frame to process accumulated events.
+
+**Layout Engine** — Flexbox-like algorithm in `layout.rs`. Measures elements (`Size`), then arranges them to a container (`Rect`). Supports `Length::Auto`, `Fixed(pixels)`, `Grow(weight)` for sizing; `Align` and `Justify` for positioning.
+
+**Memory** — Stateful interaction data: hover state, focus, scroll position, text caret, animation state. Keyed by element identity (path in tree or explicit `.key()`). Persists across frame rebuilds if identity is preserved.
+
+**Painter** — The drawing API. Methods: `fill(rect, radius, tone)`, `stroke(rect, radius, width, tone)`, `text(rect, string, size, color)`. Always used inside `draw()` primitives. Colors come from theme (never hardcoded RGB).
+
+**Role** (Tone) — Semantic color names: `Accent`, `Surface`, `Muted`, `Success`, `Warning`, `Error`. Mapped to actual RGB by the theme, respecting light/dark mode. Use roles, not hardcoded colors.
+
+**State** — Application data (a Rust struct). Immutable during frame rendering. Changed only by handlers. The entire UI rebuilds from state every frame (view is a pure function of state).
+
+**Synthetic Font** — A test font with predictable widths. Each character is 0.5 em wide (half an em), so text width = string length × 0.5 em. Ensures tests are deterministic (no platform font variations).
+
+**Tone** — Semantic color role. See `Role`.
+
+**Turn** — One frame iteration. The `turn()` function in `shell/mod.rs` (lines 325–358) is the frame-stepping abstraction: collect input → call view → layout → paint → check pixels → animate. Called once per frame on all platforms (60 fps on desktop, `requestAnimationFrame` on WASM).
+
+**View** — A pure function that returns an `El<S>` from application state. Signature: `fn view(app: &App) -> El<App> { … }`. Called every frame; rebuilds the entire UI description. No side effects.
+
+**Visual State** — Transient appearance state: hover (mouse over), focus (has keyboard focus), held (button pressed), disabled (not clickable). Tracked by `Visual` in `paint.rs`. Flows from input to paint without being stored in app state.
+
+---
+
 **Last Updated:** 2026-08-30
 **Rust Version:** 1.85+ (Edition 2021)
 **Platforms:** macOS (Cocoa), Windows (WinAPI), X11/Wayland, WASM
