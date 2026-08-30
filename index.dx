@@ -253,6 +253,24 @@ test result: ok. 260 passed; 0 failed; 0 ignored
 rustc 1.85.0 (4d6fed7f5 2025-02-20)
 ::
 
+## Quick Reference: Finding What You Need
+
+| Question | Answer | File |
+|----------|--------|------|
+| Where do I start? | Read the counter example to understand state → view → handlers | `examples/counter.rs` |
+| How do I test? | Use `Harness::new(state, view)` to drive the UI without a window | `tests/recipes.rs` |
+| How do I add a widget? | Copy `segmented.rs` (interactive) or `meter.rs` (passive) and modify | `examples/segmented.rs` |
+| How does the frame loop work? | The `turn()` function in `shell/mod.rs` lines 325–358 | `src/shell/mod.rs:325` |
+| How does layout work? | The flexbox-like engine in `layout.rs` measures and arranges elements | `src/layout.rs` |
+| How does rendering work? | `Painter` API fills/strokes shapes; `Canvas` manages pixels | `src/paint.rs` |
+| How do I handle input? | Handlers: `.on_click(\|app: &mut S\| ...)` receive mutable state | `src/widgets.rs` |
+| How are colors managed? | Tones (semantic roles) map to actual colors; `light`/`dark` modes | `src/theme.rs` |
+| How does memory persist? | `Memory` keyed by element path; use `.key()` for identity in lists | `src/memory.rs` |
+| How do platforms differ? | Six-method `Backend` trait; platform-specific code in `shell/platform/*.rs` | `src/shell/mod.rs:152` |
+| How do I add a platform? | Implement `Backend` in new `shell/platform/new.rs` | `src/shell/platform/wasm.rs` |
+| How does WASM work? | Same `turn()`, scheduled via `requestAnimationFrame` | `src/shell/mod.rs:415` |
+| How do I verify WASM parity? | Build native reference, `wasm-pack build`, open `examples/parity.html` | `examples/parity.rs` |
+
 ## Git Workflow
 
 - Pre-commit hook: Runs `cargo fmt --check` and `cargo clippy`. Bypass only in emergencies with `--no-verify`.
