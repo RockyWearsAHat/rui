@@ -92,7 +92,8 @@ pub struct Probe {
     pub key: Option<String>,
     /// The text it holds, if it is a run of text or a field.
     pub text: Option<String>,
-    /// Where the layout put it, in logical units.
+    /// Where the layout put it, in **window-logical units** (DPI-adjusted, not
+    /// device pixels).
     pub rect: Rect,
     /// Whether it was drawn dimmed and ignoring events.
     pub disabled: bool,
@@ -260,6 +261,10 @@ impl<S: 'static> Harness<S> {
     }
 
     /// Moves the pointer, and draws the frame that notices.
+    ///
+    /// The point is in **window-logical units**, accounting for DPI scaling. This
+    /// matches the coordinate system contract that all coordinate events report
+    /// in window-logical units, never device pixels or CSS pixels.
     pub fn move_pointer(&mut self, to: Point) -> &mut Self {
         self.event(Event::PointerMoved(to)).frame()
     }
@@ -270,6 +275,9 @@ impl<S: 'static> Harness<S> {
     }
 
     /// Presses and releases at a point, and draws the frame that answers.
+    ///
+    /// The point is in **window-logical units**, accounting for DPI scaling,
+    /// matching the coordinate system contract for all coordinate events.
     pub fn click(&mut self, at: Point) -> &mut Self {
         self.event(Event::PointerDown {
             position: at,
@@ -283,6 +291,9 @@ impl<S: 'static> Harness<S> {
     }
 
     /// The same with the secondary button.
+    ///
+    /// The point is in **window-logical units**, accounting for DPI scaling,
+    /// matching the coordinate system contract for all coordinate events.
     pub fn secondary_click(&mut self, at: Point) -> &mut Self {
         self.event(Event::PointerDown {
             position: at,
@@ -296,6 +307,9 @@ impl<S: 'static> Harness<S> {
     }
 
     /// Presses the pointer down and holds it, without releasing.
+    ///
+    /// The point is in **window-logical units**, accounting for DPI scaling,
+    /// matching the coordinate system contract for all coordinate events.
     pub fn press(&mut self, at: Point) -> &mut Self {
         self.event(Event::PointerDown {
             position: at,
@@ -305,6 +319,9 @@ impl<S: 'static> Harness<S> {
     }
 
     /// Moves the pointer while it is held down: one frame of a drag.
+    ///
+    /// The point is in **window-logical units**, accounting for DPI scaling,
+    /// matching the coordinate system contract for all coordinate events.
     pub fn drag_to(&mut self, to: Point) -> &mut Self {
         self.event(Event::PointerMoved(to)).frame()
     }
@@ -324,6 +341,9 @@ impl<S: 'static> Harness<S> {
     /// Three frames, because that is what it is — a press, a move, and a
     /// release cannot arrive in one, and a control that only works when they do
     /// is a control that does not work.
+    ///
+    /// Both points are in **window-logical units**, accounting for DPI scaling,
+    /// matching the coordinate system contract for all coordinate events.
     pub fn drag(&mut self, from: Point, to: Point) -> &mut Self {
         self.press(from).drag_to(to).release()
     }
