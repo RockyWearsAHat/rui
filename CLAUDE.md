@@ -391,7 +391,7 @@ See `tests/recipes.rs` for reference implementations of common controls (`checkb
 
 ### Recipe 1: Adding a WASM Backend
 
-**Commits:** 17 total from 77d4780 to 2df7f1c, grouped in three phases: clock abstraction, FrameDriver refactor, and WASM integration.
+**Commits:** 18 total from 77d4780 to 2df7f1c (1 base + 17 subsequent), grouped in three phases: clock abstraction, FrameDriver refactor, and WASM integration.
 
 The WASM backend allows the same UI code to run in a browser with no changes to the view function. The implementation required three coordinated changes to the shell:
 
