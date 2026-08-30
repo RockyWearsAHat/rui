@@ -220,7 +220,7 @@ The widget is built entirely from primitives; see `src/widgets.rs` line 333–36
 
 **Verification:**
 - Run the example: `cargo run -p rui --example segmented`
-- Inspect the test: `tests/recipes.rs` line 386 shows `a_segmented_control_changes_selection_when_clicked`
+- Inspect the test: `tests/recipes.rs` line 410 shows `a_segmented_control_changes_selection_when_clicked`
 - Copy the entire pattern to build new controls: state type → view function → handler closure
 
 **Getting Started: Copy and Modify**
@@ -361,7 +361,7 @@ The meter is a draw primitive showing a filled rectangle inside a track; see `sr
 
 **Verification:**
 - Run the example: `cargo run -p rui --example meter`
-- Inspect the test: `tests/recipes.rs` line 427 shows `a_meter_displays_progress_as_a_fraction`
+- Inspect the test: `tests/recipes.rs` line 451 shows `a_meter_displays_progress_as_a_fraction`
 - The meter renders at any fraction value; display behavior is deterministic
 
 **Key difference from segmented:**
