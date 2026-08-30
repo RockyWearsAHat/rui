@@ -659,7 +659,14 @@ impl Window {
         }
     }
 
-    /// A position in the window, in logical units.
+    /// A position in the window, in window-logical units.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// Returns coordinates in **window-logical units**, not device pixels.
+    /// X11 device pixel coordinates are divided by the display's scale factor
+    /// to produce platform-independent logical units used throughout rui's layout,
+    /// rendering, and event handling.
     fn position(&self, x: c_int, y: c_int) -> Point {
         Point::new(x as f32 / self.scale, y as f32 / self.scale)
     }

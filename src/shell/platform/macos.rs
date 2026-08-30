@@ -833,7 +833,16 @@ impl Window {
         }
     }
 
-    /// Where an event happened, in logical units from the top left.
+    /// Where an event happened, in window-logical units from the top left.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// Returns coordinates in **window-logical units**, not device pixels.
+    /// These coordinates account for the display's scale factor and are the same
+    /// units used throughout rui's layout, rendering, and event handling.
+    ///
+    /// AppKit measures y-coordinates from the bottom of the content area,
+    /// while rui measures from the top, so this function flips the y-coordinate.
     fn pointer_position(&self, event: Object) -> Point {
         let location: CgPoint = unsafe { send(event, sel(c"locationInWindow")) };
         // AppKit measures up from the bottom of the content area; everything
