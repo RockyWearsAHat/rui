@@ -254,7 +254,7 @@ To build your own widget from this exemplar:
    cargo run -p rui --example my_control
    ```
 
-5. **Write a test to verify it works (copy from `tests/recipes.rs` line 386):**
+5. **Write a test to verify it works (copy from `tests/recipes.rs` line 410):**
    ```rust
    #[test]
    fn my_control_changes_state_when_clicked() {
@@ -300,7 +300,7 @@ Once you understand this exemplar, here are common next steps:
    }))
    ```
 
-4. **Connect to the test:** Copy `tests/recipes.rs` line 386 as a template for verifying your custom control.
+4. **Connect to the test:** Copy `tests/recipes.rs` line 410 as a template for verifying your custom control.
 
 5. **Explore other controls:** Look at `checkbox`, `switch`, `slider`, `radio` in `tests/recipes.rs`. Each follows the same state-view-handler pattern.
 
