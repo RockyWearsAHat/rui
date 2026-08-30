@@ -30,6 +30,9 @@ cargo build --release                           # Optimized build
 cargo run -p rui --example counter               # Interactive counter app
 cargo run -p rui --example controls              # Control showcase with checkbox, slider, etc.
 cargo run -p rui --example gallery -- .          # Render every UI element to PNG (no window)
+cargo run -p rui --example segmented             # Segmented control exemplar (copy & modify template)
+cargo run -p rui --example meter                 # Meter widget exemplar (passive display-only)
+cargo run -p rui --example parity -- target/parity  # Build native reference frame for WASM parity test
 
 # Test
 cargo test                                       # Run all tests
@@ -37,6 +40,7 @@ cargo test --test setup                          # Verify Rust version and pre-c
 cargo test --lib                                 # Unit tests only
 cargo test --test interaction -- --nocapture     # Run one test file with output
 cargo test --test integration                    # Run integration tests
+cargo test --test recipes -- widget_name         # Run a specific widget test (e.g., segmented_control)
 
 # Format & Lint
 cargo fmt                                        # Auto-format all code
@@ -46,6 +50,23 @@ cargo clippy                                     # Run linter
 # Documentation
 cargo doc --no-deps --open                       # Generate and open docs
 ```
+
+## Examples Directory
+
+All examples can be run with `cargo run -p rui --example <name>`. Each example demonstrates a different aspect of the library:
+
+| Example | Purpose |
+|---------|---------|
+| `counter` | The simplest app: increment/decrement with persistent state. Entry point for learning rui. |
+| `controls` | Showcase of built-in widgets: button, checkbox, slider, segmented control, etc. |
+| `gallery` | Renders every UI element to PNG files (no window). Used to verify visual appearance without launching an app. |
+| `segmented` | Exemplar: a minimal, self-contained choice selector (33 lines). Copy and modify to build new interactive controls. |
+| `meter` | Exemplar: a passive progress bar showing how to build read-only widgets. |
+| `parity` | Builds a native reference frame for pixel-perfect WASM backend comparison. |
+| `icon` | Generates macOS `.iconset` and `.icns` app icons by drawing them at all required sizes. |
+| `segmented_modified` | Verification that the documented "Copy and Modify" path from CLAUDE.md actually works. |
+
+**Learning Path:** Start with `counter`, then `segmented` (to understand handlers), then `meter` (to understand passive widgets). Explore other examples as needed.
 
 ## WASM Backend
 
