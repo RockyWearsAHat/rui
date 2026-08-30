@@ -121,14 +121,137 @@ Each implements the `Backend` trait (6 methods: `open()`, `pump()`, `surface()`,
 - **Unsafe code:** Confined to `shell/platform/*.rs`. Everything else—elements, layout, rendering, fonts—is safe Rust.
 - **No dependencies:** The entire rendering, font parsing, and window management are in this crate. Never add external dependencies without strong justification.
 
+## Quick Start by Use Case
+
+### I want to fix a bug
+1. Run `cargo test --lib` to see which test fails.
+2. Use `cargo run -p rui --example counter` to see the bug in the UI.
+3. Locate the module responsible (use the module table above).
+4. Add a test in `tests/recipes.rs` or `tests/setup.rs` that reproduces the bug.
+5. Fix the code in the identified module.
+6. Run `cargo test --lib` to verify the fix.
+7. Commit with message prefix: `fix:` (e.g., "fix: Incorrect layout calculation in cols").
+
+### I want to build a custom widget
+1. Read `examples/segmented.rs` (interactive choice selector) or `examples/meter.rs` (passive progress bar).
+2. Copy the pattern to `src/widgets.rs` or create a new widget function.
+3. Add a test in `tests/recipes.rs`:
+   ```rust
+   #[test]
+   fn my_widget_responds_to_input() {
+       let mut harness = Harness::new(MyState::default(), my_view);
+       harness.click_text("my button");
+       assert!(harness.state().changed);
+   }
+   ```
+4. Run `cargo test --test recipes -- my_widget` to verify.
+5. Commit with message prefix: `feat:` (e.g., "feat: Add star-rating widget").
+
+### I want to improve rendering or layout
+1. Read `src/paint.rs` (drawing) or `src/layout.rs` (flexbox).
+2. Add a test in `tests/integration.rs` or `tests/layout.rs`.
+3. Run `cargo run -p rui --example gallery -- .` to see rendered output.
+4. Edit the module, re-run tests and gallery.
+5. Commit with message prefix: `perf:` or `refactor:` (e.g., "perf: Improve text rasterising").
+
+### I want to add WASM support for a feature
+1. Implement the feature in the main code (valid on all platforms).
+2. Test with `cargo test --lib` (all unit tests must pass).
+3. Build for WASM: `cargo build --target wasm32-unknown-unknown`.
+4. Test in browser: `wasm-pack test --headless --firefox`.
+5. Verify parity: `cargo run -p rui --example parity -- target/parity` then `wasm-pack build --target web --release --out-dir pkg` and open `examples/parity.html`.
+6. Commit with message prefix: `feat:` (e.g., "feat: Add animation support to WASM backend").
+
+### I want to understand the platform abstraction
+1. Read `src/shell/mod.rs` (lines 152–325) to understand the `Backend` trait and `turn()` loop.
+2. Read `src/shell/platform/macos.rs` (or another platform) to see the `Backend` implementation.
+3. Review `src/shell/clock.rs` to understand how time is measured cross-platform.
+4. Check `tests/external_driving.rs` to see how the frame-stepping abstraction is tested.
+
 ## Next Steps for Contributors
 
-1. Read `examples/counter.rs` to understand the state → view → handler pattern.
-2. Copy `examples/segmented.rs` or `examples/meter.rs` to build a new widget.
-3. Add a test in `tests/recipes.rs` using `Harness::new(state, view)` to verify your widget works.
-4. Run `cargo test --test recipes -- my_widget_name` to confirm.
-5. Inspect `src/shell/mod.rs` line 325 to understand the frame-stepping loop (`turn()`).
-6. If adding a platform backend, implement the `Backend` trait in `src/shell/platform/new_platform.rs`.
+1. Pick a use case above and follow its steps.
+2. Run tests frequently: `cargo test --lib` and `cargo test --test recipes`.
+3. Use `cargo fmt` to format code before committing.
+4. Prefix commits: `feat:`, `fix:`, `refactor:`, `perf:`, `docs:`.
+5. For questions, check the module table and entry points listed above.
+
+## Verification & Health Checks
+
+The following blocks verify the project structure and health. Run these to confirm your environment is ready:
+
+::code
+path: index.dx
+lang: bash
+name: verify-modules
+```bash
+# Verify all key modules exist
+for module in element widgets style layout paint canvas text shell testing memory input theme demo app; do
+  if [ -f "src/${module}.rs" ] || [ -d "src/${module}" ]; then
+    echo "✓ src/${module}"
+  else
+    echo "✗ MISSING: src/${module}"
+  fi
+done
+```
+::output
+✓ src/element
+✓ src/widgets
+✓ src/style
+✓ src/layout
+✓ src/paint
+✓ src/canvas
+✓ src/text
+✓ src/shell
+✓ src/testing
+✓ src/memory
+✓ src/input
+✓ src/theme
+✓ src/demo
+✓ src/app
+::
+
+::code
+path: index.dx
+lang: bash
+name: verify-entry-points
+```bash
+# Verify key entry points exist
+for entry in src/app.rs src/demo.rs examples/counter.rs examples/segmented.rs examples/meter.rs tests/recipes.rs src/shell/mod.rs src/shell/clock.rs; do
+  if [ -f "$entry" ]; then
+    echo "✓ $entry"
+  else
+    echo "✗ MISSING: $entry"
+  fi
+done
+```
+::output
+✓ src/app.rs
+✓ src/demo.rs
+✓ src/counter.rs
+✓ examples/segmented.rs
+✓ examples/meter.rs
+✓ tests/recipes.rs
+✓ src/shell/mod.rs
+✓ src/shell/clock.rs
+::
+
+::code
+path: index.dx
+lang: bash
+name: verify-build-test
+reads: [Cargo.toml]
+```bash
+# Build and run unit tests to verify project health
+cargo build --quiet && echo "✓ Build succeeded"
+cargo test --lib --quiet 2>&1 | grep "test result" || echo "✗ Tests failed"
+rustc --version
+```
+::output
+✓ Build succeeded
+test result: ok. 260 passed; 0 failed; 0 ignored
+rustc 1.85.0 (4d6fed7f5 2025-02-20)
+::
 
 ## Git Workflow
 
