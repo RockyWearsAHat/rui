@@ -12,6 +12,7 @@
 //! 5. Event ordering and queue semantics
 //! 6. State mutation consistency for identical event sequences
 
+use rui::input::{Event, Input, Key, Modifiers, PointerButton};
 use rui::testing::Harness;
 use rui::{col, text, El, Point};
 
@@ -221,5 +222,387 @@ fn input_state_is_valid_before_any_events() {
     assert!(
         pos.x >= 0.0 && pos.y >= 0.0,
         "pointer should have valid coordinates before any events"
+    );
+}
+
+// ============================================================================
+// KEYBOARD EVENT CONSISTENCY
+// ============================================================================
+
+/// Verify keyboard events are properly delivered through Input state.
+/// Keys pressed should be queryable via key_pressed() and appear in keys().
+#[test]
+fn keyboard_events_are_consistently_delivered() {
+    #[derive(Clone, Debug, PartialEq, Default)]
+    struct KeyboardApp {
+        last_text: String,
+        key_count: usize,
+    }
+
+    let harness = Harness::new(KeyboardApp::default(), |app| {
+        col((
+            text("Keyboard Test"),
+            text(format!("Keys: {}", app.key_count)),
+            text(&app.last_text),
+        ))
+    });
+
+    // Simulate a keyboard event
+    let input = harness.input();
+    let initial_key_count = input.keys().len();
+    assert_eq!(
+        initial_key_count, 0,
+        "input should start with no keys pressed"
+    );
+
+    // Apply a keyboard event via the harness
+    // (We simulate this via direct Input manipulation to test the Input state machine)
+    let mut input_state = Input::new();
+    input_state.apply(Event::KeyDown {
+        key: Key::Character('a'),
+        modifiers: Modifiers::NONE,
+    });
+
+    let keys = input_state.keys();
+    assert_eq!(keys.len(), 1, "key event should be recorded");
+    assert!(
+        input_state.key_pressed(Key::Character('a')),
+        "key_pressed should return true"
+    );
+}
+
+/// Verify text input events accumulate in Input state.
+#[test]
+fn text_input_events_accumulate_in_input_state() {
+    let mut input = Input::new();
+
+    input.apply(Event::Text("Hello".to_string()));
+    assert_eq!(input.text(), "Hello", "text should be accumulated");
+
+    input.apply(Event::Text(" ".to_string()));
+    assert_eq!(input.text(), "Hello ", "text should continue accumulating");
+
+    input.apply(Event::Text("World".to_string()));
+    assert_eq!(
+        input.text(),
+        "Hello World",
+        "text concatenation should work"
+    );
+
+    input.begin_frame();
+    assert_eq!(input.text(), "", "text should clear at frame start");
+}
+
+// ============================================================================
+// MULTI-BUTTON POINTER CONSISTENCY
+// ============================================================================
+
+/// Verify all three pointer buttons are tracked independently.
+/// Pressing multiple buttons should not interfere with each other.
+#[test]
+fn all_pointer_buttons_tracked_independently() {
+    let mut input = Input::new();
+
+    // Press primary button
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+    assert!(
+        input.held(PointerButton::Primary),
+        "primary button should be held"
+    );
+    assert!(
+        input.pressed(PointerButton::Primary),
+        "primary button should be marked pressed"
+    );
+
+    input.begin_frame();
+
+    // Press secondary button while primary is still held
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Secondary,
+    });
+
+    assert!(
+        input.held(PointerButton::Primary),
+        "primary should still be held"
+    );
+    assert!(
+        !input.pressed(PointerButton::Primary),
+        "primary should not be marked pressed in new frame"
+    );
+    assert!(
+        input.held(PointerButton::Secondary),
+        "secondary should be held"
+    );
+    assert!(
+        input.pressed(PointerButton::Secondary),
+        "secondary should be marked pressed"
+    );
+
+    // Release primary button
+    input.begin_frame();
+    input.apply(Event::PointerUp {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+
+    assert!(
+        !input.held(PointerButton::Primary),
+        "primary should no longer be held"
+    );
+    assert!(
+        input.held(PointerButton::Secondary),
+        "secondary should still be held"
+    );
+    assert!(
+        input.released(PointerButton::Primary),
+        "primary should be marked released"
+    );
+}
+
+// ============================================================================
+// MODIFIER KEY CONSISTENCY
+// ============================================================================
+
+/// Verify modifier keys are correctly tracked across events.
+#[test]
+fn modifier_keys_are_consistently_tracked() {
+    let mut input = Input::new();
+
+    let mods_with_shift = Modifiers {
+        shift: true,
+        control: false,
+        alt: false,
+        command: false,
+    };
+
+    input.apply(Event::KeyDown {
+        key: Key::Character('a'),
+        modifiers: mods_with_shift,
+    });
+
+    assert_eq!(
+        input.modifiers(),
+        mods_with_shift,
+        "modifiers should be recorded"
+    );
+
+    let keys = input.keys();
+    assert_eq!(keys.len(), 1, "one key press recorded");
+    let (key, mods) = keys[0];
+    assert_eq!(key, Key::Character('a'), "key should be 'a'");
+    assert_eq!(mods, mods_with_shift, "modifiers should be Shift only");
+}
+
+// ============================================================================
+// POINTER LEFT CONSISTENCY
+// ============================================================================
+
+/// Verify pointer_inside state is correctly updated when pointer leaves window.
+#[test]
+fn pointer_inside_flag_tracks_window_presence() {
+    let mut input = Input::new();
+
+    // Initially, pointer is not inside
+    assert!(
+        !input.pointer_inside(),
+        "pointer should not be inside initially"
+    );
+
+    // Pointer moves inside
+    input.apply(Event::PointerMoved(Point::new(100.0, 100.0)));
+    assert!(
+        input.pointer_inside(),
+        "pointer should be inside after move"
+    );
+
+    // Pointer leaves
+    input.apply(Event::PointerLeft);
+    assert!(
+        !input.pointer_inside(),
+        "pointer should not be inside after PointerLeft"
+    );
+
+    // Pointer re-enters
+    input.apply(Event::PointerMoved(Point::new(200.0, 200.0)));
+    assert!(
+        input.pointer_inside(),
+        "pointer should be inside after re-entering"
+    );
+}
+
+// ============================================================================
+// SCROLL EVENT ACCUMULATION
+// ============================================================================
+
+/// Verify scroll events accumulate within a frame and reset correctly.
+#[test]
+fn scroll_events_accumulate_and_reset_correctly() {
+    let mut input = Input::new();
+
+    // Initial scroll should be zero
+    let (sx, sy) = input.scroll();
+    assert_eq!(sx, 0.0, "initial x scroll is 0");
+    assert_eq!(sy, 0.0, "initial y scroll is 0");
+
+    // Apply first scroll event
+    input.apply(Event::Scrolled { x: 10.0, y: 20.0 });
+    let (sx, sy) = input.scroll();
+    assert_eq!(sx, 10.0, "x scroll should accumulate");
+    assert_eq!(sy, 20.0, "y scroll should accumulate");
+
+    // Apply second scroll event in same frame
+    input.apply(Event::Scrolled { x: 5.0, y: -10.0 });
+    let (sx, sy) = input.scroll();
+    assert_eq!(sx, 15.0, "x scroll should continue accumulating");
+    assert_eq!(sy, 10.0, "y scroll should continue accumulating");
+
+    // Frame boundary: begin_frame clears scroll
+    input.begin_frame();
+    let (sx, sy) = input.scroll();
+    assert_eq!(sx, 0.0, "x scroll should reset at frame start");
+    assert_eq!(sy, 0.0, "y scroll should reset at frame start");
+
+    // New scroll event after reset
+    input.apply(Event::Scrolled { x: 3.0, y: 7.0 });
+    let (sx, sy) = input.scroll();
+    assert_eq!(sx, 3.0, "new frame scroll should accumulate from zero");
+    assert_eq!(sy, 7.0, "new frame scroll should accumulate from zero");
+}
+
+// ============================================================================
+// CLOSE REQUEST EVENT CONSISTENCY
+// ============================================================================
+
+/// Verify CloseRequested event is properly tracked in Input state.
+#[test]
+fn close_requested_event_tracked_correctly() {
+    let mut input = Input::new();
+
+    assert!(
+        !input.close_requested(),
+        "close should not be requested initially"
+    );
+
+    input.apply(Event::CloseRequested);
+    assert!(
+        input.close_requested(),
+        "close should be requested after event"
+    );
+
+    // Note: close_requested is NOT cleared by begin_frame in the current design,
+    // as closing is terminal. This test documents that behavior.
+}
+
+// ============================================================================
+// DRAG ORIGIN TRACKING
+// ============================================================================
+
+/// Verify press_origin is correctly recorded for each button.
+/// Drag detection requires knowing where the press *started*.
+#[test]
+fn press_origin_is_tracked_per_button() {
+    let mut input = Input::new();
+
+    let origin = Point::new(100.0, 150.0);
+    input.apply(Event::PointerDown {
+        position: origin,
+        button: PointerButton::Primary,
+    });
+
+    assert_eq!(
+        input.press_origin(PointerButton::Primary),
+        Some(origin),
+        "press origin should be recorded"
+    );
+
+    input.begin_frame();
+
+    // Pointer moves; press origin should persist
+    input.apply(Event::PointerMoved(Point::new(200.0, 250.0)));
+    assert_eq!(
+        input.press_origin(PointerButton::Primary),
+        Some(origin),
+        "press origin should persist across move"
+    );
+
+    // Button released
+    input.apply(Event::PointerUp {
+        position: Point::new(200.0, 250.0),
+        button: PointerButton::Primary,
+    });
+
+    // Press origin persists after release (for drag detection on subsequent presses)
+    assert_eq!(
+        input.press_origin(PointerButton::Primary),
+        Some(origin),
+        "press origin should persist after release for drag detection"
+    );
+
+    // Press origin only gets overwritten with a new press
+    let new_origin = Point::new(300.0, 350.0);
+    input.apply(Event::PointerDown {
+        position: new_origin,
+        button: PointerButton::Primary,
+    });
+
+    assert_eq!(
+        input.press_origin(PointerButton::Primary),
+        Some(new_origin),
+        "press origin should be updated with new press"
+    );
+}
+
+// ============================================================================
+// COMPLEX EVENT SEQUENCES
+// ============================================================================
+
+/// Verify a realistic event stream with mixed event types.
+/// Simulates a user typing text while moving the pointer.
+#[test]
+fn complex_mixed_event_sequences_handled_consistently() {
+    let mut input = Input::new();
+
+    // User moves pointer to a text field
+    input.apply(Event::PointerMoved(Point::new(150.0, 200.0)));
+    assert_eq!(
+        input.pointer(),
+        Point::new(150.0, 200.0),
+        "pointer position should be set"
+    );
+
+    // User clicks the field
+    input.apply(Event::PointerDown {
+        position: Point::new(150.0, 200.0),
+        button: PointerButton::Primary,
+    });
+    assert!(
+        input.pressed(PointerButton::Primary),
+        "button should be pressed"
+    );
+
+    // User releases
+    input.begin_frame();
+    input.apply(Event::PointerUp {
+        position: Point::new(150.0, 200.0),
+        button: PointerButton::Primary,
+    });
+
+    // User types text
+    input.begin_frame();
+    input.apply(Event::Text("Hello".to_string()));
+    input.apply(Event::KeyDown {
+        key: Key::Space,
+        modifiers: Modifiers::NONE,
+    });
+    input.apply(Event::Text(" World".to_string()));
+
+    assert_eq!(input.text(), "Hello World", "text should be accumulated");
+    assert!(
+        input.key_pressed(Key::Space),
+        "space key should be recorded"
     );
 }
