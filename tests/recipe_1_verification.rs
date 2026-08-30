@@ -264,3 +264,25 @@ fn recipe_1_page_struct_exists() {
         "Page struct not found in src/shell/mod.rs"
     );
 }
+
+#[test]
+fn recipe_1_continues_called_in_native_loop() {
+    let content = fs::read_to_string("src/shell/mod.rs").expect("Failed to read src/shell/mod.rs");
+
+    // Verify continues() is called in the native run() loop (while continues(...))
+    assert!(
+        content.contains("while continues(&window, &surface, &app)"),
+        "continues() not called in native run() loop"
+    );
+}
+
+#[test]
+fn recipe_1_page_used_in_wasm_loop() {
+    let content = fs::read_to_string("src/shell/mod.rs").expect("Failed to read src/shell/mod.rs");
+
+    // Verify Page struct is created and used in WASM run()
+    assert!(
+        content.contains("let page = Rc::new(RefCell::new(Some(Page {"),
+        "Page struct not instantiated in WASM run()"
+    );
+}
