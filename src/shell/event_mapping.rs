@@ -87,15 +87,28 @@ pub fn normalize_wheel_delta(delta_x: f64, delta_y: f64, delta_mode: u32) -> (f3
     ((delta_x * multiplier) as f32, (delta_y * multiplier) as f32)
 }
 
-/// Converts a pointer event's viewport-relative position into the canvas's own
-/// drawing units.
+/// Converts a pointer event's viewport-relative position into window-logical units.
 ///
-/// `client_x`/`client_y` come straight off the DOM event; `rect_left`/`rect_top`
-/// are the canvas's position in the viewport; `rect_width`/`rect_height` are its
-/// displayed size (CSS pixels); `buffer_width`/`buffer_height` are its drawing
-/// buffer size; `scale` is the display's device pixel ratio. x and y are scaled
-/// independently — width against width, height against height — since a canvas
-/// need not be scaled the same on both axes.
+/// This function performs the coordinate system transformation from viewport coordinates
+/// (with DOM scale factors applied) to the platform-independent window-logical units
+/// that rui uses throughout.
+///
+/// # Coordinate System Contract
+///
+/// The returned coordinates are in **window-logical units**, accounting for the display's
+/// scale factor (DPI scaling). These are the same units used throughout rui's layout,
+/// rendering, and event handling—never device pixels or CSS pixels.
+///
+/// # Parameters
+///
+/// - `client_x`/`client_y`: Position from the DOM event (viewport coordinates)
+/// - `rect_left`/`rect_top`: Canvas position in the viewport
+/// - `rect_width`/`rect_height`: Canvas displayed size (CSS pixels)
+/// - `buffer_width`/`buffer_height`: Canvas drawing buffer size
+/// - `scale`: Display's device pixel ratio
+///
+/// x and y are scaled independently — width against width, height against height —
+/// since a canvas need not be scaled the same on both axes.
 #[allow(clippy::too_many_arguments)]
 pub fn pointer_canvas_position(
     client_x: f64,
