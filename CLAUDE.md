@@ -415,11 +415,11 @@ Commits in this phase: `531214f` (fix docs), `9afc9b1` (frame-stepping test), `b
 
 Files touched:
 - `src/shell/mod.rs` (line 295+): Extract the core loop body into a new `turn()` function that both native and WASM drivers call. Introduce `continues()` helper. The native driver still owns the `while` loop; the browser driver calls `turn()` from `requestAnimationFrame`.
-- `tests/shell_stepping.rs` (new): Test that `turn()` can be called repeatedly to step through frames without owning an event loop. This test verifies the abstraction is sound before WASM tries to use it.
+- `tests/external_driving.rs`: Test that drives the app frame-stepping without owning an event loop, verifying that the abstraction is sound before WASM tries to use it. The test `state_mut_between_frames_drives_the_next_frame` confirms app state can be mutated between calls to `app.frame()`.
 
-**Why this order:** WASM cannot block (there is no thread to yield), so the loop cannot be a `while` at the top level. Extracting `turn()` makes the frame logic platform-agnostic; both drivers become thin wrappers that provide events and decide when to call `turn()` again. The test suite (shell_stepping and later WASM-specific tests) verifies the frame-stepping logic is correct before integration.
+**Why this order:** WASM cannot block (there is no thread to yield), so the loop cannot be a `while` at the top level. Extracting `turn()` makes the frame logic platform-agnostic; both drivers become thin wrappers that provide events and decide when to call `turn()` again. The test suite (frame-stepping tests and later WASM-specific tests) verifies the frame-stepping logic is correct before integration.
 
-**Verification gate:** `cargo test --test shell_stepping` passes (frame stepping works). `cargo build` for native still works (no regression). `cargo test --lib` confirms compiled tests pass.
+**Verification gate:** `cargo test --test external_driving -- state_mut_between_frames_drives_the_next_frame` passes (frame stepping works). `cargo build` for native still works (no regression). `cargo test --lib` confirms compiled tests pass.
 
 **Phase 3: WASM Integration (Commits b116ac8, 32bf53d, d820ff6, e41376e, 929899a, 830033c, 2365866, 3062aba, 401a8a7, ce4acad, 2df7f1c)**
 
@@ -461,9 +461,9 @@ cargo test --lib
 
 Frame-stepping test:
 ```bash
-cargo test --test shell_stepping -- --nocapture
+cargo test --test external_driving -- state_mut_between_frames_drives_the_next_frame -- --nocapture
 ```
-Confirms the `turn()` abstraction can be called repeatedly without owning an event loop. The test verifies that state persists across calls, input is collected correctly, and frames are drawn and presented. This is the crucial gate: if frame-stepping works, both native (which loops) and WASM (which doesn't) can call the same function.
+Confirms the frame-driving abstraction works without owning an event loop. The test verifies that app state can be mutated externally between frames and persists across calls to `app.frame()`. This is the crucial gate: if frame-stepping works, both native (which loops) and WASM (which doesn't) can call the same function.
 
 **Phase 3: WASM Integration**
 
