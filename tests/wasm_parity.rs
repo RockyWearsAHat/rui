@@ -126,3 +126,45 @@ fn frame_comparison_detects_identity() {
         "total pixels should match frame dimensions"
     );
 }
+
+#[test]
+fn parity_frames_roundtrip_to_rgba() {
+    let frames = parity_frames();
+    let (_, original_bytes) = &frames[0];
+
+    // Write to temporary file
+    let temp_dir = std::env::temp_dir();
+    let test_path = temp_dir.join("parity_roundtrip_test.rgba");
+
+    std::fs::write(&test_path, original_bytes).expect("should write RGBA bytes to temporary file");
+
+    // Read back from file
+    let loaded_bytes =
+        std::fs::read(&test_path).expect("should read RGBA bytes from temporary file");
+
+    // Verify content matches
+    assert_eq!(
+        &loaded_bytes, original_bytes,
+        "RGBA bytes should round-trip through file I/O correctly"
+    );
+
+    // Cleanup
+    let _ = std::fs::remove_file(&test_path);
+}
+
+#[test]
+fn parity_frame_byte_count_correct() {
+    let frames = parity_frames();
+
+    for (appearance, bytes) in frames {
+        let expected_byte_count = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+        assert_eq!(
+            bytes.len(),
+            expected_byte_count,
+            "{:?} frame should have {} bytes (width × height × 4), got {}",
+            appearance,
+            expected_byte_count,
+            bytes.len()
+        );
+    }
+}
