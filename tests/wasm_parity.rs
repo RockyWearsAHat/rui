@@ -43,3 +43,21 @@ fn parity_frames_available() {
         "dark frame bytes should not be empty"
     );
 }
+
+#[test]
+fn all_pixels_are_opaque() {
+    let frames = parity_frames();
+
+    for (appearance, bytes) in frames {
+        // Each pixel is 4 bytes: RGBA (little-endian u32)
+        // Alpha is the 4th byte (index 3) of each pixel
+        for (pixel_idx, chunk) in bytes.chunks(4).enumerate() {
+            let alpha = chunk[3];
+            assert_eq!(
+                alpha, 0xFF,
+                "pixel {} in {:?} frame should be opaque (alpha=0xFF), got alpha={:#x}",
+                pixel_idx, appearance, alpha
+            );
+        }
+    }
+}
