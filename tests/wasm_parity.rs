@@ -32,7 +32,7 @@ fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
 }
 
 #[test]
-fn parity_frames_available() {
+fn wasm_parity_frames_available() {
     let frames = parity_frames();
     assert!(
         !frames[0].1.is_empty(),
@@ -45,7 +45,7 @@ fn parity_frames_available() {
 }
 
 #[test]
-fn wasm_parity_reference_frames() {
+fn reference_frames_generate_successfully() {
     let light = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
         .expect("light reference frame should render successfully");
     let dark = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
@@ -53,6 +53,9 @@ fn wasm_parity_reference_frames() {
 
     let light_pixels = light.pixels();
     let dark_pixels = dark.pixels();
+
+    println!("Light frame: {}x{}", REFERENCE_WIDTH, REFERENCE_HEIGHT);
+    println!("Dark frame: {}x{}", REFERENCE_WIDTH, REFERENCE_HEIGHT);
 
     assert!(
         !light_pixels.is_empty(),
@@ -74,7 +77,7 @@ fn wasm_parity_reference_frames() {
 }
 
 #[test]
-fn all_pixels_are_opaque() {
+fn wasm_parity_all_pixels_are_opaque() {
     for &appearance in &[Appearance::Light, Appearance::Dark] {
         let frame = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, appearance)
             .expect("reference frame should render successfully");
@@ -88,4 +91,18 @@ fn all_pixels_are_opaque() {
             );
         }
     }
+}
+
+#[test]
+fn light_and_dark_differ() {
+    let light = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("light reference frame should render successfully");
+    let dark = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
+        .expect("dark reference frame should render successfully");
+
+    assert_ne!(
+        light.pixels(),
+        dark.pixels(),
+        "light and dark mode frames should have different pixel data"
+    );
 }
