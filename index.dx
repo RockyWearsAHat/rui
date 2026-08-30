@@ -68,6 +68,44 @@
 - **`src/shell/clock.rs`** — Platform-agnostic time measurement (desktop uses `Instant`, WASM uses `performance.now()`).
 - **`src/shell/platform/wasm.rs`** — WASM backend implementation; handles canvas rendering and DOM events.
 
+## Getting Started: Newcomer Path
+
+**First 30 minutes: Build intuition**
+```bash
+cargo run -p rui --example counter          # Interactive app showing state persistence
+# Click + and - buttons to increment/decrement
+# This demonstrates the state → view → handler pattern in ~20 lines
+```
+
+**Next: Understand the pattern (1 hour)**
+1. Read `examples/counter.rs` end-to-end
+2. Read `CLAUDE.md` "Segmented Control Exemplar" section
+3. Copy the pattern: Define state struct → Write view function → Add handler closures
+
+**Next: Build something (30 min to 2 hours)**
+1. Copy `examples/segmented.rs` to `examples/my_widget.rs`
+2. Change state to fit your domain (replace `selected: usize`)
+3. Update view function to your UI
+4. Run with `cargo run -p rui --example my_widget`
+5. Add a test in `tests/recipes.rs` using `Harness`
+
+**Next: Debug or optimize (varies)**
+- **Understand a module:** Pick a module from "Module Structure" table, read its `src/<module>.rs`, verify with `cargo doc --no-deps --open`
+- **Fix a rendering bug:** Start in `src/paint.rs` (where pixels are drawn) or `src/canvas.rs` (pixel buffer)
+- **Fix a layout bug:** Start in `src/layout.rs` (measure & arrange)
+- **Fix an interaction bug:** Start in `src/memory.rs` (interaction state) or `src/input.rs` (event translation)
+- **Add a platform:** Start in `src/shell/platform/*.rs` — implement the `Backend` trait (six methods)
+- **Add a WASM feature:** Start in `src/shell/platform/wasm.rs` or `src/wasm.rs`
+- **Profile performance:** Use `examples/gallery.rs` to render all UI elements to disk, then measure rendering time
+
+**Decision trees (find the right file quickly)**
+
+- **"Where is text rendered?"** → `src/text.rs` (parser & layout) → `src/canvas.rs` (rasterisation)
+- **"How do animations work?"** → `src/memory.rs` (state machine) → `src/shell/mod.rs` (frame timing)
+- **"How do colors work?"** → `src/theme.rs` (roles like `Tone::Accent`) → `src/color.rs` (RGB/sRGB)
+- **"How does click handling work?"** → `src/input.rs` (event translation) → `src/memory.rs` (target tracking) → handler closure
+- **"How do callbacks work?"** → They're just function pointers/closures in element builders (`.on_click()`, `.on_drag()`)
+
 ## Design Patterns
 
 ### State → View → Handlers
