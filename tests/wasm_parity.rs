@@ -168,3 +168,95 @@ fn parity_frame_byte_count_correct() {
         );
     }
 }
+
+/// Write parity reference frames to disk in the format `examples/parity.html` expects.
+///
+/// Writes two files per appearance:
+/// - `parity-<appearance>.rgba` — raw RGBA bytes for byte-accurate comparison
+///
+/// This function enables programmatic frame generation for the browser parity workflow.
+pub fn write_parity_frames_to_directory(directory: &str) -> std::io::Result<()> {
+    use std::path::Path;
+
+    let dir = Path::new(directory);
+    if !dir.exists() {
+        std::fs::create_dir_all(dir)?;
+    }
+
+    let frames = parity_frames();
+    for (appearance, bytes) in frames {
+        let name = match appearance {
+            Appearance::Light => "light",
+            Appearance::Dark => "dark",
+        };
+
+        let rgba_path = dir.join(format!("parity-{}.rgba", name));
+        std::fs::write(&rgba_path, &bytes)?;
+    }
+
+    Ok(())
+}
+
+#[test]
+fn parity_frames_can_be_serialized_for_browser() {
+    let frames = parity_frames();
+
+    // Simulate what parity.html expects: raw RGBA byte buffers for light and dark
+    for (appearance, bytes) in frames {
+        let appearance_name = match appearance {
+            Appearance::Light => "light",
+            Appearance::Dark => "dark",
+        };
+
+        // Verify the bytes are in the format getImageData would return
+        // (width * height * 4 bytes in RGBA order)
+        assert_eq!(
+            bytes.len(),
+            (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize,
+            "frame should be serializable as raw RGBA for browser comparison"
+        );
+
+        // Every 4 bytes should represent one pixel (RGBA)
+        for chunk in bytes.chunks(4) {
+            assert_eq!(
+                chunk.len(),
+                4,
+                "each pixel in {} frame should be exactly 4 bytes (RGBA)",
+                appearance_name
+            );
+        }
+    }
+}
+
+#[test]
+fn parity_frames_can_write_to_browser_directory() {
+    let temp_dir = std::env::temp_dir().join("rui_parity_test");
+    let dir_str = temp_dir.to_string_lossy().to_string();
+
+    // Write frames to temporary directory
+    write_parity_frames_to_directory(&dir_str).expect("should write parity frames to directory");
+
+    // Verify both .rgba files exist and have correct byte counts
+    for appearance_name in &["light", "dark"] {
+        let rgba_path = temp_dir.join(format!("parity-{}.rgba", appearance_name));
+        assert!(
+            rgba_path.exists(),
+            "parity-{}.rgba should exist after write",
+            appearance_name
+        );
+
+        let metadata = std::fs::metadata(&rgba_path).expect("should read metadata for .rgba file");
+        let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as u64;
+        assert_eq!(
+            metadata.len(),
+            expected_size,
+            "parity-{}.rgba should be {} bytes, got {}",
+            appearance_name,
+            expected_size,
+            metadata.len()
+        );
+    }
+
+    // Cleanup
+    let _ = std::fs::remove_dir_all(&temp_dir);
+}
