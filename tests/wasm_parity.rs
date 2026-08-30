@@ -67,6 +67,16 @@ fn parity_frames_available() {
     let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
 
     for (appearance, bytes) in frames.iter() {
+        let pixel_count = bytes.len() / 4;
+        println!(
+            "{:?} frame: {} bytes ({} pixels = {}x{})",
+            appearance,
+            bytes.len(),
+            pixel_count,
+            REFERENCE_WIDTH,
+            REFERENCE_HEIGHT
+        );
+
         assert!(
             !bytes.is_empty(),
             "{:?} frame bytes should not be empty",
