@@ -170,10 +170,9 @@ macro_rules! code {
 
 #[cfg(test)]
 mod wasm_parity {
-    use crate::demo::{reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+    use crate::demo::{self, Counter, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+    use crate::testing::Harness;
     use crate::{image, Appearance};
-
-    const SCALE: f32 = 1.0;
 
     #[test]
     fn wasm_parity_generates_reference() {
@@ -181,10 +180,14 @@ mod wasm_parity {
         std::fs::create_dir_all(&temp_dir).expect("failed to create temp directory");
 
         for (name, appearance) in [("light", Appearance::Light), ("dark", Appearance::Dark)] {
-            let canvas = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, SCALE, appearance)
-                .expect("reference_frame should succeed");
+            let harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
+                demo::counter_view(counter)
+            })
+            .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
+            .appearance(appearance);
 
-            let pixels = image::rgba(&canvas);
+            let canvas = harness.canvas();
+            let pixels = image::rgba(canvas);
             let rgba_path = temp_dir.join(format!("parity-{name}.rgba"));
             std::fs::write(&rgba_path, &pixels).expect("failed to write RGBA file");
 
