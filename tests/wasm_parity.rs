@@ -106,3 +106,106 @@ fn wasm_parity_light_and_dark_differ() {
         "light and dark mode frames should have different pixel data"
     );
 }
+
+#[test]
+fn frame_dimensions_are_correct() {
+    let light = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("light reference frame should render successfully");
+
+    let pixel_count = light.pixels().len();
+    let expected_count = (REFERENCE_WIDTH * REFERENCE_HEIGHT) as usize;
+
+    assert_eq!(
+        pixel_count, expected_count,
+        "frame should have exactly {}x{} = {} pixels, got {}",
+        REFERENCE_WIDTH, REFERENCE_HEIGHT, expected_count, pixel_count
+    );
+}
+
+#[test]
+fn rendering_is_deterministic() {
+    let frame1 = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("first light reference frame should render successfully");
+    let frame2 = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("second light reference frame should render successfully");
+
+    assert_eq!(
+        frame1.pixels(),
+        frame2.pixels(),
+        "identical rendering parameters should produce identical pixel data"
+    );
+}
+
+#[test]
+fn scale_factor_affects_rendering() {
+    let scale_1x = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("1x scale reference frame should render successfully");
+    let scale_2x = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 2.0, Appearance::Light)
+        .expect("2x scale reference frame should render successfully");
+
+    assert_ne!(
+        scale_1x.pixels(),
+        scale_2x.pixels(),
+        "different scale factors should produce different pixel data"
+    );
+}
+
+#[test]
+fn dark_appearance_is_actually_dark() {
+    let light = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("light reference frame should render successfully");
+    let dark = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
+        .expect("dark reference frame should render successfully");
+
+    let light_pixels = light.pixels();
+    let dark_pixels = dark.pixels();
+
+    let light_brightness: u64 = light_pixels
+        .iter()
+        .map(|&pixel| {
+            let r = pixel & 0xff;
+            let g = (pixel >> 8) & 0xff;
+            let b = (pixel >> 16) & 0xff;
+            (r + g + b) as u64
+        })
+        .sum();
+
+    let dark_brightness: u64 = dark_pixels
+        .iter()
+        .map(|&pixel| {
+            let r = pixel & 0xff;
+            let g = (pixel >> 8) & 0xff;
+            let b = (pixel >> 16) & 0xff;
+            (r + g + b) as u64
+        })
+        .sum();
+
+    assert!(
+        dark_brightness < light_brightness,
+        "dark mode should have lower overall brightness than light mode"
+    );
+}
+
+#[test]
+fn each_appearance_is_deterministic() {
+    let light1 = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("first light frame should render successfully");
+    let light2 = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("second light frame should render successfully");
+
+    let dark1 = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
+        .expect("first dark frame should render successfully");
+    let dark2 = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
+        .expect("second dark frame should render successfully");
+
+    assert_eq!(
+        light1.pixels(),
+        light2.pixels(),
+        "light appearance should be deterministic across renders"
+    );
+    assert_eq!(
+        dark1.pixels(),
+        dark2.pixels(),
+        "dark appearance should be deterministic across renders"
+    );
+}
