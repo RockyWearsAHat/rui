@@ -1,1 +1,143 @@
 ~ dx1 865f4847c82cdc5807d61a547da0e1645e768f9b021dfcd25c183ab3a20ae3cc
+
+# rui — Declarative Interface Library for Rust
+
+**Project Overview:** rui is a zero-dependency declarative UI library. Views are pure functions of state; handlers receive mutable state as arguments, not closures. All rendering is platform-agnostic above the `Backend` trait. Supports desktop (macOS, Windows, X11) and WebAssembly.
+
+## Module Structure
+
+| Module | Purpose |
+|--------|---------|
+| **element** | UI element tree. `El<T>` is the root type; builders for structure (`col`, `row`) and containers. |
+| **widgets** | High-level recipes: `button`, `text`, `title`, `panel`, `tabs`, `draw`, `meter`, `segmented`. All built from primitives. |
+| **style** | Layout and appearance: `Length` (Auto/fixed/grow), `Radius`, `Tone` (color roles), `Align`, `Justify`. |
+| **layout** | Flexbox-like layout engine; single-axis stacking, `flow()` for line wrapping, scroll & layer support. |
+| **paint** | Drawing abstraction: `Painter` API used by all elements; `Visual` tracks hover/focus/held/disabled state. |
+| **canvas** | Pixel buffer and rasteriser; `Canvas::draw` is the root drawing operation. |
+| **text** | TrueType parser, glyph rasterising, text layout with kerning/ligatures; `FontId` indexes loaded fonts. |
+| **shell** | Platform window management: macOS/Windows/X11/WASM backends implement `Backend` trait. Event loop lives here. |
+| **testing** | `Harness`: drives the real frame into a buffer with a synthetic font for deterministic testing. Use `Harness::new(state, view)` in tests. |
+| **memory** | Stateful interaction data (hover, focus, scroll, caret, animations); keyed by element identity. |
+| **input** | Input events and per-frame view; translates raw `Event` stream to immediate-mode queries. |
+| **theme** | Colors, spacing, type sizes; `Appearance` (light/dark) and `Tone` (semantic roles). |
+| **demo** | Reusable counter example. Used by `examples/counter.rs`, `src/wasm.rs`, `examples/parity.rs`. |
+| **app** | Application entry point; `run()` couples state, view function, and event loop. |
+
+## Key Entry Points
+
+- **`src/app.rs`** — Application driver. `App::run(state, view)` is the primary entry point for desktop apps.
+- **`src/demo.rs`** — The counter example, reused across all backends (desktop, browser, parity test).
+- **`examples/counter.rs`** — Interactive counter app; demonstrates state → view → handlers pattern.
+- **`examples/segmented.rs`** — Minimal exemplar of an interactive widget (choice selector).
+- **`examples/meter.rs`** — Minimal exemplar of a passive widget (read-only progress display).
+- **`examples/parity.rs`** — Generates reference frame for WASM parity verification.
+- **`tests/recipes.rs`** — Worked examples of building controls (checkbox, switch, slider, radio, tooltip). Each recipe is a test using `Harness`.
+- **`tests/setup.rs`** — Verifies Rust version and pre-commit hook are in place.
+- **`src/shell/mod.rs`** — Event loop, `turn()` function (frame-stepping abstraction), platform selector.
+- **`src/shell/clock.rs`** — Platform-agnostic time measurement (desktop uses `Instant`, WASM uses `performance.now()`).
+- **`src/shell/platform/wasm.rs`** — WASM backend implementation; handles canvas rendering and DOM events.
+
+## Design Patterns
+
+### State → View → Handlers
+
+The core pattern:
+1. **State:** A Rust struct describing application data (e.g., `struct App { counter: i32 }`).
+2. **View:** A pure function that rebuilds UI from state: `fn view(app: &App) -> El<App> { ... }`.
+3. **Handlers:** Functions that mutate state on user input. Received as arguments, not closures:
+   ```rust
+   on_click(|app: &mut App| app.counter += 1)  // Handler gets mutable state
+   ```
+
+### Building Custom Controls
+
+Copy a recipe from `tests/recipes.rs` or `examples/controls.rs` and modify. All widgets are built from primitives:
+- **`row()` / `col()`** — Layout elements horizontally or vertically.
+- **`draw(size, |painter, rect| ...)`** — Paint custom shapes directly.
+- **`.on_click(|app: &mut App| ...)`** — Handle clicks.
+- **`.on_drag(|app: &mut App, drag| ...)`** — Handle drags.
+- **`.key(id)`** — Preserve identity for state (hover, focus, scroll) across frame rebuilds.
+
+### Testing with Harness
+
+Use `Harness` to test without a window:
+```rust
+use rui::testing::Harness;
+
+let mut harness = Harness::new(App { counter: 0 }, view);
+harness.click_text("Increment");
+assert_eq!(harness.state().counter, 1);
+```
+
+`Harness` provides:
+- `click_text(label)` — Click an element containing text.
+- `click(point)` — Click at a specific pixel.
+- `drag(from, to)` — Drag from one point to another.
+- `frame()` — Access the current frame; use `.shows(text)` to verify content.
+- `save_png(path)` — Export frame to PNG for visual inspection.
+
+## Build & Test Workflow
+
+```bash
+# Build & test
+cargo build                                  # Debug build
+cargo test --lib                            # Unit tests
+cargo test --test recipes                   # Widget recipe tests (Harness-based)
+cargo test --test interaction -- --nocapture  # Integration tests with output
+
+# Run examples
+cargo run -p rui --example counter           # Interactive counter
+cargo run -p rui --example segmented         # Choice selector exemplar
+cargo run -p rui --example meter             # Progress display exemplar
+cargo run -p rui --example gallery -- .      # Render all UI elements to PNG
+
+# Format & lint (pre-commit runs these)
+cargo fmt                                    # Auto-format
+cargo clippy                                 # Lint
+
+# WASM build (requires wasm-pack)
+cargo build --target wasm32-unknown-unknown -p rui --example counter
+wasm-pack build --target web --release --out-dir pkg
+wasm-pack test --headless --firefox          # Browser-based tests
+```
+
+## Platform Abstraction
+
+All rendering and layout is platform-agnostic. Platform-specific code is confined to `src/shell/platform/*.rs` (one file per OS):
+
+- **macOS:** `src/shell/platform/macos.rs` — Uses Cocoa to open windows and dispatch events.
+- **Windows:** `src/shell/platform/windows.rs` — Uses WinAPI.
+- **X11:** `src/shell/platform/x11.rs` — Uses X11 server (works on Linux and Wayland via Xwayland).
+- **WASM:** `src/shell/platform/wasm.rs` — Uses DOM canvas and `wasm-bindgen`.
+
+Each implements the `Backend` trait (6 methods: `open()`, `pump()`, `surface()`, `appearance()`, `present()`, `is_open()`). The event loop (`shell::mod.rs`) calls only these six methods; everything above them is shared.
+
+## Conventions
+
+- **Frames are pure:** `view(app)` returns the same `El<App>` for the same state; the UI tree rebuilds each frame, but the rendering diff is minimal.
+- **Identity & keys:** Elements get identity from their position in the tree. For lists that reorder, use `.key(&item.id)` to preserve hover/focus/scroll state.
+- **Colors are roles, not values:** Use `Tone::Accent`, `Tone::Surface`, `Tone::Muted` instead of hardcoded RGB. The theme (light/dark) maps roles to actual colors.
+- **Text inherits; layout does not:** `text_size`, `color`, `face` flow to children. `pad`, `gap`, `fill` do not.
+- **Unsafe code:** Confined to `shell/platform/*.rs`. Everything else—elements, layout, rendering, fonts—is safe Rust.
+- **No dependencies:** The entire rendering, font parsing, and window management are in this crate. Never add external dependencies without strong justification.
+
+## Next Steps for Contributors
+
+1. Read `examples/counter.rs` to understand the state → view → handler pattern.
+2. Copy `examples/segmented.rs` or `examples/meter.rs` to build a new widget.
+3. Add a test in `tests/recipes.rs` using `Harness::new(state, view)` to verify your widget works.
+4. Run `cargo test --test recipes -- my_widget_name` to confirm.
+5. Inspect `src/shell/mod.rs` line 325 to understand the frame-stepping loop (`turn()`).
+6. If adding a platform backend, implement the `Backend` trait in `src/shell/platform/new_platform.rs`.
+
+## Git Workflow
+
+- Pre-commit hook: Runs `cargo fmt --check` and `cargo clippy`. Bypass only in emergencies with `--no-verify`.
+- Commits: Prefix with platform or feature (e.g., "Add X11 input handling", "Improve text rendering").
+- Tests: Always run `cargo test --lib` and `cargo test --test recipes` before pushing.
+
+---
+
+**Last Updated:** 2026-08-30
+**Rust Version:** 1.85+ (Edition 2021)
+**Platforms:** macOS (Cocoa), Windows (WinAPI), X11/Wayland, WASM
