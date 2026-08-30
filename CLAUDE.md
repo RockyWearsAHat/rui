@@ -401,7 +401,7 @@ Commits in this phase: `77d4780`
 
 Files touched:
 - `src/shell/clock.rs` (new): Platform-agnostic clock abstraction. Desktops use `std::time::Instant`; WASM uses `performance.now()` (since `Instant::now()` panics on `wasm32-unknown-unknown`). Both return a `Moment` type that understands its platform.
-- `src/shell/mod.rs` (line 58+): Import `clock::Moment` and replace `Instant` with `Moment` in the `Surface` struct. Update `begin_frame()` calls to use `Moment::since()` instead of `saturating_duration_since()`.
+- `src/shell/mod.rs` (line 55): Import `clock::Moment` and replace `Instant` with `Moment` in the `Surface` struct (line 199). Update `begin_frame()` calls to use `Moment::since()` instead of `saturating_duration_since()` (line 238).
 - `src/app.rs`: Add `'static` bound to `run()` and `run_with_fonts()` (required for WASM closures to capture state across frame boundaries).
 - `Cargo.toml`: Add WASM dependencies (`Performance`, `console` to `web-sys` features).
 
@@ -414,7 +414,7 @@ Files touched:
 Commits in this phase: `531214f` (fix docs), `9afc9b1` (frame-stepping test), `b6a1b2c` (WASM documentation), `2ef3c2b` (Step 8: backend selector gate), `caa3066` (Step 3: refactor native run)
 
 Files touched:
-- `src/shell/mod.rs` (line 295+): Extract the core loop body into a new `turn()` function that both native and WASM drivers call. Introduce `continues()` helper. The native driver still owns the `while` loop; the browser driver calls `turn()` from `requestAnimationFrame`.
+- `src/shell/mod.rs` (line 325): Extract the core loop body into a new `turn()` function that both native and WASM drivers call. Introduce `continues()` helper (line 359). The native driver still owns the `while` loop (line 383); the browser driver calls `turn()` from `requestAnimationFrame` (line 472).
 - `tests/external_driving.rs`: Test that drives the app frame-stepping without owning an event loop, verifying that the abstraction is sound before WASM tries to use it. The test `state_mut_between_frames_drives_the_next_frame` confirms app state can be mutated between calls to `app.frame()`.
 
 **Why this order:** WASM cannot block (there is no thread to yield), so the loop cannot be a `while` at the top level. Extracting `turn()` makes the frame logic platform-agnostic; both drivers become thin wrappers that provide events and decide when to call `turn()` again. The test suite (frame-stepping tests and later WASM-specific tests) verifies the frame-stepping logic is correct before integration.
@@ -426,7 +426,7 @@ Files touched:
 Commits in this phase: `b116ac8` (Step 5: verify memory persistence), `32bf53d` (Step 5: fix wasm config), `d820ff6` (scout: add Recipes to worklist), `e41376e` (worklist: close item 3), `929899a` (Step 5: verify memory), `830033c` (record backend parity check), `2365866` (check browser round trip), `3062aba` (prove native/wasm parity), `2b02fd0` (Step 4: error recovery), `401a8a7` (Step 5: expose FrameDriver), `ce4acad` (Step 6: integrate WASM events), `2df7f1c` (Step 7: parity test)
 
 Files touched:
-- `src/shell/mod.rs` (line 412+): Add `#[cfg(target_arch = "wasm32")] pub(crate) fn run()` that creates a `Page` struct holding all loop state, registers a `requestAnimationFrame` callback, and returns immediately. The callback holds `Rc<RefCell<>>` of the page state and calls `turn()` on each repaint. Add `schedule()` and `report()` functions for browser integration.
+- `src/shell/mod.rs` (line 415): Add `#[cfg(target_arch = "wasm32")] pub(crate) fn run()` that creates a `Page` struct holding all loop state, registers a `requestAnimationFrame` callback, and returns immediately. The callback holds `Rc<RefCell<>>` of the page state and calls `turn()` on each repaint (line 472). Add `present()` and `listen()` functions for browser integration (lines 283, 295).
 - `src/shell/clock.rs`: Update to handle WASM timing edge cases; add fallback to zero duration if performance API is unavailable.
 - `src/wasm.rs` (new): WASM-specific bindings for the browser. Exports `init_counter()`, `listen_counter()`, `present_counter()` that call into the generic `turn()` loop. The page's event listener (DOM click, mousemove, wheel) collects events into the `Input` queue; each frame, `turn()` consumes them.
 - `src/shell/platform/wasm.rs` (new): Implement the `Backend` trait for the browser (canvas rendering, event listening, `appearance()` from `prefers-color-scheme`).
@@ -511,29 +511,29 @@ Anything that measures elapsed time must use `shell::clock::Moment`, not `Instan
 
 **How `shell::clock` flows through the frame loop**
 
-`src/shell/mod.rs` imports `shell::clock::Moment` (line 58) and uses it in two places:
-1. `Surface::drawn_at` (line 61+): Stores the time the previous frame was drawn as a `Moment`.
-2. `Surface::draw()` (line 265): Calls `Moment::now()` to get the current time, then `self.memory.begin_frame(now.since(self.drawn_at))` to measure elapsed time for animations.
+`src/shell/mod.rs` imports `shell::clock::Moment` (line 55) and uses it in two places:
+1. `Surface::drawn_at` (line 199): Stores the time the previous frame was drawn as a `Moment`.
+2. `Surface::draw()` (line 237): Calls `Moment::now()` to get the current time, then `self.memory.begin_frame(now.since(self.drawn_at))` (line 238) to measure elapsed time for animations.
 
 Both desktop `run()` and WASM `run()` call the same `Surface::draw()`, so both measure time correctly without additional logic.
 
 **Why the generic `turn()` loop works for both backends**
 
-The key abstraction is the `Backend` trait (lines 68-88 in `src/shell/mod.rs`):
+The key abstraction is the `Backend` trait (line 152 in `src/shell/mod.rs`):
 ```rust
-pub trait Backend {
+trait Backend: Sized {
     fn open(options: &WindowOptions) -> Result<Self, Error>;
-    fn pump(&mut self, wait: Duration, events: &mut Vec<Event>, redraw: &mut dyn FnMut(&Self));
+    fn pump(&mut self, timeout: Duration, events: &mut Vec<Event>, redraw: &mut dyn FnMut(&Self)) -> Result<(), Error>;
     fn surface(&self) -> (u32, u32, f32); // width, height, scale
     fn appearance(&self) -> Appearance;
-    fn present(&mut self, canvas: &Canvas) -> Result<(), Error>;
+    fn present(&self, canvas: &Canvas) -> Result<(), Error>;
     fn is_open(&self) -> bool;
 }
 ```
 
-The `turn()` function (line 313+) accepts a `Backend` and calls only these six methods. It does not know or care whether the backend is native, WASM, or something else:
-- Native `run()` (line 380): Loops calling `turn()` with a native `Backend`.
-- WASM `run()` (line 413): Registers a callback that calls `turn()` with a WASM `Backend`.
+The `turn()` function (line 325) accepts a `Backend` and calls only these six methods. It does not know or care whether the backend is native, WASM, or something else:
+- Native `run()` (line 369): Loops calling `turn()` with a native `Backend`.
+- WASM `run()` (line 415): Registers a callback that calls `turn()` with a WASM `Backend`.
 
 Both drivers call identical frame logic; the only difference is how they schedule the next frame.
 
@@ -566,16 +566,16 @@ Adding a new backend (e.g., native Wayland, or a game engine) follows the same p
    - The implementation is entirely platform-specific; nothing above `Backend` changes.
    - Compile check: `cargo build --features "wayland"` or similar platform gate.
 
-3. **Wire the new backend into `shell/mod.rs`** (the platform selector, lines 68-88)
-   - Add a new `#[cfg(target_os = "...")]` branch to the `Backend` trait impl or selector function.
+3. **Wire the new backend into `shell/mod.rs`** (the platform selector, line 152)
+   - Add a new `#[cfg(target_os = "...")]` branch to the `Backend` trait or platform module.
    - Ensure `src/shell/mod.rs` either imports the new platform module or gates it with a feature flag.
 
-4. **Conditional `run()` implementation in `shell/mod.rs`** (around line 382)
+4. **Conditional `run()` implementation in `shell/mod.rs`** (around line 369 for native, line 415 for WASM pattern)
    - Add `#[cfg(target_os = "...")]` to a new `pub(crate) fn run<S: 'static>(...)` that uses the new backend.
    - The function body is always: create a `Surface`, loop calling `turn()` with the backend, check `continues()`, repeat.
-   - If the platform cannot block (like WASM), use the callback pattern (lines 413-500) instead.
+   - If the platform cannot block (like WASM), use the callback pattern instead (reference WASM implementation at line 415).
 
-5. **Add platform detection and initialization** (in `src/app.rs`, lines 123-132)
+5. **Add platform detection and initialization** (in `src/app.rs`)
    - Verify the platform is available at compile time (use `#[cfg(...)]`).
    - Add a gate to `run()` and `run_with_fonts()` if needed (e.g., require `'static` for some platforms).
 
@@ -594,9 +594,9 @@ Adding a new backend (e.g., native Wayland, or a game engine) follows the same p
 
 **Spot-check against WASM:**
 
-- WASM's `src/shell/platform/wasm.rs` (lines 1-100): Implements `Backend` trait entirely in platform-specific code. Lines in the file correspond exactly to the six trait methods.
-- WASM's `shell/mod.rs` conditional `run()` (lines 413-500): Creates a `Page` struct, registers a callback, and returns. Calls `turn()` from the callback.
-- WASM's `src/wasm.rs` (lines 1-50): Exports WASM-specific functions (`init_counter`, `listen_counter`, `present_counter`) that drive the page loop. These are not part of the generic pattern; they are how the browser calls into Rust.
+- WASM's `src/shell/platform/wasm.rs`: Implements `Backend` trait entirely in platform-specific code. All six trait methods are implemented.
+- WASM's `shell/mod.rs` conditional `run()` (line 415): Creates a `Page` struct, registers a callback, and returns. Calls `turn()` from the callback (line 472).
+- WASM's `src/wasm.rs`: Exports WASM-specific functions (`init_counter`, `listen_counter`, `present_counter`) that drive the page loop. These are not part of the generic pattern; they are how the browser calls into Rust.
 
 The pattern holds: add a platform module implementing `Backend`, wire it into the selector, add a `run()` that calls `turn()`, verify with parity tests. Everything above `Backend` is unchanged.
 
