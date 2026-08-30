@@ -366,3 +366,53 @@ fn wasm32_target_compiles_counter_example() {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn wasm_pack_generates_web_bindings() {
+    use std::process::Command;
+
+    let output = Command::new("wasm-pack")
+        .arg("build")
+        .arg("--target")
+        .arg("web")
+        .arg("--release")
+        .arg("--out-dir")
+        .arg("pkg")
+        .output()
+        .expect("failed to run wasm-pack build");
+
+    assert!(
+        output.status.success(),
+        "wasm-pack build failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Verify generated artifacts exist
+    let pkg_exists = std::path::Path::new("pkg/rui_bg.wasm").exists();
+    assert!(pkg_exists, "wasm-pack should generate pkg/rui_bg.wasm");
+
+    let js_exists = std::path::Path::new("pkg/rui.js").exists();
+    assert!(js_exists, "wasm-pack should generate pkg/rui.js");
+}
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn wasm_tests_pass_on_target() {
+    use std::process::Command;
+
+    let output = Command::new("cargo")
+        .arg("test")
+        .arg("--target")
+        .arg("wasm32-unknown-unknown")
+        .output()
+        .expect("failed to run cargo test for wasm32 target");
+
+    assert!(
+        output.status.success(),
+        "WASM tests failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
