@@ -57,6 +57,76 @@ fn pre_commit_hook_runs_successfully_when_code_is_clean() {
 
 #[test]
 #[cfg(not(target_arch = "wasm32"))]
+fn pre_commit_hook_rejects_unformatted_code() {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::process::Command;
+
+    let test_file = PathBuf::from("tests/test_unformatted.rs");
+
+    // 1. Write unformatted Rust code
+    let bad_code = "fn     test_func(  ) {\n    let  x=1;\n}\n";
+    fs::write(&test_file, bad_code).expect("failed to write test file");
+
+    // 2. Stage the file
+    let stage_output = Command::new("git")
+        .arg("add")
+        .arg(&test_file)
+        .output()
+        .expect("failed to run git add");
+    assert!(
+        stage_output.status.success(),
+        "git add failed: {}",
+        String::from_utf8_lossy(&stage_output.stderr)
+    );
+
+    // 3. Attempt commit (should fail)
+    let commit_output = Command::new("git")
+        .arg("commit")
+        .arg("-m")
+        .arg("test: verify hook rejects unformatted code")
+        .output()
+        .expect("failed to run git commit");
+
+    let stderr = String::from_utf8_lossy(&commit_output.stderr);
+
+    // 4. Assert commit failed
+    assert!(
+        !commit_output.status.success(),
+        "pre-commit hook should have rejected unformatted code, but commit succeeded"
+    );
+
+    // 5. Assert error message indicates formatting issue
+    assert!(
+        stderr.contains("Diff")
+            || stderr.contains("code is not formatted")
+            || stderr.contains("error"),
+        "hook stderr should indicate formatting issue: {}",
+        stderr
+    );
+
+    // 6. Cleanup: remove staged file
+    let reset_output = Command::new("git")
+        .arg("reset")
+        .arg("HEAD")
+        .arg(&test_file)
+        .output()
+        .expect("failed to run git reset");
+    assert!(
+        reset_output.status.success()
+            || String::from_utf8_lossy(&reset_output.stderr)
+                .contains("pathspec 'tests/test_unformatted.rs' did not match"),
+        "git reset failed: {}",
+        String::from_utf8_lossy(&reset_output.stderr)
+    );
+
+    if test_file.exists() {
+        fs::remove_file(&test_file).expect("failed to delete test file");
+    }
+}
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
 fn rustc_version_meets_minimum_requirement() {
     use std::process::Command;
 
