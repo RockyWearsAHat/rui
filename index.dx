@@ -587,6 +587,386 @@ This is the rhythm for any feature:
 - **Verify visually:** Running the example catches issues testing misses (colors, spacing, etc.).
 - **Commit small:** One feature per commit. Easy to review, easy to revert if needed.
 
+## Common Pitfalls & How to Avoid Them
+
+These are mistakes developers commonly make when starting with rui. Learn from others' experience.
+
+### Pitfall 1: Capturing State in Closures Instead of Receiving It
+
+**What it looks like:**
+```rust
+// ✗ WRONG
+let app = app.clone();  // Trying to capture
+button("Click", move || {
+    app.counter += 1;  // Error: cannot borrow app as mutable
+})
+
+// ✓ RIGHT
+button("Click", |app: &mut App| {
+    app.counter += 1;  // Correct: receive as mutable argument
+})
+```
+
+**Why it happens:** In other UI frameworks, closures capture state via `Rc<RefCell<>>`. rui is different—handlers receive state as an argument.
+
+**How to fix:** Always write `|app: &mut S|` for handlers. Never try to capture.
+
+**Prevention:** Remember: rui passes state to handlers, never stores it. If the signature doesn't have `&mut S` as a parameter, it's wrong.
+
+---
+
+### Pitfall 2: Putting Expensive Logic in the View Function
+
+**What it looks like:**
+```rust
+// ✗ WRONG
+fn view(app: &App) -> El<App> {
+    let sorted_items = {
+        let mut items = app.items.clone();  // Expensive clone
+        items.sort();
+        items
+    };  // Happens every frame!
+
+    col(sorted_items.iter().map(|item| text(item)).collect())
+}
+
+// ✓ RIGHT (two approaches)
+
+// Approach 1: Pre-compute in state
+struct App {
+    items: Vec<String>,
+    sorted_items: Vec<String>,  // Computed once, stored
+}
+
+// Approach 2: Compute in handler
+button("Sort", |app: &mut App| {
+    app.items.sort();  // Compute on demand, not every frame
+})
+```
+
+**Why it happens:** view() seems like a good place to do all computation. But it's called every frame!
+
+**How to fix:** Move expensive logic to event handlers. Compute once, store in state. View just reads state.
+
+**Prevention:** Keep view() pure and fast. If it takes >10ms, move logic elsewhere.
+
+---
+
+### Pitfall 3: Forgetting `.key()` on Reordered Lists
+
+**What it looks like:**
+```rust
+// ✗ WRONG (no .key())
+col(
+    app.items.iter().map(|item| {
+        text(&item.name)  // ← No .key()!
+            .on_click(|app: &mut App| app.toggle_selected(/* which item? */))
+    }).collect::<Vec<_>>()
+)
+
+// After reorder:
+// Hover state follows the wrong item!
+// Click handlers are confused about which item was clicked
+
+// ✓ RIGHT
+col(
+    app.items.iter().map(|item| {
+        text(&item.name)
+            .key(&item.id)  // ← Stable identity!
+            .on_click(move |app: &mut App| app.toggle_selected(item.id))
+    }).collect::<Vec<_>>()
+)
+
+// After reorder:
+// Hover state sticks to the correct item
+// Click handlers know exactly which item was clicked
+```
+
+**Why it happens:** Developers don't realize that identity matters. Element position in the tree is identity by default.
+
+**How to fix:** Always use `.key(&item.id)` on reordered lists. Make sure ID is stable (item ID, not index).
+
+**Prevention:** If a list can reorder, add `.key()`. Test by reordering items and verifying hover/focus follows the right item.
+
+---
+
+### Pitfall 4: Hardcoding Colors Instead of Using Tone
+
+**What it looks like:**
+```rust
+// ✗ WRONG (doesn't respect dark mode)
+painter.fill(rect, Radius::None, Color::from_rgba(0, 0, 255, 255));  // Blue
+
+// ✓ RIGHT (respects dark mode automatically)
+painter.fill(rect, Radius::None, Tone::Accent);  // Maps to theme color
+```
+
+**Why it happens:** RGB colors seem simpler. But they don't adapt to light/dark mode.
+
+**How to fix:** Always use `Tone::Something`. Never hardcode RGB. Theme maps Tone to actual colors.
+
+**Prevention:** Search codebase for `Color::from_rgba(`. If you find any, change to `Tone` instead.
+
+---
+
+### Pitfall 5: Using `.clone()` Everywhere
+
+**What it looks like:**
+```rust
+// ✗ WRONG
+fn view(app: &App) -> El<App> {
+    let items = app.items.clone();  // Clone entire vector
+    col(
+        items.iter().map(|item| {
+            let item = item.clone();  // Clone each item
+            text(&item.name.clone())  // Clone string
+        }).collect()
+    )
+}
+
+// ✓ RIGHT
+fn view(app: &App) -> El<App> {
+    col(
+        app.items.iter().map(|item| {
+            text(&item.name)  // Just reference; no clone
+        }).collect()
+    )
+}
+```
+
+**Why it happens:** Closures make it seem like you need to capture by value.
+
+**How to fix:** Use references (`&item`) instead. Let ownership flow naturally.
+
+**Prevention:** If you write `.clone()`, ask: "Do I really need to own this value?" Usually the answer is no.
+
+---
+
+### Pitfall 6: Testing Only the Happy Path
+
+**What it looks like:**
+```rust
+// ✗ INCOMPLETE
+#[test]
+fn counter_increments() {
+    let mut harness = Harness::new(App { counter: 0 }, view);
+    harness.click_text("Increment");
+    assert_eq!(harness.state().counter, 1);  // Only tests one case
+}
+
+// ✓ COMPLETE
+#[test]
+fn counter_increments() {
+    let mut harness = Harness::new(App { counter: 0 }, view);
+    harness.click_text("Increment");
+    assert_eq!(harness.state().counter, 1);
+}
+
+#[test]
+fn counter_decrements() {
+    let mut harness = Harness::new(App { counter: 10 }, view);
+    harness.click_text("Decrement");
+    assert_eq!(harness.state().counter, 9);
+}
+
+#[test]
+fn counter_handles_zero() {
+    let mut harness = Harness::new(App { counter: 0 }, view);
+    harness.click_text("Decrement");
+    assert_eq!(harness.state().counter, -1);  // Or does it clamp?
+}
+
+#[test]
+fn multiple_clicks_work() {
+    let mut harness = Harness::new(App { counter: 0 }, view);
+    harness.click_text("Increment");
+    harness.click_text("Increment");
+    harness.click_text("Increment");
+    assert_eq!(harness.state().counter, 3);
+}
+```
+
+**Why it happens:** First test passes; developer assumes feature works. Edge cases break in production.
+
+**How to fix:** Test:
+- Happy path (normal flow)
+- Edge cases (empty, zero, max values)
+- Boundary values (negative numbers, very large numbers)
+- Sequences (multiple interactions)
+
+**Prevention:** Before committing, ask: "What could go wrong?" Write a test for it.
+
+---
+
+### Pitfall 7: Not Running Tests Before Committing
+
+**What it looks like:**
+```bash
+# ✗ WRONG
+git commit -m "Add new feature"
+# Later, CI fails
+
+# ✓ RIGHT
+cargo test --lib
+cargo test --test recipes
+cargo test --test interaction
+git commit -m "Add new feature"  # Only if tests pass
+```
+
+**Why it happens:** Confidence that code is correct. Happens to everyone.
+
+**How to fix:** Always run tests before committing. Make it a habit.
+
+**Prevention:** `git commit` runs pre-commit hook (cargo fmt, cargo clippy). If tests fail, you know immediately.
+
+---
+
+### Pitfall 8: Assuming Same Behavior Across Platforms
+
+**What it looks like:**
+```rust
+// ✗ WRONG
+// Works on macOS, broken on WASM
+
+// ✓ RIGHT
+// Test on all platforms
+cargo build
+wasm-pack build --target web --release
+# Test both
+```
+
+**Why it happens:** Developers test on one platform (usually their own).
+
+**How to fix:** Test on multiple platforms. At minimum:
+- Native (macOS, Windows, or Linux)
+- WASM (if supporting browser)
+
+**Prevention:** Before claiming a feature is done, test on at least two platforms.
+
+---
+
+### Pitfall 9: Rebuilding Elements When State Didn't Change
+
+**What it looks like:**
+```rust
+// ✗ INEFFICIENT (but not wrong)
+// view() is called every frame anyway, so this is unavoidable
+
+// ✓ OPTIMIZED
+// Keep view() fast so rebuild is quick
+// Don't do expensive work per frame
+```
+
+**Why it happens:** Each frame rebuilds the entire element tree. Developers worry this is slow.
+
+**How to fix:** It's fine! Element tree rebuild is fast (<5ms). Only optimize if actual measurements show slowness.
+
+**Prevention:** Don't optimize prematurely. Profile first, optimize second.
+
+---
+
+### Pitfall 10: Modifying State Outside Handlers
+
+**What it looks like:**
+```rust
+// ✗ WRONG
+fn view(app: &App) -> El<App> {
+    if !app.initialized {
+        app.initialize();  // Error: cannot borrow app as mutable
+    }
+    // ...
+}
+
+// ✓ RIGHT
+struct App {
+    initialized: bool,
+}
+
+// Initialize in handler or main entry point
+fn main() {
+    let mut app = App { initialized: false };
+    app.initialize();  // Mutate before view
+    App::run(app, view);  // Then run UI
+}
+
+// Or in event handler:
+button("Initialize", |app: &mut App| {
+    app.initialize();
+})
+```
+
+**Why it happens:** Developers think view() is a good place to do everything.
+
+**How to fix:** view() is pure. State changes only in handlers (or setup before run).
+
+**Prevention:** If view() signature is `fn view(app: &App)`, it cannot mutate. That's enforced by Rust.
+
+---
+
+### Pitfall 11: Losing Memory State on Reorder
+
+**What it looks like:**
+```rust
+// ✗ WRONG
+col(
+    app.items.iter().enumerate().map(|(i, item)| {
+        text(&item.name)
+            // No .key(); identity is index
+            // When list reorders, hover state follows wrong item
+    }).collect()
+)
+
+// ✓ RIGHT
+col(
+    app.items.iter().map(|item| {
+        text(&item.name)
+            .key(&item.id)  // Explicit identity
+            // When list reorders, hover state sticks to correct item
+    }).collect()
+)
+```
+
+**Why it happens:** Developers don't realize list order == identity by default.
+
+**How to fix:** Use `.key()` on reordered lists.
+
+**Prevention:** Test by reordering a list with hover state; verify hover follows the right item.
+
+---
+
+### Pitfall 12: Trying to Use Interior Mutability
+
+**What it looks like:**
+```rust
+// ✗ WRONG (unnecessary and fighting Rust)
+use std::cell::RefCell;
+
+struct App {
+    counter: RefCell<i32>,  // Trying to mutate through shared ref
+}
+
+button("Click", |app: &mut App| {
+    *app.counter.borrow_mut() += 1;  // Clunky and error-prone
+})
+
+// ✓ RIGHT
+struct App {
+    counter: i32,  // Just use normal field
+}
+
+button("Click", |app: &mut App| {
+    app.counter += 1;  // Simple
+})
+```
+
+**Why it happens:** Developers from other frameworks expect to need interior mutability.
+
+**How to fix:** Don't use RefCell, Mutex, or Arc. rui handlers receive `&mut S`, so you can mutate freely.
+
+**Prevention:** If you're typing `RefCell` or `Mutex`, stop and reconsider. rui doesn't need interior mutability.
+
+---
+
 ## Design Patterns
 
 ### State → View → Handlers
