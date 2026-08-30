@@ -66,3 +66,34 @@ fn page_millis() -> f64 {
         .and_then(|window| window.performance())
         .map_or(0.0, |performance| performance.now())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn moment_now_succeeds() {
+        let _ = Moment::now();
+    }
+
+    #[test]
+    fn moment_since_measures_elapsed_time() {
+        let m1 = Moment::now();
+        let m2 = Moment::now();
+        let elapsed = m2.since(m1);
+        // Duration is always non-negative; just verify it can be measured.
+        let _ = elapsed.as_millis();
+    }
+
+    #[test]
+    fn moment_since_saturates_when_clock_goes_backward() {
+        let m1 = Moment::now();
+        let m2 = Moment::now();
+        let elapsed = m1.since(m2);
+        assert_eq!(
+            elapsed.as_millis(),
+            0,
+            "saturating since prevents negative durations"
+        );
+    }
+}
