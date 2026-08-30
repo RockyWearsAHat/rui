@@ -97,6 +97,29 @@ pub fn reference_frame(
     Ok(counter_app().render(width, height, scale, appearance, &mut fonts))
 }
 
+/// Generate both light and dark reference frames as RGBA byte buffers.
+///
+/// Returns a 2-element array: `[(Appearance::Light, pixels), (Appearance::Dark, pixels)]`.
+/// Uses the same encoding as [`crate::image::rgba`]: R, G, B channels extracted from
+/// pixel u32, alpha always 0xFF.
+///
+/// This helper is used by parity verification tests to compare native and WASM
+/// rendering pixel-for-pixel.
+pub fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
+    let light = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("light reference frame should render successfully");
+    let dark = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
+        .expect("dark reference frame should render successfully");
+
+    let light_bytes = crate::image::rgba(&light);
+    let dark_bytes = crate::image::rgba(&dark);
+
+    [
+        (Appearance::Light, light_bytes),
+        (Appearance::Dark, dark_bytes),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -3,7 +3,7 @@
 //! Verifies that reference frames can be generated deterministically using embedded fonts
 //! for later comparison with WASM-rendered output.
 
-use rui::demo::{reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+use rui::demo::{parity_frames, reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
 use rui::{image, Appearance};
 
 /// Compare two RGBA byte buffers pixel-by-pixel.
@@ -19,25 +19,6 @@ pub fn compare_frames(expected: &[u8], actual: &[u8]) -> (usize, usize) {
         .filter(|(exp, act)| exp != act)
         .count();
     (diff_count, total_pixels)
-}
-
-/// Generate both light and dark reference frames as RGBA byte buffers.
-/// Returns a 2-element array: [(Appearance::Light, pixels), (Appearance::Dark, pixels)].
-/// Uses the same encoding as `image::rgba()`: R, G, B channels extracted from pixel u32,
-/// alpha always 0xFF.
-fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
-    let light = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
-        .expect("light reference frame should render successfully");
-    let dark = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
-        .expect("dark reference frame should render successfully");
-
-    let light_bytes = image::rgba(&light);
-    let dark_bytes = image::rgba(&dark);
-
-    [
-        (Appearance::Light, light_bytes),
-        (Appearance::Dark, dark_bytes),
-    ]
 }
 
 #[test]
