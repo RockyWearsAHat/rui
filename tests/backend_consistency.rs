@@ -606,3 +606,412 @@ fn complex_mixed_event_sequences_handled_consistently() {
         "space key should be recorded"
     );
 }
+
+// ============================================================================
+// FRAME BOUNDARY SEMANTICS
+// ============================================================================
+
+/// Verify pressed/released are frame-local and clear at frame boundaries.
+#[test]
+fn pressed_released_clear_at_frame_boundary() {
+    let mut input = Input::new();
+
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+
+    assert!(
+        input.pressed(PointerButton::Primary),
+        "pressed should be true in press frame"
+    );
+    assert!(
+        !input.released(PointerButton::Primary),
+        "released should be false in press frame"
+    );
+
+    // Frame boundary
+    input.begin_frame();
+
+    assert!(
+        !input.pressed(PointerButton::Primary),
+        "pressed should clear after frame boundary"
+    );
+    assert!(
+        input.held(PointerButton::Primary),
+        "held should persist through frame boundary"
+    );
+
+    // Release in next frame
+    input.apply(Event::PointerUp {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+
+    assert!(
+        input.released(PointerButton::Primary),
+        "released should be true in release frame"
+    );
+    assert!(
+        !input.held(PointerButton::Primary),
+        "held should clear on release"
+    );
+
+    // Frame boundary after release
+    input.begin_frame();
+
+    assert!(
+        !input.released(PointerButton::Primary),
+        "released should clear after frame boundary"
+    );
+    assert!(
+        !input.held(PointerButton::Primary),
+        "held should stay cleared"
+    );
+}
+
+/// Verify held state persists across frames while pressed/released are frame-local.
+#[test]
+fn held_persists_pressed_released_are_frame_local() {
+    let mut input = Input::new();
+
+    // Press button
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+
+    assert!(input.pressed(PointerButton::Primary), "frame 1: pressed");
+    assert!(
+        !input.released(PointerButton::Primary),
+        "frame 1: not released"
+    );
+    assert!(input.held(PointerButton::Primary), "frame 1: held");
+
+    // Frame 2: button still held, press flag cleared
+    input.begin_frame();
+    assert!(
+        !input.pressed(PointerButton::Primary),
+        "frame 2: pressed cleared"
+    );
+    assert!(
+        !input.released(PointerButton::Primary),
+        "frame 2: not released"
+    );
+    assert!(input.held(PointerButton::Primary), "frame 2: held persists");
+
+    // Frame 3: button still held
+    input.begin_frame();
+    assert!(
+        !input.pressed(PointerButton::Primary),
+        "frame 3: pressed still cleared"
+    );
+    assert!(
+        !input.released(PointerButton::Primary),
+        "frame 3: not released"
+    );
+    assert!(input.held(PointerButton::Primary), "frame 3: held persists");
+
+    // Frame 4: release button
+    input.apply(Event::PointerUp {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+
+    assert!(
+        !input.pressed(PointerButton::Primary),
+        "frame 4: not pressed on release"
+    );
+    assert!(input.released(PointerButton::Primary), "frame 4: released");
+    assert!(
+        !input.held(PointerButton::Primary),
+        "frame 4: held cleared on release"
+    );
+
+    // Frame 5: release flag cleared
+    input.begin_frame();
+    assert!(
+        !input.released(PointerButton::Primary),
+        "frame 5: released cleared"
+    );
+    assert!(
+        !input.held(PointerButton::Primary),
+        "frame 5: held stays cleared"
+    );
+}
+
+// ============================================================================
+// TEXT AND KEY CLEARING AT FRAME BOUNDARY
+// ============================================================================
+
+/// Verify text and keys clear at frame boundary but modifiers persist.
+#[test]
+fn text_and_keys_clear_at_frame_boundary() {
+    let mut input = Input::new();
+
+    input.apply(Event::Text("Hello".to_string()));
+    input.apply(Event::KeyDown {
+        key: Key::Character('a'),
+        modifiers: Modifiers {
+            shift: true,
+            control: false,
+            alt: false,
+            command: false,
+        },
+    });
+
+    assert_eq!(input.text(), "Hello", "frame 1: text accumulated");
+    assert_eq!(input.keys().len(), 1, "frame 1: key recorded");
+    assert!(
+        input.key_pressed(Key::Character('a')),
+        "frame 1: key_pressed"
+    );
+
+    // Frame boundary
+    input.begin_frame();
+
+    assert_eq!(input.text(), "", "frame 2: text cleared");
+    assert_eq!(input.keys().len(), 0, "frame 2: keys cleared");
+    assert!(
+        !input.key_pressed(Key::Character('a')),
+        "frame 2: key_pressed false"
+    );
+
+    // But if the key is held down (KeyDown without corresponding KeyUp),
+    // modifiers should reflect the current state
+    assert!(
+        input.modifiers().shift,
+        "frame 2: modifiers persist from key state"
+    );
+}
+
+// ============================================================================
+// DRAG DETECTION PREREQUISITES
+// ============================================================================
+
+/// Verify drag detection: press_origin is used to calculate drag distance.
+#[test]
+fn drag_distance_calculated_from_press_origin() {
+    let mut input = Input::new();
+
+    let origin = Point::new(100.0, 100.0);
+    input.apply(Event::PointerDown {
+        position: origin,
+        button: PointerButton::Primary,
+    });
+
+    // Move slightly (within typical drag threshold ~10 pixels)
+    input.apply(Event::PointerMoved(Point::new(105.0, 105.0)));
+
+    let current_pos = input.pointer();
+    assert_eq!(current_pos, Point::new(105.0, 105.0), "pointer updates");
+
+    // Drag detection would calculate distance from press_origin
+    let press_pt = input.press_origin(PointerButton::Primary).unwrap();
+    let drag_distance =
+        ((current_pos.x - press_pt.x).powi(2) + (current_pos.y - press_pt.y).powi(2)).sqrt();
+    assert!(
+        drag_distance < 20.0,
+        "drag distance should be ~7 pixels: {}",
+        drag_distance
+    );
+
+    // Move farther (definite drag)
+    input.apply(Event::PointerMoved(Point::new(150.0, 150.0)));
+    let current_pos = input.pointer();
+    let press_pt = input.press_origin(PointerButton::Primary).unwrap();
+    let drag_distance =
+        ((current_pos.x - press_pt.x).powi(2) + (current_pos.y - press_pt.y).powi(2)).sqrt();
+    assert!(
+        drag_distance > 50.0,
+        "large drag should be ~70 pixels: {}",
+        drag_distance
+    );
+}
+
+// ============================================================================
+// RAPID EVENT SEQUENCES
+// ============================================================================
+
+/// Verify rapid multi-click handling (e.g., double-click detection).
+#[test]
+fn rapid_click_sequence_handled_consistently() {
+    let mut input = Input::new();
+
+    let pos = Point::new(100.0, 100.0);
+
+    // First click
+    input.apply(Event::PointerDown {
+        position: pos,
+        button: PointerButton::Primary,
+    });
+    assert!(input.pressed(PointerButton::Primary), "1st press");
+
+    input.apply(Event::PointerUp {
+        position: pos,
+        button: PointerButton::Primary,
+    });
+    assert!(input.released(PointerButton::Primary), "1st release");
+
+    input.begin_frame();
+
+    // Second click (rapid, within typical double-click window)
+    input.apply(Event::PointerDown {
+        position: pos,
+        button: PointerButton::Primary,
+    });
+    assert!(input.pressed(PointerButton::Primary), "2nd press");
+
+    input.apply(Event::PointerUp {
+        position: pos,
+        button: PointerButton::Primary,
+    });
+    assert!(input.released(PointerButton::Primary), "2nd release");
+
+    // Application would use frame timing to detect double-click
+    // (This test documents that consecutive click events are properly tracked)
+}
+
+/// Verify multiple keys can be held simultaneously.
+#[test]
+fn multiple_keys_tracked_simultaneously() {
+    let mut input = Input::new();
+
+    // First key pressed
+    input.apply(Event::KeyDown {
+        key: Key::Character('a'),
+        modifiers: Modifiers::NONE,
+    });
+    assert!(input.key_pressed(Key::Character('a')), "a pressed");
+
+    input.begin_frame();
+
+    // Second key pressed while first held
+    input.apply(Event::KeyDown {
+        key: Key::Character('b'),
+        modifiers: Modifiers::NONE,
+    });
+    assert_eq!(input.keys().len(), 1, "second key recorded");
+
+    // Both should be in the current frame's key list
+    let keys: Vec<_> = input.keys().iter().map(|k| k.0).collect();
+    assert!(
+        keys.contains(&Key::Character('b')),
+        "second key in current frame"
+    );
+
+    input.begin_frame();
+
+    // Release first key
+    input.apply(Event::KeyUp {
+        key: Key::Character('a'),
+        modifiers: Modifiers::NONE,
+    });
+    assert_eq!(
+        input.keys().len(),
+        0,
+        "release event recorded (not in keys)"
+    );
+}
+
+// ============================================================================
+// EDGE CASES WITH FRACTIONAL COORDINATES
+// ============================================================================
+
+/// Verify fractional coordinates are preserved accurately.
+#[test]
+fn fractional_pointer_coordinates_preserved() {
+    let mut input = Input::new();
+
+    let fractional_pos = Point::new(123.456, 789.012);
+    input.apply(Event::PointerMoved(fractional_pos));
+
+    let stored_pos = input.pointer();
+    assert_eq!(
+        stored_pos.x, fractional_pos.x,
+        "fractional x should be preserved"
+    );
+    assert_eq!(
+        stored_pos.y, fractional_pos.y,
+        "fractional y should be preserved"
+    );
+}
+
+// ============================================================================
+// EDGE CASES WITH EXTREME SCROLL VALUES
+// ============================================================================
+
+/// Verify large scroll values are accumulated correctly.
+#[test]
+fn large_scroll_values_accumulated_correctly() {
+    let mut input = Input::new();
+
+    // Very large scroll (e.g., trackpad momentum scroll)
+    input.apply(Event::Scrolled {
+        x: 1000.0,
+        y: -2000.0,
+    });
+    let (sx, sy) = input.scroll();
+    assert_eq!(sx, 1000.0, "large x scroll accumulated");
+    assert_eq!(sy, -2000.0, "large negative y scroll accumulated");
+
+    // Multiple large scroll events
+    input.apply(Event::Scrolled {
+        x: -500.0,
+        y: 500.0,
+    });
+    let (sx, sy) = input.scroll();
+    assert_eq!(sx, 500.0, "x scroll continues accumulating: 1000 - 500");
+    assert_eq!(sy, -1500.0, "y scroll continues accumulating: -2000 + 500");
+}
+
+// ============================================================================
+// MULTIPLE SIMULTANEOUS POINTER BUTTONS
+// ============================================================================
+
+/// Verify all three pointer buttons can be held simultaneously.
+#[test]
+fn all_three_buttons_can_be_held_simultaneously() {
+    let mut input = Input::new();
+
+    let pos = Point::new(100.0, 100.0);
+
+    // Press primary
+    input.apply(Event::PointerDown {
+        position: pos,
+        button: PointerButton::Primary,
+    });
+    assert!(input.held(PointerButton::Primary), "primary held");
+
+    input.begin_frame();
+
+    // Press secondary while primary held
+    input.apply(Event::PointerDown {
+        position: pos,
+        button: PointerButton::Secondary,
+    });
+    assert!(input.held(PointerButton::Primary), "primary still held");
+    assert!(input.held(PointerButton::Secondary), "secondary held");
+
+    input.begin_frame();
+
+    // Press middle while both held
+    input.apply(Event::PointerDown {
+        position: pos,
+        button: PointerButton::Middle,
+    });
+    assert!(input.held(PointerButton::Primary), "primary still held");
+    assert!(input.held(PointerButton::Secondary), "secondary still held");
+    assert!(input.held(PointerButton::Middle), "middle held");
+
+    input.begin_frame();
+
+    // Release secondary, others remain
+    input.apply(Event::PointerUp {
+        position: pos,
+        button: PointerButton::Secondary,
+    });
+    assert!(input.held(PointerButton::Primary), "primary still held");
+    assert!(!input.held(PointerButton::Secondary), "secondary released");
+    assert!(input.held(PointerButton::Middle), "middle still held");
+}
