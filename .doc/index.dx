@@ -1,0 +1,276 @@
+# rui Project Index
+
+**rui** is a declarative interface library for Rust with zero dependencies. This index provides quick access to build commands, test commands, examples, and module structure.
+
+## Quick Start
+
+### Build Commands
+
+```bash
+# Debug build
+cargo build
+
+# Optimized build
+cargo build --release
+
+# WASM target
+cargo build --target wasm32-unknown-unknown -p rui --example counter
+```
+
+### Test Commands
+
+```bash
+# All tests
+cargo test
+
+# Unit tests only
+cargo test --lib
+
+# Integration tests
+cargo test --test integration
+cargo test --test recipes -- widget_name
+
+# Specific test files
+cargo test --test setup              # Verify Rust 1.85+ and pre-commit hook
+cargo test --test layout             # Layout engine tests
+cargo test --test rendering          # Rendering pipeline tests
+cargo test --test interaction        # Event handling tests
+cargo test --test external_driving   # Frame-stepping tests (WASM compatibility)
+cargo test --test recipe_1_verification  # WASM backend verification gates
+
+# WASM tests (require Firefox and wasm-pack)
+cargo test --target wasm32-unknown-unknown
+wasm-pack test --headless --firefox --test wasm_integration
+```
+
+### Key Examples (Learning Path)
+
+Entry points for learning rui:
+
+```bash
+# 1. Counter: The simplest app (start here)
+cargo run -p rui --example counter
+
+# 2. Segmented: How to build interactive controls
+cargo run -p rui --example segmented
+
+# 3. Meter: How to build passive/read-only widgets
+cargo run -p rui --example meter
+
+# 4. Other examples
+cargo run -p rui --example controls       # Showcase of widgets
+cargo run -p rui --example gallery -- .   # Render to PNG
+cargo run -p rui --example parity -- target/parity  # WASM reference frame
+cargo run -p rui --example icon           # Generate macOS app icons
+cargo run -p rui --example segmented_modified  # "Copy and Modify" verification
+```
+
+## Module Structure
+
+| Module | Purpose | Key Files |
+|--------|---------|-----------|
+| **element** | UI element tree; builders for structure and containers | `src/element.rs` |
+| **widgets** | Recipes: button, text, title, panel, tabs, draw, segmented, meter | `src/widgets.rs` |
+| **style** | Layout and appearance: Length, Radius, Tone, Align, Justify | `src/style.rs` |
+| **layout** | Flexbox-like layout engine; stacking, line wrapping, scroll, layer | `src/layout.rs` |
+| **paint** | Drawing abstraction: Painter API used by all elements | `src/paint.rs` |
+| **canvas** | Pixel buffer and rasteriser; Canvas::draw is the root operation | `src/canvas.rs` |
+| **text** | TrueType parser, glyph rasterising, text layout with kerning/ligatures | `src/text.rs` (in font/) |
+| **color** | RGB(A) colors and sRGB gamma handling | `src/color.rs` |
+| **geom** | Primitives: Rect, Point, Size, Insets | `src/geom.rs` |
+| **image** | PNG encoder for rendering to files | `src/image.rs` |
+| **input** | Input events and per-frame view of them; immediate-mode queries | `src/input.rs` |
+| **theme** | Colors, spacing, type sizes; Appearance (light/dark), Tone (semantic roles) | `src/theme.rs` |
+| **syntax** | Syntax highlighting tokenizer; Rust, Python, JavaScript, Bash, Diff | `src/syntax.rs` |
+| **shell** | Platform window management: macOS/Windows/X11/WASM backends | `src/shell/mod.rs`, `src/shell/platform/*.rs` |
+| **shell/clock** | Platform-agnostic clock abstraction (Instant on native, performance.now() on WASM) | `src/shell/clock.rs` |
+| **memory** | Stateful interaction data: hover, focus, scroll, caret, animations | `src/memory.rs` |
+| **app** | Application entry point; couples state, view function, and event loop | `src/app.rs` |
+| **testing** | Harness: drives real frame with synthetic font for deterministic testing | `src/testing/harness.rs` |
+| **demo** | Counter app; referenced by examples/counter.rs, src/wasm.rs, examples/parity.rs | `src/demo.rs` |
+
+## Platform Backends
+
+All platforms implement the `Backend` trait (`src/shell/mod.rs`):
+
+| Platform | Status | File | Notes |
+|----------|--------|------|-------|
+| macOS | ✓ Stable | `src/shell/platform/macos.rs` | Native Cocoa window, event loop |
+| Windows | ✓ Stable | `src/shell/platform/windows.rs` | Native WinAPI window, event loop |
+| X11 | ✓ Stable | `src/shell/platform/x11.rs` | X11/Wayland server, event loop |
+| WASM | ✓ Implemented | `src/shell/platform/wasm.rs` | Browser canvas, requestAnimationFrame |
+
+## Key Architectural Patterns
+
+### The View Pattern
+
+```rust
+// State: Your application data
+struct App { counter: i32 }
+
+// View: Pure function from state to UI
+fn view(app: &App) -> El<App> {
+    col((
+        text(app.counter.to_string()),
+        button("Increment", |app: &mut App| app.counter += 1),
+    ))
+}
+
+// Run: Attach state and view to the event loop
+App { counter: 0 }.run(view)
+```
+
+### Handlers (Not Closures)
+
+Handlers receive mutable state as an argument, eliminating `Rc<RefCell<>>`:
+
+```rust
+.on_click(|app: &mut App| {
+    app.counter += 1;  // Direct mutation; no interior mutability needed
+})
+```
+
+### Testing with Harness
+
+Drive the real frame without a window, with synthetic fonts for deterministic testing:
+
+```rust
+use rui::testing::Harness;
+
+let mut harness = Harness::new(App { counter: 0 }, view);
+harness.click_text("Increment");
+assert_eq!(harness.state().counter, 1);
+assert!(harness.frame().shows("1"));
+```
+
+## Test Files Reference
+
+| Test File | Command | Purpose |
+|-----------|---------|---------|
+| `tests/setup.rs` | `cargo test --test setup` | Rust 1.85+ and pre-commit hook verification |
+| `tests/layout.rs` | `cargo test --test layout` | Flexbox-like layout engine tests |
+| `tests/rendering.rs` | `cargo test --test rendering` | Rendering pipeline (colors, shapes, text) |
+| `tests/recipes.rs` | `cargo test --test recipes -- widget_name` | Widget examples: checkbox, switch, slider, radio, tooltip, segmented, meter |
+| `tests/interaction.rs` | `cargo test --test interaction -- --nocapture` | Clicks, drags, keyboard, focus management |
+| `tests/integration.rs` | `cargo test --test integration` | End-to-end layout + rendering + interaction |
+| `tests/external_driving.rs` | `cargo test --test external_driving` | Frame-stepping without event loop (WASM compat) |
+| `tests/recipe_1_verification.rs` | `cargo test --test recipe_1_verification` | WASM backend verification gates |
+| `tests/wasm_integration.rs` | `wasm-pack test --headless --firefox` | Browser integration tests |
+| `tests/wasm_events.rs` | `wasm-pack test --headless --firefox` | WASM DOM event handling |
+| `tests/wasm_fonts.rs` | `wasm-pack test --headless --firefox` | WASM font loading and rendering |
+| `tests/wasm_parity.rs` | `cargo test --test wasm_parity` | Pixel-perfect native/WASM comparison |
+
+## Common Workflows
+
+### Run All Tests
+
+```bash
+cargo test
+```
+
+### Verify Code Quality (Pre-Commit)
+
+```bash
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+```
+
+### Generate Documentation
+
+```bash
+cargo doc --no-deps --open
+```
+
+### Build WASM Package
+
+```bash
+# Install dependencies (one-time)
+rustup target add wasm32-unknown-unknown
+curl https://rustwasm.org/wasm-pack/installer/init.sh -sSf | sh
+
+# Build
+cargo build --target wasm32-unknown-unknown -p rui --example counter
+wasm-pack build --target web --release --out-dir pkg
+```
+
+### Test WASM Parity (Pixel-Perfect)
+
+```bash
+# Build native reference frame
+cargo run -p rui --example parity -- target/parity
+
+# Build WASM
+wasm-pack build --target web --release --out-dir pkg
+
+# Serve locally
+python3 -m http.server 8731 --bind 127.0.0.1
+
+# Open http://127.0.0.1:8731/examples/parity.html in browser
+# Green = identical, Red = differences
+```
+
+## Recipes
+
+Recipes are step-by-step implementations of major features with verification gates.
+
+### Recipe 1: Adding a WASM Backend
+
+**Status:** Implemented (18 commits across 3 phases)
+
+**Phases:**
+1. Clock abstraction (`src/shell/clock.rs`) — Platform-agnostic time measurement
+2. FrameDriver refactor — Extract core loop into reusable `turn()` function
+3. WASM integration — Implement Backend trait for browser, wire events via DOM
+
+**Verification gates:**
+- `cargo test --lib` — Unit tests pass
+- `cargo test --test external_driving -- state_mut_between_frames_drives_the_next_frame` — Frame-stepping works
+- `cargo build --target wasm32-unknown-unknown -p rui --example counter` — WASM compiles
+- `wasm-pack test --headless --firefox` — Browser tests pass
+- `cargo test --test wasm_parity` — Pixel-perfect parity confirmed
+
+### Recipe 2: Add a New Widget
+
+**Pattern:**
+1. Define state and appearance
+2. Write widget function in `src/widgets.rs` (build El<S> from primitives)
+3. Add test in `tests/recipes.rs` (use Harness)
+4. Verify `cargo test --test recipes -- widget_name`
+5. Run example to confirm visually
+
+**Examples to copy:**
+- `segmented` (interactive choice selector, 59 lines)
+- `meter` (passive progress bar, 22 lines)
+- checkbox, switch, slider, radio (in tests/recipes.rs)
+
+## Verification Checklist
+
+Before committing:
+
+- [ ] `cargo build` succeeds
+- [ ] `cargo test` passes (all tests)
+- [ ] `cargo fmt --check` passes (no formatting issues)
+- [ ] `cargo clippy --all-targets -- -D warnings` passes (no lints)
+- [ ] Examples run without errors: `cargo run -p rui --example counter`
+- [ ] For WASM changes: `cargo test --test recipe_1_verification` passes
+
+## Troubleshooting Quick Links
+
+- **Build fails:** Check Rust version (`rustc --version` — need 1.85+), run `cargo clean`
+- **Tests fail:** Read assertion message, run single test with `cargo test --lib test_name`
+- **Pre-commit hook blocks commit:** Run `cargo fmt` and `cargo clippy --fix` to auto-fix
+- **WASM won't build:** Verify target with `rustup target add wasm32-unknown-unknown`
+- **Examples won't run:** Verify you're in project root (`pwd`), check platform support (macOS/Windows/X11 for native)
+- **X11 display error on Linux:** Ensure X11 is running (`echo $DISPLAY`) or use `xvfb-run -a`
+
+## Entry Points by Role
+
+| Role | Start Here |
+|------|-----------|
+| **Learning rui** | `cargo run -p rui --example counter`, then read `CLAUDE.md` |
+| **Building widgets** | Copy `examples/segmented.rs` (interactive) or `examples/meter.rs` (passive), modify, test with `Harness` |
+| **Platform hacking** | Read `src/shell/mod.rs` (Backend trait), then `src/shell/platform/*.rs` for your target OS |
+| **Font rendering** | Read `src/font/` modules; `tests/rendering.rs` shows text layout tests |
+| **Layout engine** | Read `src/layout.rs` and `tests/layout.rs` for flexbox-like stacking and wrapping |
+| **WASM porting** | Read Recipe 1 commits; verify with `cargo test --test recipe_1_verification` |
+| **Testing** | Use `Harness` in `tests/recipes.rs` examples; see `src/testing/harness.rs` for API |
