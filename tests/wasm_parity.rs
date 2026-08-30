@@ -94,7 +94,7 @@ fn wasm_parity_all_pixels_are_opaque() {
 }
 
 #[test]
-fn light_and_dark_differ() {
+fn wasm_parity_light_and_dark_differ() {
     let light = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
         .expect("light reference frame should render successfully");
     let dark = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
