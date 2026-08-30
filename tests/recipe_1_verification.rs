@@ -183,65 +183,65 @@ fn recipe_1_line_numbers_accurate() {
     let content = fs::read_to_string("src/shell/mod.rs").expect("Failed to read src/shell/mod.rs");
     let lines: Vec<&str> = content.lines().collect();
 
-    // Line 55: use clock::Moment;
+    // Line 64: use clock::Moment; (updated for Step 11 docs)
     assert!(
-        lines[54].contains("use clock::Moment"),
-        "Line 55: use clock::Moment; not found at expected line. Got: {}",
-        lines.get(54).unwrap_or(&"")
+        lines[63].contains("use clock::Moment"),
+        "use clock::Moment; not found at expected location. Got: {}",
+        lines.get(63).unwrap_or(&"")
     );
 
-    // Line 152: trait Backend
+    // Line 170: trait Backend (updated for Step 11 docs)
     assert!(
-        lines[151].contains("trait Backend"),
-        "Line 152: trait Backend not found at expected line. Got: {}",
-        lines.get(151).unwrap_or(&"")
+        lines[169].contains("trait Backend"),
+        "trait Backend not found at expected location. Got: {}",
+        lines.get(169).unwrap_or(&"")
     );
 
-    // Line 186: struct Surface
+    // Line 204: struct Surface (updated for Step 11 docs)
     assert!(
-        lines[185].contains("struct Surface"),
-        "Line 186: struct Surface not found at expected line. Got: {}",
-        lines.get(185).unwrap_or(&"")
+        lines[203].contains("struct Surface"),
+        "struct Surface not found at expected location. Got: {}",
+        lines.get(203).unwrap_or(&"")
     );
 
-    // Line 199: drawn_at: Moment,
+    // Line 217: drawn_at: Moment, (updated for Step 11 docs)
     assert!(
-        lines[198].contains("drawn_at:") && lines[198].contains("Moment"),
-        "Line 199: drawn_at: Moment not found at expected line. Got: {}",
-        lines.get(198).unwrap_or(&"")
+        lines[216].contains("drawn_at:") && lines[216].contains("Moment"),
+        "drawn_at: Moment not found at expected location. Got: {}",
+        lines.get(216).unwrap_or(&"")
     );
 
-    // Line 237: let now = Moment::now();
+    // Line 255: let now = Moment::now(); (updated for Step 11 docs)
     assert!(
-        lines[236].contains("Moment::now"),
-        "Line 237: Moment::now() not found at expected line. Got: {}",
-        lines.get(236).unwrap_or(&"")
+        lines[254].contains("Moment::now"),
+        "Moment::now() not found at expected location. Got: {}",
+        lines.get(254).unwrap_or(&"")
     );
 
-    // Line 325: fn turn<S>
+    // Line 343: fn turn<S> (updated for Step 11 docs)
     assert!(
-        lines[324].contains("fn turn"),
-        "Line 325: fn turn<S> not found at expected line. Got: {}",
-        lines.get(324).unwrap_or(&"")
+        lines[342].contains("fn turn"),
+        "fn turn<S> not found at expected location. Got: {}",
+        lines.get(342).unwrap_or(&"")
     );
 
-    // Line 369: pub(crate) fn run<S: 'static> for native
+    // Line 387: pub(crate) fn run<S: 'static> for native (updated for Step 11 docs)
     assert!(
-        lines[368].contains("pub(crate) fn run") && !lines[368].contains("wasm"),
-        "Line 369: pub(crate) fn run (native) not found at expected line. Got: {}",
-        lines.get(368).unwrap_or(&"")
+        lines[386].contains("pub(crate) fn run") && !lines[386].contains("wasm"),
+        "pub(crate) fn run (native) not found at expected location. Got: {}",
+        lines.get(386).unwrap_or(&"")
     );
 
-    // Line 415: pub(crate) fn run<S: 'static> for WASM (preceded by #[cfg(target_arch = "wasm32")])
+    // Line 433: pub(crate) fn run<S: 'static> for WASM (updated for Step 11 docs, preceded by #[cfg(target_arch = "wasm32")])
     assert!(
-        lines[414].contains("pub(crate) fn run"),
-        "Line 415: pub(crate) fn run (WASM) not found at expected line. Got: {}",
-        lines.get(414).unwrap_or(&"")
+        lines[432].contains("pub(crate) fn run"),
+        "pub(crate) fn run (WASM) not found at expected location. Got: {}",
+        lines.get(432).unwrap_or(&"")
     );
-    // Verify WASM config is on the line before
+    // Verify WASM config is near the line before
     assert!(
-        lines[411..414].iter().any(|l| l.contains("wasm32")),
-        "WASM run() at line 415 should be preceded by wasm32 cfg attribute"
+        lines[429..432].iter().any(|l| l.contains("wasm32")),
+        "WASM run() should be preceded by wasm32 cfg attribute"
     );
 }
 

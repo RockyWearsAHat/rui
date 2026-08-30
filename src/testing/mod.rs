@@ -441,6 +441,14 @@ impl<S: 'static> Harness<S> {
         self.app.state()
     }
 
+    /// The input state from the last frame.
+    ///
+    /// Provides access to pointer position, keyboard state, and other input
+    /// tracking for backend consistency testing.
+    pub fn input(&self) -> &Input {
+        &self.input
+    }
+
     /// The pixels of the last frame.
     pub fn canvas(&self) -> &Canvas {
         &self.canvas
