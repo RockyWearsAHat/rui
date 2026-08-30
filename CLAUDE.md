@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Setup & Requirements
 
-- **Rust 1.85+** (Edition 2024), verified by `tests/setup.rs`. Use `rustup update` if needed.
+- **Rust 1.85+** (Edition 2021), verified by `tests/setup.rs`. Use `rustup update` if needed.
 - **No external dependencies**—the full renderer, font handling, and window management are in this crate.
 - **Platforms:** macOS (Cocoa), Windows (WinAPI), X11/Wayland (via X11 server).
 - **Pre-commit hook:** Runs `cargo fmt --check` and `cargo clippy` (`.git/hooks/pre-commit`). Executable after first git setup.
