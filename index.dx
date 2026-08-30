@@ -499,6 +499,100 @@ This is the rhythm of making a change:
 
 ---
 
+## Performance Profiling Guide
+
+### When to Profile
+
+- App frame rate drops below 60 fps (stutters).
+- Example takes >100ms to render a single frame.
+- WASM build is slower than native.
+- Scrolling lists with >100 items causes lag.
+
+### Where to Look
+
+| Component | Metric | Measure With |
+|-----------|--------|--------------|
+| View function | Time to rebuild the `El<S>` tree | Add timing in your view function: `let t0 = std::time::Instant::now(); let el = view(app); println!("view: {:?}", t0.elapsed());` |
+| Layout | Time to measure and arrange elements | Add timing around `layout()` calls in `shell/mod.rs` (line 250). |
+| Paint | Time to paint elements to pixels | Add timing around `paint()` in `shell/mod.rs` (line 260). |
+| Canvas | Time to allocate and rasterise pixels | Check `canvas.rs` line 1; measure allocation and fill time. |
+| Text | Time to rasterise glyphs | Add timing around `text()` calls; check `text.rs` line 200 for glyph cache. |
+| Platform | Time blocked waiting for OS events | Check platform backend `pump()` calls; they're blocking. |
+
+### Optimization Checklist
+
+**In the view function:**
+- ❌ Create large vectors or collect entire lists: `items.iter().collect::<Vec<_>>()` allocates every frame.
+- ✅ Use iterators: `items.iter().map(…).collect()` is fine; avoid multiple passes.
+- ❌ Call `.clone()` on large data structures.
+- ✅ Pass `&item` references into the view tree.
+- ❌ Do layout calculations in the view function.
+- ✅ Let the layout engine handle measurement.
+
+**In handlers:**
+- ❌ Block on I/O (network, disk) in a handler.
+- ✅ Return immediately and update state; let the next frame handle I/O results.
+
+**In custom paint:**
+- ❌ Draw millions of small shapes per frame (`for i in 0..1_000_000 { painter.fill(...) }`).
+- ✅ Draw in batches or use pre-computed surfaces.
+- ❌ Create text for every character manually.
+- ✅ Use the `text()` widget which batches glyph rasterising.
+
+**For lists:**
+- ❌ Rebuild all list items when one changes. Every reorder redraws all text glyphs.
+- ✅ Use `.key(&item.id)` on list items. Unchanged items preserve hover/focus state; only changed ones re-render.
+
+**For WASM:**
+- ❌ Use `console.log()` inside the frame loop; it's slow.
+- ✅ Log only on state changes or in handlers.
+- ❌ Measure performance in the browser console; GC pauses skew the result.
+- ✅ Use DevTools Performance tab; record profiles to see the real frame time.
+
+### Profiling Tools
+
+**Rust (native):**
+```bash
+# Build with optimizations
+cargo build --release
+
+# Use a profiler (macOS example)
+instruments -t "System Trace" ./target/release/rui_example
+
+# Or inline timing
+time cargo run -p rui --example counter
+```
+
+**JavaScript (WASM):**
+```javascript
+// In the browser console
+const start = performance.now();
+listen_counter();
+present_counter();
+console.log(`Frame: ${(performance.now() - start).toFixed(2)}ms`);
+```
+
+**Synthetic load testing:**
+```rust
+// In tests/integration.rs, create an app with large state
+let app = App { items: (0..10_000).collect() };
+let t0 = std::time::Instant::now();
+let frame = view(&app);
+println!("Large frame: {:?}", t0.elapsed());
+```
+
+### Red Flags
+
+| Signal | Problem | Solution |
+|--------|---------|----------|
+| View function takes >10ms | Too much allocation or computation | Profile; reduce `.clone()` and iteration |
+| Layout takes >5ms | Too many elements or deeply nested | Simplify layout; use `layer()` for overlays instead of nesting |
+| Paint takes >20ms | Too many shapes being drawn | Batch drawing; pre-compute surfaces where possible |
+| WASM slower than native by >2x | JavaScript overhead or unoptimized WASM | Check if you're using `console.log()` in the loop; measure with DevTools |
+| Memory grows unbounded | Leak in `Memory` or canvas buffer | Check that old elements are being garbage collected; verify `.key()` usage |
+
+---
+
 ## Common Mistakes & How to Avoid Them
 
 | Mistake | Symptom | Fix |
