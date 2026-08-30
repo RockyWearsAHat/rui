@@ -58,25 +58,18 @@ type EventHandler = fn(&web_sys::Event, &web_sys::HtmlCanvasElement) -> Option<E
 fn canvas_point(surface: &web_sys::HtmlCanvasElement, event: &web_sys::MouseEvent) -> Point {
     let rect = surface.get_bounding_client_rect();
     let scale = web_sys::window().map_or(1.0, |window| window.device_pixel_ratio());
-    let across = |offset: f64, shown: f64, buffer: f64| {
-        if shown > 0.0 && scale > 0.0 {
-            (offset * buffer / shown / scale) as f32
-        } else {
-            offset as f32
-        }
-    };
-    Point::new(
-        across(
-            event.client_x() as f64 - rect.left(),
-            rect.width(),
-            surface.width() as f64,
-        ),
-        across(
-            event.client_y() as f64 - rect.top(),
-            rect.height(),
-            surface.height() as f64,
-        ),
-    )
+    let (x, y) = event_mapping::pointer_canvas_position(
+        event.client_x() as f64,
+        event.client_y() as f64,
+        rect.left(),
+        rect.top(),
+        rect.width(),
+        rect.height(),
+        surface.width() as f64,
+        surface.height() as f64,
+        scale,
+    );
+    Point::new(x, y)
 }
 
 /// Handles a simple pointer down event: extracts button and position.
