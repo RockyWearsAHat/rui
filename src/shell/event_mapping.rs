@@ -87,6 +87,40 @@ pub fn normalize_wheel_delta(delta_x: f64, delta_y: f64, delta_mode: u32) -> (f3
     ((delta_x * multiplier) as f32, (delta_y * multiplier) as f32)
 }
 
+/// Converts a pointer event's viewport-relative position into the canvas's own
+/// drawing units.
+///
+/// `client_x`/`client_y` come straight off the DOM event; `rect_left`/`rect_top`
+/// are the canvas's position in the viewport; `rect_width`/`rect_height` are its
+/// displayed size (CSS pixels); `buffer_width`/`buffer_height` are its drawing
+/// buffer size; `scale` is the display's device pixel ratio. x and y are scaled
+/// independently — width against width, height against height — since a canvas
+/// need not be scaled the same on both axes.
+#[allow(clippy::too_many_arguments)]
+pub fn pointer_canvas_position(
+    client_x: f64,
+    client_y: f64,
+    rect_left: f64,
+    rect_top: f64,
+    rect_width: f64,
+    rect_height: f64,
+    buffer_width: f64,
+    buffer_height: f64,
+    scale: f64,
+) -> (f32, f32) {
+    let across = |offset: f64, shown: f64, buffer: f64| {
+        if shown > 0.0 && scale > 0.0 {
+            (offset * buffer / shown / scale) as f32
+        } else {
+            offset as f32
+        }
+    };
+    (
+        across(client_x - rect_left, rect_width, buffer_width),
+        across(client_y - rect_top, rect_height, buffer_height),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -293,5 +327,32 @@ mod tests {
     #[test]
     fn empty_string_remains_empty() {
         assert_eq!(filter_text_input_data(""), "");
+    }
+
+    #[test]
+    fn pointer_canvas_position_reads_x_from_client_x_not_client_y() {
+        // A rect offset only in x, with no width/height/scale distortion, should
+        // move only the x coordinate of the result.
+        let (x, y) =
+            pointer_canvas_position(110.0, 20.0, 10.0, 20.0, 100.0, 100.0, 100.0, 100.0, 1.0);
+        assert_eq!(x, 100.0);
+        assert_eq!(y, 0.0);
+    }
+
+    #[test]
+    fn pointer_canvas_position_reads_y_from_client_y_not_client_x() {
+        let (x, y) =
+            pointer_canvas_position(10.0, 120.0, 10.0, 20.0, 100.0, 100.0, 100.0, 100.0, 1.0);
+        assert_eq!(x, 0.0);
+        assert_eq!(y, 100.0);
+    }
+
+    #[test]
+    fn pointer_canvas_position_scales_x_by_width_and_y_by_height_independently() {
+        // Buffer is twice as wide as shown, and half as tall as shown: a swapped
+        // implementation would scale x and y the same way and fail this.
+        let (x, y) = pointer_canvas_position(60.0, 60.0, 0.0, 0.0, 100.0, 100.0, 200.0, 50.0, 1.0);
+        assert_eq!(x, 120.0);
+        assert_eq!(y, 30.0);
     }
 }
