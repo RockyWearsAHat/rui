@@ -733,3 +733,68 @@ Done. The widget is ready to use anywhere state is a Rust struct with a `rating`
 - **Hook:** Pre-commit runs `cargo fmt --check` and `cargo clippy`. Bypass with `git commit --no-verify` only for emergencies (then fix the hook cause).
 - **Cache/state files ignored:** `.cache/`, `.doc/index.db`, `.engine/` (build artifacts) are in `.gitignore`; working directory must stay clean.
 - **Commits:** Prefix with the platform or feature touched (e.g., "Add X11 input handling", "Refactor layout engine", "Improve text rendering").
+
+## Troubleshooting
+
+### Build & Compilation
+
+**Problem:** `error: could not compile rui`
+
+- **Check Rust version:** Run `rustc --version`. Minimum is 1.85. Update with `rustup update`.
+- **Check dependencies:** Run `cargo tree` to inspect dependency graph. rui has zero dependencies; unexpected crates indicate a configuration issue.
+- **Clean build artifacts:** Run `cargo clean` and retry. This resolves stale cache issues.
+
+**Problem:** `error: failed to resolve: use of undeclared crate`
+
+- **Verify your current directory:** Run `pwd` to confirm you're in `/Users/alexwaldmann/Desktop/rui`. The project root contains `Cargo.toml`.
+- **Verify Cargo.toml exists:** Run `ls -la Cargo.toml`. If missing, you're not in the project root.
+
+### Tests
+
+**Problem:** `cargo test --lib` fails with "test failures"
+
+- **Read the failure message:** Each test includes an `assert!()` or assertion that tells you exactly what is failing.
+- **Run a single test:** Use `cargo test --lib test_name` to isolate and debug one test in detail.
+- **Example:** `cargo test --lib geometry --lib` runs only geometry-related unit tests.
+
+**Problem:** `cargo test --test setup` fails
+
+- **Ensure clean git state:** Run `git status`. If it shows unstaged changes, stash them with `git stash`.
+- **Run hook manually:** Run `bash .git/hooks/pre-commit` to see the exact error. The hook checks formatting and lints.
+- **Fix formatting:** If the hook complains about formatting, run `cargo fmt` to auto-fix.
+- **Run clippy to fix lints:** Run `cargo clippy --fix --allow-staged` to auto-fix linter warnings.
+
+### Examples
+
+**Problem:** Example fails to build or run
+
+- **Verify the example exists:** Run `ls examples/` to list all examples. Spelling must match exactly.
+- **Run with output:** Use `cargo run -p rui --example counter 2>&1` to see stderr if anything goes wrong.
+- **Check platform requirements:** macOS examples need macOS, X11 examples need an X11 server, WASM examples need a browser and wasm-pack.
+
+### WASM Backend
+
+**Problem:** `wasm-pack build` fails with "wasm target not found"
+
+- **Install WASM target:** Run `rustup target add wasm32-unknown-unknown`.
+- **Verify wasm-pack is installed:** Run `wasm-pack --version`. Install if missing: `curl https://rustwasm.org/wasm-pack/installer/init.sh -sSf | sh`.
+
+**Problem:** WASM browser example shows blank canvas or no interaction
+
+- **Check browser console:** Open the browser's developer tools (F12) and look for JavaScript errors. They appear in the **Console** tab.
+- **Verify serving locally:** Examples served from `file://` URLs won't work. Use `python3 -m http.server 8000` to serve locally.
+- **Test in Firefox:** Firefox is the primary test browser for parity verification. Chrome and Safari may have subtle rendering differences.
+
+### Performance & Debugging
+
+**Problem:** Application is slow or rendering is stuttering
+
+- **Use `--release` build:** Debug builds are much slower. Run `cargo build --release` and `cargo run -p rui --example counter --release` for optimized performance.
+- **Check for infinite loops:** If the app hangs, it may be stuck in the view function or an event handler. Verify handlers eventually return.
+- **Profile with Xcode Instruments:** On macOS, use `cargo build --release && open -a Instruments ./target/release/rui` to profile the app.
+
+### Getting Help
+
+- **Check git history:** Run `git log --oneline` to see recent commits. The commit messages document what changed and why.
+- **Search for similar issues:** Run `grep -r "error message" src/` to find where an error is thrown.
+- **Read test examples:** Look at `tests/recipes.rs` for working examples of each widget and pattern.
