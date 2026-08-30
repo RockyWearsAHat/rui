@@ -216,7 +216,7 @@ The synthetic font ensures widths are arithmetic (half an em per character). Ani
 
 ### Segmented Control Exemplar
 
-The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough to copy and modify immediately—the core widget pattern (state + view + handler) is about 26 lines, the full example is 37 lines including imports and main.
+The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough to copy and modify immediately—the example is 59 lines total, with just 19 substantive lines of code (the pattern itself is trivial: state struct, view function, handler closure).
 
 **Pattern at a Glance:**
 ```
