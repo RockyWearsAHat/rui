@@ -2,6 +2,19 @@
 Build Plan
 ::end
 
+::heading level=2 id=document-hierarchy
+Document Hierarchy
+::end
+
+::paragraph id=doc-links
+This document (dev.dx) tracks the build plan progress and worklist status. For detailed project structure, module documentation, and developer workflows, see [[index.dx]].
+
+**Document purposes:**
+- **dev.dx** (this file): Build plan checklist, step-by-step verification, project health status
+- **index.dx**: Comprehensive project orientation, module structure, design patterns, build workflows
+- **CLAUDE.md**: Coding standards, testing strategy, architecture patterns, platform-specific guidance
+::end
+
 ::checklist id=steps
 - [x] Step 1: Verify Rust 1.85+ toolchain and wasm32 target installed
 - [x] Step 2: Run full test suite and verify all tests pass
