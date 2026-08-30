@@ -23,6 +23,8 @@ pub fn compare_frames(expected: &[u8], actual: &[u8]) -> (usize, usize) {
 
 /// Generate both light and dark reference frames as RGBA byte buffers.
 /// Returns a 2-element array: [(Appearance::Light, pixels), (Appearance::Dark, pixels)].
+/// Uses the same encoding as `image::rgba()`: R, G, B channels extracted from pixel u32,
+/// alpha always 0xFF.
 fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
     let light = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
         .expect("light reference frame should render successfully");
@@ -32,12 +34,12 @@ fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
     let light_bytes: Vec<u8> = light
         .pixels()
         .iter()
-        .flat_map(|pixel| pixel.to_le_bytes())
+        .flat_map(|&pixel| vec![(pixel >> 16) as u8, (pixel >> 8) as u8, pixel as u8, 0xff])
         .collect();
     let dark_bytes: Vec<u8> = dark
         .pixels()
         .iter()
-        .flat_map(|pixel| pixel.to_le_bytes())
+        .flat_map(|&pixel| vec![(pixel >> 16) as u8, (pixel >> 8) as u8, pixel as u8, 0xff])
         .collect();
 
     [
@@ -259,4 +261,64 @@ fn parity_frames_can_write_to_browser_directory() {
 
     // Cleanup
     let _ = std::fs::remove_dir_all(&temp_dir);
+}
+
+#[test]
+fn programmatic_frames_match_example_output() {
+    // Generate frames using the parity example (reference implementation)
+    let example_dir = std::env::temp_dir().join("rui_parity_example_verify");
+    let example_dir_str = example_dir.to_string_lossy().to_string();
+
+    // Clean up any prior run
+    let _ = std::fs::remove_dir_all(&example_dir);
+
+    // Create directory for example output
+    std::fs::create_dir_all(&example_dir)
+        .expect("should create temporary directory for example output");
+
+    // Run the parity example to generate reference frames
+    let output = std::process::Command::new("cargo")
+        .args(["run", "-p", "rui", "--example", "parity", "--"])
+        .arg(&example_dir_str)
+        .output()
+        .expect("should run parity example");
+
+    if !output.status.success() {
+        panic!(
+            "parity example failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    // Load the example-generated RGBA files
+    let example_light_path = example_dir.join("parity-light.rgba");
+    let example_dark_path = example_dir.join("parity-dark.rgba");
+
+    let example_light_bytes = std::fs::read(&example_light_path)
+        .expect("should read parity-light.rgba from example output");
+    let example_dark_bytes = std::fs::read(&example_dark_path)
+        .expect("should read parity-dark.rgba from example output");
+
+    // Generate frames programmatically using the test helper
+    let frames = parity_frames();
+    let (_, programmatic_light_bytes) = &frames[0];
+    let (_, programmatic_dark_bytes) = &frames[1];
+
+    // Compare light frames
+    let (diff_light, total_pixels) = compare_frames(&example_light_bytes, programmatic_light_bytes);
+    assert_eq!(
+        diff_light, 0,
+        "programmatic light frame should match example output exactly ({} pixels)",
+        total_pixels
+    );
+
+    // Compare dark frames
+    let (diff_dark, _) = compare_frames(&example_dark_bytes, programmatic_dark_bytes);
+    assert_eq!(
+        diff_dark, 0,
+        "programmatic dark frame should match example output exactly"
+    );
+
+    // Cleanup
+    let _ = std::fs::remove_dir_all(&example_dir);
 }
