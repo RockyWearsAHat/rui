@@ -31,16 +31,8 @@ fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
     let dark = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
         .expect("dark reference frame should render successfully");
 
-    let light_bytes: Vec<u8> = light
-        .pixels()
-        .iter()
-        .flat_map(|&pixel| vec![(pixel >> 16) as u8, (pixel >> 8) as u8, pixel as u8, 0xff])
-        .collect();
-    let dark_bytes: Vec<u8> = dark
-        .pixels()
-        .iter()
-        .flat_map(|&pixel| vec![(pixel >> 16) as u8, (pixel >> 8) as u8, pixel as u8, 0xff])
-        .collect();
+    let light_bytes = image::rgba(&light);
+    let dark_bytes = image::rgba(&dark);
 
     [
         (Appearance::Light, light_bytes),
