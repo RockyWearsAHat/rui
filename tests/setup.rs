@@ -64,6 +64,17 @@ fn pre_commit_hook_rejects_unformatted_code() {
 
     let test_file = PathBuf::from("tests/test_unformatted.rs");
 
+    // Save git state before test to ensure isolation in parallel execution
+    let stash_output = Command::new("git")
+        .arg("stash")
+        .output()
+        .expect("failed to save git state");
+    assert!(
+        stash_output.status.success(),
+        "git stash failed: {}",
+        String::from_utf8_lossy(&stash_output.stderr)
+    );
+
     // 1. Write unformatted Rust code
     let bad_code = "fn     test_func(  ) {\n    let  x=1;\n}\n";
     fs::write(&test_file, bad_code).expect("failed to write test file");
@@ -105,23 +116,34 @@ fn pre_commit_hook_rejects_unformatted_code() {
         stderr
     );
 
-    // 6. Cleanup: remove staged file
+    // 6. Restore git state to ensure no leakage to other tests
     let reset_output = Command::new("git")
         .arg("reset")
         .arg("HEAD")
-        .arg(&test_file)
         .output()
         .expect("failed to run git reset");
     assert!(
-        reset_output.status.success()
-            || String::from_utf8_lossy(&reset_output.stderr)
-                .contains("pathspec 'tests/test_unformatted.rs' did not match"),
+        reset_output.status.success(),
         "git reset failed: {}",
         String::from_utf8_lossy(&reset_output.stderr)
     );
 
     if test_file.exists() {
         fs::remove_file(&test_file).expect("failed to delete test file");
+    }
+
+    // Pop stash to restore the exact state before the test
+    let pop_output = Command::new("git")
+        .arg("stash")
+        .arg("pop")
+        .output()
+        .expect("failed to restore git state");
+    // Ignore error if stash was empty (no prior changes)
+    if !pop_output.status.success() {
+        let stderr = String::from_utf8_lossy(&pop_output.stderr);
+        if !stderr.contains("No stash entries found") {
+            panic!("git stash pop failed: {}", stderr);
+        }
     }
 }
 
@@ -342,5 +364,29 @@ fn wasm_module_is_exported_from_lib_with_correct_guard() {
     assert!(
         guard_line.contains("#[cfg") || (guard_line.is_empty() && wasm_pub_line >= 2),
         "the line immediately before 'pub mod wasm;' should be the cfg attribute"
+    );
+}
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn wasm32_target_compiles_counter_example() {
+    use std::process::Command;
+
+    let output = Command::new("cargo")
+        .arg("build")
+        .arg("--target")
+        .arg("wasm32-unknown-unknown")
+        .arg("-p")
+        .arg("rui")
+        .arg("--example")
+        .arg("counter")
+        .output()
+        .expect("failed to run cargo build for wasm32 target");
+
+    assert!(
+        output.status.success(),
+        "wasm32-unknown-unknown target failed to compile counter example:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
     );
 }
