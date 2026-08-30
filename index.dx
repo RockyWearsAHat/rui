@@ -179,6 +179,198 @@ Rendering feature? → src/paint.rs (Painter API)
 Platform feature? → src/shell/platform/[platform].rs
 ```
 
+## Reading Paths: Deep Understanding by Topic
+
+These reading paths guide you through specific areas of the codebase to build comprehensive understanding.
+
+### Goal: Master the Frame Loop (1.5 hours)
+The frame loop is rui's heartbeat. Understanding it unlocks everything.
+
+1. **Read:** `src/shell/mod.rs` lines 150–200 (Backend trait definition)
+   - Understand: Each platform implements 6 methods to open, pump events, report state, and present pixels
+   - Stop point: You can explain what Backend does without looking at code
+
+2. **Read:** `src/shell/mod.rs` lines 250–325 (the `turn()` function)
+   - Understand: This is the frame-stepping abstraction; both desktop and WASM call it
+   - Stop point: You can trace a click from input → handler → state → redraw
+
+3. **Read:** `src/shell/mod.rs` lines 369–390 (native `run()` for desktop)
+   - Understand: Loops, calls `turn()`, checks if app is still open
+   - Stop point: You see how desktop owns the while loop
+
+4. **Read:** `src/shell/mod.rs` lines 415–480 (WASM `run()` for browser)
+   - Understand: No while loop; `requestAnimationFrame` calls `turn()` instead
+   - Stop point: You see how WASM delegates to browser scheduler
+
+5. **Verify:** `tests/external_driving.rs` (frame-stepping test)
+   - Understand: You can drive the frame without owning the loop
+   - Stop point: You can write a test that calls `app.frame()` multiple times
+
+**Result:** You understand that rui's frame loop is platform-agnostic. Both desktop and browser call the same `turn()` function. Only Backend differs.
+
+### Goal: Understand Layout (1 hour)
+Layout is how elements get sized and positioned.
+
+1. **Read:** `src/layout.rs` lines 1–80 (types and measure function)
+   - Understand: `measure()` returns `Size` (width, height); takes constraints
+   - Stop point: You can explain the flex algorithm
+
+2. **Read:** `src/style.rs` (Length enum and related types)
+   - Understand: `Length::Auto`, `Fixed(px)`, `Grow(weight)` determine how sizing works
+   - Stop point: You know when to use each variant
+
+3. **Read:** `src/layout.rs` lines 100–150 (arrange function)
+   - Understand: `arrange()` positions elements based on measured sizes
+   - Stop point: You can trace how an element ends up at position (100, 50)
+
+4. **Verify:** `tests/layout.rs` (layout test cases)
+   - Understand: Add elements, call measure, call arrange, verify Rect positions
+   - Stop point: You can write a layout test
+
+**Result:** You understand the two-pass layout algorithm. Measure → arrange. Know it.
+
+### Goal: Learn Widget Building (2 hours)
+Most rui work is building widgets (interactive or passive).
+
+1. **Copy:** `examples/segmented.rs` (interactive widget)
+   - Understand: State struct + view function + handler closure = widget
+   - Stop point: You modified it and it still works
+
+2. **Read:** `src/widgets.rs` lines 333–365 (segmented implementation in codebase)
+   - Understand: This is how segmented is actually built from primitives
+   - Stop point: You can build your own widget from primitives
+
+3. **Copy:** `examples/meter.rs` (passive widget)
+   - Understand: No handler; just display state
+   - Stop point: You modified it and tested it
+
+4. **Add:** A test in `tests/recipes.rs` using Harness
+   - Understand: How to test widgets without a window
+   - Stop point: Test passes; widget is verified
+
+**Result:** You can build any widget. State → view → handler. Copy → modify → test → ship.
+
+### Goal: Fix a Rendering Bug (1–2 hours)
+Rendering bugs are usually localized to one module.
+
+1. **Identify:** Run `cargo run -p rui --example gallery -- .` before/after
+   - Understand: Which element looks wrong? Only one platform or all?
+   - Stop point: You have screenshots showing the bug
+
+2. **Locate:** Find the widget in `src/widgets.rs`
+   - Understand: How is it drawn? What does it call?
+   - Stop point: You know which module to fix (paint, text, layout, etc.)
+
+3. **Read:** The responsible module
+   - If `paint.rs`: How does `Painter::fill()` work?
+   - If `text.rs`: How are glyphs measured and drawn?
+   - If `canvas.rs`: How are pixels blended?
+   - Stop point: You understand the bug root cause
+
+4. **Add:** A test in `tests/recipes.rs` that reproduces the bug
+   - Understand: Deterministic, no window, instant feedback
+   - Stop point: Test fails before fix, passes after
+
+5. **Fix:** Minimal change to make the test pass
+
+**Result:** Bug fixed. Tests pass. Ship it.
+
+### Goal: Add a New Platform (3–4 hours)
+Platforms are backend implementations. One per OS.
+
+1. **Study:** `src/shell/platform/macos.rs` (or another working platform)
+   - Understand: How does it open a window? Collect events? Present pixels?
+   - Stop point: You can explain all 6 Backend methods
+
+2. **Read:** `src/shell/mod.rs` lines 150–200 (Backend trait)
+   - Understand: What 6 methods must you implement?
+   - Stop point: You can list them from memory
+
+3. **Create:** `src/shell/platform/[your_platform].rs`
+   - Implement all 6 methods using your platform's API
+   - Stub the methods; don't implement fully yet
+   - Stop point: File compiles
+
+4. **Integrate:** Wire into `src/shell/mod.rs` via `#[cfg(...)]` selector
+   - Add platform check at top of module
+   - Run: `cargo build --target [your_target]`
+   - Stop point: Builds successfully
+
+5. **Implement:** Fill in each Backend method
+   - Reference working platform for similar code
+   - Test on target device/emulator
+   - Stop point: `cargo run -p rui --example counter` works
+
+6. **Verify:** Parity test
+   - Render the same frame on native and your platform
+   - Compare pixels (should be identical)
+   - Test light and dark modes
+   - Stop point: Parity test passes
+
+**Result:** New platform working. Framework extensible.
+
+### Goal: Understand Text Rendering (1.5 hours)
+Text is complex. TrueType parsing, glyph metrics, kerning, ligatures.
+
+1. **Read:** `src/text.rs` lines 1–100 (overview and structure)
+   - Understand: What does a TrueType file contain? Which tables do we read?
+   - Stop point: You know font structure
+
+2. **Read:** `src/text.rs` lines 150–200 (TrueType parser)
+   - Understand: How are glyph metrics extracted? How is kerning applied?
+   - Stop point: You can trace a glyph from name to pixels
+
+3. **Read:** `src/canvas.rs` (rasterization)
+   - Understand: How are glyph outlines converted to pixels?
+   - Stop point: You know anti-aliasing is done here
+
+4. **Read:** `src/paint.rs` text methods
+   - Understand: How does `Painter::text()` call into the text module?
+   - Stop point: You can trace text rendering end-to-end
+
+5. **Verify:** Write a test in `tests/recipes.rs` with text
+   - Understand: Use Harness to verify text renders correctly
+   - Stop point: Test passes
+
+**Result:** You understand text rendering deeply. Bugs become obvious.
+
+### Goal: Master Theming & Colors (1 hour)
+Colors respect light/dark mode. Understand roles vs values.
+
+1. **Read:** `src/theme.rs` (complete file)
+   - Understand: `Tone` enum defines roles (Accent, Surface, Error, etc.)
+   - Understand: `Appearance` enum is light or dark
+   - Understand: `Colors` struct maps (Tone, Appearance) to RGB
+   - Stop point: You can add a new Tone role
+
+2. **Read:** `src/color.rs` (complete file)
+   - Understand: sRGB gamma handling, RGB representation
+   - Stop point: You understand why gamma matters
+
+3. **Verify:** Test with both light and dark mode
+   - Run example: `cargo run -p rui --example counter`
+   - Check: Does appearance match system setting?
+   - Stop point: Both modes work
+
+**Result:** You never hardcode RGB. Always use Tone. Dark mode works automatically.
+
+### Goal: Understand Memory & State Preservation (1 hour)
+Hover, focus, scroll, caret, animations all persist across frames.
+
+1. **Read:** `src/memory.rs` (complete file)
+   - Understand: Memory is keyed by element identity
+   - Understand: Identity is element path in tree or explicit `.key()`
+   - Understand: Without stable identity, state follows wrong element on reorder
+   - Stop point: You know why `.key()` matters
+
+2. **Verify:** Test without `.key()` and with `.key()`
+   - Build: List of items with ID
+   - Without `.key()`: Reorder items; hover state follows wrong item
+   - With `.key()`: Reorder items; hover state follows correct item
+   - Stop point: You see the difference
+
+**Result:** You always use `.key()` on reordered lists. State sticks to right element.
+
 ## Design Patterns
 
 ### State → View → Handlers
