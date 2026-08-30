@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Rust 1.85+** (Edition 2024), verified by `tests/setup.rs`. Use `rustup update` if needed.
 - **No external dependencies**—the full renderer, font handling, and window management are in this crate.
 - **Platforms:** macOS (Cocoa), Windows (WinAPI), X11/Wayland (via X11 server).
-- **Pre-commit hook:** Runs `cargo fmt` and checks Cargo.lock cleanliness (`.git/hooks/pre-commit`). Executable after first git setup.
+- **Pre-commit hook:** Runs `cargo fmt --check` and `cargo clippy` (`.git/hooks/pre-commit`). Executable after first git setup.
 
 ## Common Commands
 
@@ -160,7 +160,7 @@ The synthetic font ensures widths are arithmetic (half an em per character). Ani
 
 ### Segmented Control Exemplar
 
-The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough (26 lines) to copy and modify immediately.
+The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough (33 lines) to copy and modify immediately.
 
 **Pattern at a Glance:**
 ```
