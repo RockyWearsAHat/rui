@@ -322,3 +322,62 @@ fn programmatic_frames_match_example_output() {
     // Cleanup
     let _ = std::fs::remove_dir_all(&example_dir);
 }
+
+#[test]
+fn programmatic_frames_ready_for_browser_parity() {
+    // This test verifies the complete workflow: programmatic frames can be
+    // written to the location `examples/parity.html` expects for browser comparison.
+    // The parity.html script loads frames from `/target/parity/parity-{light,dark}.rgba`
+    // and compares them byte-for-byte against what the WASM backend draws.
+
+    let target_parity_dir = "target/parity";
+
+    // Write programmatic frames to the exact location parity.html will fetch from
+    write_parity_frames_to_directory(target_parity_dir)
+        .expect("should write frames to target/parity for browser parity verification");
+
+    // Verify both files exist and are the correct size
+    for appearance_name in &["light", "dark"] {
+        let rgba_path = std::path::PathBuf::from(target_parity_dir)
+            .join(format!("parity-{}.rgba", appearance_name));
+
+        assert!(
+            rgba_path.exists(),
+            "parity-{}.rgba should exist at target/parity for browser to load",
+            appearance_name
+        );
+
+        let metadata =
+            std::fs::metadata(&rgba_path).expect("should read metadata for reference frame");
+        let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as u64;
+
+        assert_eq!(
+            metadata.len(),
+            expected_size,
+            "parity-{}.rgba should be {} bytes for {}x{} frame",
+            appearance_name,
+            expected_size,
+            REFERENCE_WIDTH,
+            REFERENCE_HEIGHT
+        );
+    }
+
+    // Load and verify the content is correct
+    let light_bytes =
+        std::fs::read(std::path::PathBuf::from(target_parity_dir).join("parity-light.rgba"))
+            .expect("should read parity-light.rgba");
+
+    let dark_bytes =
+        std::fs::read(std::path::PathBuf::from(target_parity_dir).join("parity-dark.rgba"))
+            .expect("should read parity-dark.rgba");
+
+    // Frames should not be empty
+    assert!(!light_bytes.is_empty(), "light frame should contain pixels");
+    assert!(!dark_bytes.is_empty(), "dark frame should contain pixels");
+
+    // Frames should be different (light vs dark modes render differently)
+    assert_ne!(
+        light_bytes, dark_bytes,
+        "light and dark frames should differ (different appearance = different rendering)"
+    );
+}
