@@ -1,0 +1,60 @@
+{
+  "updatedAt": "2026-08-30T01:54:20.619145Z",
+  "agents": [
+    {
+      "id": "coach",
+      "role": "coach",
+      "status": "active",
+      "updatedAt": "2026-08-30T01:54:11.228161Z"
+    },
+    {
+      "id": "lead",
+      "role": "orchestrator",
+      "status": "running",
+      "updatedAt": "2026-08-30T01:51:13.625624Z"
+    },
+    {
+      "id": "planner",
+      "role": "planner",
+      "status": "active",
+      "updatedAt": "2026-08-30T01:51:13.726469Z"
+    },
+    {
+      "id": "reviewer",
+      "role": "reviewer",
+      "status": "active",
+      "updatedAt": "2026-08-30T01:53:06.045977Z"
+    },
+    {
+      "id": "team-frontend-1",
+      "role": "builder",
+      "status": "active",
+      "updatedAt": "2026-08-30T01:53:13.77587Z"
+    },
+    {
+      "id": "team-frontend-3",
+      "role": "builder",
+      "status": "active",
+      "updatedAt": "2026-08-30T01:54:15.198738Z"
+    },
+    {
+      "id": "team-general-0",
+      "role": "builder",
+      "status": "active",
+      "updatedAt": "2026-08-30T01:52:27.40947Z"
+    },
+    {
+      "id": "team-general-2",
+      "role": "builder",
+      "status": "active",
+      "updatedAt": "2026-08-30T01:54:20.619143Z"
+    },
+    {
+      "id": "team-general-4",
+      "role": "builder",
+      "status": "active",
+      "updatedAt": "2026-08-30T01:51:34.137549Z"
+    }
+  ],
+  "messages": null
+}
