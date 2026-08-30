@@ -33,6 +33,7 @@ struct CounterState {
     events: Vec<Event>,
     ui_font: crate::text::FontId,
     mono_font: crate::text::FontId,
+    last_frame_time: crate::shell::clock::Moment,
 }
 
 /// Starts the counter and lets the library drive its own frames.
@@ -73,6 +74,7 @@ pub fn init_counter() -> i32 {
             events: Vec::new(),
             ui_font,
             mono_font,
+            last_frame_time: crate::shell::clock::Moment::now(),
         });
     });
     0
@@ -92,6 +94,11 @@ pub fn present_counter() {
                 .canvas
                 .clear_vertical(theme.palette.background, theme.palette.background_deep);
 
+            let now = crate::shell::clock::Moment::now();
+            let elapsed = now.since(counter.last_frame_time);
+            counter.last_frame_time = now;
+
+            counter.memory.begin_frame(elapsed);
             counter.input.begin_frame();
             for event in counter.events.drain(..) {
                 counter.input.apply(event);

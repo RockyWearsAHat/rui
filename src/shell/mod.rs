@@ -38,7 +38,7 @@
 //! not something only this loop can do: `Backend::pump` is handed a way to
 //! draw one, for a backend to call when the platform has taken over.
 
-mod clock;
+pub mod clock;
 pub mod embedded_fonts;
 pub mod event_mapping;
 pub mod fonts;
