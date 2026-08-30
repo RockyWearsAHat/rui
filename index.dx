@@ -371,6 +371,222 @@ Hover, focus, scroll, caret, animations all persist across frames.
 
 **Result:** You always use `.key()` on reordered lists. State sticks to right element.
 
+## Real-World Scenario: Building a Feature From Idea to Ship
+
+This walkthrough shows a complete feature implementation. Use it as a template for your own work.
+
+### Scenario: Add a "Confirm Before Delete" Dialog
+
+**Goal:** User clicks a delete button. Instead of deleting immediately, show a confirmation dialog. Only delete if user clicks "Confirm Delete".
+
+### Step 1: Define State (10 min)
+
+First, capture what the dialog needs to track:
+
+```rust
+#[derive(Clone, Copy, PartialEq)]
+enum DialogState {
+    Hidden,
+    Shown,
+}
+
+struct App {
+    items: Vec<String>,
+    delete_dialog: DialogState,
+    pending_delete_index: Option<usize>,
+}
+```
+
+**Why this shape?** `delete_dialog` tracks visibility. `pending_delete_index` remembers which item the user wants to delete.
+
+**Stop point:** You can explain why this state structure makes sense.
+
+### Step 2: Draw the View Function (15 min)
+
+Build the UI from state. When dialog is shown, render it on top of the list:
+
+```rust
+fn view(app: &App) -> El<App> {
+    let list = col(
+        app.items.iter().enumerate().map(|(i, item)| {
+            row((
+                text(item),
+                button("Delete", move |app: &mut App| {
+                    app.pending_delete_index = Some(i);
+                    app.delete_dialog = DialogState::Shown;
+                }),
+            ))
+            .key(&i)  // ← Preserve hover/focus when list changes
+        }).collect::<Vec<_>>()
+    );
+
+    let dialog = if app.delete_dialog == DialogState::Shown {
+        col((
+            text("Confirm delete?"),
+            row((
+                button("Cancel", |app: &mut App| {
+                    app.delete_dialog = DialogState::Hidden;
+                }),
+                button("Confirm Delete", |app: &mut App| {
+                    if let Some(idx) = app.pending_delete_index {
+                        app.items.remove(idx);
+                        app.delete_dialog = DialogState::Hidden;
+                        app.pending_delete_index = None;
+                    }
+                }),
+            )),
+        ))
+        .pad(20.0)
+        .fill(Tone::Surface)
+    } else {
+        col(()).height(Length::Fixed(0.0))  // Hidden (no space taken)
+    };
+
+    col((list, dialog))
+}
+```
+
+**Key patterns:**
+- State determines visibility (if condition)
+- Each button is a handler that updates state
+- Handlers receive `&mut App` (no closures, no RefCell)
+- `.key(&i)` preserves list item state across reorders
+
+**Stop point:** You can trace through a click: click "Delete" → handler sets `pending_delete_index` → state changes → view rebuilds → dialog shows.
+
+### Step 3: Write a Test (15 min)
+
+Test the feature without a window using Harness:
+
+```rust
+#[test]
+fn delete_dialog_appears_on_delete_click() {
+    let mut harness = Harness::new(
+        App {
+            items: vec!["Item 1".into(), "Item 2".into()],
+            delete_dialog: DialogState::Hidden,
+            pending_delete_index: None,
+        },
+        view,
+    );
+
+    // Click "Delete" on first item
+    harness.click_text("Delete");
+
+    // Dialog should appear
+    assert!(harness.frame().shows("Confirm delete?"));
+    assert_eq!(harness.state().delete_dialog, DialogState::Shown);
+}
+
+#[test]
+fn delete_confirmed_removes_item() {
+    let mut harness = Harness::new(
+        App {
+            items: vec!["Item 1".into(), "Item 2".into()],
+            delete_dialog: DialogState::Hidden,
+            pending_delete_index: None,
+        },
+        view,
+    );
+
+    // Delete Item 1
+    harness.click_text("Delete");  // Opens dialog
+    harness.click_text("Confirm Delete");  // Confirms deletion
+
+    // Item should be removed
+    assert_eq!(harness.state().items.len(), 1);
+    assert_eq!(harness.state().items[0], "Item 2");
+    assert!(harness.frame().shows("Item 2"));
+    assert!(!harness.frame().shows("Item 1"));
+}
+```
+
+**Run tests:**
+```bash
+cargo test --test recipes -- delete_dialog
+```
+
+**Result:** Tests pass ✓ Feature verified
+
+**Stop point:** Both tests pass before any implementation.
+
+### Step 4: Verify Visually (5 min)
+
+Run the example to see it work:
+
+```bash
+cargo run -p rui --example my_app  # (you build this file)
+```
+
+**What to check:**
+- List renders correctly
+- Click "Delete" → dialog appears
+- Click "Cancel" → dialog closes, item still there
+- Click "Delete" again, then "Confirm Delete" → item removed
+
+**Stop point:** Feature works as expected on desktop.
+
+### Step 5: Test on WASM (Optional, 10 min)
+
+If supporting browser, verify it works:
+
+```bash
+wasm-pack build --target web --release --out-dir pkg
+python3 -m http.server 8000
+# Open http://localhost:8000 in a browser
+```
+
+**What to check:**
+- Same interactions work in browser
+- Parity test (if you have one) still passes
+
+**Stop point:** Works identically on desktop and browser.
+
+### Step 6: Format and Lint (2 min)
+
+```bash
+cargo fmt
+cargo clippy
+```
+
+**Stop point:** No warnings, all code formatted.
+
+### Step 7: Commit (1 min)
+
+```bash
+git add src/demo.rs tests/recipes.rs
+git commit -m "feat: Add confirmation dialog for deletes
+
+- Add DialogState to track dialog visibility
+- New 'Delete' button opens confirmation dialog
+- 'Confirm Delete' removes item from list
+- 'Cancel' dismisses dialog without deleting
+- Tests verify state transitions and final state
+- Works on desktop and WASM"
+```
+
+**Stop point:** Commit message clearly describes what changed and why.
+
+### Total Time: ~1 hour
+
+This is the rhythm for any feature:
+1. **Define state** (what data does the feature need?)
+2. **Draw the view** (how should it look based on state?)
+3. **Write tests** (does it behave as expected?)
+4. **Verify visually** (does it look/feel right?)
+5. **Test on all platforms** (WASM, etc.)
+6. **Format & lint** (pre-commit hooks)
+7. **Commit** (ship it!)
+
+### Key Takeaways
+
+- **State first:** Before you code, design the state shape. Good state makes the view obvious.
+- **View is pure:** No side effects. State in, pixels out.
+- **Handlers mutate:** Handlers are the *only* place state changes. Click → handler → state change → view rebuilds.
+- **Test first:** Write tests before or alongside code. Harness makes this fast.
+- **Verify visually:** Running the example catches issues testing misses (colors, spacing, etc.).
+- **Commit small:** One feature per commit. Easy to review, easy to revert if needed.
+
 ## Design Patterns
 
 ### State → View → Handlers
