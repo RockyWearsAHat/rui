@@ -47,6 +47,8 @@ fn pre_commit_hook_exists_and_is_executable() {
 fn pre_commit_hook_runs_successfully_when_code_is_clean() {
     use std::process::Command;
 
+    let _guard = GIT_LOCK.lock().unwrap();
+
     let output = Command::new("bash")
         .arg(".git/hooks/pre-commit")
         .output()
