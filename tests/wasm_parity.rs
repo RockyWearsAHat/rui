@@ -4,7 +4,7 @@
 //! for later comparison with WASM-rendered output.
 
 use rui::demo::{reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
-use rui::Appearance;
+use rui::{image, Appearance};
 
 /// Compare two RGBA byte buffers pixel-by-pixel.
 /// Returns (differing_pixel_count, total_pixels).
@@ -175,6 +175,7 @@ fn parity_frame_byte_count_correct() {
 ///
 /// Writes two files per appearance:
 /// - `parity-<appearance>.rgba` — raw RGBA bytes for byte-accurate comparison
+/// - `parity-<appearance>.png` — PNG-encoded frame for human inspection
 ///
 /// This function enables programmatic frame generation for the browser parity workflow.
 pub fn write_parity_frames_to_directory(directory: &str) -> std::io::Result<()> {
@@ -185,15 +186,21 @@ pub fn write_parity_frames_to_directory(directory: &str) -> std::io::Result<()> 
         std::fs::create_dir_all(dir)?;
     }
 
-    let frames = parity_frames();
-    for (appearance, bytes) in frames {
-        let name = match appearance {
-            Appearance::Light => "light",
-            Appearance::Dark => "dark",
-        };
+    for (appearance_name, appearance) in [("light", Appearance::Light), ("dark", Appearance::Dark)]
+    {
+        let canvas = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, appearance)
+            .expect("reference frame should render");
+        let pixels = image::rgba(&canvas);
 
-        let rgba_path = dir.join(format!("parity-{}.rgba", name));
-        std::fs::write(&rgba_path, &bytes)?;
+        // Write RGBA file for programmatic comparison
+        let rgba_path = dir.join(format!("parity-{}.rgba", appearance_name));
+        std::fs::write(&rgba_path, &pixels)?;
+
+        // Write PNG file for human inspection
+        let png_bytes = image::png(canvas.width(), canvas.height(), &pixels)
+            .ok_or_else(|| std::io::Error::other("PNG encoding failed"))?;
+        let png_path = dir.join(format!("parity-{}.png", appearance_name));
+        std::fs::write(&png_path, png_bytes)?;
     }
 
     Ok(())
@@ -336,29 +343,44 @@ fn programmatic_frames_ready_for_browser_parity() {
     write_parity_frames_to_directory(target_parity_dir)
         .expect("should write frames to target/parity for browser parity verification");
 
-    // Verify both files exist and are the correct size
+    // Verify both RGBA and PNG files exist and are the correct size
     for appearance_name in &["light", "dark"] {
         let rgba_path = std::path::PathBuf::from(target_parity_dir)
             .join(format!("parity-{}.rgba", appearance_name));
+        let png_path = std::path::PathBuf::from(target_parity_dir)
+            .join(format!("parity-{}.png", appearance_name));
 
         assert!(
             rgba_path.exists(),
             "parity-{}.rgba should exist at target/parity for browser to load",
             appearance_name
         );
+        assert!(
+            png_path.exists(),
+            "parity-{}.png should exist at target/parity for display",
+            appearance_name
+        );
 
-        let metadata =
-            std::fs::metadata(&rgba_path).expect("should read metadata for reference frame");
+        let rgba_metadata =
+            std::fs::metadata(&rgba_path).expect("should read metadata for RGBA file");
         let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as u64;
 
         assert_eq!(
-            metadata.len(),
+            rgba_metadata.len(),
             expected_size,
             "parity-{}.rgba should be {} bytes for {}x{} frame",
             appearance_name,
             expected_size,
             REFERENCE_WIDTH,
             REFERENCE_HEIGHT
+        );
+
+        // PNG should exist and have content
+        let png_metadata = std::fs::metadata(&png_path).expect("should read metadata for PNG file");
+        assert!(
+            png_metadata.len() > 0,
+            "parity-{}.png should contain data",
+            appearance_name
         );
     }
 
