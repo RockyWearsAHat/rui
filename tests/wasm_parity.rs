@@ -6,6 +6,21 @@
 use rui::demo::{reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
 use rui::Appearance;
 
+/// Compare two RGBA byte buffers pixel-by-pixel.
+/// Returns (differing_pixel_count, total_pixels).
+pub fn compare_frames(expected: &[u8], actual: &[u8]) -> (usize, usize) {
+    if expected.len() != actual.len() {
+        return (usize::MAX, expected.len() / 4); // Signal size mismatch
+    }
+    let total_pixels = expected.len() / 4;
+    let diff_count = expected
+        .chunks(4)
+        .zip(actual.chunks(4))
+        .filter(|(exp, act)| exp != act)
+        .count();
+    (diff_count, total_pixels)
+}
+
 /// Generate both light and dark reference frames as RGBA byte buffers.
 /// Returns a 2-element array: [(Appearance::Light, pixels), (Appearance::Dark, pixels)].
 fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
@@ -80,4 +95,34 @@ fn all_pixels_are_opaque() {
             );
         }
     }
+}
+
+#[test]
+fn frames_are_deterministic() {
+    let frames1 = parity_frames();
+    let frames2 = parity_frames();
+
+    for ((_, bytes1), (_, bytes2)) in frames1.iter().zip(frames2.iter()) {
+        assert_eq!(
+            bytes1, bytes2,
+            "parity frames should be identical across multiple generations (deterministic rendering)"
+        );
+    }
+}
+
+#[test]
+fn frame_comparison_detects_identity() {
+    let frames = parity_frames();
+    let (_, light_bytes) = &frames[0];
+    let (diff_count, total_pixels) = compare_frames(light_bytes, light_bytes);
+
+    assert_eq!(
+        diff_count, 0,
+        "comparing a frame to itself should show 0 differing pixels"
+    );
+    assert_eq!(
+        total_pixels,
+        (REFERENCE_WIDTH * REFERENCE_HEIGHT) as usize,
+        "total pixels should match frame dimensions"
+    );
 }
