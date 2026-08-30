@@ -723,6 +723,194 @@ fn counter_increments_on_click() {
 
 ---
 
+## Code Patterns You'll See in the Codebase
+
+Understanding these patterns helps you read and modify code confidently:
+
+### Pattern 1: Builder Pattern for Elements
+
+**Where:** `src/element.rs`, `src/widgets.rs`
+
+**What it looks like:**
+```rust
+col((
+    text("Hello"),
+    button("Click me", |app: &mut App| app.count += 1),
+))
+.pad(10.0)
+.gap(5.0)
+.fill(Tone::Surface)
+```
+
+**Why:** Fluent API lets you describe UI structure, style, and behavior in one expression. Each method returns `self` (or a transformed `self`) to enable chaining.
+
+### Pattern 2: Generic Handler Closures
+
+**Where:** `src/widgets.rs` (any widget with `.on_click()`, `.on_drag()`, `.on_key()`)
+
+**What it looks like:**
+```rust
+pub fn button<S>(label: &str, on_click: impl Fn(&mut S) + Copy + 'static) -> El<S> {
+    // ...
+}
+
+// Usage
+button("Increment", |app: &mut App| app.counter += 1)
+```
+
+**Why:** Handlers receive `&mut S` (mutable state) as an argument, not captured via closure. This enables state mutation without `Rc<RefCell<>>`. The `+ Copy + 'static` bounds ensure the handler can be stored in the element tree and called multiple times.
+
+### Pattern 3: Keyed Lists for Identity Preservation
+
+**Where:** `src/memory.rs`, `src/element.rs::.key()`
+
+**What it looks like:**
+```rust
+col(
+    items.iter().map(|item| {
+        text(&item.name)
+            .key(&item.id)  // ← Preserve identity across reorders
+    }).collect::<Vec<_>>()
+)
+```
+
+**Why:** Without `.key()`, an element's position in the tree is its identity. If the list reorders, hover/focus/scroll state follows the wrong element. `.key()` pins identity to a stable value so state sticks to the right element even if it moves in the tree.
+
+### Pattern 4: Conditional Rendering
+
+**Where:** `src/widgets.rs`, `examples/controls.rs`
+
+**What it looks like:**
+```rust
+col((
+    text("Status:"),
+    if app.loading {
+        text("Loading...")
+    } else {
+        button("Click", |app: &mut App| app.do_thing())
+    },
+))
+```
+
+**Why:** Rust's `if` expression returns a value. Both branches must have the same type, so you often use `.into()` to coerce `El<AppA>` and `El<AppB>` to a common container type. Alternatively, wrap in a common element type (`col`, `row`, etc.).
+
+### Pattern 5: Painter Calls Inside `draw()`
+
+**Where:** `src/widgets.rs`, `tests/recipes.rs`
+
+**What it looks like:**
+```rust
+draw(Size::new(100.0, 20.0), |painter, rect| {
+    // Fill background
+    painter.fill(rect, Radius::Pill, Tone::Surface);
+    // Stroke border
+    painter.stroke(rect, Radius::Pill, 2.0, Tone::Muted);
+    // Draw text
+    painter.text(rect, "Label", 12.0, Tone::Text);
+})
+```
+
+**Why:** `draw()` is how you paint custom shapes. `Painter` provides `fill()`, `stroke()`, and `text()` methods. Always use `Tone` (semantic roles), never hardcoded colors.
+
+### Pattern 6: Iterator Chains in Views
+
+**Where:** Any view with dynamic lists
+
+**What it looks like:**
+```rust
+col(
+    app.items.iter()
+        .enumerate()
+        .map(|(i, item)| {
+            button(&item.name, move |app: &mut App| app.select(i))
+                .key(&item.id)
+        })
+        .collect::<Vec<_>>()
+)
+```
+
+**Why:** Views build element trees from data. Use iterators to map domain data to UI elements. Collect to `Vec<El<S>>` at the end. The `move` keyword captures `i` for the handler closure.
+
+### Pattern 7: Theme Colors (Tone, Not RGB)
+
+**Where:** Everywhere colors appear
+
+**What it looks like:**
+```rust
+// ✗ Wrong
+painter.fill(rect, Radius::None, Color::from_rgba(255, 0, 0, 255)); // Red (hardcoded)
+
+// ✓ Right
+painter.fill(rect, Radius::None, Tone::Error); // Maps to theme color
+```
+
+**Why:** Tones are semantic roles that respect light/dark mode. Hardcoding RGB breaks dark mode and makes WASM parity testing harder. Always use `Tone` from the current theme.
+
+### Pattern 8: Testing with Harness
+
+**Where:** `tests/recipes.rs`, any new test file
+
+**What it looks like:**
+```rust
+#[test]
+fn my_feature_works() {
+    let mut harness = Harness::new(App { state: 0 }, view);
+
+    // Interact
+    harness.click_text("Button");
+
+    // Assert
+    assert_eq!(harness.state().state, 1);
+    assert!(harness.frame().shows("updated"));
+}
+```
+
+**Why:** `Harness` drives the frame logic without a window, using a deterministic synthetic font. Fast, repeatable, no platform dependencies.
+
+### Pattern 9: Platform-Specific Code (Backend Trait)
+
+**Where:** `src/shell/mod.rs`, `src/shell/platform/*.rs`
+
+**What it looks like:**
+```rust
+trait Backend: Sized {
+    fn open(options: &WindowOptions) -> Result<Self, Error>;
+    fn pump(&mut self, timeout: Duration, events: &mut Vec<Event>, …) -> Result<(), Error>;
+    fn surface(&self) -> (u32, u32, f32); // width, height, scale
+    fn appearance(&self) -> Appearance;   // light or dark
+    fn present(&self, canvas: &Canvas) -> Result<(), Error>;
+    fn is_open(&self) -> bool;
+}
+
+// Implemented once per OS in src/shell/platform/macos.rs, windows.rs, etc.
+```
+
+**Why:** Platform code is isolated behind a six-method interface. Everything above that line is shared. Adding a new platform means implementing these six methods, nothing more.
+
+### Pattern 10: Element Identity and Key
+
+**Where:** `src/element.rs`, `src/memory.rs`
+
+**What it looks like:**
+```rust
+// Identity comes from tree position by default
+col((
+    text("First"),   // Position 0 → identity 0
+    text("Second"),  // Position 1 → identity 1
+))
+
+// Explicit identity for reordered lists
+col(
+    items.iter().map(|item| {
+        text(&item.name).key(&item.id)  // ← Explicit identity
+    }).collect::<Vec<_>>()
+)
+```
+
+**Why:** Memory (hover, focus, scroll, animations) is keyed by element identity. Without `.key()`, identity is positional; reordering breaks state. With `.key()`, identity is explicit and stable.
+
+---
+
 **Last Updated:** 2026-08-30
 **Rust Version:** 1.85+ (Edition 2021)
 **Platforms:** macOS (Cocoa), Windows (WinAPI), X11/Wayland, WASM
