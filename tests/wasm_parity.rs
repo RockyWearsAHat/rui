@@ -63,14 +63,33 @@ fn reference_frames_generate_successfully() {
 #[test]
 fn parity_frames_available() {
     let frames = parity_frames();
-    assert!(
-        !frames[0].1.is_empty(),
-        "light frame bytes should not be empty"
-    );
-    assert!(
-        !frames[1].1.is_empty(),
-        "dark frame bytes should not be empty"
-    );
+
+    let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+
+    for (appearance, bytes) in frames.iter() {
+        assert!(
+            !bytes.is_empty(),
+            "{:?} frame bytes should not be empty",
+            appearance
+        );
+        assert_eq!(
+            bytes.len(),
+            expected_bytes,
+            "{:?} frame should have {} bytes ({}x{}*4), got {}",
+            appearance,
+            expected_bytes,
+            REFERENCE_WIDTH,
+            REFERENCE_HEIGHT,
+            bytes.len()
+        );
+        assert_eq!(
+            bytes.len() % 4,
+            0,
+            "{:?} frame bytes must be divisible by 4 (RGBA format), got {} bytes",
+            appearance,
+            bytes.len()
+        );
+    }
 }
 
 #[test]
