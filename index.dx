@@ -340,6 +340,30 @@ rustc 1.85.0 (4d6fed7f5 2025-02-20)
 | How does WASM work? | Same `turn()`, scheduled via `requestAnimationFrame` | `src/shell/mod.rs:415` |
 | How do I verify WASM parity? | Build native reference, `wasm-pack build`, open `examples/parity.html` | `examples/parity.rs` |
 
+## Common Workflows: File Modifications Matrix
+
+**Quick reference for what files to change for common developer tasks:**
+
+| Task | Primary File | Secondary Files | Test File | Why |
+|------|--------------|-----------------|-----------|-----|
+| Add a new widget recipe | `src/widgets.rs` | `src/element.rs` if new builder needed | `tests/recipes.rs` | Widgets are functions building `El<S>` |
+| Fix a layout bug | `src/layout.rs:50–150` | `src/style.rs` if Length logic wrong | `tests/layout.rs` | Flex engine is in layout.rs |
+| Fix a rendering bug | `src/paint.rs` | `src/canvas.rs` if pixel logic wrong | `tests/rendering.rs` | Painter API is the draw layer |
+| Fix text rendering | `src/text.rs` | `src/paint.rs` for glyph drawing | `tests/text.rs` | TrueType parsing & rasterization |
+| Add color theme support | `src/theme.rs` | `src/color.rs` if RGB logic wrong | `tests/theme.rs` | Tone → Color mapping lives here |
+| Fix interaction (click, hover) | `src/memory.rs` | `src/input.rs` if event translation wrong | `tests/interaction.rs` | Memory keys by element path |
+| Add platform support | `src/shell/platform/new.rs` | `src/shell/mod.rs:152` to wire in | `tests/integration.rs` | One file per OS implementing Backend |
+| Add WASM feature | `src/shell/platform/wasm.rs` | `src/wasm.rs` for exports | `tests/wasm_integration.rs` | WASM backend is in shell/platform |
+| Fix performance | Profile first, then fix | Likely `src/element.rs` or `src/layout.rs` | Add perf test | Identify hot path before optimizing |
+| Add state persistence | `src/demo.rs` or your app | `src/memory.rs` if dynamic state | `tests/memory.rs` | State structure + Memory module |
+
+**Reading the matrix:**
+- **Task**: What you want to accomplish
+- **Primary File**: Where 90% of the work happens
+- **Secondary Files**: Where you might need to touch if there's a cross-cutting concern
+- **Test File**: Where to add a test to verify your change
+- **Why**: Rationale for where to look
+
 ## Architecture Deep Dive: Anatomy of a Click
 
 Understanding how a click flows through the system helps you know where to add features or debug issues:
