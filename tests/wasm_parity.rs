@@ -1,11 +1,37 @@
 //! Integration test for WASM parity verification.
 //!
-//! Generates light and dark reference frames using Harness and stores them as temporary files
-//! for comparison with WASM-rendered output.
+//! Generates light and dark reference frames using embedded font pair for comparison with WASM-rendered output.
 
 use rui::demo::{self, Counter, REFERENCE_HEIGHT, REFERENCE_WIDTH};
 use rui::testing::Harness;
 use rui::{image, Appearance};
+
+/// Reference frame data: pixel buffer and metadata about dimensions.
+struct ReferenceFrame {
+    pixels: Vec<u8>,
+    width: u32,
+    height: u32,
+}
+
+/// Generate a reference frame for the given appearance mode.
+fn reference_frame(appearance: Appearance) -> ReferenceFrame {
+    let harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
+        demo::counter_view(counter)
+    })
+    .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
+    .appearance(appearance);
+
+    let canvas = harness.canvas();
+    let width = canvas.width();
+    let height = canvas.height();
+    let pixels = image::rgba(canvas);
+
+    ReferenceFrame {
+        pixels,
+        width,
+        height,
+    }
+}
 
 fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
     let mut frames = [
@@ -14,18 +40,25 @@ fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
     ];
 
     for (i, &appearance) in [Appearance::Light, Appearance::Dark].iter().enumerate() {
-        let harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
-            demo::counter_view(counter)
-        })
-        .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
-        .appearance(appearance);
-
-        let canvas = harness.canvas();
-        let pixels = image::rgba(canvas);
-        frames[i] = (appearance, pixels);
+        let frame = reference_frame(appearance);
+        frames[i] = (appearance, frame.pixels);
     }
 
     frames
+}
+
+#[test]
+fn reference_frames_generate_successfully() {
+    let light_frame = reference_frame(Appearance::Light);
+    let dark_frame = reference_frame(Appearance::Dark);
+
+    println!("Light frame: {}x{}", light_frame.width, light_frame.height);
+    println!("Dark frame: {}x{}", dark_frame.width, dark_frame.height);
+
+    assert_eq!(light_frame.width, REFERENCE_WIDTH);
+    assert_eq!(light_frame.height, REFERENCE_HEIGHT);
+    assert_eq!(dark_frame.width, REFERENCE_WIDTH);
+    assert_eq!(dark_frame.height, REFERENCE_HEIGHT);
 }
 
 #[test]
@@ -47,18 +80,12 @@ fn wasm_parity_generates_reference() {
     std::fs::create_dir_all(&temp_dir).expect("failed to create temp directory");
 
     for (name, appearance) in [("light", Appearance::Light), ("dark", Appearance::Dark)] {
-        let harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
-            demo::counter_view(counter)
-        })
-        .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
-        .appearance(appearance);
+        let frame = reference_frame(appearance);
 
-        let canvas = harness.canvas();
-        let pixels = image::rgba(canvas);
         let rgba_path = temp_dir.join(format!("parity-{name}.rgba"));
-        std::fs::write(&rgba_path, &pixels).expect("failed to write RGBA file");
+        std::fs::write(&rgba_path, &frame.pixels).expect("failed to write RGBA file");
 
-        let png = image::png(canvas.width(), canvas.height(), &pixels)
+        let png = image::png(frame.width, frame.height, &frame.pixels)
             .expect("PNG encoding should succeed");
         let png_path = temp_dir.join(format!("parity-{name}.png"));
         std::fs::write(&png_path, png).expect("failed to write PNG file");
@@ -73,16 +100,9 @@ fn wasm_parity_generates_reference() {
 #[test]
 fn all_pixels_are_opaque() {
     for appearance in [Appearance::Light, Appearance::Dark] {
-        let harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
-            demo::counter_view(counter)
-        })
-        .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
-        .appearance(appearance);
+        let frame = reference_frame(appearance);
 
-        let canvas = harness.canvas();
-        let pixels = image::rgba(canvas);
-
-        for (i, chunk) in pixels.chunks_exact(4).enumerate() {
+        for (i, chunk) in frame.pixels.chunks_exact(4).enumerate() {
             let alpha = chunk[3];
             assert_eq!(
                 alpha, 0xFF,
@@ -95,26 +115,11 @@ fn all_pixels_are_opaque() {
 
 #[test]
 fn light_and_dark_differ() {
-    let mut light_harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
-        demo::counter_view(counter)
-    })
-    .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
-    .appearance(Appearance::Light);
-
-    let mut dark_harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
-        demo::counter_view(counter)
-    })
-    .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
-    .appearance(Appearance::Dark);
-
-    light_harness.frame();
-    dark_harness.frame();
-
-    let light_pixels = image::rgba(light_harness.canvas());
-    let dark_pixels = image::rgba(dark_harness.canvas());
+    let light_frame = reference_frame(Appearance::Light);
+    let dark_frame = reference_frame(Appearance::Dark);
 
     assert_ne!(
-        light_pixels, dark_pixels,
+        light_frame.pixels, dark_frame.pixels,
         "light and dark mode frames should have different pixel data"
     );
 }
