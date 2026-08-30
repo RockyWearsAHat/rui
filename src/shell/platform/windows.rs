@@ -581,7 +581,14 @@ impl Window {
         )
     }
 
-    /// The pointer position a mouse message carries, in logical units.
+    /// The pointer position a mouse message carries, in window-logical units.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// Returns coordinates in **window-logical units**, not device pixels.
+    /// Device pixel coordinates are divided by the display's scale factor to
+    /// produce platform-independent logical units used throughout rui's layout,
+    /// rendering, and event handling.
     fn position_of(&self, long: LongParameter) -> Point {
         // Packed as two signed 16-bit values; taking them unsigned puts the
         // pointer at 65,000 the moment it leaves the window to the left.
