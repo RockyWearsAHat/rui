@@ -43,3 +43,17 @@ fn parity_frames_available() {
         "dark frame bytes should not be empty"
     );
 }
+
+#[test]
+fn reference_frames_generate_successfully() {
+    let light = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("light reference frame should generate");
+    let dark = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
+        .expect("dark reference frame should generate");
+
+    assert!(!light.pixels().is_empty(), "light frame pixels generated");
+    assert!(!dark.pixels().is_empty(), "dark frame pixels generated");
+
+    println!("Light frame: {}x{}", REFERENCE_WIDTH, REFERENCE_HEIGHT);
+    println!("Dark frame: {}x{}", REFERENCE_WIDTH, REFERENCE_HEIGHT);
+}
