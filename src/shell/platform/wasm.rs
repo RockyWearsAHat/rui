@@ -47,14 +47,23 @@ type Listener = Closure<dyn FnMut(web_sys::Event)>;
 /// measured from the corner of its own canvas.
 type EventHandler = fn(&web_sys::Event, &web_sys::HtmlCanvasElement) -> Option<Event>;
 
-/// Where on the interface a pointer event landed, in the units it draws in.
+/// Where on the interface a pointer event landed, in window-logical units.
 ///
-/// Two corrections, and they are separate things. The canvas sits somewhere in
-/// a page, so its own corner comes off first. Then the element's drawing buffer
-/// need not be the size the page gives the element — a display with a scale
-/// factor is exactly the case where it is not — so the offset is carried into
-/// the buffer's own scale and back out of the interface's, which leaves the
-/// logical position every other backend reports.
+/// # Coordinate System Contract
+///
+/// Returns coordinates in **window-logical units**, not device pixels or CSS pixels.
+/// These coordinates account for the display's scale factor and are the same
+/// units used throughout rui's layout, rendering, and event handling.
+///
+/// # Coordinate Transformation
+///
+/// Two corrections are applied separately:
+/// 1. The canvas sits somewhere in a page, so its own corner comes off first
+///    (viewport → canvas-relative coordinates)
+/// 2. The element's drawing buffer need not be the size the page gives the element.
+///    A display with a scale factor is exactly the case where it is not, so the offset
+///    is carried into the buffer's own scale and back out of the interface's, which
+///    leaves the logical position every other backend reports.
 fn canvas_point(surface: &web_sys::HtmlCanvasElement, event: &web_sys::MouseEvent) -> Point {
     let rect = surface.get_bounding_client_rect();
     let scale = web_sys::window().map_or(1.0, |window| window.device_pixel_ratio());
