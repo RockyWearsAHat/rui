@@ -2,9 +2,13 @@
 
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::os::unix::fs::PermissionsExt;
+
+// Serialize git-state-modifying tests to prevent parallel execution conflicts
+static GIT_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 #[cfg(not(target_arch = "wasm32"))]
@@ -62,18 +66,11 @@ fn pre_commit_hook_rejects_unformatted_code() {
     use std::path::PathBuf;
     use std::process::Command;
 
+    let _guard = GIT_LOCK.lock().unwrap();
     let test_file = PathBuf::from("tests/test_unformatted.rs");
 
-    // Save git state before test to ensure isolation in parallel execution
-    let stash_output = Command::new("git")
-        .arg("stash")
-        .output()
-        .expect("failed to save git state");
-    assert!(
-        stash_output.status.success(),
-        "git stash failed: {}",
-        String::from_utf8_lossy(&stash_output.stderr)
-    );
+    // Ensure clean git state at start
+    let _ = Command::new("git").arg("reset").arg("HEAD").output();
 
     // 1. Write unformatted Rust code
     let bad_code = "fn     test_func(  ) {\n    let  x=1;\n}\n";
@@ -116,34 +113,11 @@ fn pre_commit_hook_rejects_unformatted_code() {
         stderr
     );
 
-    // 6. Restore git state to ensure no leakage to other tests
-    let reset_output = Command::new("git")
-        .arg("reset")
-        .arg("HEAD")
-        .output()
-        .expect("failed to run git reset");
-    assert!(
-        reset_output.status.success(),
-        "git reset failed: {}",
-        String::from_utf8_lossy(&reset_output.stderr)
-    );
+    // 6. Cleanup: restore git state for other tests
+    let _ = Command::new("git").arg("reset").arg("HEAD").output();
 
     if test_file.exists() {
         fs::remove_file(&test_file).expect("failed to delete test file");
-    }
-
-    // Pop stash to restore the exact state before the test
-    let pop_output = Command::new("git")
-        .arg("stash")
-        .arg("pop")
-        .output()
-        .expect("failed to restore git state");
-    // Ignore error if stash was empty (no prior changes)
-    if !pop_output.status.success() {
-        let stderr = String::from_utf8_lossy(&pop_output.stderr);
-        if !stderr.contains("No stash entries found") {
-            panic!("git stash pop failed: {}", stderr);
-        }
     }
 }
 
