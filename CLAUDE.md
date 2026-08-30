@@ -169,7 +169,7 @@ State describes your data. View turns data into UI. Handler modifies state on us
 
 This exemplar teaches:
 - How state shapes the view (`app.selected` determines which button is highlighted)
-- How handlers update state (the closure on line 179–181 mutates `app`)
+- How handlers update state (the handler function receives mutable state as an argument)
 - How to build custom controls from primitives (`row`, `on_click`, `Painter`)
 
 **Try it first:**
@@ -204,7 +204,7 @@ fn view(app: &App) -> El<App> {
 }
 ```
 
-The handler (lines 179–181) is a function that receives mutable state as an argument, not a closure capturing a reference. This means you can freely modify `app` without any interior mutability tricks.
+The handler is a function that receives mutable state as an argument, not a closure capturing a reference. This means you can freely modify `app` without any interior mutability tricks.
 
 **How to modify:**
 - Change `["Small", "Medium", "Large"]` to any `&[&str]` slice
