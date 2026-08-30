@@ -9,11 +9,7 @@ Cargo.lock
 .cache/
 .doc/index.db
 .doc/coverage.jsonl
-.engine/state.db
-.engine/memory/
-.engine/task-*.md
-.engine/task-*.json
-.engine/*.md
+.engine/
 # dx: the local index is rebuildable from .doc/repo.dxcp
 .doc/index.db-wal
 .doc/index.db-shm
