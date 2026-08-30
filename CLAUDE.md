@@ -681,7 +681,7 @@ fn a_star_rating_updates_when_clicked() {
     let mut harness = Harness::new(App { rating: 0 }, |app: &App| {
         col(star_rating(app.rating, |app: &mut App, r| app.rating = r))
     });
-    harness.click_at(Point::new(48.0, 8.0)); // Click the 4th star
+    harness.click(Point::new(48.0, 8.0)); // Click the 4th star
     assert_eq!(harness.state().rating, 4);
 }
 ```
