@@ -4,6 +4,8 @@
 use rui::input::{Key, PointerButton};
 use rui::shell::event_mapping::{map_keyboard_code_to_key, map_pointer_button};
 
+wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
 #[wasm_bindgen_test::wasm_bindgen_test]
 fn test_wasm_pointer_button_mapping() {
     // This test verifies that pointer button mapping works correctly.
