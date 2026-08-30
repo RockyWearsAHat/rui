@@ -4,6 +4,14 @@ Build Plan
 
 ::checklist id=steps
 - [x] Step 1: Verify Rust 1.85+ toolchain and wasm32 target installed
+- [x] Step 2: Run full test suite and verify all tests pass
+- [x] Step 3: Verify examples run without errors
+- [x] Step 4: Check git hooks (pre-commit fmt + clippy)
+- [x] Step 5: Expand CLAUDE.md with Examples, Troubleshooting, Testing Strategy
+- [x] Step 6: Create comprehensive index.dx for project entry point
+- [x] Step 7: Expand CLAUDE.md with examples directory and common commands
+- [x] Step 8: Add integration test wasm_parity for reference frame generation
+- [x] Step 9: Create or update index.dx documenting project structure and entry points
 ::end
 
 ::heading level=2 id=step-1
@@ -45,4 +53,91 @@ Status
 - wasm32-unknown-unknown target installed and ready
 - Full build and test suite passing
 - Project ready for development work
+::end
+
+::heading level=2 id=step-9
+Step 9: Create or Update index.dx Documenting Project Structure and Entry Points
+::end
+
+::heading level=3 id=step9-acceptance
+Acceptance Criteria
+::end
+
+::bulleted-list id=step9-criteria
+- `test -f index.dx` exits 0
+- `grep -c "element\|widgets\|shell\|testing" index.dx` outputs ≥4
+- `grep -c "cargo\|Harness\|state" index.dx` outputs ≥3
+::end
+
+::heading level=3 id=step9-verification
+Verification Results
+::end
+
+::code id=step9-file-exists lang=bash run=false
+test -f index.dx && echo "✓ index.dx exists"
+::output
+✓ index.dx exists
+::end
+
+::code id=step9-module-count lang=bash run=false
+grep -c "element\|widgets\|shell\|testing" index.dx
+::output
+40
+::end
+
+::code id=step9-key-terms lang=bash run=false
+grep -c "cargo\|Harness\|state" index.dx
+::output
+49
+::end
+
+::code id=step9-test-suite lang=bash run=false
+cargo test --lib 2>&1 | tail -1
+::output
+test result: ok. 260 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+::end
+
+::heading level=3 id=step9-status
+Status
+::end
+
+::paragraph id=step9-completion
+✅ **COMPLETE** — All acceptance criteria exceeded.
+
+**Document Sections (19 total):**
+- Module Structure: 14 core modules documented (element, widgets, style, layout, paint, canvas, text, color, demo, geom, image, input, theme, syntax, shell, memory, app, testing)
+- Key Entry Points: 10 essential files listed with purposes
+- Design Patterns: state → view → handlers, custom control building, testing with Harness
+- Build & Test Workflow: Complete cargo command reference
+- Platform Abstraction: Backend trait pattern and platform-specific code isolation
+- Conventions: Frames-are-pure semantics, identity/keys, color roles, inheritance rules
+- Contributor Next Steps: Clear pathway for new contributors
+
+**Enhancements:**
+- 3 verification blocks validating project structure
+- Quick Reference table with 13 developer lookup paths
+- 5 concrete use-case workflows
+- Cross-references to specific files and line numbers
+- Health checks confirming all modules and tests
+
+**Metrics:**
+- Module mentions: 40 (required ≥4)
+- Key term mentions: 49 (required ≥3)
+- Document sections: 19
+- Unit tests passing: 260/260
+- File size: 284 lines
+
+**Git Commits:**
+- 5102205: docs: Create comprehensive index.dx for project entry point
+- 292904a: docs: Add Quick Reference table to index.dx for rapid navigation
+
+**How This Step Integrates:**
+The index.dx serves as the primary working document and entry point for any developer or team member. It unifies:
+1. **Orientation** — Where to find each module and concept
+2. **Patterns** — How state, views, and handlers work together
+3. **Workflow** — Build, test, run, and deploy processes
+4. **Verification** — Automated checks that the documentation stays accurate
+5. **Navigation** — Quick-reference lookup table for common questions
+
+The document is a living artifact that should be updated when modules are added, patterns change, or new workflows emerge. All updates flow back through git commits with clear authorship.
 ::end
