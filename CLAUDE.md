@@ -36,7 +36,7 @@ cargo test                                       # Run all tests
 cargo test --test setup                          # Verify Rust version and pre-commit hook
 cargo test --lib                                 # Unit tests only
 cargo test --test interaction -- --nocapture     # Run one test file with output
-cargo test integration --lib                     # Test the rendering pipeline
+cargo test --test integration                    # Run integration tests
 
 # Format & Lint
 cargo fmt                                        # Auto-format all code
@@ -114,14 +114,17 @@ The parity test verifies both light and dark modes and confirms that the renderi
 | `layout` | Flexbox-like layout engine; single-axis stacking, `flow()` for line wrapping, scroll & layer support. |
 | `paint` | Drawing abstraction: `Painter` API used by all elements; `Visual` tracks hover/focus/held/disabled state. |
 | `canvas` | Pixel buffer and rasteriser; `Canvas::draw` is the root drawing operation. |
-| `font` & `text` | TrueType parser, glyph rasterising, text layout with kerning/ligatures. `FontId` indexes loaded fonts. |
+| `text` | TrueType parser, glyph rasterising, text layout with kerning/ligatures; `FontId` indexes loaded fonts. |
 | `color` | RGB(A) colors and sRGB gamma handling. |
 | `demo` | The counter, in one place. `examples/counter.rs`, `src/wasm.rs`, and `examples/parity.rs` all drive this one description, which is what makes "every backend draws the identical frame" checkable rather than merely claimed. |
 | `geom` | Primitives: `Rect`, `Point`, `Size`, `Insets`. |
 | `image` | PNG encoder for rendering to files (used by `gallery` example). |
-| `shell` | Platform window management: macOS/Windows/X11 backends implement `Backend` trait. Event loop lives here. |
+| `input` | Input events and per-frame view of them; translates raw `Event` stream to immediate-mode queries. |
+| `theme` | Colors, spacing, and type sizes for the entire UI; `Appearance` (light/dark) and `Tone` (semantic roles). |
+| `syntax` | Syntax highlighting tokenizer for code display; supports Rust, Python, JavaScript, Bash, Diff. |
+| `shell` | Platform window management: macOS/Windows/X11/WASM backends implement `Backend` trait. Event loop lives here. |
 | `memory` | Stateful interaction data (hover, focus, scroll position, caret, animations); keyed by element identity. |
-| `app` & `run` | Application entry point; couples state, view function, and the event loop. |
+| `app` | Application entry point; `run()` couples state, view function, and the event loop. |
 | `testing` | `Harness`: drives the real frame into a buffer with a synthetic font for deterministic testing; `Harness::click_text`, `drag`, `shows`, `pixel`, `save_png`. |
 
 ## Key Architectural Patterns
@@ -139,7 +142,7 @@ loop:
   if animating: refresh within 8ms; else wait App::idle_timeout
 ```
 
-Platform-specific code (macOS/Windows/X11) implements a `Backend` trait with five methods: `open()`, `pump()`, `surface()`, `appearance()`, `present()`, `is_open()`. All layout, painting, and state logic is platform-agnostic above that line.
+Platform-specific code (macOS/Windows/X11/WASM) implements a `Backend` trait with six methods: `open()`, `pump()`, `surface()`, `appearance()`, `present()`, `is_open()`. All layout, painting, and state logic is platform-agnostic above that line.
 
 ### Testing UI (in `src/testing/`)
 
