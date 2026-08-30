@@ -176,3 +176,70 @@ fn recipe_1_wasm_backend_exists() {
         "Backend trait implementation not found in wasm.rs"
     );
 }
+
+#[test]
+fn recipe_1_line_numbers_accurate() {
+    let content = fs::read_to_string("src/shell/mod.rs").expect("Failed to read src/shell/mod.rs");
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Line 55: use clock::Moment;
+    assert!(
+        lines[54].contains("use clock::Moment"),
+        "Line 55: use clock::Moment; not found at expected line. Got: {}",
+        lines.get(54).unwrap_or(&"")
+    );
+
+    // Line 152: trait Backend
+    assert!(
+        lines[151].contains("trait Backend"),
+        "Line 152: trait Backend not found at expected line. Got: {}",
+        lines.get(151).unwrap_or(&"")
+    );
+
+    // Line 186: struct Surface
+    assert!(
+        lines[185].contains("struct Surface"),
+        "Line 186: struct Surface not found at expected line. Got: {}",
+        lines.get(185).unwrap_or(&"")
+    );
+
+    // Line 199: drawn_at: Moment,
+    assert!(
+        lines[198].contains("drawn_at:") && lines[198].contains("Moment"),
+        "Line 199: drawn_at: Moment not found at expected line. Got: {}",
+        lines.get(198).unwrap_or(&"")
+    );
+
+    // Line 237: let now = Moment::now();
+    assert!(
+        lines[236].contains("Moment::now"),
+        "Line 237: Moment::now() not found at expected line. Got: {}",
+        lines.get(236).unwrap_or(&"")
+    );
+
+    // Line 325: fn turn<S>
+    assert!(
+        lines[324].contains("fn turn"),
+        "Line 325: fn turn<S> not found at expected line. Got: {}",
+        lines.get(324).unwrap_or(&"")
+    );
+
+    // Line 369: pub(crate) fn run<S: 'static> for native
+    assert!(
+        lines[368].contains("pub(crate) fn run") && !lines[368].contains("wasm"),
+        "Line 369: pub(crate) fn run (native) not found at expected line. Got: {}",
+        lines.get(368).unwrap_or(&"")
+    );
+
+    // Line 415: pub(crate) fn run<S: 'static> for WASM (preceded by #[cfg(target_arch = "wasm32")])
+    assert!(
+        lines[414].contains("pub(crate) fn run"),
+        "Line 415: pub(crate) fn run (WASM) not found at expected line. Got: {}",
+        lines.get(414).unwrap_or(&"")
+    );
+    // Verify WASM config is on the line before
+    assert!(
+        lines[411..414].iter().any(|l| l.contains("wasm32")),
+        "WASM run() at line 415 should be preceded by wasm32 cfg attribute"
+    );
+}
