@@ -7,6 +7,40 @@ use rui::demo::{self, Counter, REFERENCE_HEIGHT, REFERENCE_WIDTH};
 use rui::testing::Harness;
 use rui::{image, Appearance};
 
+fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
+    let mut frames = [
+        (Appearance::Light, Vec::new()),
+        (Appearance::Dark, Vec::new()),
+    ];
+
+    for (i, &appearance) in [Appearance::Light, Appearance::Dark].iter().enumerate() {
+        let harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
+            demo::counter_view(counter)
+        })
+        .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
+        .appearance(appearance);
+
+        let canvas = harness.canvas();
+        let pixels = image::rgba(canvas);
+        frames[i] = (appearance, pixels);
+    }
+
+    frames
+}
+
+#[test]
+fn parity_frames_available() {
+    let frames = parity_frames();
+    assert!(
+        !frames[0].1.is_empty(),
+        "light frame bytes should not be empty"
+    );
+    assert!(
+        !frames[1].1.is_empty(),
+        "dark frame bytes should not be empty"
+    );
+}
+
 #[test]
 fn wasm_parity_generates_reference() {
     let temp_dir = std::path::PathBuf::from("/tmp/rui-wasm-parity");
@@ -34,4 +68,53 @@ fn wasm_parity_generates_reference() {
     assert!(temp_dir.join("parity-light.png").exists());
     assert!(temp_dir.join("parity-dark.rgba").exists());
     assert!(temp_dir.join("parity-dark.png").exists());
+}
+
+#[test]
+fn all_pixels_are_opaque() {
+    for appearance in [Appearance::Light, Appearance::Dark] {
+        let harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
+            demo::counter_view(counter)
+        })
+        .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
+        .appearance(appearance);
+
+        let canvas = harness.canvas();
+        let pixels = image::rgba(canvas);
+
+        for (i, chunk) in pixels.chunks_exact(4).enumerate() {
+            let alpha = chunk[3];
+            assert_eq!(
+                alpha, 0xFF,
+                "Pixel {} has alpha={}, expected 0xFF (fully opaque)",
+                i, alpha
+            );
+        }
+    }
+}
+
+#[test]
+fn light_and_dark_differ() {
+    let mut light_harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
+        demo::counter_view(counter)
+    })
+    .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
+    .appearance(Appearance::Light);
+
+    let mut dark_harness = Harness::new(Counter { count: 0 }, |counter: &Counter| {
+        demo::counter_view(counter)
+    })
+    .size(REFERENCE_WIDTH as f32, REFERENCE_HEIGHT as f32)
+    .appearance(Appearance::Dark);
+
+    light_harness.frame();
+    dark_harness.frame();
+
+    let light_pixels = image::rgba(light_harness.canvas());
+    let dark_pixels = image::rgba(dark_harness.canvas());
+
+    assert_ne!(
+        light_pixels, dark_pixels,
+        "light and dark mode frames should have different pixel data"
+    );
 }
