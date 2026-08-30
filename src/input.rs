@@ -199,6 +199,16 @@ pub enum Key {
 }
 
 /// Something the window told us happened.
+///
+/// # Coordinate System Contract
+///
+/// All coordinate events ([`Event::PointerMoved`], [`Event::PointerDown`],
+/// [`Event::PointerUp`], and [`Event::Scrolled`]) report positions in
+/// **window-logical units**, never device pixels or CSS pixels. Logical units
+/// account for the display's scale factor (DPI scaling), so coordinates are
+/// platform-independent and consistent across different display densities.
+/// Elements and widgets receive these coordinates translated to their own local
+/// space for layout and interaction.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
     /// The pointer moved to a position in logical units.
