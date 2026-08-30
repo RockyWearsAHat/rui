@@ -23,6 +23,37 @@
 | **demo** | Reusable counter example. Used by `examples/counter.rs`, `src/wasm.rs`, `examples/parity.rs`. |
 | **app** | Application entry point; `run()` couples state, view function, and event loop. |
 
+### Module Dependency Graph
+
+```
+                    app (public entry)
+                      ↓
+                    shell (event loop, frame driver)
+                   ↙  ↓  ↘
+                  /   ↓   \ platform-specific:
+                 /    ↓    \ macos.rs, windows.rs, x11.rs, wasm.rs
+                ↙     ↓     ↘
+           input   memory   layout (measure, arrange)
+            ↓         ↓        ↓
+          style   canvas    paint (draw)
+            ↓       ↓          ↓
+          theme   text ← ← ← Painter API
+                    ↓
+           (TrueType, kerning, ligatures)
+                      ↑
+                   element
+                      ↑
+                   widgets (recipes built from element)
+                      ↑
+                    demo / examples
+                      ↑
+                    testing (Harness drives the frame)
+```
+
+**Read path:** `element` describes the UI; `layout` measures; `paint` draws via `Painter`; `canvas` buffers pixels; `theme` provides colors. Cross-cutting: `memory` preserves interaction state, `input` translates events, `style` defines appearance.
+
+**Write path:** `app::run()` owns the event loop in `shell`. `shell` calls platform `Backend`, collects events via `input`, calls the view function, and drives `layout` → `paint` → `canvas`.
+
 ## Key Entry Points
 
 - **`src/app.rs`** — Application driver. `App::run(state, view)` is the primary entry point for desktop apps.
@@ -479,6 +510,74 @@ This is the rhythm of making a change:
 | Hardcoding colors instead of using `Tone` | App breaks in dark mode; WASM doesn't match native | Always use `Tone::Accent`, `Tone::Surface`, etc.; never hardcode RGB |
 | Testing only the happy path | Edge cases break in production | Test: empty state, boundary values (0, max, negative), invalid input |
 | Committing without running tests | CI fails; work blocks the team | Always run `cargo test --lib` and `cargo test --test recipes` before commit |
+
+---
+
+## API Surface Reference
+
+These are the types and functions you'll use most when working on rui:
+
+### Core Types
+
+| Type | Module | Use |
+|------|--------|-----|
+| `El<S>` | `element` | The UI element tree. Everything is an `El<S>`. |
+| `Event` | `input` | Platform events: `Click(point)`, `Key(key)`, `Wheel(delta)`, `Drag(…)`. |
+| `Painter<'_>` | `paint` | Draw API: `fill()`, `stroke()`, `text()`, `image()`. |
+| `Canvas` | `canvas` | Pixel buffer; `Canvas::new()` creates a blank canvas for tests. |
+| `Rect` | `geom` | A rectangle: `x, y, w, h`. Used everywhere for layout. |
+| `Tone` | `theme` | Color roles: `Accent`, `Surface`, `Muted`, `Success`, `Warning`, `Error`. Never hardcode RGB. |
+| `Appearance` | `theme` | Light or dark mode; detected from OS or overridden in tests. |
+| `Length` | `style` | Sizing: `Auto`, `Fixed(pixels)`, `Grow(flex_weight)`. |
+| `Harness<S>` | `testing` | Test driver. `Harness::new(state, view)` runs a frame with no window. |
+
+### Common Functions
+
+| Function | Module | Use |
+|----------|--------|-----|
+| `App::run(state, view)` | `app` | Start the app; blocks until window closes. |
+| `col(elements)`, `row(elements)` | `element` | Stack elements vertically or horizontally. |
+| `draw(size, \|painter, rect\| { … })` | `widgets` | Paint custom shapes; called on every frame. |
+| `button(label, handler)` | `widgets` | Clickable button. Handler: `\|app: &mut S\| { … }`. |
+| `text(string)` | `widgets` | Render text; inherits size and color from parent. |
+| `text_size(size, element)` | `widgets` | Set text size for this element and children. |
+| `fill(color, element)` | `element` | Set background color. |
+| `gap(pixels, elements)` | `element` | Add space between items. |
+| `.on_click(handler)` | `element` | Attach a click handler. Handler called after frame. |
+| `.on_drag(handler)` | `element` | Attach a drag handler. Receives `Drag { from, to, … }`. |
+| `.on_key(handler)` | `element` | Attach a keyboard handler. Receives `Key` and modifier flags. |
+| `.key(id)` | `element` | Preserve element identity for state (hover, focus, scroll) across reorders. |
+| `Harness::click_text(label)` | `testing` | Click the first element containing text (in a test). |
+| `Harness::click(point)` | `testing` | Click at pixel (x, y). |
+| `Harness::frame().shows(text)` | `testing` | Assert text is visible in the rendered frame. |
+
+### Patterns You'll Repeat
+
+```rust
+// Define state
+struct App { counter: i32 }
+
+// Define view (rebuilds every frame)
+fn view(app: &App) -> El<App> {
+    col((
+        text(format!("Count: {}", app.counter)),
+        button("Increment", |app: &mut App| app.counter += 1),
+    ))
+}
+
+// Run the app
+App::run(App { counter: 0 }, view);
+```
+
+```rust
+// Test the app (no window needed)
+#[test]
+fn counter_increments_on_click() {
+    let mut harness = Harness::new(App { counter: 0 }, view);
+    harness.click_text("Increment");
+    assert_eq!(harness.state().counter, 1);
+}
+```
 
 ---
 
