@@ -193,7 +193,7 @@ The state is just an index—no closures, no `Rc<RefCell<>>`. This simplicity is
 ```rust
 fn view(app: &App) -> El<App> {
     let choices = ["Small", "Medium", "Large"];
-    
+
     col((
         text("Pick a size:"),
         widgets::segmented(
