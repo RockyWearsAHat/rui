@@ -181,7 +181,7 @@ The synthetic font ensures widths are arithmetic (half an em per character). Ani
 
 ### Segmented Control Exemplar
 
-The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough (33 lines) to copy and modify immediately.
+The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough to copy and modify immediately—the core widget pattern (state + view + handler) is about 26 lines, the full example is 37 lines including imports and main.
 
 **Pattern at a Glance:**
 ```
@@ -373,7 +373,7 @@ The `meter()` widget takes only two arguments:
 - `tone: Tone` — the color role (e.g., `Accent`, `Success`, `Warning`)
 
 **How to modify:**
-- Change `Tone::Accent` to `Tone::Success`, `Tone::Warning`, etc. for different colors
+- Change `Tone::Accent` to `Tone::Ok`, `Tone::Warn`, `Tone::Bad`, etc. for different colors
 - To customize the bar width/height, copy the implementation from `src/widgets.rs` line 259–280 and adjust `Size::new(80.0, 6.0)`
 - To add animation, update `app.progress` over time in your event loop
 
@@ -461,7 +461,7 @@ Files touched:
 - Compiled verification: `cargo build --target wasm32-unknown-unknown -p rui --example counter` succeeds.
 - Unit tests: `cargo test --lib` passes; memory and animation state persist across frames.
 - Browser testing: `wasm-pack test --headless --firefox` confirms the app initializes and responds to DOM events.
-- Parity verification: `examples/parity.html` (browser) renders pixel-for-pixel identical frames to the native desktop. Light and dark modes both verified. Gate runs as part of `cargo test --test interaction`.
+- Parity verification: `cargo test --test wasm_parity` generates reference frames for light and dark modes. Browser comparison happens at `examples/parity.html` (open after running `wasm-pack build`).
 
 #### Verification at Each Phase
 
