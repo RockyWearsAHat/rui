@@ -271,6 +271,217 @@ rustc 1.85.0 (4d6fed7f5 2025-02-20)
 | How does WASM work? | Same `turn()`, scheduled via `requestAnimationFrame` | `src/shell/mod.rs:415` |
 | How do I verify WASM parity? | Build native reference, `wasm-pack build`, open `examples/parity.html` | `examples/parity.rs` |
 
+## Architecture Deep Dive: Anatomy of a Click
+
+Understanding how a click flows through the system helps you know where to add features or debug issues:
+
+### Step 1: Platform-Specific Event Capture
+**File:** `src/shell/platform/macos.rs` (or windows.rs, x11.rs, wasm.rs)
+- User clicks the mouse.
+- Platform backend captures the click (NSMouseEvent, LPARAM, XEvent, MouseEvent).
+- Backend creates a `Point` and pushes an `Event::Click(point)` to the event queue.
+
+### Step 2: Event Loop Processes the Event
+**File:** `src/shell/mod.rs` (lines 325–358, the `turn()` function)
+- The `turn()` function reads all pending events from the backend.
+- Events are stored in `input.events` (a `Vec<Event>`).
+- `input.on_frame()` converts the raw event stream to per-frame immediate-mode state.
+
+### Step 3: View Function Receives Input
+**File:** User's view function (e.g., `examples/counter.rs`, `examples/segmented.rs`)
+- `turn()` calls `view(state)`, passing the current application state.
+- View returns an `El<S>` tree describing the UI.
+- Each button or interactive element in the tree has a `.on_click(handler)` attached.
+
+### Step 4: Layout & Hit Testing
+**File:** `src/layout.rs` (lines 1–200)
+- The `El<S>` tree is measured and laid out to screen coordinates.
+- Each element has a `Rect` describing where it occupies pixels.
+- Input system hit-tests the click point against all element rects.
+
+### Step 5: Handler Execution
+**File:** `src/element.rs` (lines 300–400, element traversal) and `src/paint.rs` (line 80, handler dispatch)
+- If the click point is inside an element's rect and that element has `.on_click(handler)`, the handler is called.
+- Handler receives `&mut State` and can mutate application state directly (no closures, no RefCell).
+- Example: `on_click(|app: &mut App| app.counter += 1)` increments the counter.
+
+### Step 6: Frame Rebuild
+**File:** `src/shell/mod.rs` (line 325)
+- After the handler runs, `turn()` calls `view(state)` again with the new state.
+- The view function rebuilds the entire UI description from the updated state.
+- `layout()` remeasures and relays out the new tree.
+
+### Step 7: Paint & Presentation
+**File:** `src/paint.rs` (lines 1–150) and `src/canvas.rs` (lines 1–100)
+- `paint()` traverses the element tree and paints each element to the canvas.
+- `Painter::fill()` and `Painter::stroke()` draw shapes, using theme colors (respecting light/dark mode).
+- `canvas.present()` sends pixels to the platform backend.
+
+### Step 8: Screen Update (Conditional)
+**File:** `src/shell/mod.rs` (line 360)
+- The backend compares the new frame to the previous frame.
+- If pixels differ, `backend.present(canvas)` updates the screen.
+- If pixels are identical, no update (saves CPU and GPU).
+
+**Key Insight:** The entire cycle (step 1–8) happens for every click, keyboard input, mouse movement, and animation frame. The view function is always rebuilt; the renderer is always stateless. State flows in; pixels flow out.
+
+---
+
+## Troubleshooting
+
+### Build Fails: "Unsupported platform"
+**Symptom:** `cargo build` fails with an error about `wasm32-unknown-unknown` or a platform module.
+
+**Root Cause:** You're on a platform not yet supported (e.g., Android, bare metal).
+
+**Solution:**
+1. Check which platforms are supported: `grep "target_os" src/shell/mod.rs`.
+2. To add a new platform, implement `src/shell/platform/my_platform.rs` with the six-method `Backend` trait.
+3. Reference `src/shell/platform/wasm.rs` or `macos.rs` as a template.
+
+### Tests Fail: "Element not found"
+**Symptom:** `Harness::click_text("Button")` fails; the text wasn't found in the frame.
+
+**Root Cause:** The button text doesn't match exactly, or the button isn't rendered.
+
+**Solution:**
+1. Call `harness.frame().save_png("debug.png")` to see what's actually rendered.
+2. Check the view function: does it create the button with the expected text?
+3. Verify state: does the button render only in certain states? Print `harness.state()` before the click.
+
+### Layout is Wrong: Elements Overlap or Are Misaligned
+**Symptom:** Elements are drawn on top of each other or in unexpected positions.
+
+**Root Cause:** Padding, gaps, or grow factors are incorrect, or the layout engine has a bug.
+
+**Solution:**
+1. Run `cargo run -p rui --example gallery -- .` to see how all elements render.
+2. Check `src/layout.rs` (lines 50–150) for the flex layout logic; check `src/style.rs` for `Length` interpretation.
+3. Add a test in `tests/layout.rs` that reproduces the misalignment.
+4. Use `harness.frame().save_png()` to compare expected vs actual output.
+
+### Colors Are Wrong (Light/Dark Mode Issue)
+**Symptom:** A button is the wrong color in light mode, or colors don't match between native and WASM.
+
+**Root Cause:** Tone is mapped incorrectly, or light/dark mode detection is wrong.
+
+**Solution:**
+1. Check `src/theme.rs` (lines 1–80): does `Tone::Accent` map to the expected color in your appearance (light/dark)?
+2. Verify appearance detection: `cargo run -p rui --example counter` and check if light/dark mode matches your system setting.
+3. In tests, explicitly set appearance: `harness.set_appearance(Appearance::Dark)` (if available).
+4. Compare parity: run the example on macOS, Windows, X11, and in the browser to see if they match.
+
+### Performance: Frame Rate Drops
+**Symptom:** The app stutters, or frame rate drops below 60 fps.
+
+**Root Cause:** The view function is expensive, or the renderer is thrashing.
+
+**Solution:**
+1. Profile the view function: wrap the view function in timing code to see how long it takes.
+2. Check for unnecessary allocations: avoid creating large vectors in the view function per frame.
+3. Run `cargo build --release` for optimized builds (debug mode is much slower).
+4. Use `.key()` on reordered lists to prevent unnecessary re-renders of child state (hover, focus, scroll).
+
+### WASM Doesn't Work: Browser Console Shows Errors
+**Symptom:** The WASM example loads but doesn't render, or the console shows JavaScript errors.
+
+**Root Cause:** WASM build failed, parity is broken, or there's a JavaScript integration issue.
+
+**Solution:**
+1. Check the build: `cargo build --target wasm32-unknown-unknown --example counter`.
+2. Verify the WASM was built: check `pkg/` directory exists and has `.wasm` and `.js` files.
+3. Check browser console (F12): look for "panic" or "wasm_bindgen" errors.
+4. Test parity: `cargo run -p rui --example parity -- target/parity` and `wasm-pack test --headless --firefox` to isolate native vs browser issues.
+
+### Pre-Commit Hook Blocks Commit
+**Symptom:** `git commit` fails with "cargo fmt" or "clippy" errors; you can't push.
+
+**Root Cause:** Code is not formatted or has lint warnings.
+
+**Solution:**
+1. Run `cargo fmt` to auto-format all code.
+2. Run `cargo clippy` to see what lint warnings exist.
+3. Fix the warnings (don't use `--no-verify` unless it's a true emergency; fix the root cause).
+4. Retry the commit.
+
+---
+
+## Testing Strategies
+
+The project uses three testing layers:
+
+### Layer 1: Unit Tests (`cargo test --lib`)
+**Where:** Each module has unit tests at the bottom of the file.
+**When:** Test individual functions, invariants, state transitions.
+**Example:** `src/layout.rs` tests the flexbox algorithm in isolation.
+
+### Layer 2: Recipe Tests (`cargo test --test recipes`)
+**Where:** `tests/recipes.rs` — driven by `Harness`, no window.
+**When:** Test user-facing widgets and interactions.
+**Example:** "A segmented control changes selection when clicked" (lines 410–420).
+
+### Layer 3: Integration Tests (`cargo test --test interaction`)
+**Where:** `tests/interaction.rs`, `tests/setup.rs` — tests the whole system.
+**When:** Test end-to-end flows, examples, platform features.
+**Example:** "Counter example initializes and increments on click" (uses real window on desktop).
+
+### When to Add What
+
+- **Found a bug?** Add a unit test in the affected module that reproduces it.
+- **Adding a widget?** Add a recipe test in `tests/recipes.rs`.
+- **Adding a platform feature?** Add an integration test in `tests/integration.rs`.
+- **Unsure?** Start with a recipe test; it's the easiest and catches most issues.
+
+---
+
+## Iteration Workflow for Contributors
+
+This is the rhythm of making a change:
+
+1. **Identify the issue** — Run `cargo test --lib` to find failing tests, or start with a concrete goal ("add undo support").
+2. **Write a failing test first** (red) — Add a test that captures what you want. Let it fail.
+3. **Make it pass** (green) — Write minimal code to make the test pass.
+4. **Verify visually** (optional) — Run an example or use `harness.save_png()` to see the change.
+5. **Refactor if needed** — If the code is messy or duplicative, clean it up; re-run tests.
+6. **Format and lint** — `cargo fmt` and `cargo clippy`.
+7. **Commit** — Use a descriptive message with a prefix: `feat:`, `fix:`, `refactor:`, `perf:`, `docs:`.
+8. **Push and wait for CI** — If there's a CI system, wait for it to pass.
+
+**Example: Add a "pause" button to the counter.**
+
+1. Write a failing test in `tests/recipes.rs`:
+   ```rust
+   #[test]
+   fn counter_can_be_paused() {
+       let mut harness = Harness::new(App { counter: 0, paused: false }, view);
+       harness.click_text("Pause");
+       assert!(harness.state().paused);
+   }
+   ```
+2. Run `cargo test --test recipes -- counter_can_be_paused` — it fails (red).
+3. Edit the counter state in `src/demo.rs` and the view to add a pause button.
+4. Edit the pause button handler to set `app.paused = true`.
+5. Re-run the test — it passes (green).
+6. Verify with `cargo run -p rui --example counter` — the button is visible and clickable.
+7. Check formatting: `cargo fmt` (no changes needed if already formatted).
+8. Commit: `git commit -m "feat: Add pause button to counter"`.
+
+---
+
+## Common Mistakes & How to Avoid Them
+
+| Mistake | Symptom | Fix |
+|---------|---------|-----|
+| Capturing state in a closure instead of receiving it as an argument | `error: cannot borrow app as mutable` in handler | Change `let app = ...` to receiving `\|app: &mut App\|` as a handler parameter |
+| Rebuilding state inside the view function | View function has side effects; state changes unpredictably | Move side effects out of the view function; state changes only in handlers |
+| Not using `.key()` on reordered lists | Hover/focus state "sticks" to the wrong element when list reorders | Add `.key(&item.id)` to each element in a dynamically reordered list |
+| Using `.clone()` everywhere | Code is hard to follow; performance suffers | Use references (`&item`) and let the view function own the data |
+| Hardcoding colors instead of using `Tone` | App breaks in dark mode; WASM doesn't match native | Always use `Tone::Accent`, `Tone::Surface`, etc.; never hardcode RGB |
+| Testing only the happy path | Edge cases break in production | Test: empty state, boundary values (0, max, negative), invalid input |
+| Committing without running tests | CI fails; work blocks the team | Always run `cargo test --lib` and `cargo test --test recipes` before commit |
+
+---
+
 ## Git Workflow
 
 - Pre-commit hook: Runs `cargo fmt --check` and `cargo clippy`. Bypass only in emergencies with `--no-verify`.
