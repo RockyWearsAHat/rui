@@ -62,13 +62,14 @@ pub enum Phase {
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Drag {
-    /// The pointer, relative to the element's top-left corner.
+    /// The pointer, relative to the element's top-left corner, in **window-logical
+    /// units** (DPI-adjusted, not device pixels).
     ///
     /// Not clamped: a pointer dragged off the end of a slider reports a
     /// position outside the element, because the control — not this type —
     /// decides whether that means "the maximum" or "cancelled".
     pub at: Point,
-    /// Where the element was drawn, in window coordinates.
+    /// Where the element was drawn, in **window-logical units** (DPI-adjusted).
     pub rect: Rect,
     /// Which part of the press this frame is.
     pub phase: Phase,
@@ -77,9 +78,11 @@ pub struct Drag {
 impl Drag {
     /// How far across and down the element the pointer is, from zero to one.
     ///
-    /// Clamped, and zero on an axis the element has no extent along, so a
-    /// control reading it can never be handed a value outside its own range or
-    /// a NaN from dividing by an empty rectangle.
+    /// Computed from the pointer position in **window-logical units** (DPI-adjusted)
+    /// and the element's rectangle in the same coordinate system. Clamped to 0–1
+    /// on each axis, and returns zero on an axis the element has no extent along,
+    /// so a control reading it can never be handed a value outside its own range
+    /// or a NaN from dividing by an empty rectangle.
     pub fn fraction(&self) -> Point {
         let across = if self.rect.w > 0.0 {
             self.at.x / self.rect.w
@@ -264,11 +267,13 @@ pub enum Event {
 /// What the pointer and keyboard are doing this frame.
 #[derive(Debug, Clone, Default)]
 pub struct Input {
-    /// Where the pointer is, in logical units.
+    /// Where the pointer is, in **window-logical units** (DPI-adjusted, not
+    /// device pixels or CSS pixels).
     pointer: Point,
     /// Whether the pointer is over the window at all.
     pointer_inside: bool,
-    /// Where the pointer was when each button was pressed.
+    /// Where the pointer was when each button was pressed, in **window-logical
+    /// units** (DPI-adjusted).
     ///
     /// A drag is judged from where it *began*, so that releasing outside a
     /// widget still counts as a click on it only if the press started there.
@@ -335,7 +340,10 @@ impl Input {
         }
     }
 
-    /// Where the pointer is, in logical units.
+    /// Where the pointer is, in **window-logical units** (DPI-adjusted).
+    ///
+    /// This follows the coordinate system contract: all coordinate events report
+    /// in window-logical units, never device pixels or CSS pixels.
     pub fn pointer(&self) -> Point {
         self.pointer
     }
@@ -360,7 +368,12 @@ impl Input {
         self.released[button.index()]
     }
 
-    /// Where the pointer was when a held button went down.
+    /// Where the pointer was when a held button went down, in **window-logical
+    /// units** (DPI-adjusted).
+    ///
+    /// Returns `None` if the button is not held down or has never been pressed.
+    /// This follows the coordinate system contract where all positions are
+    /// reported in window-logical units, never device pixels.
     pub fn press_origin(&self, button: PointerButton) -> Option<Point> {
         self.press_origin[button.index()]
     }
