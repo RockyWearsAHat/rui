@@ -555,6 +555,61 @@ pub fn star_rating<S: 'static>(
     .gap(4.0)
 }
 
+/// A group of checkboxes, each with independent state in a larger collection.
+///
+/// This is Recipe 3: a more complex widget pattern that manages multiple items
+/// with individual selection states. Unlike simpler widgets like `star_rating`,
+/// a checkbox_group demonstrates:
+///
+/// - Managing state for multiple items (a `Vec<bool>`)
+/// - Building from primitives for each item
+/// - Handling separate interactions for each checkbox
+/// - Using element keys for proper identity across frame rebuilds
+///
+/// **Pattern:**
+/// ```ignore
+/// State:   Vec<bool> of selected items
+/// View:    For each item, build a checkbox with its state
+/// Handler: When clicked, toggle that item's state in the vec
+/// ```
+///
+/// **Coordinate System Contract:**
+/// All coordinates used in `draw()` closures are in window-logical units (DPI-adjusted).
+pub fn checkbox_group<S: 'static>(
+    items: &[&str],
+    selected: &[bool],
+    toggle: impl Fn(&mut S, usize) + Copy + 'static,
+) -> El<S> {
+    col(items
+        .iter()
+        .enumerate()
+        .map(|(i, &label)| {
+            let checked = i < selected.len() && selected[i];
+            row((
+                draw(
+                    Size::new(15.0, 15.0),
+                    move |painter: &mut Painter<'_>, rect: Rect| {
+                        painter.fill(
+                            rect,
+                            Radius::Units(4.0),
+                            if checked { Tone::Accent } else { Tone::Sunken },
+                        );
+                        painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
+                    },
+                )
+                .size(15.0, 15.0),
+                text(label),
+            ))
+            .gap(8.0)
+            .h(22.0)
+            .align(Align::Center)
+            .key(format!("checkbox-{}", i))
+            .on_click(move |state: &mut S| toggle(state, i))
+        })
+        .collect::<Vec<_>>())
+    .gap(12.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
