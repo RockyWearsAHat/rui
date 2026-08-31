@@ -12,8 +12,8 @@
 
 use rui_native::testing::Harness;
 use rui_native::{
-    caption, col, draw, panel, row, text, Align, Anchor, Drag, El, Key, Modifiers, Painter, Point,
-    Radius, Rect, Size, Tone,
+    caption, checkbox, col, draw, panel, row, text, Align, Anchor, Drag, El, Key, Modifiers,
+    Painter, Point, Radius, Rect, Size, Tone,
 };
 
 /// Everything the controls below are wired to.
@@ -29,29 +29,6 @@ struct Settings {
 // ---------------------------------------------------------------------------
 // The recipes
 // ---------------------------------------------------------------------------
-
-/// A box that answers the pointer, and a word beside it.
-fn checkbox<S: 'static>(label: &str, checked: bool, toggle: impl Fn(&mut S) + 'static) -> El<S> {
-    row((
-        draw(
-            Size::new(15.0, 15.0),
-            move |painter: &mut Painter<'_>, rect: Rect| {
-                painter.fill(
-                    rect,
-                    Radius::Units(4.0),
-                    if checked { Tone::Accent } else { Tone::Sunken },
-                );
-                painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
-            },
-        )
-        .size(15.0, 15.0),
-        text(label),
-    ))
-    .gap(8.0)
-    .h(22.0)
-    .align(Align::Center)
-    .on_click(move |state: &mut S| toggle(state))
-}
 
 /// A track, and a knob that slides along it.
 fn switch<S: 'static>(on: bool, flip: impl Fn(&mut S) + 'static) -> El<S> {
