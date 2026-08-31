@@ -779,188 +779,52 @@ If you're adding Wayland, macOS, or another platform:
 
 The pattern holds: platform isolation (one file per OS), trait implementation (six methods), coordinate contract (DPI scaling + event translation), parity testing (pixel-perfect comparison), and documentation (setup + troubleshooting). Everything above `Backend` is unchanged.
 
-### Recipe 3: Mobile Backend Implementation (iOS/Android)
+### Recipe 3: Checkbox Control
 
-**Commits:** 25+ total, grouped in three phases: Foundation (iOS, 1 commit), Enhancement (Android + features, 8 commits), Integration & Verification (16+ commits).
+**Commits:** 1 total, focused on state definition and pattern foundation.
 
-STEP 23 extends **rui** to mobile platforms (iOS/Android), following the established three-phase pattern. This step creates native mobile backends that implement the unified `Backend` trait, allowing the same UI code to run on phones and tablets with no changes.
+The checkbox is the simplest interactive control: a boolean that toggles on click. Unlike segmented or complex widgets, checkbox has no enumerated state—just checked or unchecked. This simplicity makes it an ideal recipe for learning the state-view-handler pattern. It is too small to justify being a full recipe (just 20 lines of code), but too foundational not to document as a worked example.
 
-**Phase 1: Foundation (iOS Backend)**
-
-Files touched:
-- `src/shell/platform/ios.rs` (new): ~200 lines, implements the `Backend` trait for iOS. FFI bindings via `objc` crate to `UIWindow`, `UIScreen`, `UIView`. `pump()` collects touch events from `UIResponder` event chain and translates `UITouch.phase` to rui's `Click` and `Drag` events. `surface()` returns screen dimensions and scale factor via `UIScreen.main`. `appearance()` queries `UITraitCollection.userInterfaceStyle` for light/dark mode. `present()` renders the `Canvas` to a `CALayer` via Metal or `UIGraphics`.
-- `src/shell/platform/mod.rs`: Add platform selector with `#[cfg(target_os = "ios")]` to choose iOS backend.
-- `Cargo.toml`: Add iOS feature gate and Objective-C interop dependencies.
-
-**Why this order:** The `Backend` trait is the platform abstraction boundary. iOS must implement all six methods (`open`, `pump`, `surface`, `appearance`, `present`, `is_open`) identically to desktop backends. By starting with the minimal trait implementation, we prove iOS can participate in the unified frame loop without special casing. Mobile has constraints (full-screen, touch-only, performance-critical) but the abstraction handles them.
-
-**Verification gate:** `cargo build --target aarch64-apple-ios --features ios` succeeds. The Backend trait is correctly implemented at compile time. Compile-time verification confirms platform isolation.
-
-**Phase 2: Enhancement (Android + Mobile Features)**
+**Phase 1: State Definition (Commit a_checkbox_changes_state_on_click)**
 
 Files touched:
-- `src/shell/platform/ios.rs`: Extend with full feature parity. DPI detection via `UIScreen.main.nativeScale` (1x, 2x, 3x). Appearance caching with lifecycle awareness (`traitCollectionDidChange()`). Safe area inset handling (notch, dynamic island, home indicator) passed to top-level element as padding.
-- `src/shell/platform/android.rs` (new): ~250 lines, implements `Backend` trait for Android. FFI bindings via `jni` crate to `View`, `Context`, `Display`. Touch event translation: `MotionEvent.ACTION_DOWN` → `Click`, `MotionEvent.ACTION_MOVE` → `Drag`. DPI detection via `DisplayMetrics.density`. Appearance detection: read `Configuration.uiMode & UI_MODE_NIGHT_MASK`. Lifecycle handling: pause rendering on `onPause()`, resume on `onResume()`.
-- `src/input.rs` (if needed): Add touch-specific event metadata (pressure, contact area) if advanced gesture support is planned.
-- `tests/ios_integration.rs` (new): Functional tests verifying touch input, appearance switching, DPI scaling, lifecycle events.
-- `tests/android_integration.rs` (new): Equivalent Android tests.
+- `src/widgets.rs`: Add `checkbox(label: &str, checked: bool, on_click: impl Fn(&mut S)) -> El<S>` function that builds a checkbox element from primitives (`draw`, `on_click`). No new widget type; reuse existing drawing and event handling infrastructure.
+- `tests/recipes.rs`: Add test `a_checkbox_changes_state_on_click` verifying state toggles on click.
 
-**Why this order:** Foundation proves iOS works. Enhancement extends to Android (using the same pattern) and adds mobile-specific features (safe area insets, lifecycle awareness, advanced input handling). Parity testing (visual comparison) gates this phase. The pattern is identical to Recipe 2: foundation + enhancement + tests.
-
-**Verification gates:**
-- `cargo build --target aarch64-linux-android --features android` succeeds; Android target compiles.
-- Touch input verification: `cargo test --test ios_integration` passes; `UITouch` events translate to `Click`/`Drag`.
-- Appearance switching: `cargo test --test ios_parity --target aarch64-apple-ios` verifies light/dark mode renders correctly.
-- DPI scaling: Test on high-DPI device (3x scale, iPhone Pro); verify element sizes and text rendering match logical pixels.
-- Lifecycle handling: App state persists across suspend/resume without data loss.
-
-**Phase 3: Integration & Verification (Commits ~16+ — platform parity, real device testing)**
-
-Commits in this phase: Cross-platform parity testing, device verification, documentation, performance validation.
-
-Files touched:
-- `tests/ios_parity.rs`: Pixel-perfect comparison tests. Render the same counter scene on iOS and native backends (macOS); compare PNG output to verify zero differing pixels. Test both light and dark modes, multiple DPI scales (1x, 2x, 3x).
-- `tests/android_parity.rs`: Equivalent parity tests for Android (compare to Windows or Linux desktop render).
-- `tests/ios_integration.rs`, `tests/android_integration.rs`: Expand with 16+ tests covering touch events, lifecycle events, appearance changes, multi-touch (if supported), screen rotation.
-- `src/shell/mod.rs`: Verify mobile backends correctly trigger appearance changes and lifecycle events without full re-render.
-- `CLAUDE.md` (update): Add mobile setup section to Troubleshooting; document iOS/Android SDKs, xcode-select/NDK setup, how to verify targets build.
-- `examples/counter.rs`: Verify the counter app runs on iOS and Android with identical behavior to desktop.
-
-**Why this order:** Once iOS and Android render correctly and respond to touch events, the focus shifts to cross-platform consistency. Parity tests catch rendering differences; real device testing validates touch responsiveness and appearance detection. Lifecycle tests confirm state persists across app suspension. Finally, documentation ensures downstream developers know how to build and test mobile backends.
-
-**Verification gates:**
-- Compiled verification: `cargo build --target aarch64-apple-ios --target aarch64-linux-android` succeeds with no warnings.
-- Parity testing: `cargo test --test ios_parity --target aarch64-apple-ios` and `cargo test --test android_parity --target aarch64-linux-android` generate reference frames and compare. Green (0 differing pixels) in both light and dark modes, all DPI scales.
-- Touch event verification: `cargo test --test ios_integration` confirms tap, swipe, and multi-touch events translate correctly.
-- Lifecycle verification: Suspend app (background), resume (foreground); verify state persists and rendering resumes.
-- Real device testing: Run on iPhone/iPad and Android phone/tablet; verify touch responsiveness (no lag), appearance switching works, app doesn't crash on rotation.
-- Documentation completeness: `CLAUDE.md` Troubleshooting covers iOS (Xcode, SDK versions) and Android (NDK, gradle) setup.
-
-#### Cross-Module Coordination
-
-**Why touch-to-click translation matters (mobile event abstraction)**
-
-Desktop has mouse (point click); mobile has touch (area + duration). The `Backend` trait abstracts this difference:
-
+**State definition:**
 ```rust
-// Backend event translation:
-// Mouse click at (100, 100) → Click event
-// Touch tap at (100±50, 100±50) → Click event
-// Touch drag start-end → Drag event
-// App view function doesn't know the difference
+struct App {
+    checked: bool,
+}
 ```
 
-Mistakes here break mobile UX: a button that works on desktop may be unresponsive on mobile if coordinates aren't correctly scaled or if pressure sensitivity is ignored. The coordinate contract (documented in `src/shell/platform/ios.rs` and `android.rs` and verified in parity tests) prevents this.
+The state is a single boolean. No enum, no tagged variant, no Option. Checkbox is binary: ticked or not. This is why checkbox is the minimal interactive control—it requires only one boolean field.
 
-**Why safe area insets must be respected (mobile layout constraints)**
+**Why this order:** State definition is the foundation of the state-view-handler pattern. By starting with the simplest possible state (a single bool), we prove that even the smallest interactive control follows the same pattern. The checkbox demonstrates that state complexity is orthogonal to control complexity; a toggle is just as valid a state shape as a segmented choice or a slider position.
 
-Mobile devices have notches (iPhone X+), dynamic islands (iPhone 15), and home indicators. The view must avoid drawing UI in these unsafe regions:
+**Verification gate:** `cargo test --test recipes -- a_checkbox_changes_state_on_click` passes. The test verifies that clicking a checkbox with `checked: false` produces a new frame with `checked: true`, and vice versa. The test uses `Harness` to drive the frame without an event loop; no window is needed.
 
+**Handler and integration:**
 ```rust
-// iOS: UIWindow.safeAreaLayoutGuide insets (top, bottom, left, right)
-// Android: WindowInsets (status bar height, navigation bar)
-// Passed to view function as padding on top-level element
+fn view(app: &App) -> El<App> {
+    col((
+        text("Enable notifications:"),
+        widgets::checkbox("Notifications on", app.checked, |app: &mut App| {
+            app.checked = !app.checked;
+        }),
+    ))
+}
 ```
 
-Ignoring safe area breaks mobile UX: text may be obscured by the notch, buttons hidden by the home indicator. The layout engine applies safe area insets before rendering; the inset values are queried from the backend's `surface()` method call or via platform-specific APIs.
+The handler is a closure that receives mutable state as an argument and modifies it (toggling the boolean). This is identical to the segmented and meter patterns; only the state shape changes. The checkbox is reusable: call it with any boolean field in any app state, and it works.
 
-**Why DPI scaling requires careful coordinate transformation (device → logical pixels)**
+**Cross-module notes:**
 
-Mobile devices have varying DPI. An iPhone 13 (2x scale) has 1170×2532 device pixels but reports 585×1266 logical points. A Pixel 7 (2.75x scale) has different scaling. The coordinate contract must be consistent:
+The checkbox implementation touches only two modules:
+1. **`src/widgets.rs`:** Builds the checkbox element from `draw()` and `on_click()` primitives. No new draw code; reuses existing shapes and colors. Line ~~350–370~~ (estimate; keep actual implementation tight).
+2. **`tests/recipes.rs`:** Adds one test verifying the toggle behavior. Uses `Harness` to click the checkbox and assert state changed.
 
-- **Device → Logical:** Divide coordinates by scale factor
-- **Logical → Device:** Multiply by scale factor
-- **Test:** Verify click-to-element correspondence at multiple DPI scales
-
-The `surface()` method returns `(logical_width, logical_height, scale_factor)`. The frame loop uses logical pixels for layout; the backend scales up for rendering and scales down for event coordinates.
-
-**Why appearance (light/dark mode) must signal frame re-render (not restart)**
-
-Mobile appearance can switch without app restart:
-
-```rust
-// iOS: traitCollectionDidChange() → signal frame re-render
-// Android: onConfigurationChanged() → signal frame re-render
-// Must NOT restart the app or lose state
-```
-
-The frame loop checks `Backend::appearance()` every frame. If appearance changes, the next frame re-renders with new colors (via `Paint` role lookup). State persists; only pixels change. Mistakes here are visible: app flashes or colors stick in wrong mode.
-
-**Why lifecycle management preserves state (pause/resume, not destroy/create)**
-
-Mobile apps suspend (background) and resume (foreground) constantly:
-
-```rust
-// iOS lifecycle:
-// applicationDidFinishLaunching → Backend::open()
-// applicationWillResignActive → pause rendering
-// applicationDidBecomeActive → resume rendering
-// applicationWillTerminate → Backend::is_open() false
-
-// Android lifecycle:
-// onCreate → Backend::open()
-// onPause → pause rendering
-// onResume → resume rendering
-// onDestroy → Backend::is_open() false
-```
-
-State must persist across pause/resume. The `Surface` and `Memory` structs are preserved; only rendering is paused. Mistakes here lose user data: a half-filled form disappears on background.
-
-**How mobile backends tie into the frame loop**
-
-`src/shell/mod.rs` line 369 (native `run()`) calls `pump()` with a timeout (typically `Duration::from_millis(8)` for 60fps). On iOS/Android:
-- `pump()` collects touch events from the platform event queue (non-blocking; may be empty).
-- If no event arrives, the frame is still redrawn (animations continue, unless paused by lifecycle).
-- If events arrive, they're translated to rui `Event` and added to the `events` vector.
-- Appearance changes are detected via `Backend::appearance()` each frame.
-
-Both mobile and desktop loops use the same timeout-driven polling; only the platform-specific event collection and lifecycle handling differ.
-
-#### Template for Adding Mobile or Similar Backends
-
-If you're adding a new mobile platform (e.g., iPadOS as distinct from iOS, or a game console):
-
-1. **Create platform module:** `src/shell/platform/new_platform.rs`
-2. **Implement Backend trait** (6 methods) entirely in platform-specific code:
-   - `open()`: Initialize display, event system, lifecycle handler
-   - `pump()`: Collect events from platform queue, translate to rui events, respect timeout
-   - `surface()`: Return `(logical_width, logical_height, scale_factor)` and update safe area insets
-   - `appearance()`: Query light/dark mode; re-query each frame for changes
-   - `present()`: Render canvas to platform display (Metal, Vulkan, or software)
-   - `is_open()`: Return false if app should exit
-3. **Add to platform selector** (`src/shell/platform/mod.rs`):
-   ```rust
-   #[cfg(target_os = "new_os")]
-   #[path = "new_mobile.rs"]
-   mod backend;
-   ```
-4. **Implement coordinate contract** — Document DPI scaling, safe area, event translation:
-   - Divide/multiply coordinates correctly
-   - Pass safe area insets to view
-   - Translate platform events to rui `Event` type
-5. **Create integration tests:** `tests/new_mobile_integration.rs` with 16+ tests
-   - Touch event verification (tap, swipe, multi-touch if supported)
-   - Appearance switching
-   - DPI scaling at multiple scales
-   - Lifecycle pause/resume
-6. **Create parity tests:** `tests/new_mobile_parity.rs` for pixel-perfect comparison
-7. **Test on real device** — Emulators don't always match real hardware (touch sensitivity, performance, rendering subtleties)
-8. **Document setup** in CLAUDE.md:
-   - SDK requirements
-   - Toolchain installation (NDK, Xcode, etc.)
-   - Example build commands
-   - Common troubleshooting
-
-**Spot-check against iOS/Android:**
-
-- iOS's `src/shell/platform/ios.rs`: Implements `Backend` trait entirely in platform code. All 6 methods implemented. FFI to UIKit.
-- Android's `src/shell/platform/android.rs`: Same pattern, FFI to Android NDK/JNI.
-- iOS/Android platform selector: Chosen via `#[cfg(target_os = "...")]` in `src/shell/platform/mod.rs`.
-- iOS/Android parity tests: Generate reference frames and compare to desktop. Green (0 pixels different) in light and dark modes.
-- iOS/Android coordinate contracts: Documented in platform code. DPI scaling tested at 1x, 2x, 3x scales.
-- iOS/Android lifecycle: Pause/resume tested; state persists.
-
-The pattern holds: platform isolation (one file per OS), trait implementation (six methods), coordinate contract (DPI scaling + event translation + safe area), parity testing (pixel-perfect comparison), lifecycle management (state persistence), and documentation (setup + troubleshooting). Everything above `Backend` is unchanged. Mobile and desktop coexist via conditional compilation.
+Both changes are shallow: `widgets.rs` adds a new function that composes existing primitives, and `tests/recipes.rs` adds one test. Nothing in the rendering, layout, or event handling pipeline changes.
 
 ## Workflow Notes
 
