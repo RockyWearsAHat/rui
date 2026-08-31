@@ -195,8 +195,8 @@ mod tests {
 
     #[test]
     fn render_wasm_parity_frame_light_produces_correct_buffer() {
-        // Test the pure, non-wasm-gated function with signature (dark: bool) -> Result<Vec<u8>, String>
-        let pixels = render_parity_frame_rgba(false).expect("light frame should render");
+        // Test the pure, non-wasm-gated function with signature (dark: bool) -> Vec<u8>
+        let pixels = render_wasm_parity_frame(false);
         let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
         assert_eq!(
             pixels.len(),
@@ -211,8 +211,8 @@ mod tests {
 
     #[test]
     fn render_wasm_parity_frame_dark_produces_correct_buffer() {
-        // Test the pure, non-wasm-gated function with signature (dark: bool) -> Result<Vec<u8>, String>
-        let pixels = render_parity_frame_rgba(true).expect("dark frame should render");
+        // Test the pure, non-wasm-gated function with signature (dark: bool) -> Vec<u8>
+        let pixels = render_wasm_parity_frame(true);
         let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
         assert_eq!(
             pixels.len(),
