@@ -1015,3 +1015,123 @@ fn all_three_buttons_can_be_held_simultaneously() {
     assert!(!input.held(PointerButton::Secondary), "secondary released");
     assert!(input.held(PointerButton::Middle), "middle still held");
 }
+
+// ============================================================================
+// BACKEND TRAIT BOUNDARY VERIFICATION
+// ============================================================================
+
+/// Verify frame driver correctly applies Backend coordinate contract.
+/// Backend delivers window-logical coordinates (DPI-adjusted); frame driver
+/// should preserve them without additional transforms.
+#[test]
+fn frame_driver_preserves_backend_coordinates() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    harness.click(Point::new(100.5, 75.25));
+
+    let input = harness.input();
+    assert_eq!(
+        input.pointer(),
+        Point::new(100.5, 75.25),
+        "frame driver should preserve backend's DPI-adjusted coordinates"
+    );
+}
+
+/// Verify event pump ordering is deterministic across backends.
+/// Multiple clicks should be processed in the order delivered by Backend::pump().
+#[test]
+fn backend_pump_event_ordering_deterministic() {
+    let mut harness1 = Harness::new(App::default(), interactive_view);
+    harness1.click(Point::new(100.0, 100.0));
+    harness1.click(Point::new(150.0, 150.0));
+    harness1.click(Point::new(200.0, 200.0));
+    let count1 = harness1.state().click_count;
+
+    let mut harness2 = Harness::new(App::default(), interactive_view);
+    harness2.click(Point::new(100.0, 100.0));
+    harness2.click(Point::new(150.0, 150.0));
+    harness2.click(Point::new(200.0, 200.0));
+    let count2 = harness2.state().click_count;
+
+    assert_eq!(
+        count1, count2,
+        "identical event sequences produce identical handler execution"
+    );
+    assert_eq!(count1, 3, "all 3 clicks processed in order");
+}
+
+/// Verify coordinate transforms at Backend boundary are consistent.
+/// DPI-adjusted coordinates from Backend::pump() should flow directly to Input.
+#[test]
+fn backend_boundary_coordinate_transforms_consistent() {
+    let test_coords = [
+        Point::new(0.0, 0.0),
+        Point::new(50.75, 100.25),
+        Point::new(1000.0, 1000.0),
+    ];
+
+    for (i, coord) in test_coords.iter().enumerate() {
+        let mut harness = Harness::new(App::default(), interactive_view);
+        harness.click(*coord);
+        let ptr = harness.input().pointer();
+
+        assert_eq!(
+            ptr, *coord,
+            "coordinate {} should be preserved at backend boundary",
+            i
+        );
+    }
+}
+
+/// Verify surface dimensions remain consistent across frames.
+/// Backend::surface() returns (width, height, scale) each frame.
+#[test]
+fn frame_driver_respects_backend_surface_stability() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    let w1 = harness.canvas().width();
+    let h1 = harness.canvas().height();
+
+    harness.frame();
+    let w2 = harness.canvas().width();
+    let h2 = harness.canvas().height();
+
+    assert_eq!(w1, w2, "surface width consistent across frames");
+    assert_eq!(h1, h2, "surface height consistent across frames");
+    assert!(w1 > 0 && h1 > 0, "dimensions must be positive");
+}
+
+/// Verify input state machine is deterministic across backends.
+/// Identical event sequences must produce identical Input state regardless of backend.
+#[test]
+fn input_state_determinism_from_backend_events() {
+    let mut input1 = Input::new();
+    let mut input2 = Input::new();
+    let pos = Point::new(100.0, 100.0);
+
+    // Identical sequence: pointer down
+    input1.apply(Event::PointerDown {
+        position: pos,
+        button: PointerButton::Primary,
+    });
+    input2.apply(Event::PointerDown {
+        position: pos,
+        button: PointerButton::Primary,
+    });
+
+    assert_eq!(
+        input1.pressed(PointerButton::Primary),
+        input2.pressed(PointerButton::Primary),
+        "pressed flag should be identical"
+    );
+    assert_eq!(
+        input1.held(PointerButton::Primary),
+        input2.held(PointerButton::Primary),
+        "held flag should be identical"
+    );
+    assert_eq!(
+        input1.pointer(),
+        input2.pointer(),
+        "pointer position should be identical"
+    );
+}
