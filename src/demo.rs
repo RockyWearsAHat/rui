@@ -178,4 +178,38 @@ mod tests {
             .expect("the embedded faces should parse");
         assert_ne!(light.pixels(), dark.pixels());
     }
+
+    #[test]
+    fn render_wasm_parity_frame_light_produces_correct_buffer() {
+        let result = render_parity_frame_rgba(false);
+        assert!(result.is_ok(), "light frame should render successfully");
+        let pixels = result.unwrap();
+        let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+        assert_eq!(
+            pixels.len(),
+            expected_bytes,
+            "light frame should return {}x{}x4 = {} bytes",
+            REFERENCE_WIDTH,
+            REFERENCE_HEIGHT,
+            expected_bytes
+        );
+        assert!(!pixels.is_empty(), "light frame buffer should not be empty");
+    }
+
+    #[test]
+    fn render_wasm_parity_frame_dark_produces_correct_buffer() {
+        let result = render_parity_frame_rgba(true);
+        assert!(result.is_ok(), "dark frame should render successfully");
+        let pixels = result.unwrap();
+        let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+        assert_eq!(
+            pixels.len(),
+            expected_bytes,
+            "dark frame should return {}x{}x4 = {} bytes",
+            REFERENCE_WIDTH,
+            REFERENCE_HEIGHT,
+            expected_bytes
+        );
+        assert!(!pixels.is_empty(), "dark frame buffer should not be empty");
+    }
 }
