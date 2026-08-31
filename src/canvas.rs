@@ -269,6 +269,13 @@ impl Canvas {
     }
 
     /// The whole surface, in logical units.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The returned `Rect` is in **window-logical units**, not device pixels.
+    /// The width and height are calculated by dividing device pixels by the
+    /// display scale factor, making this value consistent across all platforms
+    /// and DPI settings.
     pub fn bounds(&self) -> Rect {
         Rect::new(
             0.0,
@@ -284,6 +291,12 @@ impl Canvas {
     }
 
     /// The current clip, in logical units.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The returned `Rect` is in **window-logical units**, not device pixels.
+    /// The clipping region is maintained internally in device pixels but
+    /// converted to logical units for consistency with other coordinate returns.
     pub fn clip(&self) -> Rect {
         Rect::new(
             self.clip.left as f32 / self.scale,
@@ -297,6 +310,12 @@ impl Canvas {
     ///
     /// The new clip is always the *intersection* with the old one, so a nested
     /// region can never draw outside its parent however it was called.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `rect` parameter and returned `Rect` are in **window-logical units**,
+    /// not device pixels. The clipping region is automatically scaled by the
+    /// display scale factor.
     #[must_use = "the previous clip must be restored, or later drawing stays clipped"]
     pub fn push_clip(&mut self, rect: Rect) -> Rect {
         let previous = self.clip();
@@ -305,6 +324,11 @@ impl Canvas {
     }
 
     /// Restores a clip taken from [`Canvas::push_clip`].
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `previous` parameter is in **window-logical units**, not device pixels.
+    /// The restored clipping region is automatically scaled by the display scale factor.
     pub fn pop_clip(&mut self, previous: Rect) {
         self.clip = PixelBounds {
             left: 0,
@@ -319,6 +343,12 @@ impl Canvas {
     ///
     /// Widgets ask this to skip work — a list scrolled past its thousandth row
     /// should cost nothing to not draw.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `rect` parameter is in **window-logical units**, not device pixels.
+    /// The visibility check is performed against the clipping region, which is
+    /// automatically scaled by the display scale factor.
     pub fn is_visible(&self, rect: Rect) -> bool {
         !self.clip.intersect(self.device_bounds(rect)).is_empty()
     }
