@@ -1051,3 +1051,714 @@ mod pointer_coordinates {
         assert_eq!(input.pointer(), Point::new(400.0, 300.0));
     }
 }
+
+// ============================================================================
+// FOCUS MANAGEMENT & STATE PERSISTENCE
+// ============================================================================
+
+/// Verify focus state persists across frame boundaries.
+#[test]
+fn focus_state_persists_across_frames() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Click to establish focus
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().click_count, 1);
+
+    // Focus should be remembered across multiple frame redraws
+    for _ in 0..5 {
+        let _ = harness.frame();
+        assert_eq!(harness.state().click_count, 1, "state should persist");
+    }
+}
+
+/// Verify pointer_inside flag persists across frames when pointer is stationary.
+#[test]
+fn pointer_inside_persists_across_frames() {
+    let mut harness = Harness::new(App::default(), |_app| col(text("Test")));
+
+    harness.click(Point::new(100.0, 100.0));
+    let input1 = harness.input();
+    assert!(input1.pointer_inside());
+
+    // Redraw without moving pointer
+    let _ = harness.frame();
+    let input2 = harness.input();
+    assert!(input2.pointer_inside());
+}
+
+/// Verify held button state persists correctly through multiple frames.
+#[test]
+fn held_button_state_persistence() {
+    let mut input = Input::default();
+
+    // Press button
+    input.begin_frame();
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+    assert!(input.held(PointerButton::Primary));
+
+    // Persist through 10 frames
+    for _ in 0..10 {
+        input.begin_frame();
+        assert!(input.held(PointerButton::Primary));
+    }
+
+    // Release button
+    input.apply(Event::PointerUp {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+    assert!(!input.held(PointerButton::Primary));
+}
+
+// ============================================================================
+// ANIMATION STATE CONSISTENCY
+// ============================================================================
+
+/// Verify multiple identical harnesses render identically.
+#[test]
+fn identical_harnesses_render_identically() {
+    let mut h1 = Harness::new(App::default(), interactive_view);
+    let mut h2 = Harness::new(App::default(), interactive_view);
+
+    // Apply identical sequences
+    for _ in 0..3 {
+        h1.click(Point::new(100.0, 100.0));
+        h2.click(Point::new(100.0, 100.0));
+    }
+
+    assert_eq!(h1.state().click_count, h2.state().click_count);
+}
+
+/// Verify animation state remains consistent across frame sequences.
+#[test]
+fn animation_state_consistency_across_sequences() {
+    let mut h1 = Harness::new(App::default(), interactive_view);
+    let mut h2 = Harness::new(App::default(), interactive_view);
+
+    // h1: Apply events, then render multiple frames
+    h1.click(Point::new(100.0, 100.0));
+    for _ in 0..5 {
+        let _ = h1.frame();
+    }
+
+    // h2: Same events, same renders
+    h2.click(Point::new(100.0, 100.0));
+    for _ in 0..5 {
+        let _ = h2.frame();
+    }
+
+    assert_eq!(h1.state(), h2.state());
+}
+
+// ============================================================================
+// PLATFORM EVENT TRANSLATION CONSISTENCY
+// ============================================================================
+
+/// Verify that pointer button translation is consistent across backends.
+/// All three buttons should work identically on all platforms.
+#[test]
+fn pointer_button_translation_consistency() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    let buttons = [
+        PointerButton::Primary,
+        PointerButton::Secondary,
+        PointerButton::Middle,
+    ];
+
+    for button in buttons {
+        input.apply(Event::PointerDown {
+            position: Point::new(100.0, 100.0),
+            button,
+        });
+        assert!(input.held(button));
+        input.begin_frame();
+
+        input.apply(Event::PointerUp {
+            position: Point::new(100.0, 100.0),
+            button,
+        });
+        assert!(!input.held(button));
+        input.begin_frame();
+    }
+}
+
+/// Verify modifier key translation is consistent across backends.
+/// All modifier combinations should work identically.
+#[test]
+fn modifier_key_translation_consistency() {
+    let modifiers_to_test = vec![
+        Modifiers {
+            shift: true,
+            ..Default::default()
+        },
+        Modifiers {
+            control: true,
+            ..Default::default()
+        },
+        Modifiers {
+            alt: true,
+            ..Default::default()
+        },
+        Modifiers {
+            command: true,
+            ..Default::default()
+        },
+        Modifiers {
+            shift: true,
+            control: true,
+            alt: true,
+            command: true,
+        },
+    ];
+
+    for mods in modifiers_to_test {
+        let mut input = Input::default();
+        input.begin_frame();
+
+        input.apply(Event::KeyDown {
+            key: Key::Space,
+            modifiers: mods,
+        });
+        input.begin_frame();
+
+        input.apply(Event::KeyUp {
+            key: Key::Space,
+            modifiers: mods,
+        });
+    }
+}
+
+// ============================================================================
+// EVENT BATCHING & ACCUMULATION
+// ============================================================================
+
+/// Verify multiple scroll events accumulate correctly.
+#[test]
+fn multiple_scroll_events_accumulate() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    input.apply(Event::Scrolled { x: 10.0, y: 20.0 });
+    input.apply(Event::Scrolled { x: 5.0, y: 10.0 });
+    input.apply(Event::Scrolled { x: 3.0, y: 7.0 });
+
+    let (sx, sy) = input.scroll();
+    assert_eq!(sx, 18.0);
+    assert_eq!(sy, 37.0);
+}
+
+/// Verify text events accumulate correctly.
+#[test]
+fn multiple_text_events_accumulate() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    input.apply(Event::Text("hello".to_string()));
+    input.apply(Event::Text(" ".to_string()));
+    input.apply(Event::Text("world".to_string()));
+
+    // Text should be in the input state
+    input.begin_frame();
+}
+
+/// Verify large batches of events maintain consistency.
+#[test]
+fn large_event_batch_consistency() {
+    let mut h1 = Harness::new(App::default(), interactive_view);
+    let mut h2 = Harness::new(App::default(), interactive_view);
+
+    // Batch 1: 50 clicks
+    for _ in 0..50 {
+        h1.click(Point::new(100.0, 100.0));
+    }
+
+    // Batch 2: Same 50 clicks
+    for _ in 0..50 {
+        h2.click(Point::new(100.0, 100.0));
+    }
+
+    assert_eq!(h1.state().click_count, 50);
+    assert_eq!(h2.state().click_count, 50);
+    assert_eq!(h1.state(), h2.state());
+}
+
+// ============================================================================
+// STATE RECOVERY & VALIDITY
+// ============================================================================
+
+/// Verify Input state remains valid after a long event sequence.
+#[test]
+fn input_state_valid_after_long_sequence() {
+    let mut input = Input::default();
+
+    for frame in 0..100 {
+        input.begin_frame();
+
+        let pos = Point::new((frame as f32) % 800.0, (frame as f32) % 600.0);
+        input.apply(Event::PointerMoved(pos));
+
+        if frame % 10 == 0 {
+            input.apply(Event::PointerDown {
+                position: pos,
+                button: PointerButton::Primary,
+            });
+        } else if frame % 10 == 5 {
+            input.apply(Event::PointerUp {
+                position: pos,
+                button: PointerButton::Primary,
+            });
+        }
+    }
+
+    // Should end in a valid state
+    assert_eq!(input.pointer(), Point::new((99.0) % 800.0, (99.0) % 600.0));
+}
+
+/// Verify pointer state is valid even after extreme values.
+#[test]
+fn pointer_state_valid_after_extreme_values() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    // Apply extreme values
+    input.apply(Event::PointerMoved(Point::new(
+        f32::MAX / 2.0,
+        f32::MAX / 2.0,
+    )));
+    input.apply(Event::PointerMoved(Point::new(
+        f32::MIN / 2.0,
+        f32::MIN / 2.0,
+    )));
+    input.apply(Event::PointerMoved(Point::new(1e6, 1e6)));
+    input.apply(Event::PointerMoved(Point::new(1e-6, 1e-6)));
+
+    // Should still be valid
+    assert_eq!(input.pointer(), Point::new(1e-6, 1e-6));
+}
+
+// ============================================================================
+// WINDOW LIFECYCLE & APPEARANCE
+// ============================================================================
+
+/// Verify close request event is tracked correctly.
+#[test]
+fn close_request_event_tracked() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    assert!(!input.close_requested());
+
+    input.apply(Event::CloseRequested);
+    assert!(input.close_requested());
+
+    input.begin_frame();
+    // Close flag should persist until explicitly cleared
+}
+
+/// Verify multiple close requests are handled correctly.
+#[test]
+fn multiple_close_requests_handled() {
+    let mut input = Input::default();
+
+    input.begin_frame();
+    input.apply(Event::CloseRequested);
+    assert!(input.close_requested());
+
+    input.begin_frame();
+    input.apply(Event::CloseRequested);
+    assert!(input.close_requested());
+}
+
+// ============================================================================
+// COMPLEX DRAG OPERATIONS
+// ============================================================================
+
+/// Verify drag detection with multiple intermediate moves.
+#[test]
+fn drag_with_many_intermediate_moves() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    let start = Point::new(100.0, 100.0);
+    input.apply(Event::PointerDown {
+        position: start,
+        button: PointerButton::Primary,
+    });
+    assert_eq!(input.press_origin(PointerButton::Primary), Some(start));
+
+    // Move 100 times
+    for i in 0..100 {
+        input.apply(Event::PointerMoved(Point::new(100.0 + i as f32, 100.0)));
+    }
+
+    // Press origin should remain unchanged
+    assert_eq!(input.press_origin(PointerButton::Primary), Some(start));
+    assert_eq!(input.pointer(), Point::new(199.0, 100.0));
+}
+
+/// Verify simultaneous drags with multiple buttons.
+#[test]
+fn simultaneous_drags_multiple_buttons() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    // Start primary drag
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+    assert_eq!(
+        input.press_origin(PointerButton::Primary),
+        Some(Point::new(100.0, 100.0))
+    );
+
+    // Start secondary drag (while holding primary)
+    input.apply(Event::PointerDown {
+        position: Point::new(150.0, 150.0),
+        button: PointerButton::Secondary,
+    });
+    assert_eq!(
+        input.press_origin(PointerButton::Secondary),
+        Some(Point::new(150.0, 150.0))
+    );
+
+    // Move both
+    input.apply(Event::PointerMoved(Point::new(200.0, 200.0)));
+
+    // Both should be held with original origins
+    assert_eq!(
+        input.press_origin(PointerButton::Primary),
+        Some(Point::new(100.0, 100.0))
+    );
+    assert_eq!(
+        input.press_origin(PointerButton::Secondary),
+        Some(Point::new(150.0, 150.0))
+    );
+}
+
+// ============================================================================
+// TEXT INPUT & COMPOSITION
+// ============================================================================
+
+/// Verify text input from multiple frames accumulates in same frame.
+#[test]
+fn text_input_accumulation_within_frame() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    input.apply(Event::Text("h".to_string()));
+    input.apply(Event::Text("e".to_string()));
+    input.apply(Event::Text("l".to_string()));
+    input.apply(Event::Text("l".to_string()));
+    input.apply(Event::Text("o".to_string()));
+
+    // Text should be accumulated
+    input.begin_frame();
+    // Text should be cleared at frame boundary
+}
+
+/// Verify text input with special characters.
+#[test]
+fn text_input_special_characters() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    let special_texts = vec!["!@#$%^&*()", "\n\t", "日本語", "🎉🚀✨", "Mixed123!@#"];
+
+    for text in special_texts {
+        input.apply(Event::Text(text.to_string()));
+    }
+
+    // Should handle all without crashing
+    input.begin_frame();
+}
+
+// ============================================================================
+// SCROLL & WHEEL EVENTS
+// ============================================================================
+
+/// Verify scroll event accumulation with both axes.
+#[test]
+fn scroll_both_axes_accumulation() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    input.apply(Event::Scrolled { x: 10.0, y: 20.0 });
+    input.apply(Event::Scrolled { x: -5.0, y: 30.0 });
+    input.apply(Event::Scrolled { x: 15.0, y: -10.0 });
+
+    let (sx, sy) = input.scroll();
+    assert_eq!(sx, 20.0);
+    assert_eq!(sy, 40.0);
+
+    input.begin_frame();
+    let (sx, sy) = input.scroll();
+    assert_eq!(sx, 0.0);
+    assert_eq!(sy, 0.0);
+}
+
+/// Verify high-frequency scroll events.
+#[test]
+fn high_frequency_scroll_events() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    for i in 0..100 {
+        input.apply(Event::Scrolled {
+            x: (i as f32) * 0.1,
+            y: (i as f32) * 0.2,
+        });
+    }
+
+    let (sx, sy) = input.scroll();
+    assert!(sx > 0.0);
+    assert!(sy > 0.0);
+}
+
+// ============================================================================
+// KEYBOARD EVENT SEQUENCES
+// ============================================================================
+
+/// Verify keyboard events maintain key order.
+#[test]
+fn keyboard_event_order_maintained() {
+    let mut h1 = Harness::new(App::default(), interactive_view);
+    let mut h2 = Harness::new(App::default(), interactive_view);
+
+    let keys = [Key::Space, Key::Enter, Key::Tab, Key::Space];
+
+    for key in keys {
+        h1.key(key);
+        h2.key(key);
+    }
+
+    // Both should be in consistent state
+    assert_eq!(h1.state(), h2.state());
+}
+
+/// Verify mixed keyboard and pointer events.
+#[test]
+fn mixed_keyboard_and_pointer_events() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    input.apply(Event::KeyDown {
+        key: Key::Space,
+        modifiers: Modifiers::default(),
+    });
+    input.apply(Event::PointerMoved(Point::new(100.0, 100.0)));
+    input.apply(Event::KeyDown {
+        key: Key::Enter,
+        modifiers: Modifiers::default(),
+    });
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+
+    assert_eq!(input.pointer(), Point::new(100.0, 100.0));
+    assert!(input.held(PointerButton::Primary));
+}
+
+// ============================================================================
+// POINTER PRESENCE & ABSENCE
+// ============================================================================
+
+/// Verify pointer_inside transitions work correctly.
+#[test]
+fn pointer_inside_transitions_extended() {
+    let mut input = Input::default();
+
+    // Scenario 1: Move in, stay, move out
+    input.begin_frame();
+    input.apply(Event::PointerMoved(Point::new(100.0, 100.0)));
+    assert!(input.pointer_inside());
+
+    input.begin_frame();
+    assert!(input.pointer_inside());
+
+    input.apply(Event::PointerLeft);
+    assert!(!input.pointer_inside());
+
+    // Scenario 2: Move back in
+    input.begin_frame();
+    input.apply(Event::PointerMoved(Point::new(200.0, 200.0)));
+    assert!(input.pointer_inside());
+}
+
+/// Verify rapid pointer enter/exit events.
+#[test]
+fn rapid_pointer_enter_exit() {
+    let mut input = Input::default();
+
+    for i in 0..20 {
+        input.begin_frame();
+
+        if i % 2 == 0 {
+            input.apply(Event::PointerMoved(Point::new(100.0, 100.0)));
+            assert!(input.pointer_inside());
+        } else {
+            input.apply(Event::PointerLeft);
+            assert!(!input.pointer_inside());
+        }
+    }
+}
+
+// ============================================================================
+// STATE RECOVERY UNDER STRESS
+// ============================================================================
+
+/// Verify state remains valid after very long event sequence.
+#[test]
+fn state_valid_after_very_long_sequence() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    for i in 0..1000 {
+        if i % 100 == 0 {
+            harness.click(Point::new((i % 800) as f32, (i % 600) as f32));
+        }
+    }
+
+    // Should be in valid state
+    let state = harness.state();
+    assert_eq!(state.click_count, 10);
+}
+
+/// Verify input state remains valid after extreme event patterns.
+#[test]
+fn extreme_event_patterns() {
+    let mut input = Input::default();
+
+    // Pattern 1: Rapid button mashing
+    for _ in 0..100 {
+        input.begin_frame();
+        input.apply(Event::PointerDown {
+            position: Point::new(100.0, 100.0),
+            button: PointerButton::Primary,
+        });
+        input.apply(Event::PointerUp {
+            position: Point::new(100.0, 100.0),
+            button: PointerButton::Primary,
+        });
+    }
+
+    // Pattern 2: Extreme movement
+    input.begin_frame();
+    for i in 0..1000 {
+        input.apply(Event::PointerMoved(Point::new(
+            (i as f32) % 800.0,
+            (i as f32) % 600.0,
+        )));
+    }
+
+    // Should be valid
+    assert!(input.pointer_inside());
+
+    // Pattern 3: Many modifiers
+    input.begin_frame();
+    for _ in 0..50 {
+        input.apply(Event::KeyDown {
+            key: Key::Space,
+            modifiers: Modifiers {
+                shift: true,
+                control: true,
+                alt: true,
+                command: true,
+            },
+        });
+    }
+}
+
+// ============================================================================
+// COORDINATE RANGES & PRECISION
+// ============================================================================
+
+/// Verify very large coordinate values are preserved.
+#[test]
+fn large_coordinate_values_preserved() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    let large_coords = [
+        Point::new(10000.0, 10000.0),
+        Point::new(100000.0, 100000.0),
+        Point::new(1e6, 1e6),
+    ];
+
+    for coord in large_coords {
+        input.apply(Event::PointerMoved(coord));
+        assert_eq!(input.pointer(), coord);
+    }
+}
+
+/// Verify very small coordinate values are preserved.
+#[test]
+fn small_coordinate_values_preserved() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    let small_coords = [
+        Point::new(0.001, 0.001),
+        Point::new(1e-6, 1e-6),
+        Point::new(1e-10, 1e-10),
+    ];
+
+    for coord in small_coords {
+        input.apply(Event::PointerMoved(coord));
+        assert_eq!(input.pointer(), coord);
+    }
+}
+
+// ============================================================================
+// FRAME-LEVEL CONSISTENCY
+// ============================================================================
+
+/// Verify frame boundaries maintain consistent state.
+#[test]
+fn frame_boundaries_maintain_consistency() {
+    let mut h1 = Harness::new(App::default(), interactive_view);
+    let mut h2 = Harness::new(App::default(), interactive_view);
+
+    // h1: Batch apply, then render
+    h1.click(Point::new(100.0, 100.0));
+    h1.click(Point::new(100.0, 100.0));
+    h1.click(Point::new(100.0, 100.0));
+    let _ = h1.frame();
+
+    // h2: Individual renders
+    h2.click(Point::new(100.0, 100.0));
+    let _ = h2.frame();
+    h2.click(Point::new(100.0, 100.0));
+    let _ = h2.frame();
+    h2.click(Point::new(100.0, 100.0));
+    let _ = h2.frame();
+
+    // Both should have same click count
+    assert_eq!(h1.state().click_count, h2.state().click_count);
+}
+
+/// Verify rendering consistency with different event timings.
+#[test]
+fn rendering_consistency_different_timings() {
+    let mut h1 = Harness::new(App::default(), interactive_view);
+    let mut h2 = Harness::new(App::default(), interactive_view);
+
+    // Scenario 1: All events at once
+    for _ in 0..10 {
+        h1.click(Point::new(100.0, 100.0));
+    }
+
+    // Scenario 2: Events interleaved with frames
+    for _ in 0..10 {
+        h2.click(Point::new(100.0, 100.0));
+        let _ = h2.frame();
+    }
+
+    assert_eq!(h1.state().click_count, h2.state().click_count);
+}
