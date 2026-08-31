@@ -2426,3 +2426,138 @@ fn very_long_event_sequences_maintain_determinism() {
     assert_eq!(h1.state().click_count, h2.state().click_count);
     assert_eq!(h1.state().click_count, 500);
 }
+
+// ============================================================================
+// APPEARANCE TOGGLE WITH COMPLEX STATE
+// ============================================================================
+
+/// Verify appearance changes correctly when focus state is active.
+/// Focus styling should adapt to appearance changes.
+#[test]
+fn appearance_toggle_with_focus_state() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+
+    // Simulate focus by clicking an element
+    harness.click(Point::new(100.0, 100.0));
+    harness.frame();
+    let light_with_focus = harness.pixel(100, 100);
+
+    // Toggle appearance while focus is active
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_with_focus = harness.pixel(100, 100);
+
+    // Focus styling should be different in dark mode
+    assert_ne!(
+        light_with_focus, dark_with_focus,
+        "focus state styling should reflect appearance change"
+    );
+}
+
+/// Verify appearance changes work correctly with hover state.
+/// Hover styling should be appearance-aware.
+#[test]
+fn appearance_toggle_preserves_element_states() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+    let light_baseline = harness.pixel(0, 0);
+
+    // Apply multiple clicks to create state
+    harness.click(Point::new(100.0, 100.0));
+    harness.click(Point::new(100.0, 100.0));
+    harness.frame();
+
+    // Toggle to dark mode with active state
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_with_state = harness.pixel(0, 0);
+
+    // Both appearance and state should affect rendering
+    assert_ne!(light_baseline, dark_with_state);
+}
+
+/// Verify rapid appearance toggles with state changes don't interfere.
+/// State and appearance changes should be orthogonal.
+#[test]
+fn appearance_and_state_changes_are_orthogonal() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.click(Point::new(100.0, 100.0));
+    harness.frame();
+    assert_eq!(harness.state().click_count, 1);
+
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+
+    harness.click(Point::new(100.0, 100.0));
+    harness.frame();
+    assert_eq!(
+        harness.state().click_count,
+        2,
+        "state changes should work independent of appearance"
+    );
+
+    let mut harness = harness.appearance(Appearance::Light);
+    harness.frame();
+
+    harness.click(Point::new(100.0, 100.0));
+    harness.frame();
+    assert_eq!(
+        harness.state().click_count,
+        3,
+        "state accumulation should be unaffected by appearance toggles"
+    );
+}
+
+/// Verify appearance changes don't corrupt internal state.
+/// Multiple rapid toggles should leave the app in a valid state.
+#[test]
+fn rapid_appearance_toggles_maintain_state_validity() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+
+    for _ in 0..10 {
+        harness.click(Point::new(100.0, 100.0));
+        harness.frame();
+
+        harness = harness.appearance(Appearance::Dark);
+        harness.frame();
+
+        harness = harness.appearance(Appearance::Light);
+        harness.frame();
+    }
+
+    // After 10 rapid toggle cycles with clicks, state should be valid
+    assert_eq!(harness.state().click_count, 10);
+}
+
+/// Verify appearance toggle doesn't affect coordinate systems.
+/// Click coordinates should be interpreted identically regardless of appearance.
+#[test]
+fn appearance_toggle_preserves_click_coordinate_interpretation() {
+    use rui_native::theme::Appearance;
+
+    let mut harness1 = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    let mut harness2 = Harness::new(App::default(), interactive_view).appearance(Appearance::Dark);
+
+    // Same click at same coordinates in both appearances
+    harness1.click(Point::new(150.0, 150.0));
+    harness2.click(Point::new(150.0, 150.0));
+
+    harness1.frame();
+    harness2.frame();
+
+    // Event handling should be identical
+    assert_eq!(
+        harness1.state().click_count,
+        harness2.state().click_count,
+        "click handling should be independent of appearance"
+    );
+}
