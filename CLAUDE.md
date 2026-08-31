@@ -935,33 +935,13 @@ struct App {
 }
 ```
 
-**Commits:** 1 total, focused on state definition and pattern foundation.
-
-The checkbox is the simplest interactive control: a boolean that toggles on click. Unlike segmented or complex widgets, checkbox has no enumerated state—just checked or unchecked. This simplicity makes it an ideal recipe for learning the state-view-handler pattern.
-
 Files touched:
-- `src/widgets.rs`: Add `checkbox(label: &str, checked: bool, on_click: impl Fn(&mut S)) -> El<S>` function that builds a checkbox element from primitives (`draw`, `on_click`). No new widget type; reuse existing drawing and event handling infrastructure.
-- `tests/recipes.rs`: Add test `a_checkbox_changes_state_on_click` verifying state toggles on click.
+- `src/widgets.rs`
+- `tests/recipes.rs`
 
-The state is a single boolean. No enum, no tagged variant, no Option. Checkbox is binary: ticked or not. This is why checkbox is the minimal interactive control—it requires only one boolean field.
+**Why this order:** State definition is the foundation of the state-view-handler pattern. By starting with the simplest possible state (a single bool), we prove that even the smallest interactive control follows the same pattern. Checkbox requires only one boolean field—no enums, no variants—making it the minimal interactive control that proves the pattern applies to all toggles.
 
-**Why this order:** State definition is the foundation of the state-view-handler pattern. By starting with the simplest possible state (a single bool), we prove that even the smallest interactive control follows the same pattern. The checkbox demonstrates that state complexity is orthogonal to control complexity; a toggle is just as valid a state shape as a segmented choice or a slider position.
-
-**Verification gate:** `cargo test --test recipes -- a_checkbox_changes_state_on_click` passes. The test verifies that clicking a checkbox with `checked: false` produces a new frame with `checked: true`, and vice versa. The test uses `Harness` to drive the frame without an event loop; no window is needed.
-
-**Handler and integration:**
-```rust
-fn view(app: &App) -> El<App> {
-    col((
-        text("Enable notifications:"),
-        widgets::checkbox("Notifications on", app.checked, |app: &mut App| {
-            app.checked = !app.checked;
-        }),
-    ))
-}
-```
-
-The handler is a closure that receives mutable state as an argument and modifies it (toggling the boolean). This is identical to the segmented and meter patterns; only the state shape changes. The checkbox is reusable: call it with any boolean field in any app state, and it works.
+**Verification gate:** `cargo test --test recipes -- a_checkbox_changes_state_on_click` passes.
 
 **Phase 2: Enhancement (Styling & Visual Polish)**
 
