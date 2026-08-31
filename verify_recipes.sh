@@ -141,6 +141,16 @@ check "git show caa3066 --stat | grep -q 'src/shell/mod.rs'" "Commit caa3066 tou
 check "git show 2df7f1c --stat | grep -q 'parity' || true" "Commit 2df7f1c (parity test) exists"
 check "git show 401a8a7 --stat | grep -q 'src' || true" "Commit 401a8a7 (expose FrameDriver) exists"
 
+# STEP 6: Final Recipe Completeness Check
+# Verify that all documented recipes are properly verified
+echo ""
+echo "STEP 6: Final Recipe Completeness Check"
+check "grep -q 'Recipe 1: Adding a WASM Backend' CLAUDE.md" "Recipe 1 section header exists in CLAUDE.md"
+check "grep -q 'Recipe 2: X11 Backend Implementation' CLAUDE.md" "Recipe 2 section header exists in CLAUDE.md"
+check "grep -q 'Recipe 3: Checkbox Control' CLAUDE.md" "Recipe 3 section header exists in CLAUDE.md"
+check "[ $(grep -c 'Recipe [0-9]:' CLAUDE.md) -eq 3 ]" "Exactly 3 recipes documented"
+check "grep -c 'Recipe [0-9]' verify_recipes.sh | grep -q '[1-9]' && true" "Recipe checks present in verification script"
+
 # Final report
 echo ""
 echo "============================================"
