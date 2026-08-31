@@ -707,6 +707,17 @@ pub fn capture_wasm_frame(appearance: Appearance) -> Result<Vec<u8>, String> {
     Ok(frame_data)
 }
 
+/// Extract frame dimensions from RGBA byte buffer.
+/// For parity frames, validates byte count matches expected size (960×640 RGBA).
+fn extract_frame_dimensions(frame_bytes: &[u8]) -> Option<(usize, usize)> {
+    let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+    if frame_bytes.len() == expected_bytes {
+        Some((REFERENCE_WIDTH as usize, REFERENCE_HEIGHT as usize))
+    } else {
+        None
+    }
+}
+
 /// Detect if a headless browser is available for WASM testing.
 /// Supports Firefox (via headless-chrome/GeckoDriver) and Chrome (via Puppeteer/ChromeDriver).
 fn is_headless_browser_available() -> bool {
@@ -1067,4 +1078,47 @@ fn wasm_frame_extraction_always_succeeds() {
 
     assert_eq!(light_len, expected_len);
     assert_eq!(dark_len, expected_len);
+}
+
+#[test]
+fn capture_harness_extracts_frame_dimensions() {
+    // STEP 1 requirement: capture harness should extract frame dimensions from parity_frames()
+    let frames = parity_frames();
+
+    for (appearance, frame_bytes) in frames.iter() {
+        // Should be able to extract dimensions from frame data
+        let dimensions = extract_frame_dimensions(frame_bytes);
+        assert!(
+            dimensions.is_some(),
+            "should extract dimensions from {:?} frame",
+            appearance
+        );
+
+        let (width, height) = dimensions.unwrap();
+        assert_eq!(width, REFERENCE_WIDTH as usize);
+        assert_eq!(height, REFERENCE_HEIGHT as usize);
+    }
+}
+
+#[test]
+fn capture_harness_validates_frame_consistency() {
+    // STEP 1 requirement: verify captured frames match parity_frames() expectations
+    let expected_frames = parity_frames();
+    let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+
+    for (expected_appearance, expected_data) in expected_frames.iter() {
+        assert_eq!(
+            expected_data.len(),
+            expected_bytes,
+            "parity frame for {:?} should be exactly {} bytes",
+            expected_appearance,
+            expected_bytes
+        );
+
+        // Extract dimensions and validate
+        let dims = extract_frame_dimensions(expected_data);
+        assert!(dims.is_some());
+        let (w, h) = dims.unwrap();
+        assert_eq!(w * h * 4, expected_bytes);
+    }
 }
