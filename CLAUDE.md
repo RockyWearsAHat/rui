@@ -659,205 +659,125 @@ Adding a new backend (e.g., native Wayland, or a game engine) follows the same p
 
 The pattern holds: add a platform module implementing `Backend`, wire it into the selector, add a `run()` that calls `turn()`, verify with parity tests. Everything above `Backend` is unchanged.
 
-### Recipe 2: Add a New Widget
+### Recipe 2: X11 Backend Implementation
 
-**Commits:** 1 per verification gate; typically 3–5 total.
+**Commits:** 10 total, grouped in three phases: Foundation (1 commit), Enhancement (1 commit), Platform Integration (8 commits).
 
-A widget is a function that builds an `El<S>` from application state and wires handlers to mutate it. The simplest widgets (like `meter`) are passive display; more complex ones (like `segmented`) handle clicks or drags. Both follow the same pattern: state → view → handlers.
+The X11 backend brings native Linux support to **rui**, allowing the same UI code to run in an X11 session with no changes. X11 is a legacy but still-ubiquitous display server on Linux; supporting it alongside Wayland requires careful platform abstraction and coordinate contract documentation.
 
-**Files Touched:**
-- `src/widgets.rs`: Define the widget function
-- `tests/recipes.rs`: Add a test using `Harness`
-- `examples/` (optional): Add a standalone example
+**Phase 1: Foundation (Commit a67d578)**
 
-**Steps in Order:**
+Files touched:
+- `src/shell/platform/x11.rs` (new): Implement the `Backend` trait for X11. FFI bindings via `xlib` or hand-rolled X11 protocol to `XOpenDisplay`, `XCreateWindow`, `XSelectInput`, `XNextEvent`. Translate X11 events to rui's unified `Event` type. `present()` renders the `Canvas` to `XImage` and calls `XPutImage` to blit pixels to the window.
+- `src/shell/mod.rs`: Conditionally select X11 backend with `#[cfg(target_os = "linux")]`.
 
-1. **Decide on state and appearance** — What does the widget display? What user interaction does it need? (e.g., "a choice between options" → state is `selected: usize`)
+**Why this order:** The `Backend` trait is the platform abstraction boundary. X11 must implement all six methods (`open`, `pump`, `surface`, `appearance`, `present`, `is_open`) identically to native backends. By starting with the minimal trait implementation, we prove X11 can participate in the unified frame loop without special casing.
 
-2. **Write the widget function in `src/widgets.rs`** — Build an `El<S>` from primitives. Use `draw()` for custom shapes, `row()`/`col()` for layout, `.on_click()` / `.on_drag()` for handlers. No closures; handlers receive `&mut S`.
+**Verification gate:** `cargo build --target x86_64-unknown-linux-gnu` succeeds. The Backend trait is correctly implemented at compile time; no X11-specific branch logic leaks above `src/shell/platform/x11.rs`.
 
-3. **Add a test in `tests/recipes.rs`** — Use `Harness::new(state, view)` to drive the widget with no window. Call `harness.click_text()` or other interactions and assert state changed as expected.
+**Phase 2: Enhancement (Commit c42c0f0)**
 
-4. **Verify `cargo test --test recipes -- widget_name` passes** — The test proves the widget responds to input and updates state correctly.
+Files touched:
+- `src/shell/platform/x11.rs`: Extend with full feature parity. Canvas rendering (vector lines, shapes), font loading from system directories, text layout with kerning, DPI scaling via `XDisplayWidth` and `XDisplayWidthMM` (physical width). Appearance detection: read `COLORFTERM` environment variable or `_NET_WM_APPEARANCE` window manager property to detect light/dark mode. Input event translation: map X11 KeySym to rui's `Key` enum, translate ButtonPress/ButtonRelease to Click, MotionNotify to Drag.
+- `src/text.rs`, `src/paint.rs`, `src/canvas.rs` (if needed): Ensure font loading and rendering work on X11 (use system font paths like `/usr/share/fonts` if not embedded).
+- `tests/x11_integration.rs` (new): Integration tests verifying the app responds to X11 events (click, drag, keyboard input) and renders correctly.
 
-5. **Run an example to confirm visually** — If interactive, add a minimal example in `examples/` or use the counter example with your widget in the view.
+**Why this order:** Foundation proves X11 can hook into the loop. Enhancement ensures the app looks and behaves identically to native backends. Parity testing (visual comparison, event handling verification) gates this phase.
 
-**Verification Gates:**
+**Verification gates:**
+- `cargo test --test x11_integration` passes; app responds to simulated X11 events.
+- Visual inspection: `cargo run -p rui --example counter` on an X11 system renders identically to macOS/Windows.
+- Appearance detection: `COLORFTERM=truecolor cargo run --example counter` and toggle theme; the UI switches modes correctly.
+- DPI scaling: Connect two monitors with different DPI and verify scaling adapts (element sizes remain proportional).
 
-- `cargo test --test recipes -- widget_name` passes
-- `cargo build` succeeds with no warnings
-- Widget renders at all state values (test 0%, 50%, 100% for progress; all options for choice)
+**Phase 3: Platform Integration & Refinement (Commits 80e3003 through 84ade0e — 8 commits)**
 
-**How the Pattern Scales:**
+Commits in this phase: Coordination, documentation, parity verification.
 
-- **Simple, passive (like `meter`):** Just draw; no handlers. State flows in, pixels flow out.
-- **Interactive (like `segmented`):** Add `.on_click()` handlers. Handler closures take `&mut S` and mutate state. Handlers run *after* the frame is drawn, so no re-entrancy.
-- **Complex (like `tabs`):** Combine layout (`row` of buttons), styling (highlight current), and handlers (call user's choice callback). Still built from primitives; no special support needed.
+Files touched:
+- `src/shell/mod.rs`: Add `EventLoopDriver` trait (or feature gate) to handle platform-specific event loop requirements. WASM cannot block; native loops can. X11 uses XNextEvent (blocking) like macOS/Windows but with different timeout handling (X11 select() vs. platform-native waits). Unify timeout semantics across backends.
+- `src/shell/platform/x11.rs`: Document coordinate contract: window coordinates vs. screen coordinates, DPI scaling factor application, event coordinate translation. Verify X11 event coordinates are correctly mapped to logical pixels after DPI scaling.
+- `tests/x11_parity.rs`: Pixel-perfect comparison tests. Render the same scene on X11 and native backend; compare PNG output to verify zero differing pixels (light and dark modes).
+- `CLAUDE.md` (update): Document X11 setup in Troubleshooting section; explain `DISPLAY` variable, X11 development header requirements, how to verify X11 backend builds.
+- `src/app.rs`: If needed, add platform-specific initialization (e.g., X11-specific font paths, locale setup).
 
-**Cross-Module Coordination:**
+**Why this order:** Once X11 renders correctly and responds to events, the focus shifts to platform consistency. The EventLoopDriver abstraction ensures timeout semantics are unified (so a 60fps refresh works on all platforms). Parity tests catch rendering differences; coordinate contract documentation prevents future bugs from DPI scaling or event translation mistakes. Finally, updating user-facing docs ensures downstream developers know how to set up and troubleshoot X11.
 
-If your widget uses `draw()`, it needs `Painter` (from `paint::Painter`) to fill shapes and stroke outlines. The painter is stateful: colors are looked up via `painter.color(tone)` to respect themes (light/dark). If your widget has text, inherit `text_size` and `color` from the parent—these flow automatically to children. If your widget has interactive state (hover, focus, caret), it lives in `memory::Memory`, keyed by element identity; preserve element identity across frame rebuilds with `.key()` for reordered lists.
+**Verification gates:**
+- Compiled verification: `cargo build --target x86_64-unknown-linux-gnu` succeeds with no warnings.
+- Timeout semantics: App maintains 60fps on X11 at same CPU cost as other backends (profile with `perf` to verify select() timeout is tuned correctly).
+- Parity testing: `cargo test --test x11_parity` generates reference frames on X11 and compares to native renders. Green page (0 differing pixels) in both light and dark modes.
+- Coordinate contract: Document pixel-perfect coordinate translation. Test that a click at screen position (100, 200) with 2x DPI triggers a Click event at logical (50, 100).
+- Documentation completeness: Verify `CLAUDE.md` Troubleshooting section covers common X11 issues (no display, missing headers, permission errors).
 
-#### End-to-End Example: Building a Custom Widget
+#### Cross-Module Concerns
 
-Here's how to add a new widget following Recipe 2:
+**Why coordinate contract matters (DPI scaling, event translation)**
 
-**1. Choose state and appearance:**
-Suppose you want a `star_rating` widget: display 1–5 stars, clickable to set the rating.
+X11 reports screen coordinates (physical pixels), but rui works in logical pixels (DPI-independent). A 1920×1080 monitor at 2x DPI is 960×540 logical pixels. When the user clicks at physical (200, 200), the X11 backend must translate to logical (100, 100) before passing the `Click` event to the frame.
 
-```rust
-struct App {
-    rating: usize,  // 0..=5
-}
-```
+Mistakes here are subtle: the app renders at the correct size but clicks register in the wrong place. The coordinate contract (documented in `src/shell/platform/x11.rs` and verified in `tests/x11_parity.rs`) prevents this:
+- **Physical → Logical:** Divide by DPI scale factor.
+- **Logical → Physical:** Multiply by DPI scale factor.
+- **Test:** Verify click-to-element correspondence: click the "Increment" button and confirm the state changes, for several DPI scales.
 
-**2. Write the function in `src/widgets.rs`:**
-```rust
-pub fn star_rating<S: 'static>(
-    rating: usize,
-    set_rating: impl Fn(&mut S, usize) + Copy + 'static,
-) -> El<S> {
-    row((1..=5).map(|i| {
-        let filled = i <= rating;
-        draw(Size::new(16.0, 16.0), move |painter: &mut Painter<'_>, rect: Rect| {
-            let color = if filled { Tone::Accent } else { Tone::Muted };
-            painter.fill(rect, Radius::None, painter.color(color));
-        })
-        .key(format!("star-{}", i))
-        .on_click(move |state: &mut S| set_rating(state, i))
-    }).collect::<Vec<_>>())
-    .gap(4.0)
-}
-```
+**Why appearance detection requires fallback**
 
-**3. Add a test in `tests/recipes.rs`:**
-```rust
-#[test]
-fn a_star_rating_updates_when_clicked() {
-    let mut harness = Harness::new(App { rating: 0 }, |app: &App| {
-        col(star_rating(app.rating, |app: &mut App, r| app.rating = r))
-    });
-    harness.click(Point::new(48.0, 8.0)); // Click the 4th star
-    assert_eq!(harness.state().rating, 4);
-}
-```
+Not all X11 sessions have `_NET_WM_APPEARANCE` (set by modern window managers). The fallback chain:
+1. Query `_NET_WM_APPEARANCE` (modern: GNOME, KDE Plasma).
+2. Check `COLORFTERM` environment variable (user may set to `truecolor` for dark shells).
+3. Default to light (most conservative; many systems have light terminals by default).
 
-**4. Run `cargo test --test recipes -- star_rating`** — Test passes ✓
+The appearance is read once at `open()` time and re-queried on window manager signals (if needed). Test with `COLORFTERM=truecolor` to verify fallback works.
 
-**5. Verify visually** (optional):
-Add to your view function or the counter example:
-```rust
-col((
-    text("Rate this:"),
-    star_rating(app.rating, |app: &mut App, r| app.rating = r),
-))
-```
+**How X11 ties into the frame loop**
 
-Done. The widget is ready to use anywhere state is a Rust struct with a `rating` field.
+`src/shell/mod.rs` line 369 (native `run()`) calls `pump()` with a timeout (typically `Duration::from_millis(8)` for 60fps). On X11:
+- `pump()` calls `XNextEvent()` with a timeout (or select() on the X11 connection FD).
+- If no event arrives, the frame is still redrawn (animations continue).
+- If events arrive, they're translated and added to the `events` vector.
 
-#### Common Patterns & Gotchas
+Both native and X11 loops use the same timeout-driven polling; only the platform-specific event collection differs.
 
-**Pattern: Reusable component with a callback**
+#### Template for Adding X11 or Similar Backends
 
-Widgets often need to accept a callback that describes what to do when the user interacts. The pattern is:
-```rust
-pub fn my_widget<S: 'static>(
-    value: SomeType,
-    on_change: impl Fn(&mut S, NewValue) + Copy + 'static,
-) -> El<S> {
-    // ... widget here, calling on_change in handlers ...
-}
-```
+If you're adding Wayland, macOS, or another platform:
 
-The key: `on_change` is `Copy + 'static`, not `Box<dyn Fn>`. This allows the handler to be copied into multiple closures without heap allocation. Callers pass a simple function or lambda: `|app, val| app.field = val`.
+1. **Implement the `Backend` trait entirely in `src/shell/platform/new_platform.rs`** — Keep platform code isolated.
+   - All six methods must be present: `open`, `pump`, `surface`, `appearance`, `present`, `is_open`.
+   - Use platform-native FFI (wayland-client crate for Wayland, native Win32 for Windows, etc.).
+   - Translate platform events to rui's unified `Event` type.
 
-**Gotcha: Handler capturing `Self` vs. State**
+2. **Add a conditional in `src/shell/mod.rs`** — Wire the backend into the platform selector.
+   - Use `#[cfg(target_os = "...")]` or feature gates to select the backend at compile time.
 
-Wrong:
-```rust
-.on_click(|self: &mut Self| { /* ... */ })  // Doesn't compile; closures can't take Self
-```
+3. **Verify coordinate contract** — Document and test DPI scaling, event coordinate translation.
+   - Create `tests/new_backend_parity.rs` with pixel-perfect comparison.
+   - Compare renders on the new platform to a known-good backend.
 
-Right:
-```rust
-.on_click(|app: &mut App| { /* ... */ })     // Take the state type directly
-```
+4. **Appearance detection** — Read light/dark preference from the platform.
+   - Implement `appearance()` to query the platform's theme setting.
+   - Provide fallback if the setting is unavailable.
 
-The handler receives the application state (`&mut S`), not a self reference. This is by design—it forces you to be explicit about what you're mutating.
+5. **Update CLAUDE.md** — Document setup, troubleshooting, and any platform-specific requirements.
+   - Add a section in Troubleshooting for the new platform.
+   - Explain environment variables, dependencies, or permissions required.
 
-**Gotcha: Identity across frame rebuilds**
+6. **Test thoroughly** — Run the full suite on the new platform.
+   - `cargo build --target new_platform` succeeds.
+   - `cargo test --target new_platform` passes all tests.
+   - Parity test: `cargo test --test new_backend_parity` shows 0 differing pixels.
+   - Visual inspection: Run `examples/counter` and interact with it; verify behavior is identical to other platforms.
 
-If your widget renders a list and that list can reorder, use `.key()`:
-```rust
-for (id, item) in items.iter().enumerate() {
-    button(item.label)
-        .key(format!("item-{}-{}", item.id, id))  // Preserve state even if list reorders
-        .on_click(move |app: &mut App| app.select(item.id))
-}
-```
+**Spot-check against X11:**
 
-Without `.key()`, if two items swap positions, their hover/focus state swaps too. The `.key()` function tells the rendering engine "this element's identity is stable across frames."
+- X11's `src/shell/platform/x11.rs`: Implements `Backend` trait entirely in platform-specific code.
+- X11's conditional in `src/shell/mod.rs`: Selects X11 backend with `#[cfg(target_os = "linux")]`.
+- X11's parity test: `tests/x11_parity.rs` generates reference frames and compares to native (macOS/Windows).
+- X11's appearance detection: `COLORFTERM` env var + fallback to light.
+- X11's coordinate contract: Documented in platform code; tests verify click→element correspondence at various DPI scales.
 
-**Pattern: Animated widgets**
-
-To animate a value over time, store progress in state and update it each frame:
-```rust
-struct App {
-    progress: f32,  // 0.0 to 1.0
-    animating: bool,
-}
-
-fn view(app: &App) -> El<App> {
-    col((
-        text(format!("{}%", (app.progress * 100.0) as u32)),
-        meter(app.progress, Tone::Accent),
-    ))
-    .on_frame(|app: &mut App, elapsed| {
-        if app.animating {
-            app.progress = (app.progress + elapsed.as_secs_f32() * 0.5).min(1.0);
-            if app.progress >= 1.0 {
-                app.animating = false;
-            }
-        }
-    })
-}
-```
-
-The `.on_frame()` handler is called once per animation frame, receiving the elapsed time since the last frame. Use this to smoothly update progress or any other animated property.
-
-**Pattern: Themed colors for better light/dark support**
-
-Always use semantic `Tone` values, not raw RGB:
-```rust
-// Good: respects light/dark theme
-painter.fill(rect, Radius::Pill, painter.color(Tone::Accent));
-
-// Bad: ignores theme
-painter.fill(rect, Radius::Pill, Color::rgb(0xFF, 0x00, 0x00));  // Always red, even in dark mode
-```
-
-The `Tone` enum has semantic names: `Surface`, `Muted`, `Accent`, `Warn`, `Ok`, `Bad`. The actual RGB values are looked up from the current theme at render time. A widget built with tones looks good in both light and dark modes without any changes.
-
-**Verification: Test all state combinations**
-
-For a choice widget with 3 options, your test should verify all 3 states:
-```rust
-#[test]
-fn segmented_renders_all_options() {
-    let mut harness = Harness::new(App { selected: 0 }, view);
-    assert!(harness.frame().shows("First"));   // selected = 0
-    
-    harness.state_mut().selected = 1;
-    harness.frame();
-    assert!(harness.frame().shows("Second"));  // selected = 1
-    
-    harness.state_mut().selected = 2;
-    harness.frame();
-    assert!(harness.frame().shows("Third"));   // selected = 2
-}
-```
-
-Test state changes, test edge cases (0%, 100% for progress), and test in both light and dark modes (call `harness.frame().set_appearance(Appearance::Dark)` to toggle).
+The pattern holds: platform isolation (one file per OS), trait implementation (six methods), coordinate contract (DPI scaling + event translation), parity testing (pixel-perfect comparison), and documentation (setup + troubleshooting). Everything above `Backend` is unchanged.
 
 ## Workflow Notes
 
