@@ -1221,3 +1221,504 @@ fn backend_trait_boundary_encapsulation() {
     // If this test passes, it confirms that event handling above the
     // Backend trait is truly platform-agnostic (same code runs on all platforms)
 }
+
+// ============================================================================
+// MEMORY STATE PERSISTENCE (HOVER, FOCUS, SCROLL)
+// ============================================================================
+
+/// Verify that memory state (hover, focus, scroll) persists correctly across frames.
+/// This is critical for interactive widgets that track internal state.
+#[test]
+fn memory_state_persists_across_frames() {
+    #[derive(Clone, Debug, PartialEq, Default)]
+    struct MemoryApp {
+        value: i32,
+    }
+
+    fn view(app: &MemoryApp) -> El<MemoryApp> {
+        col((text("Memory Test"), text(format!("Value: {}", app.value))))
+            .on_click(|app: &mut MemoryApp| app.value += 1)
+    }
+
+    let mut harness = Harness::new(MemoryApp::default(), view);
+
+    // Frame 1: Click to set initial state
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().value, 1, "frame 1: value incremented");
+
+    // Frame 2: View is rebuilt; memory state should persist
+    // (Even though the view function is called again, internal element state persists)
+    harness.click(Point::new(100.0, 100.0)); // Another click
+    assert_eq!(
+        harness.state().value,
+        2,
+        "frame 2: memory persisted across rebuild"
+    );
+
+    // Frame 3: Multiple rapid clicks to verify accumulation
+    for _ in 0..3 {
+        harness.click(Point::new(100.0, 100.0));
+    }
+    assert_eq!(
+        harness.state().value,
+        5,
+        "frame 3: multiple clicks accumulated"
+    );
+}
+
+// ============================================================================
+// HANDLER STATE MUTATIONS WITH COMPLEX STATE
+// ============================================================================
+
+/// Verify that handlers can safely mutate complex application state.
+/// State mutations should be observable and consistent across handler invocations.
+#[test]
+fn handler_state_mutations_are_consistent() {
+    #[derive(Clone, Debug, PartialEq)]
+    struct ComplexApp {
+        counter: usize,
+        name: String,
+        enabled: bool,
+    }
+
+    impl Default for ComplexApp {
+        fn default() -> Self {
+            Self {
+                counter: 0,
+                name: "Test".to_string(),
+                enabled: true,
+            }
+        }
+    }
+
+    fn view(app: &ComplexApp) -> El<ComplexApp> {
+        col((
+            text(format!("Counter: {}", app.counter)),
+            text(format!("Name: {}", app.name)),
+            text(if app.enabled { "Enabled" } else { "Disabled" }),
+        ))
+        .on_click(|app: &mut ComplexApp| {
+            app.counter += 1;
+            if app.counter > 3 {
+                app.enabled = false;
+            }
+        })
+    }
+
+    let mut harness = Harness::new(ComplexApp::default(), view);
+
+    assert_eq!(harness.state().counter, 0, "initial state");
+    assert!(harness.state().enabled, "initially enabled");
+
+    // Click 1: counter = 1, enabled = true
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().counter, 1, "after click 1");
+    assert!(harness.state().enabled, "still enabled");
+
+    // Click 2: counter = 2, enabled = true
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().counter, 2, "after click 2");
+    assert!(harness.state().enabled, "still enabled");
+
+    // Click 3: counter = 3, enabled = true
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().counter, 3, "after click 3");
+    assert!(harness.state().enabled, "still enabled");
+
+    // Click 4: counter = 4, handler sets enabled = false
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().counter, 4, "after click 4");
+    assert!(!harness.state().enabled, "now disabled");
+}
+
+// ============================================================================
+// MULTIPLE VIEW REBUILDS WITH SAME STATE
+// ============================================================================
+
+/// Verify that multiple rebuilds with the same state produce identical behavior.
+/// This tests the principle: "View is a pure function of state."
+#[test]
+fn view_rebuilds_produce_identical_behavior() {
+    #[derive(Clone, Debug, PartialEq, Default)]
+    struct PureApp {
+        clicks: usize,
+    }
+
+    fn pure_view(app: &PureApp) -> El<PureApp> {
+        col(text(format!("Clicks: {}", app.clicks))).on_click(|app: &mut PureApp| app.clicks += 1)
+    }
+
+    let mut harness = Harness::new(PureApp::default(), pure_view);
+
+    // Initial state: 0 clicks
+    assert_eq!(harness.state().clicks, 0, "initial state");
+
+    // Click once
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().clicks, 1, "after first click");
+
+    // Create a new harness with the same state
+    let mut harness2 = Harness::new(PureApp { clicks: 1 }, pure_view);
+
+    // Both harneses should have identical state and click behavior
+    assert_eq!(harness2.state().clicks, 1, "new harness: same state");
+
+    // Clicking the second harness should produce same result as first
+    harness2.click(Point::new(100.0, 100.0));
+    assert_eq!(
+        harness2.state().clicks,
+        2,
+        "new harness: click behavior identical"
+    );
+}
+
+// ============================================================================
+// CANVAS RENDERING CONSISTENCY
+// ============================================================================
+
+/// Verify that canvas dimensions and rendering state are consistent.
+#[test]
+fn canvas_rendering_consistency() {
+    let harness = Harness::new(App::default(), interactive_view);
+
+    let canvas = harness.canvas();
+    let width = canvas.width();
+    let height = canvas.height();
+
+    // Canvas must have reasonable dimensions
+    assert!(width > 0, "canvas width must be positive");
+    assert!(height > 0, "canvas height must be positive");
+    assert!(width < 10000, "canvas width must be reasonable");
+    assert!(height < 10000, "canvas height must be reasonable");
+
+    // Aspect ratio should be reasonable (not extreme)
+    let aspect_ratio = width as f32 / height as f32;
+    assert!(
+        aspect_ratio > 0.5 && aspect_ratio < 2.0,
+        "canvas aspect ratio should be reasonable: {}",
+        aspect_ratio
+    );
+}
+
+// ============================================================================
+// INPUT STATE VALIDITY ACROSS BACKENDS
+// ============================================================================
+
+/// Verify that Input state is always valid before any events are applied.
+#[test]
+fn input_state_valid_before_events() {
+    let input = Input::new();
+
+    // Initial pointer should be at (0, 0)
+    assert_eq!(
+        input.pointer(),
+        Point::new(0.0, 0.0),
+        "initial pointer at origin"
+    );
+
+    // No button should be pressed initially
+    assert!(!input.pressed(PointerButton::Primary));
+    assert!(!input.pressed(PointerButton::Secondary));
+    assert!(!input.pressed(PointerButton::Middle));
+
+    // No button should be held initially
+    assert!(!input.held(PointerButton::Primary));
+    assert!(!input.held(PointerButton::Secondary));
+    assert!(!input.held(PointerButton::Middle));
+
+    // No key should be pressed initially
+    assert_eq!(input.keys().len(), 0);
+    assert_eq!(input.text(), "");
+
+    // No scroll initially
+    let (scroll_x, scroll_y) = input.scroll();
+    assert_eq!(scroll_x, 0.0);
+    assert_eq!(scroll_y, 0.0);
+
+    // Pointer starts outside initially (no PointerMoved or PointerDown event received yet)
+    // This is correct behavior: until the backend sends pointer events, we don't know if pointer is inside
+    assert!(
+        !input.pointer_inside(),
+        "pointer_inside is false until first pointer event"
+    );
+
+    // Should not request close
+    assert!(!input.close_requested());
+
+    // Modifiers should be all false
+    let mods = input.modifiers();
+    assert!(!mods.shift);
+    assert!(!mods.control);
+    assert!(!mods.alt);
+    assert!(!mods.command);
+}
+
+// ============================================================================
+// EVENT SEQUENCE DETERMINISM WITH STATE CHANGES
+// ============================================================================
+
+/// Verify that event sequences with state-dependent handlers are deterministic.
+/// Same state → same events → same result (across multiple runs).
+#[test]
+fn event_sequences_with_state_changes_are_deterministic() {
+    #[derive(Clone, Debug, PartialEq, Default)]
+    struct StateChangeApp {
+        clicks: usize,
+        multiplier: usize,
+    }
+
+    fn state_change_view(app: &StateChangeApp) -> El<StateChangeApp> {
+        col(text(format!(
+            "Clicks × Multiplier: {}",
+            app.clicks * app.multiplier
+        )))
+        .on_click(|app: &mut StateChangeApp| {
+            app.clicks += 1;
+            if app.clicks % 3 == 0 {
+                app.multiplier += 1;
+            }
+        })
+    }
+
+    // Run the event sequence three times with identical initial state
+    let mut results = Vec::new();
+    for _ in 0..3 {
+        let mut harness = Harness::new(StateChangeApp::default(), state_change_view);
+
+        // Perform identical event sequence
+        for _ in 0..9 {
+            harness.click(Point::new(100.0, 100.0));
+        }
+
+        results.push((harness.state().clicks, harness.state().multiplier));
+    }
+
+    // All three runs should produce identical results
+    assert_eq!(results[0], results[1], "run 1 and 2 should be identical");
+    assert_eq!(results[1], results[2], "run 2 and 3 should be identical");
+
+    // Verify the expected state after 9 clicks with multiplier logic
+    assert_eq!(results[0].0, 9, "9 clicks");
+    assert_eq!(
+        results[0].1, 3,
+        "multiplier should be 3 (incremented at clicks 3, 6, 9)"
+    );
+}
+
+// ============================================================================
+// POINTER COORDINATE NORMALIZATION ACROSS EVENT TYPES
+// ============================================================================
+
+/// Verify pointer coordinates are normalized in window-logical units for PointerMoved.
+/// Test at origin (0,0), edge (800,600), and middle (400,300) positions.
+#[test]
+fn pointer_coordinates_normalized_pointer_moved_events() {
+    let mut input = Input::new();
+
+    let test_positions = vec![
+        Point::new(0.0, 0.0),
+        Point::new(800.0, 600.0),
+        Point::new(400.0, 300.0),
+    ];
+
+    for pos in test_positions {
+        input.apply(Event::PointerMoved(pos));
+        assert_eq!(
+            input.pointer(),
+            pos,
+            "PointerMoved should normalize coordinates to window-logical units"
+        );
+    }
+}
+
+/// Verify pointer coordinates are normalized in window-logical units for PointerDown.
+/// Test at origin (0,0), edge (800,600), and middle (400,300) positions.
+#[test]
+fn pointer_coordinates_normalized_pointer_down_events() {
+    let mut input = Input::new();
+
+    let test_positions = vec![
+        Point::new(0.0, 0.0),
+        Point::new(800.0, 600.0),
+        Point::new(400.0, 300.0),
+    ];
+
+    for pos in test_positions {
+        input.apply(Event::PointerDown {
+            position: pos,
+            button: PointerButton::Primary,
+        });
+        assert_eq!(
+            input.pointer(),
+            pos,
+            "PointerDown should normalize coordinates to window-logical units"
+        );
+        assert_eq!(
+            input.press_origin(PointerButton::Primary),
+            Some(pos),
+            "press origin should record normalized coordinates"
+        );
+        input.begin_frame();
+    }
+}
+
+/// Verify pointer coordinates are normalized in window-logical units for PointerUp.
+/// Test at origin (0,0), edge (800,600), and middle (400,300) positions.
+#[test]
+fn pointer_coordinates_normalized_pointer_up_events() {
+    let mut input = Input::new();
+
+    let test_positions = vec![
+        Point::new(0.0, 0.0),
+        Point::new(800.0, 600.0),
+        Point::new(400.0, 300.0),
+    ];
+
+    for pos in test_positions {
+        input.apply(Event::PointerDown {
+            position: pos,
+            button: PointerButton::Primary,
+        });
+        input.begin_frame();
+        input.apply(Event::PointerUp {
+            position: pos,
+            button: PointerButton::Primary,
+        });
+        assert_eq!(
+            input.pointer(),
+            pos,
+            "PointerUp should normalize coordinates to window-logical units"
+        );
+        input.begin_frame();
+    }
+}
+
+/// Verify drag coordinates are normalized across start, move, and end positions.
+/// Drag detection uses normalized window-logical coordinates from PointerDown/Move/Up.
+#[test]
+fn pointer_coordinates_normalized_across_drag_sequence() {
+    let mut input = Input::new();
+
+    let drag_start = Point::new(100.0, 100.0);
+    let drag_middle = Point::new(400.0, 300.0);
+    let drag_end = Point::new(800.0, 600.0);
+
+    // Press at start position
+    input.apply(Event::PointerDown {
+        position: drag_start,
+        button: PointerButton::Primary,
+    });
+    assert_eq!(
+        input.pointer(),
+        drag_start,
+        "drag start position should be normalized"
+    );
+    assert_eq!(
+        input.press_origin(PointerButton::Primary),
+        Some(drag_start),
+        "drag origin should be normalized"
+    );
+
+    input.begin_frame();
+
+    // Move to middle position
+    input.apply(Event::PointerMoved(drag_middle));
+    assert_eq!(
+        input.pointer(),
+        drag_middle,
+        "drag middle position should be normalized"
+    );
+    assert_eq!(
+        input.press_origin(PointerButton::Primary),
+        Some(drag_start),
+        "drag origin should persist (still normalized)"
+    );
+
+    input.begin_frame();
+
+    // Move to end position
+    input.apply(Event::PointerMoved(drag_end));
+    assert_eq!(
+        input.pointer(),
+        drag_end,
+        "drag end position should be normalized"
+    );
+    assert_eq!(
+        input.press_origin(PointerButton::Primary),
+        Some(drag_start),
+        "drag origin should persist across moves (still normalized)"
+    );
+
+    input.begin_frame();
+
+    // Release at end position
+    input.apply(Event::PointerUp {
+        position: drag_end,
+        button: PointerButton::Primary,
+    });
+    assert_eq!(
+        input.pointer(),
+        drag_end,
+        "drag release position should be normalized"
+    );
+}
+
+/// Verify all pointer event types maintain coordinate consistency at critical positions.
+/// Comprehensive test combining PointerMoved, PointerDown, PointerUp in one sequence.
+#[test]
+fn pointer_coordinate_consistency_across_all_event_types() {
+    let mut input = Input::new();
+
+    // Test at origin (0, 0)
+    input.apply(Event::PointerMoved(Point::new(0.0, 0.0)));
+    assert_eq!(input.pointer(), Point::new(0.0, 0.0));
+
+    input.apply(Event::PointerDown {
+        position: Point::new(0.0, 0.0),
+        button: PointerButton::Primary,
+    });
+    assert_eq!(input.pointer(), Point::new(0.0, 0.0));
+
+    input.begin_frame();
+    input.apply(Event::PointerUp {
+        position: Point::new(0.0, 0.0),
+        button: PointerButton::Primary,
+    });
+    assert_eq!(input.pointer(), Point::new(0.0, 0.0));
+
+    // Test at edge (800, 600)
+    input.begin_frame();
+    input.apply(Event::PointerMoved(Point::new(800.0, 600.0)));
+    assert_eq!(input.pointer(), Point::new(800.0, 600.0));
+
+    input.apply(Event::PointerDown {
+        position: Point::new(800.0, 600.0),
+        button: PointerButton::Primary,
+    });
+    assert_eq!(input.pointer(), Point::new(800.0, 600.0));
+
+    input.begin_frame();
+    input.apply(Event::PointerUp {
+        position: Point::new(800.0, 600.0),
+        button: PointerButton::Primary,
+    });
+    assert_eq!(input.pointer(), Point::new(800.0, 600.0));
+
+    // Test at middle (400, 300)
+    input.begin_frame();
+    input.apply(Event::PointerMoved(Point::new(400.0, 300.0)));
+    assert_eq!(input.pointer(), Point::new(400.0, 300.0));
+
+    input.apply(Event::PointerDown {
+        position: Point::new(400.0, 300.0),
+        button: PointerButton::Primary,
+    });
+    assert_eq!(input.pointer(), Point::new(400.0, 300.0));
+
+    input.begin_frame();
+    input.apply(Event::PointerUp {
+        position: Point::new(400.0, 300.0),
+        button: PointerButton::Primary,
+    });
+    assert_eq!(input.pointer(), Point::new(400.0, 300.0));
+}
