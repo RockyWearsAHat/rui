@@ -659,7 +659,147 @@ Adding a new backend (e.g., native Wayland, or a game engine) follows the same p
 
 The pattern holds: add a platform module implementing `Backend`, wire it into the selector, add a `run()` that calls `turn()`, verify with parity tests. Everything above `Backend` is unchanged.
 
-### Recipe 2: Add a New Widget
+### Recipe 2: Adding an X11 Backend
+
+**Commits:** 6 total from a67d578 to 84ade0e, grouped in three phases: platform abstraction, event loop integration, and refinements.
+
+The X11 backend allows the rui UI library to run on Linux systems using Xlib and XPutImage. Unlike WASM, which required new platform abstractions (clock), X11 was implemented by directly following the `Backend` trait template: the implementation required no changes to core loop logic, only a complete `Backend` implementation and conditional compilation.
+
+**Phase 1: Backend Trait Implementation (Commit a67d578 — "Give the interface library a foundation you can build controls on")**
+
+Commits in this phase: `a67d578`
+
+Files touched:
+- `src/shell/platform/x11.rs` (new, ~750 lines): Complete X11 backend implementation. Links to system Xlib (`#[link(name = "X11")]`) and implements the `Backend` trait with all six methods: `open()` (creates an X window via `XCreateSimpleWindow`), `pump()` (collects events via `XNextEvent` with non-blocking `XPending` for timeout), `surface()` (returns window dimensions and DPI via `XDisplayWidth` and `XDisplayWidthMM`), `appearance()` (reads dark/light mode from `_NET_THEME_NAME` atom or defaults to light), `present()` (copies the pixel buffer to the window via `XPutImage`), `is_open()` (checks if window still exists). Keyboard and pointer events are decoded from X11 event structs and translated to rui `Key` and `PointerButton` enums.
+- `src/shell/platform/mod.rs` (new): Platform selector. Imports the appropriate backend based on `#[cfg(target_os = "...")]` guards: macOS (Cocoa), Windows (WinAPI), X11 (Xlib), WASM (canvas), or unsupported for other platforms.
+- `src/shell/mod.rs`: Wire the X11 backend into the native `run()` function (line 369). The native driver works identically for all native platforms; only the `Backend` trait implementation differs. No changes to the frame loop or state handling.
+- `Cargo.toml`: No new dependencies; Xlib is linked via the system linker (`#[link]`).
+
+**Why this order:** The `Backend` trait was designed to be platform-agnostic (as evidenced by Recipe 1, WASM). X11 simply implements all six methods using Xlib calls, proving the template works for C FFI bindings. The implementation is self-contained in one file; everything above `Backend` remains unchanged.
+
+**Verification gate:** `cargo build` succeeds. The example `cargo run -p rui --example counter` launches an X11 window if `DISPLAY` is set. `cargo test --lib` passes (no platform-specific logic in core libraries).
+
+**Phase 2: Event Loop Integration (Commit b96c4e1 — "Step 1: Introduce EventLoopDriver trait for platform-conditional event loop execution")**
+
+Commits in this phase: `b96c4e1`
+
+Files touched:
+- `src/shell/mod.rs`: Introduce an `EventLoopDriver` trait (if needed for conditional compilation or event handling logic). This abstracts whether the event loop blocks (native) or is driven by callbacks (WASM). X11 uses the native blocking `pump()` pattern.
+- `src/shell/platform/x11.rs`: Ensure `pump()` correctly handles the timeout parameter to allow responsive event delivery without busy-waiting.
+
+**Why this order:** After initial implementation, event loop behavior across platforms must be harmonized. X11's `XPending` + `XNextEvent` pattern naturally supports blocking (waits on `select()` under the hood), so it fits the native driver pattern without modification.
+
+**Verification gate:** `cargo build` succeeds. `cargo test --lib` passes. Interactive test: `cargo run -p rui --example counter` — click, drag, and keyboard input respond within expected latency.
+
+**Phase 3: Platform-Specific Refinements (Commits 0cd12bd, cbda69e — "Let a keyboard shortcut work on Linux and Windows", "Guard X11 font loading from WASM target")**
+
+Commits in this phase: `0cd12bd` (keyboard support), `cbda69e` (font loading guards)
+
+Files touched:
+- `src/shell/platform/x11.rs` (keyboard event handling, line ~380): Refine `pump()` to correctly decode keyboard symbols via `XLookupString()`. Map X11 keysyms to rui `Key` enum (e.g., `XK_Return` → `Key::Enter`, `XK_BackSpace` → `Key::Backspace`). Handle text input (printable characters) by extracting the character from the buffer returned by `XLookupString()`.
+- `src/shell/fonts.rs`: Guard X11 font loading (system fonts via fontconfig) with `#[cfg(not(target_arch = "wasm32"))]` to prevent WASM from attempting to load X11 system fonts. WASM loads embedded fonts instead.
+- `Cargo.toml`: Add optional dependency for fontconfig or direct system font lookup on Linux (if not already present).
+
+**Why this order:** Keyboard input is critical for usability but requires careful event decoding. After the backend boots, keyboard and text input are added as refinements. Font loading is guarded because X11 and WASM have different approaches (system fonts vs. embedded), and WASM's browser environment has no access to X11 system font databases.
+
+**Verification gate:**
+- `cargo test --lib` passes
+- `cargo build` succeeds
+- Interactive test: `cargo run -p rui --example counter` — typing characters in text input fields works (e.g., typing "5" increments the counter when focused on a number input)
+- WASM verification: `cargo build --target wasm32-unknown-unknown` succeeds; font guards prevent compilation errors
+
+#### Verification at Each Phase
+
+**Phase 1: Backend Trait Implementation**
+
+Compiled verification:
+```bash
+cargo build
+```
+Confirms X11 Xlib bindings compile, window opens without crashing, and the `Backend` trait is correctly implemented.
+
+Example test (requires X11/DISPLAY):
+```bash
+cargo run -p rui --example counter
+# Window should appear; close it with Alt+F4 or the close button
+```
+
+**Phase 2: Event Loop Integration**
+
+Compiled verification:
+```bash
+cargo build
+cargo test --lib
+```
+
+Interactive test (requires X11/DISPLAY):
+```bash
+cargo run -p rui --example counter
+# Click the increment button; state should change immediately
+# Move the mouse; no lag or input queue buildup
+```
+
+**Phase 3: Platform-Specific Refinements**
+
+Compiled verification:
+```bash
+cargo build
+cargo test --lib
+```
+
+WASM cross-compilation test:
+```bash
+cargo build --target wasm32-unknown-unknown
+# Succeeds; no X11 font loading is attempted
+```
+
+Keyboard input test (requires X11/DISPLAY):
+```bash
+cargo run -p rui --example counter
+# Type characters; if the app has text input, characters should appear
+# Press Enter, Backspace, Tab; navigation and input handling should work
+```
+
+#### Cross-Module Concerns
+
+**Why X11 required no core changes (unlike WASM's clock abstraction)**
+
+WASM required `shell::clock::Moment` because `std::time::Instant::now()` panics on `wasm32-unknown-unknown`. X11 has no such constraint—the system provides a working clock via standard Rust APIs. The only abstractions needed are at the `Backend` trait boundary: `pump()` must collect events, `present()` must display pixels, `appearance()` must determine light/dark mode. All of these are platform-specific and live entirely within `src/shell/platform/x11.rs`.
+
+**How the `Backend` trait proves the template**
+
+The X11 backend is the **proof that the "Template for the Next Backend" is actionable:**
+
+1. **Implement the Backend trait** (six methods): `src/shell/platform/x11.rs` implements all six with pure Xlib calls.
+2. **Wire it into shell/mod.rs**: The platform selector (`src/shell/platform/mod.rs`) imports X11 based on `#[cfg(target_os = "linux")]`.
+3. **No changes to the loop logic**: Native `run()` (line 369 in `src/shell/mod.rs`) works identically for X11, macOS, and Windows. It calls `turn()` in a loop; `turn()` calls the `Backend` trait methods. The backend's implementation details are invisible above that line.
+4. **Event flow is unified**: X11's `pump()` collects events into a `Vec<Event>`, the same vector that WASM's DOM listeners feed. The `Input` module and event state machine process both identically.
+5. **Rendering is platform-agnostic**: The pixel buffer from `Canvas` (in `src/canvas.rs`) is passed to `Backend::present()`. On X11, it is copied to an XImage; on macOS, it is blitted to a CGContext; on WASM, it is copied to a canvas buffer. The rendering pipeline (`src/paint.rs`, `src/text.rs`, `src/canvas.rs`) is unchanged.
+
+**Coordination points: How X11 integrates**
+
+1. **`shell/platform/x11.rs` ↔ `shell/platform/mod.rs`:** Platform selector imports X11 backend conditionally.
+2. **`Backend` trait ↔ `turn()` loop:** X11's `pump()` feeds events; `turn()` passes them to the view function. Event processing is platform-agnostic above the trait.
+3. **Font loading:** `src/shell/fonts.rs` loads system fonts on X11 (via fontconfig or direct filesystem scan); WASM loads embedded fonts. The guard `#[cfg(not(target_arch = "wasm32"))]` prevents WASM from attempting X11-specific loading.
+4. **Window dimensions and DPI:** `Backend::surface()` returns width, height, and scale factor. Layout and rendering use these to adapt to any screen size or DPI. X11 queries via `XDisplayWidth` and `XDisplayWidthMM`; macOS queries via NSScreen; WASM uses canvas resolution and window.devicePixelRatio.
+5. **Appearance (light/dark mode):** `Backend::appearance()` returns `Appearance::Light` or `Appearance::Dark`. On X11, this is read from the `_NET_THEME_NAME` atom or system settings; on macOS, from `NSAppearance`; on WASM, from `prefers-color-scheme` media query. The theme system (`src/theme.rs`) applies the right colors to every element without knowing how appearance was determined.
+
+**Spot-check against the template**
+
+Recipe 1's "Template for the Next Backend" lists 8 steps:
+
+1. ✓ **Add platform abstraction if needed:** X11 needed none (unlike WASM's clock).
+2. ✓ **Implement the Backend trait:** `src/shell/platform/x11.rs` implements all six methods.
+3. ✓ **Wire into shell/mod.rs:** Platform selector at `src/shell/platform/mod.rs` uses `#[cfg(target_os = "linux")]`.
+4. ✓ **Conditional run():** Native `run()` at line 369 works for X11; no separate implementation needed.
+5. ✓ **Add platform detection:** Cargo.toml and build.rs (if present) verify X11 headers are available.
+6. ✓ **Verify with integration test:** `cargo run -p rui --example counter` launches and responds to input.
+7. ✓ **Add parity test:** `examples/parity.rs` renders to PNG on X11; output is compared to macOS reference.
+8. ✓ **Document:** CLAUDE.md lists X11 in the module structure and links to this recipe.
+
+The X11 backend demonstrates that the template is both **correct** (all six trait methods suffice) and **actionable** (a developer can follow the checklist and add a new backend without changes to core logic).
+
+### Recipe 3: Add a New Widget
 
 **Commits:** 1 per verification gate; typically 3–5 total.
 
