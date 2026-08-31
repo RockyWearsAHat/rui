@@ -5,10 +5,10 @@
 
 #![cfg(target_arch = "wasm32")]
 
-use rui::demo::{reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
-use rui::shell::pixel_conversion::convert_pixels_to_rgba;
-use rui::theme::Appearance;
-use rui::wasm::{
+use rui_native::demo::{reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+use rui_native::shell::pixel_conversion::convert_pixels_to_rgba;
+use rui_native::theme::Appearance;
+use rui_native::wasm::{
     counter_frame_count, init_counter, listen_counter, present_counter, present_parity_frame,
 };
 use wasm_bindgen::JsCast;
@@ -53,7 +53,7 @@ fn surface() -> web_sys::HtmlCanvasElement {
 /// The page compares the browser against a file a desktop run wrote, which is
 /// the whole claim and needs two machines' worth of setup. This is the half
 /// that can be a test: the frame the renderer produced is presented through the
-/// real [`rui::shell::present`] and read straight back off the `<canvas>`, so
+/// real [`rui_native::shell::present`] and read straight back off the `<canvas>`, so
 /// anything the backend loses on the way — a channel swapped, alpha
 /// premultiplied, a row's stride misjudged — shows up as a differing byte.
 ///

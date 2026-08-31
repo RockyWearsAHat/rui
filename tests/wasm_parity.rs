@@ -3,8 +3,8 @@
 //! Verifies that reference frames can be generated deterministically using embedded fonts
 //! for later comparison with WASM-rendered output.
 
-use rui::demo::{parity_frames, reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
-use rui::{image, Appearance};
+use rui_native::demo::{parity_frames, reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+use rui_native::{image, Appearance};
 
 /// Compare two RGBA byte buffers pixel-by-pixel.
 /// Returns (differing_pixel_count, total_pixels).

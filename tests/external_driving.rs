@@ -8,7 +8,7 @@
 //! `Harness` until now (`state()` is read-only) — `App::state_mut` and the
 //! newly-public `App::frame` are what this test proves actually works.
 
-use rui::{col, testing, text, App, Appearance, Canvas, El, Input, Memory, Theme};
+use rui_native::{col, testing, text, App, Appearance, Canvas, El, Input, Memory, Theme};
 
 #[derive(Default)]
 struct Counter {

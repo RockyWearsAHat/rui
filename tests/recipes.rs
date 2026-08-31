@@ -10,8 +10,8 @@
 //! project and changing it is the intended use; see `examples/controls.rs` for
 //! the same set drawn together.
 
-use rui::testing::Harness;
-use rui::{
+use rui_native::testing::Harness;
+use rui_native::{
     caption, col, draw, panel, row, text, Align, Anchor, Drag, El, Key, Modifiers, Painter, Point,
     Radius, Rect, Size, Tone,
 };
@@ -355,7 +355,7 @@ fn a_note_that_is_up_does_not_come_up_again_every_frame() {
 
 #[test]
 fn code_block_highlights_keywords_and_strings() {
-    use rui::{code_block, Language};
+    use rui_native::{code_block, Language};
 
     #[derive(Default)]
     struct App;
@@ -384,7 +384,7 @@ fn code_block_highlights_keywords_and_strings() {
 
 #[test]
 fn code_block_highlights_numeric_literals() {
-    use rui::{code_block, Language};
+    use rui_native::{code_block, Language};
 
     #[derive(Default)]
     struct App;
@@ -408,7 +408,7 @@ fn code_block_highlights_numeric_literals() {
 
 #[test]
 fn a_segmented_control_changes_selection_when_clicked() {
-    use rui::segmented;
+    use rui_native::segmented;
 
     let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
         col(segmented(
@@ -449,7 +449,7 @@ fn a_segmented_control_changes_selection_when_clicked() {
 
 #[test]
 fn a_meter_displays_progress_as_a_fraction() {
-    use rui::meter;
+    use rui_native::meter;
 
     #[derive(Default)]
     struct ProgressState {
@@ -526,7 +526,7 @@ fn a_star_rating_updates_when_clicked() {
     let mut harness = Harness::new(RatingState { rating: 0 }, |state: &RatingState| {
         col((
             text("Rate this content:"),
-            rui::widgets::star_rating(state.rating, |state: &mut RatingState, r| {
+            rui_native::widgets::star_rating(state.rating, |state: &mut RatingState, r| {
                 state.rating = r;
             })
             .key("star-rating"),
@@ -597,7 +597,7 @@ fn a_checkbox_group_manages_multiple_selections() {
         |state: &SettingsState| {
             col((
                 text("Notification Settings:"),
-                rui::widgets::checkbox_group(
+                rui_native::widgets::checkbox_group(
                     &["Email", "SMS", "Push"],
                     &state.notifications,
                     |state: &mut SettingsState, index| {
