@@ -192,3 +192,29 @@ pub fn present_parity_frame(dark: bool) -> Result<(), JsValue> {
 pub fn parity_frame_size() -> Vec<u32> {
     vec![demo::REFERENCE_WIDTH, demo::REFERENCE_HEIGHT]
 }
+
+/// Render the parity frame and return its pixels as RGBA bytes.
+///
+/// Like [`present_parity_frame`], but returns the pixel data instead of
+/// presenting it to the canvas. This allows test infrastructure to collect
+/// WASM-rendered output without a running browser window.
+///
+/// Returns the RGBA bytes (4 bytes per pixel, 960x640 = 2,457,600 bytes)
+/// encoded in the same format as [`crate::image::rgba`].
+#[wasm_bindgen]
+pub fn render_wasm_parity_frame(dark: bool) -> Result<Vec<u8>, JsValue> {
+    let appearance = if dark {
+        Appearance::Dark
+    } else {
+        Appearance::Light
+    };
+    let canvas = demo::reference_frame(
+        demo::REFERENCE_WIDTH,
+        demo::REFERENCE_HEIGHT,
+        1.0,
+        appearance,
+    )
+    .map_err(|error| JsValue::from_str(&format!("the parity frame could not be drawn: {error}")))?;
+
+    Ok(crate::image::rgba(&canvas))
+}
