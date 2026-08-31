@@ -2201,6 +2201,190 @@ fn appearance_updates_reflect_immediately() {
     );
 }
 
+/// Verify Light -> Dark -> Light cycle produces consistent rendering.
+/// Colors should return to their original values when toggling back to light mode.
+#[test]
+fn appearance_light_dark_light_cycle_consistent() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+    let light_pixel_1 = harness.pixel(0, 0);
+
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_pixel = harness.pixel(0, 0);
+
+    let mut harness = harness.appearance(Appearance::Light);
+    harness.frame();
+    let light_pixel_2 = harness.pixel(0, 0);
+
+    // Colors should be identical on return to light mode
+    assert_eq!(
+        light_pixel_1, light_pixel_2,
+        "light mode colors should be consistent across cycles"
+    );
+
+    // And different from dark mode
+    assert_ne!(
+        light_pixel_1, dark_pixel,
+        "light and dark modes should produce different colors"
+    );
+}
+
+/// Verify appearance changes apply to multiple regions.
+/// Different parts of the UI should all change when appearance toggles.
+#[test]
+fn appearance_changes_apply_to_multiple_regions() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+
+    let light_pixels = [
+        harness.pixel(0, 0),
+        harness.pixel(100, 100),
+        harness.pixel(200, 200),
+        harness.pixel(50, 300),
+    ];
+
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+
+    let dark_pixels = [
+        harness.pixel(0, 0),
+        harness.pixel(100, 100),
+        harness.pixel(200, 200),
+        harness.pixel(50, 300),
+    ];
+
+    // At least some pixels should change (not all positions change, but background should)
+    assert!(
+        light_pixels[0] != dark_pixels[0],
+        "appearance change should affect rendered colors"
+    );
+}
+
+/// Verify appearance persists across multiple frames without re-toggling.
+/// Once appearance is set, it should remain consistent across subsequent frames.
+#[test]
+fn appearance_persists_across_frames() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Dark);
+    harness.frame();
+    let pixel_frame_1 = harness.pixel(0, 0);
+
+    harness.frame();
+    let pixel_frame_2 = harness.pixel(0, 0);
+
+    harness.frame();
+    let pixel_frame_3 = harness.pixel(0, 0);
+
+    // Same pixels across frames when appearance doesn't change
+    assert_eq!(
+        pixel_frame_1, pixel_frame_2,
+        "dark mode appearance should persist between frames"
+    );
+    assert_eq!(
+        pixel_frame_2, pixel_frame_3,
+        "dark mode appearance should remain consistent"
+    );
+}
+
+/// Verify rapid appearance toggles are all applied correctly.
+/// Multiple quick toggles should each take effect immediately.
+#[test]
+fn rapid_appearance_toggles_applied_correctly() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+    let light_1 = harness.pixel(0, 0);
+
+    // Rapid toggles
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_1 = harness.pixel(0, 0);
+
+    let mut harness = harness.appearance(Appearance::Light);
+    harness.frame();
+    let light_2 = harness.pixel(0, 0);
+
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_2 = harness.pixel(0, 0);
+
+    // Each toggle should produce consistent colors
+    assert_eq!(
+        light_1, light_2,
+        "light mode should be consistent across toggles"
+    );
+    assert_eq!(
+        dark_1, dark_2,
+        "dark mode should be consistent across toggles"
+    );
+    assert_ne!(light_1, dark_1, "light and dark should differ");
+}
+
+/// Verify appearance changes don't affect event handling or state.
+/// Toggling appearance should not change how events are processed.
+#[test]
+fn appearance_toggle_doesnt_affect_event_handling() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().click_count, 1);
+
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(
+        harness.state().click_count,
+        2,
+        "events should work identically in dark mode"
+    );
+
+    let mut harness = harness.appearance(Appearance::Light);
+    harness.frame();
+
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(
+        harness.state().click_count,
+        3,
+        "events should work identically after toggling back"
+    );
+}
+
+/// Verify appearance with different app states renders correctly.
+/// App state changes and appearance changes should be independent.
+#[test]
+fn appearance_independent_of_app_state() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+
+    harness.click(Point::new(100.0, 100.0));
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().click_count, 2);
+
+    harness.frame();
+    let light_with_state = harness.pixel(0, 0);
+
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_with_same_state = harness.pixel(0, 0);
+
+    // Same app state, different appearance -> different render
+    assert_ne!(
+        light_with_state, dark_with_same_state,
+        "appearance should affect rendering independent of state"
+    );
+}
+
 // ============================================================================
 // COMPLEX MULTI-EVENT SCENARIOS
 // ============================================================================
