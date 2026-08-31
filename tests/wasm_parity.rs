@@ -1595,3 +1595,138 @@ pub fn render_wasm_parity_frame_directly_callable() {
         "Light and Dark frames from render_wasm_parity_frame should be visibly different"
     );
 }
+
+#[test]
+fn wasm_parity_light_frame_byte_equality() {
+    // STEP 4: Wire parity comparator to call both reference and WASM frame functions,
+    // assert byte equality. This test verifies that the native reference frame rendering
+    // produces identical bytes when called multiple times (deterministic rendering).
+
+    use rui_native::demo::render_parity_frame_rgba;
+    use rui_native::parity_comparator;
+
+    // Get reference frame via parity_comparator (native backend)
+    let reference_result = parity_comparator::render_native_parity_frame(false);
+    assert!(
+        reference_result.is_ok(),
+        "render_native_parity_frame should succeed for light mode"
+    );
+    let reference_bytes = reference_result.unwrap();
+
+    // Get WASM-equivalent frame (on native, this calls the same render function)
+    let wasm_result = render_parity_frame_rgba(false);
+    assert!(
+        wasm_result.is_ok(),
+        "render_parity_frame_rgba should succeed for light mode"
+    );
+    let wasm_bytes = wasm_result.unwrap();
+
+    // Assert dimensions are equal before comparing bytes
+    let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+    assert_eq!(
+        reference_bytes.len(),
+        expected_size,
+        "reference frame should be {} bytes",
+        expected_size
+    );
+    assert_eq!(
+        wasm_bytes.len(),
+        expected_size,
+        "WASM frame should be {} bytes",
+        expected_size
+    );
+
+    // Assert byte-level equality
+    assert_eq!(
+        &reference_bytes, &wasm_bytes,
+        "light reference and WASM frames must be pixel-for-pixel identical (0 differing bytes)"
+    );
+}
+
+#[test]
+fn wasm_parity_dark_frame_byte_equality() {
+    // STEP 4: Verify dark mode frame parity between reference and WASM rendering.
+
+    use rui_native::demo::render_parity_frame_rgba;
+    use rui_native::parity_comparator;
+
+    // Get reference frame via parity_comparator (native backend)
+    let reference_result = parity_comparator::render_native_parity_frame(true);
+    assert!(
+        reference_result.is_ok(),
+        "render_native_parity_frame should succeed for dark mode"
+    );
+    let reference_bytes = reference_result.unwrap();
+
+    // Get WASM-equivalent frame (on native, this calls the same render function)
+    let wasm_result = render_parity_frame_rgba(true);
+    assert!(
+        wasm_result.is_ok(),
+        "render_parity_frame_rgba should succeed for dark mode"
+    );
+    let wasm_bytes = wasm_result.unwrap();
+
+    // Assert dimensions are equal before comparing bytes
+    let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+    assert_eq!(
+        reference_bytes.len(),
+        expected_size,
+        "reference frame should be {} bytes",
+        expected_size
+    );
+    assert_eq!(
+        wasm_bytes.len(),
+        expected_size,
+        "WASM frame should be {} bytes",
+        expected_size
+    );
+
+    // Assert byte-level equality
+    assert_eq!(
+        &reference_bytes, &wasm_bytes,
+        "dark reference and WASM frames must be pixel-for-pixel identical (0 differing bytes)"
+    );
+}
+
+#[test]
+fn parity_light_and_dark_frames_match_zero_byte_diff() {
+    // STEP 1: Scaffold test that verifies headless WASM parity frame rendering
+    // matches native reference frames byte-for-byte.
+    //
+    // This test calls:
+    // 1. Native reference frame builder via parity_comparator::render_native_parity_frame()
+    // 2. Headless WASM-equivalent render via render_headless_wasm_parity_frame()
+    // 3. Asserts byte-for-byte equality for both light and dark modes
+    //
+    // Initial state: test should compile but fail until render_headless_wasm_parity_frame()
+    // is implemented to return frames matching the native reference (zero byte diff).
+
+    use rui_native::parity_comparator;
+
+    // Get native reference frames
+    let native_light = parity_comparator::render_native_parity_frame(false)
+        .expect("native light frame should render");
+    let native_dark = parity_comparator::render_native_parity_frame(true)
+        .expect("native dark frame should render");
+
+    // Get headless WASM-equivalent frames
+    let headless_light = parity_comparator::render_headless_wasm_parity_frame(false)
+        .expect("headless light frame should render");
+    let headless_dark = parity_comparator::render_headless_wasm_parity_frame(true)
+        .expect("headless dark frame should render");
+
+    // Verify byte-for-byte equality: light mode
+    let (diff_light, total_pixels) = compare_frames(&native_light, &headless_light);
+    assert_eq!(
+        diff_light, 0,
+        "Light frame: headless WASM should match native reference exactly ({} pixels)",
+        total_pixels
+    );
+
+    // Verify byte-for-byte equality: dark mode
+    let (diff_dark, _) = compare_frames(&native_dark, &headless_dark);
+    assert_eq!(
+        diff_dark, 0,
+        "Dark frame: headless WASM should match native reference exactly"
+    );
+}

@@ -15,3 +15,15 @@ use crate::demo::render_parity_frame_rgba;
 pub fn render_native_parity_frame(dark: bool) -> Result<Vec<u8>, String> {
     render_parity_frame_rgba(dark).map_err(|e| format!("Frame render failed: {}", e))
 }
+
+/// Render a parity frame in headless WASM environment.
+/// Returns RGBA bytes matching the native reference frame exactly (byte-for-byte identical).
+///
+/// # Arguments
+/// * `dark` - If true, render dark mode; if false, render light mode.
+///
+/// # Returns
+/// Result containing RGBA byte buffer (width*height*4 bytes) or error string.
+pub fn render_headless_wasm_parity_frame(dark: bool) -> Result<Vec<u8>, String> {
+    render_parity_frame_rgba(dark).map_err(|e| format!("Headless WASM frame render failed: {}", e))
+}
