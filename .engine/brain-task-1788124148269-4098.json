@@ -1,0 +1,170 @@
+{
+  "ProjectPath": "/Users/alexwaldmann/Desktop/rui",
+  "Owner": "",
+  "Repo": "",
+  "Brief": "You are preparing the project at /Users/alexwaldmann/Desktop/rui for autonomous work. Before SARA starts dispatching worklist items to you and others, verify and document:\n\n1. **Environment**: The project builds and runs cleanly in isolation. Check PATH, credentials (.env if needed), system dependencies, installed packages.\n2. **Credentials \u0026 Secrets**: Any API keys, GitHub tokens, or credentials needed are in place and working. Verify with a quick test if possible.\n3. **Build System**: The build (npm install, cargo build, poetry install, etc.) completes without errors. Document the build command.\n4. **Test Suite**: Run the existing test suite if one exists. Fix any pre-existing failures (they block detection of new breakage).\n5. **Development Setup**: Editor config, linters, formatters, git hooks all working. Commit setup changes if any were needed.\n6. **Documentation**: index.dx or README clearly states:\n   - How to build and test this project\n   - Where to find the actual code entry points\n   - What the main moving parts are\n   - Any project-specific rules or conventions\n\nDo not implement features or fix bugs — setup is verification only. If something is broken or unclear, fix it enough that the next worker gets a clean slate. Commit your work (or note what you could not fix). When done, say \"Setup complete\" to mark this project ready.",
+  "requirements": {
+    "prd": "",
+    "design": ""
+  },
+  "plan": [
+    {
+      "index": 1,
+      "title": "**Verify Rust version meets 1.85+ minimum**",
+      "body": "Test that `rustc` is installed and version check passes. Reads version string, compares against documented minimum from CLAUDE.md.",
+      "acceptance": "`rustc --version | grep -E \"1.8[5-9]|1.9[0-9]|[2-9]\\.\" \u0026\u0026 echo \"✓ Rust OK\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T21:09:44Z"
+    },
+    {
+      "index": 2,
+      "title": "**Verify platform-specific system dependencies**",
+      "body": "Detect OS (macOS/Linux/Windows), verify required headers present. On macOS check for Xcode tools; on Linux verify X11 headers; on Windows check WinAPI availability.",
+      "acceptance": "`cargo build --target $(rustc -vV | grep host: | awk '{print $2}') 2\u003e\u00261 | tail -3 | grep -q \"Finished\" \u0026\u0026 echo \"✓ Platform OK\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T21:09:44Z"
+    },
+    {
+      "index": 3,
+      "title": "**Clean build from scratch, verify no errors**",
+      "body": "Remove build artifacts, rebuild all targets to ensure no stale state. Captures final build output line.",
+      "acceptance": "`cargo clean \u0026\u0026 cargo build 2\u003e\u00261 | tail -1 | grep -q \"Finished\\|error\" \u0026\u0026 cargo build 2\u003e\u00261 | tail -1 | grep -q \"Finished\"` succeeds",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T21:09:44Z"
+    },
+    {
+      "index": 4,
+      "title": "**Run full test suite, document pre-existing failures**",
+      "body": "Execute `cargo test` and `cargo test --test setup` to identify any failing tests. If tests fail, diagnose root cause (missing dep, broken import, hook issue) and fix in-place.",
+      "acceptance": "`cargo test 2\u003e\u00261 | tail -3 | grep -q \"test result: ok\"` or failures fixed and re-run succeeds",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T21:09:44Z"
+    },
+    {
+      "index": 5,
+      "title": "**Verify pre-commit hook is installed and executable**",
+      "body": "Check that `.git/hooks/pre-commit` exists, is executable, and runs without error. Manually execute hook to verify formatters and linters fire.",
+      "acceptance": "`test -x .git/hooks/pre-commit \u0026\u0026 bash .git/hooks/pre-commit \u0026\u0026 echo \"✓ Hooks OK\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T21:09:44Z"
+    },
+    {
+      "index": 6,
+      "title": "**Run formatters and linters to completion, fix all warnings**",
+      "body": "Execute `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings`. If either fails, run `cargo fmt` to auto-fix formatting, then `cargo clippy --fix --allow-staged` to auto-fix clippy warnings.",
+      "acceptance": "`cargo fmt --check \u0026\u0026 cargo clippy --all-targets -- -D warnings 2\u003e\u00261 | tail -1 | grep -q \"warning: 0\\|error: 0\"` succeeds silently",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T21:09:44Z"
+    },
+    {
+      "index": 7,
+      "title": "**Create `.doc/index.dx` with verified build, test, and example commands**",
+      "body": "Write single .dx document indexing project structure, build commands, test commands, and key examples from CLAUDE.md. Reference entry points (counter, segmented exemplars) and module dependencies.",
+      "acceptance": "`test -f .doc/index.dx \u0026\u0026 grep -q \"cargo build\\|cargo test\\|cargo run\" .doc/index.dx \u0026\u0026 echo \"✓ Index OK\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T21:09:44Z"
+    },
+    {
+      "index": 8,
+      "title": "**Build and run counter example end-to-end locally**",
+      "body": "Build counter example in release mode, launch app, verify window opens and responds to input (click increment button, verify state updates).",
+      "acceptance": "`cargo build --release -p rui --example counter 2\u003e\u00261 | tail -1 | grep -q \"Finished\"` and manual launch succeeds",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T21:09:44Z"
+    },
+    {
+      "index": 9,
+      "title": "**Verify WASM build target compiles without errors**",
+      "body": "Ensure `wasm32-unknown-unknown` target is installed and builds. Cross-compile counter example to WASM to verify no platform-specific breakage.",
+      "acceptance": "`rustup target add wasm32-unknown-unknown \u0026\u0026 cargo build --target wasm32-unknown-unknown -p rui --example counter 2\u003e\u00261 | tail -1 | grep -q \"Finished\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T21:09:44Z"
+    },
+    {
+      "index": 10,
+      "title": "**Record final setup state, mark project ready for autonomous dispatch**",
+      "body": "Create `.engine/setup-verified.txt` with timestamp, Rust version, platform, build command, test count, and verification checklist. Commit .doc/index.dx and setup record.",
+      "acceptance": "`test -f .engine/setup-verified.txt \u0026\u0026 git add -A \u0026\u0026 git commit -m \"setup: verify build, tests, hooks, docs for autonomous dispatch\" \u0026\u0026 git log --oneline | head -1 | grep -q \"setup\"` succeeds",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T21:09:44Z"
+    }
+  ],
+  "teams": {
+    "team-frontend-1": {
+      "id": "team-frontend-1",
+      "role": "frontend",
+      "assigned_steps": [
+        2,
+        3
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-30T15:09:44.132175-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    },
+    "team-frontend-3": {
+      "id": "team-frontend-3",
+      "role": "frontend",
+      "assigned_steps": [
+        6,
+        7,
+        8
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-30T15:09:44.118229-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    },
+    "team-general-0": {
+      "id": "team-general-0",
+      "role": "general",
+      "assigned_steps": [
+        0,
+        1
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-30T15:09:44.124678-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    },
+    "team-general-2": {
+      "id": "team-general-2",
+      "role": "general",
+      "assigned_steps": [
+        4,
+        5
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-30T15:09:44.142419-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    },
+    "team-general-4": {
+      "id": "team-general-4",
+      "role": "general",
+      "assigned_steps": [
+        9
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-30T15:09:44.121549-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    }
+  },
+  "outer_iterations": 1,
+  "started_at": "2026-08-30T15:09:08.278272-06:00",
+  "updated_at": "2026-08-30T15:09:44.14242-06:00",
+  "completed_at": "0001-01-01T00:00:00Z",
+  "session_id_prefix": "task-1788124148269-4098",
+  "state_slug": "task-1788124148269-4098"
+}
