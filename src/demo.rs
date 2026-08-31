@@ -139,6 +139,20 @@ pub fn render_parity_frame_rgba(dark: bool) -> Result<Vec<u8>, String> {
     Ok(crate::image::rgba(&canvas))
 }
 
+/// Render the WASM parity frame and return its pixels as RGBA bytes.
+///
+/// A pure, non-WASM-gated function that renders the parity frame to RGBA bytes
+/// using the same paint pipeline as the WASM backend. This allows native test
+/// binaries to collect WASM-equivalent rendering without requiring a browser.
+///
+/// Panics if rendering fails. Use [`render_parity_frame_rgba`] for error handling.
+///
+/// Returns the RGBA bytes (4 bytes per pixel, 960x640 = 2,457,600 bytes)
+/// encoded in the same format as [`crate::image::rgba`].
+pub fn render_wasm_parity_frame(dark: bool) -> Vec<u8> {
+    render_parity_frame_rgba(dark).expect("parity frame should render successfully")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,9 +195,8 @@ mod tests {
 
     #[test]
     fn render_wasm_parity_frame_light_produces_correct_buffer() {
-        let result = render_parity_frame_rgba(false);
-        assert!(result.is_ok(), "light frame should render successfully");
-        let pixels = result.unwrap();
+        // Test the pure, non-wasm-gated function with signature (dark: bool) -> Result<Vec<u8>, String>
+        let pixels = render_parity_frame_rgba(false).expect("light frame should render");
         let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
         assert_eq!(
             pixels.len(),
@@ -198,9 +211,8 @@ mod tests {
 
     #[test]
     fn render_wasm_parity_frame_dark_produces_correct_buffer() {
-        let result = render_parity_frame_rgba(true);
-        assert!(result.is_ok(), "dark frame should render successfully");
-        let pixels = result.unwrap();
+        // Test the pure, non-wasm-gated function with signature (dark: bool) -> Result<Vec<u8>, String>
+        let pixels = render_parity_frame_rgba(true).expect("dark frame should render");
         let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
         assert_eq!(
             pixels.len(),
