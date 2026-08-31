@@ -143,6 +143,43 @@ fn radio_group<S: 'static>(
 // ---------------------------------------------------------------------------
 
 #[test]
+fn a_checkbox_changes_state_on_click() {
+    // Extracted checkbox pattern: state, element with draw & on_click, handler.
+    // state: a Settings struct with a notify boolean
+    // element: built with draw() to render a box and text label
+    // handler: on_click() closure that receives &mut state and toggles the boolean
+    let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
+        let checked = settings.notify;
+        col((row((
+            draw(
+                Size::new(15.0, 15.0),
+                move |painter: &mut Painter<'_>, rect: Rect| {
+                    painter.fill(
+                        rect,
+                        Radius::Units(4.0),
+                        if checked { Tone::Accent } else { Tone::Sunken },
+                    );
+                    painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
+                },
+            )
+            .size(15.0, 15.0),
+            text("Enable"),
+        ))
+        .gap(8.0)
+        .h(22.0)
+        .align(Align::Center)
+        .on_click(|state: &mut Settings| state.notify = !state.notify),))
+        .align(Align::Start)
+    });
+
+    assert!(!harness.state().notify);
+    harness.click_text("Enable");
+    assert!(harness.state().notify, "state changes on click");
+    harness.click_text("Enable");
+    assert!(!harness.state().notify, "click toggles state");
+}
+
+#[test]
 fn a_checkbox_answers_a_click_on_its_label_as_well_as_on_its_box() {
     let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
         col(checkbox(
