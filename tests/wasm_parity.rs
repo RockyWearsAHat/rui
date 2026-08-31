@@ -707,6 +707,70 @@ pub fn capture_wasm_frame(appearance: Appearance) -> Result<Vec<u8>, String> {
     Ok(frame_data)
 }
 
+/// Harness for preparing and managing WASM parity frame capture.
+/// Encapsulates frame dimensions, validation, and appearance support.
+struct ParityCaptureHarness {
+    width: usize,
+    height: usize,
+    byte_count: usize,
+    appearances: Vec<Appearance>,
+}
+
+impl ParityCaptureHarness {
+    /// Create a new parity capture harness with standard dimensions (960×640).
+    fn new() -> Self {
+        let width = REFERENCE_WIDTH as usize;
+        let height = REFERENCE_HEIGHT as usize;
+        let byte_count = width * height * 4;
+
+        Self {
+            width,
+            height,
+            byte_count,
+            appearances: vec![Appearance::Light, Appearance::Dark],
+        }
+    }
+
+    /// Get the frame width.
+    fn width(&self) -> usize {
+        self.width
+    }
+
+    /// Get the frame height.
+    fn height(&self) -> usize {
+        self.height
+    }
+
+    /// Get the expected byte count for frame data (width × height × 4 RGBA).
+    fn expected_byte_count(&self) -> usize {
+        self.byte_count
+    }
+
+    /// Check if this harness supports a given appearance.
+    fn supports_appearance(&self, appearance: Appearance) -> bool {
+        self.appearances.contains(&appearance)
+    }
+
+    /// Validate that frame data matches expected size.
+    fn validate_frame_data(&self, data: &[u8]) -> Result<(), String> {
+        if data.len() == self.byte_count {
+            Ok(())
+        } else {
+            Err(format!(
+                "frame data size {} does not match expected {}",
+                data.len(),
+                self.byte_count
+            ))
+        }
+    }
+}
+
+/// Prepare a capture harness for WASM parity frame extraction.
+/// This encapsulates the reference frame dimensions and validation logic.
+fn prepare_parity_capture_harness() -> ParityCaptureHarness {
+    ParityCaptureHarness::new()
+}
+
 /// Extract frame dimensions from RGBA byte buffer.
 /// For parity frames, validates byte count matches expected size (960×640 RGBA).
 fn extract_frame_dimensions(frame_bytes: &[u8]) -> Option<(usize, usize)> {
@@ -1078,6 +1142,46 @@ fn wasm_frame_extraction_always_succeeds() {
 
     assert_eq!(light_len, expected_len);
     assert_eq!(dark_len, expected_len);
+}
+
+#[test]
+fn prepare_capture_harness_for_browser_testing() {
+    // STEP 1 requirement: prepare capture harness for browser-based testing
+    let harness = prepare_parity_capture_harness();
+
+    // Should return valid dimensions
+    assert_eq!(harness.width(), REFERENCE_WIDTH as usize);
+    assert_eq!(harness.height(), REFERENCE_HEIGHT as usize);
+
+    // Should have expected byte count
+    let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+    assert_eq!(harness.expected_byte_count(), expected_bytes);
+
+    // Should support both appearances
+    assert!(harness.supports_appearance(Appearance::Light));
+    assert!(harness.supports_appearance(Appearance::Dark));
+}
+
+#[test]
+fn capture_harness_validates_frame_data() {
+    // STEP 1 requirement: harness should validate captured frame data
+    let harness = prepare_parity_capture_harness();
+    let frames = parity_frames();
+
+    for (_, frame_bytes) in frames.iter() {
+        // Valid frame data should pass validation
+        assert!(
+            harness.validate_frame_data(frame_bytes).is_ok(),
+            "harness should validate correct frame data"
+        );
+    }
+
+    // Invalid frame data (wrong size) should fail validation
+    let invalid_data = vec![0u8; 1000];
+    assert!(
+        harness.validate_frame_data(&invalid_data).is_err(),
+        "harness should reject invalid frame data"
+    );
 }
 
 #[test]
