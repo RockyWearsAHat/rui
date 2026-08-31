@@ -3,7 +3,9 @@
 //! Verifies that reference frames can be generated deterministically using embedded fonts
 //! for later comparison with WASM-rendered output.
 
-use rui_native::demo::{parity_frames, reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+use rui_native::demo::{
+    parity_frames, reference_frame, render_parity_frame_rgba, REFERENCE_HEIGHT, REFERENCE_WIDTH,
+};
 use rui_native::{image, Appearance};
 
 /// Compare two RGBA byte buffers pixel-by-pixel.
@@ -1427,27 +1429,51 @@ fn headless_wasm_parity_frame_rendering_produces_valid_output() {
 
 #[test]
 fn render_wasm_parity_frame_produces_valid_output() {
-    // Verify the exact logic that render_wasm_parity_frame() implements:
-    // 1. Call demo::reference_frame() with Appearance::Light/Dark
-    // 2. Convert canvas to RGBA bytes with image::rgba()
-    // Size/format/opacity are already verified by other tests; this test
-    // only verifies the function logic path actually produces pixel output.
+    // Directly call render_parity_frame_rgba() which is the core logic
+    // used by render_wasm_parity_frame() (the wasm_bindgen wrapper).
+    // This test verifies the function returns valid pixel data.
 
-    // Light mode: render_wasm_parity_frame(false)
-    let light_canvas = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
-        .expect("light parity frame should render");
-    let light_bytes = image::rgba(&light_canvas);
+    // Light mode: render_parity_frame_rgba(false)
+    let light_result = render_parity_frame_rgba(false);
+    assert!(
+        light_result.is_ok(),
+        "render_parity_frame_rgba(false) should succeed"
+    );
+    let light_bytes = light_result.unwrap();
     assert!(
         !light_bytes.is_empty(),
-        "light frame should produce pixel data"
+        "light frame should produce non-empty pixel data"
+    );
+    let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+    assert_eq!(
+        light_bytes.len(),
+        expected_size,
+        "light frame RGBA size should be {}",
+        expected_size
     );
 
-    // Dark mode: render_wasm_parity_frame(true)
-    let dark_canvas = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
-        .expect("dark parity frame should render");
-    let dark_bytes = image::rgba(&dark_canvas);
+    // Dark mode: render_parity_frame_rgba(true)
+    let dark_result = render_parity_frame_rgba(true);
+    assert!(
+        dark_result.is_ok(),
+        "render_parity_frame_rgba(true) should succeed"
+    );
+    let dark_bytes = dark_result.unwrap();
     assert!(
         !dark_bytes.is_empty(),
-        "dark frame should produce pixel data"
+        "dark frame should produce non-empty pixel data"
+    );
+    assert_eq!(
+        dark_bytes.len(),
+        expected_size,
+        "dark frame RGBA size should be {}",
+        expected_size
+    );
+
+    // Verify light and dark frames are different
+    let (diff_pixels, total_pixels) = compare_frames(&light_bytes, &dark_bytes);
+    assert!(
+        diff_pixels > total_pixels / 100,
+        "Light and Dark frames from render_parity_frame_rgba should be visibly different"
     );
 }

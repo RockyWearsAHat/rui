@@ -120,6 +120,25 @@ pub fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
     ]
 }
 
+/// Render a parity frame and return its pixels as RGBA bytes.
+///
+/// Core logic for rendering a parity frame to RGBA bytes. Used by the WASM
+/// parity frame rendering function and testable from native code.
+///
+/// Returns the RGBA bytes (4 bytes per pixel, 960x640 = 2,457,600 bytes)
+/// encoded in the same format as [`crate::image::rgba`].
+pub fn render_parity_frame_rgba(dark: bool) -> Result<Vec<u8>, String> {
+    let appearance = if dark {
+        Appearance::Dark
+    } else {
+        Appearance::Light
+    };
+    let canvas = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, appearance)
+        .map_err(|error| format!("the parity frame could not be drawn: {error}"))?;
+
+    Ok(crate::image::rgba(&canvas))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
