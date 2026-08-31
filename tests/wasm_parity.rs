@@ -1481,6 +1481,37 @@ fn render_wasm_parity_frame_produces_valid_output() {
 /// Test that directly calls render_wasm_parity_frame() on wasm32 targets.
 /// This test only compiles and runs on wasm32-unknown-unknown.
 /// Run with: wasm-pack test --headless --firefox --test wasm_parity
+#[test]
+fn generates_native_reference_frame_bytes() {
+    // STEP 1: Verify render_parity_frame_rgba() generates valid native reference frame bytes
+    // for light mode, compatible with headless WASM parity verification.
+    // This calls the same underlying logic used by render_wasm_parity_frame() on WASM.
+
+    let result = render_parity_frame_rgba(false); // false = light mode
+    assert!(
+        result.is_ok(),
+        "render_parity_frame_rgba(false) should succeed for light mode"
+    );
+
+    let frame_bytes = result.unwrap();
+    let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+
+    assert_eq!(
+        frame_bytes.len(),
+        expected_size,
+        "light frame should have {} bytes ({}x{}*4), got {}",
+        expected_size,
+        REFERENCE_WIDTH,
+        REFERENCE_HEIGHT,
+        frame_bytes.len()
+    );
+
+    assert!(
+        !frame_bytes.is_empty(),
+        "light frame should contain non-empty pixel data"
+    );
+}
+
 #[cfg(target_arch = "wasm32")]
 pub fn render_wasm_parity_frame_directly_callable() {
     // Import render_wasm_parity_frame from the wasm module
