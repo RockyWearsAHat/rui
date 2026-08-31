@@ -69,7 +69,7 @@ fn pre_commit_hook_rejects_unformatted_code() {
     use std::process::Command;
 
     let _guard = GIT_LOCK.lock().unwrap();
-    let test_file = PathBuf::from("tests/test_unformatted.rs");
+    let test_file = PathBuf::from(".test_unformatted_temp.rs");
 
     // Ensure clean git state at start
     let _ = Command::new("git").arg("reset").arg("HEAD").output();
