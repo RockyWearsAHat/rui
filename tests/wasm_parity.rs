@@ -1646,9 +1646,32 @@ fn wasm_parity_light_frame_byte_equality() {
 #[test]
 fn wasm_parity_dark_frame_byte_equality() {
     // STEP 4: Verify dark mode frame parity between reference and WASM rendering.
+    // Assert dimensions via parity_frame_size() before comparing bytes.
+    //
+    // Implementation: call build_reference_frame(true) and render_wasm_parity_frame(true),
+    // assert Vec<u8> equal (0 differing bytes for dark mode).
 
-    use rui_native::demo::render_parity_frame_rgba;
+    use rui_native::demo::{
+        parity_frame_size, render_parity_frame_rgba, REFERENCE_HEIGHT, REFERENCE_WIDTH,
+    };
     use rui_native::parity_comparator;
+
+    // Get frame dimensions from parity_frame_size() as specified in STEP 4
+    let frame_dims = parity_frame_size();
+    assert_eq!(
+        frame_dims.len(),
+        2,
+        "parity_frame_size should return [width, height]"
+    );
+    let width = frame_dims[0] as usize;
+    let height = frame_dims[1] as usize;
+
+    // Assert dimensions match expected reference frame size
+    assert_eq!(width, REFERENCE_WIDTH as usize, "frame width should match");
+    assert_eq!(
+        height, REFERENCE_HEIGHT as usize,
+        "frame height should match"
+    );
 
     // Get reference frame via parity_comparator (native backend)
     let reference_result = parity_comparator::render_native_parity_frame(true);
@@ -1666,25 +1689,31 @@ fn wasm_parity_dark_frame_byte_equality() {
     );
     let wasm_bytes = wasm_result.unwrap();
 
-    // Assert dimensions are equal before comparing bytes
-    let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+    // Assert dimensions are equal before comparing bytes (verified via byte count)
+    let expected_size = width * height * 4;
     assert_eq!(
         reference_bytes.len(),
         expected_size,
-        "reference frame should be {} bytes",
-        expected_size
+        "reference frame should be {} bytes ({}x{}*4)",
+        expected_size,
+        width,
+        height
     );
     assert_eq!(
         wasm_bytes.len(),
         expected_size,
-        "WASM frame should be {} bytes",
-        expected_size
+        "WASM frame should be {} bytes ({}x{}*4)",
+        expected_size,
+        width,
+        height
     );
 
-    // Assert byte-level equality
+    // Assert byte-level equality: 0 differing bytes reported
+    let (diff_count, total_pixels) = compare_frames(&reference_bytes, &wasm_bytes);
     assert_eq!(
-        &reference_bytes, &wasm_bytes,
-        "dark reference and WASM frames must be pixel-for-pixel identical (0 differing bytes)"
+        diff_count, 0,
+        "Dark frame: 0 differing pixels expected, got {} / {} pixels differ",
+        diff_count, total_pixels
     );
 }
 
