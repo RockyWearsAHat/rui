@@ -156,6 +156,167 @@ fn parity_frames_roundtrip_to_rgba() {
     let _ = std::fs::remove_file(&test_path);
 }
 
+/// Configuration for WASM frame capture in browser environment.
+/// Used by browser-based tests to configure frame capture behavior.
+#[derive(Debug, Clone)]
+pub struct WasmCaptureConfig {
+    /// Enable automatic retry on capture failure
+    pub retry_on_failure: bool,
+    /// Maximum number of retries
+    pub max_retries: u32,
+    /// Timeout in milliseconds for frame capture
+    pub capture_timeout_ms: u32,
+}
+
+impl Default for WasmCaptureConfig {
+    fn default() -> Self {
+        WasmCaptureConfig {
+            retry_on_failure: true,
+            max_retries: 3,
+            capture_timeout_ms: 5000,
+        }
+    }
+}
+
+/// Result of a WASM frame capture attempt.
+#[derive(Debug, Clone)]
+pub struct WasmCaptureResult {
+    /// Success indicator
+    pub success: bool,
+    /// Error message if capture failed
+    pub error_message: Option<String>,
+    /// Frame data if capture succeeded
+    pub frame_data: Option<Vec<u8>>,
+    /// Appearance that was captured
+    pub appearance: Appearance,
+}
+
+impl WasmCaptureResult {
+    /// Create a successful capture result
+    pub fn success(appearance: Appearance, frame_data: Vec<u8>) -> Self {
+        WasmCaptureResult {
+            success: true,
+            error_message: None,
+            frame_data: Some(frame_data),
+            appearance,
+        }
+    }
+
+    /// Create a failed capture result
+    pub fn error(appearance: Appearance, message: String) -> Self {
+        WasmCaptureResult {
+            success: false,
+            error_message: Some(message),
+            frame_data: None,
+            appearance,
+        }
+    }
+
+    /// Check if capture matches reference frame
+    pub fn matches_reference(&self) -> Result<bool, String> {
+        if !self.success {
+            return Err(self.error_message.clone().unwrap_or_default());
+        }
+
+        let frame_data = self
+            .frame_data
+            .as_ref()
+            .ok_or_else(|| "No frame data captured".to_string())?;
+        let reference = get_reference_frame(self.appearance)?;
+
+        Ok(frame_data == &reference)
+    }
+}
+
+#[test]
+fn wasm_capture_config_has_defaults() {
+    let config = WasmCaptureConfig::default();
+
+    assert!(
+        config.retry_on_failure,
+        "retry should be enabled by default"
+    );
+    assert_eq!(config.max_retries, 3, "max retries should be 3");
+    assert_eq!(
+        config.capture_timeout_ms, 5000,
+        "capture timeout should be 5000ms"
+    );
+}
+
+#[test]
+fn wasm_capture_result_success_path() {
+    let frames = parity_frames();
+    let (_, frame_data) = &frames[0];
+
+    let result = WasmCaptureResult::success(Appearance::Light, frame_data.clone());
+
+    assert!(result.success, "result should be marked as successful");
+    assert!(
+        result.error_message.is_none(),
+        "error message should be None"
+    );
+    assert!(result.frame_data.is_some(), "frame data should be present");
+    assert_eq!(
+        result.appearance,
+        Appearance::Light,
+        "appearance should match"
+    );
+}
+
+#[test]
+fn wasm_capture_result_error_path() {
+    let result = WasmCaptureResult::error(Appearance::Dark, "test error message".to_string());
+
+    assert!(!result.success, "result should be marked as failed");
+    assert!(
+        result.error_message.is_some(),
+        "error message should be present"
+    );
+    assert!(result.frame_data.is_none(), "frame data should be None");
+}
+
+#[test]
+fn wasm_capture_result_matches_reference_success() {
+    let frames = parity_frames();
+    let (_, light_frame) = &frames[0];
+
+    let result = WasmCaptureResult::success(Appearance::Light, light_frame.clone());
+    let matches = result.matches_reference();
+
+    assert!(matches.is_ok(), "should check reference without error");
+    assert!(
+        matches.unwrap(),
+        "captured frame should match reference frame"
+    );
+}
+
+#[test]
+fn wasm_capture_result_detects_mismatch() {
+    let frames = parity_frames();
+    let (_, _) = &frames[0];
+    let modified = vec![0u8; (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize];
+
+    let result = WasmCaptureResult::success(Appearance::Light, modified);
+    let matches = result.matches_reference();
+
+    assert!(matches.is_ok(), "should check reference without error");
+    assert!(
+        !matches.unwrap(),
+        "modified frame should not match reference"
+    );
+}
+
+#[test]
+fn wasm_capture_result_error_on_failed_capture() {
+    let result = WasmCaptureResult::error(Appearance::Dark, "capture failed".to_string());
+
+    let matches = result.matches_reference();
+    assert!(
+        matches.is_err(),
+        "should error when result is not successful"
+    );
+}
+
 #[test]
 fn parity_frame_byte_count_correct() {
     let frames = parity_frames();
