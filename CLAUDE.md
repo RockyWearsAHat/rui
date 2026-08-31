@@ -943,7 +943,58 @@ Files touched:
 
 **Verification gate:** `cargo test --test recipes -- a_checkbox_changes_state_on_click` passes.
 
-**Phase 2: Enhancement (Styling & Visual Polish)**
+**Phase 2: Element Tree Construction**
+
+Files touched:
+- `src/widgets.rs` (lines 259–283): Implement checkbox using primitives
+
+The checkbox is built entirely from `draw()` and `on_click()` primitives. State determines visual appearance—the filled/empty box is rendered based on the `checked` boolean:
+
+```rust
+pub fn checkbox<S: 'static>(
+    label: &str,
+    checked: bool,
+    toggle: impl Fn(&mut S) + 'static,
+) -> El<S> {
+    row((
+        draw(
+            Size::new(15.0, 15.0),
+            move |painter: &mut Painter<'_>, rect: Rect| {
+                // Conditional fill: Accent tone when checked, Sunken when unchecked
+                painter.fill(
+                    rect,
+                    Radius::Units(4.0),
+                    if checked { Tone::Accent } else { Tone::Sunken },
+                );
+                painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
+            },
+        )
+        .size(15.0, 15.0),
+        text(label),
+    ))
+    .gap(8.0)
+    .h(22.0)
+    .align(Align::Center)
+    .on_click(move |state: &mut S| toggle(state))
+}
+```
+
+The checkbox demonstrates how state shapes the element tree:
+- `checked` parameter (boolean from app state) flows into the `draw()` closure as an upvalue.
+- Inside the closure, the conditional `if checked { Tone::Accent } else { Tone::Sunken }` determines which color tone fills the box.
+- An unchecked checkbox shows a sunken (recessed) background; a checked checkbox shows the accent color (typically blue).
+- The `on_click()` handler receives mutable state and calls the `toggle` function to update `app.checked`.
+
+**Why this order:** After defining state shape, we show how state flows into the view function. The element tree construction demonstrates the core pattern: view functions receive state as parameters, not closures. This simplicity eliminates interior mutability (no `Rc<RefCell<>>`), letting handlers modify state directly. The checkbox is minimal—just `draw()`, `on_click()`, and conditional styling—proving that simple primitives compose into interactive controls.
+
+**Verification gate:** 
+```bash
+cargo test --test recipes -- a_checkbox_draws_differently_once_it_is_ticked  # Visual state changes with checked
+```
+
+The test verifies that a checkbox renders with different fill colors before and after being ticked, confirming state flows correctly into the visual representation.
+
+**Phase 3: Enhancement (Styling & Visual Polish)**
 
 Files touched:
 - `src/widgets.rs`: Enhance checkbox with platform-appropriate styling (rounded corners, focus ring, disabled state, hover highlight). Add `.fill()` customization to allow theme colors. Verify the checkbox visually matches native platform controls.
@@ -960,7 +1011,7 @@ cargo run -p rui --example controls    # Visual inspection: checkbox looks polis
 
 Both tests pass and visual inspection confirms checkbox matches the rui design system across light and dark modes.
 
-**Phase 3: Integration & Verification**
+**Phase 4: Integration & Verification**
 
 Files touched:
 - `tests/recipes.rs`: Add comprehensive integration tests `a_checkbox_preserves_state_across_frames` and `a_checkbox_works_with_multiple_instances` verifying state persists and multiple checkboxes can coexist independently.
