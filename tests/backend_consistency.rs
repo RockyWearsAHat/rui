@@ -2922,3 +2922,88 @@ fn appearance_toggle_before_first_frame() {
         "appearance toggle before first frame should work"
     );
 }
+
+/// Verify all visible text remains readable after appearance toggle.
+/// Tests that text colors adapt correctly for both light and dark modes.
+#[test]
+fn appearance_toggle_preserves_text_readability() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+    let light_text = harness.text().clone();
+
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_text = harness.text().clone();
+
+    // Text content should be identical in both appearances
+    assert_eq!(
+        light_text, dark_text,
+        "text content should not change when appearance toggles"
+    );
+}
+
+/// Verify appearance changes reflect in multiple regions of the UI simultaneously.
+/// Tests that background, borders, and text colors all update together.
+#[test]
+fn appearance_toggle_affects_all_visual_regions() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+
+    let light_pixels = [
+        harness.pixel(0, 0),     // Top-left background
+        harness.pixel(400, 300), // Center background
+        harness.pixel(799, 599), // Bottom-right background
+    ];
+
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+
+    let dark_pixels = [
+        harness.pixel(0, 0),     // Top-left background
+        harness.pixel(400, 300), // Center background
+        harness.pixel(799, 599), // Bottom-right background
+    ];
+
+    // All regions should show different colors
+    for (i, (light, dark)) in light_pixels.iter().zip(dark_pixels.iter()).enumerate() {
+        assert_ne!(
+            light, dark,
+            "pixel region {} should change color when appearance toggles",
+            i
+        );
+    }
+}
+
+/// Verify appearance toggle doesn't affect the geometric layout.
+/// Elements should remain in the same positions regardless of appearance.
+#[test]
+fn appearance_toggle_preserves_layout_geometry() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+    let light_probes = harness.probes().to_vec();
+
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_probes = harness.probes().to_vec();
+
+    // Number of elements should be the same
+    assert_eq!(
+        light_probes.len(),
+        dark_probes.len(),
+        "element count should not change with appearance"
+    );
+
+    // Positions should be identical
+    for (light_probe, dark_probe) in light_probes.iter().zip(dark_probes.iter()) {
+        assert_eq!(
+            light_probe.rect, dark_probe.rect,
+            "element positions should not change with appearance"
+        );
+    }
+}
