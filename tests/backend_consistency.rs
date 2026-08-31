@@ -1238,6 +1238,42 @@ fn modifier_key_translation_consistency() {
 // EVENT BATCHING & ACCUMULATION
 // ============================================================================
 
+/// Verify multiple events (pointer moves and clicks) in a single frame all appear in Input state.
+/// This test ensures that batched events like "mousemove + click + mousemove" within one frame
+/// are all processed and reflected correctly in the Input state.
+#[test]
+fn events_batch_in_same_frame() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    // Inject multiple events in one frame: mousemove, click, mousemove
+    input.apply(Event::PointerMoved(Point::new(100.0, 100.0)));
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+    input.apply(Event::PointerMoved(Point::new(200.0, 200.0)));
+
+    // Verify all events appeared in Input state in the same frame
+    assert_eq!(
+        input.pointer(),
+        Point::new(200.0, 200.0),
+        "final mousemove should be reflected in pointer position"
+    );
+    assert!(
+        input.pressed(PointerButton::Primary),
+        "click should be registered in pressed state"
+    );
+    assert!(
+        input.held(PointerButton::Primary),
+        "click should be registered in held state"
+    );
+    assert!(
+        input.pointer_inside(),
+        "pointer should be inside after moves"
+    );
+}
+
 /// Verify multiple scroll events accumulate correctly.
 #[test]
 fn multiple_scroll_events_accumulate() {
