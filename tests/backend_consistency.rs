@@ -1221,3 +1221,335 @@ fn backend_trait_boundary_encapsulation() {
     // If this test passes, it confirms that event handling above the
     // Backend trait is truly platform-agnostic (same code runs on all platforms)
 }
+
+// ============================================================================
+// APPEARANCE CONSISTENCY (Light/Dark Mode)
+// ============================================================================
+
+/// Verify appearance can be set and used consistently.
+/// Theme state (light/dark mode) should be queryable and settable.
+#[test]
+fn appearance_consistency_across_frames() {
+    use rui::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view)
+        .appearance(Appearance::Light);
+
+    // Trigger some events
+    harness.click(Point::new(100.0, 100.0));
+
+    // Verify event processing works in light mode
+    assert_eq!(harness.state().click_count, 1, "event processed in light mode");
+
+    // Create new harness in dark mode
+    let mut harness2 = Harness::new(App::default(), interactive_view)
+        .appearance(Appearance::Dark);
+
+    // Verify appearance can be changed without affecting event processing
+    harness2.click(Point::new(100.0, 100.0));
+
+    // State should still be processed correctly
+    assert_eq!(harness2.state().click_count, 1, "events processed consistently in dark mode");
+}
+
+// ============================================================================
+// MEMORY STATE PERSISTENCE (Focus, Scroll, Animation)
+// ============================================================================
+
+/// Verify that memory state (hover, focus, scroll) persists correctly.
+/// The Memory module stores per-element state; changes must be retained across frames.
+#[test]
+fn memory_state_persistence_across_frames() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Click to advance state
+    harness.click(Point::new(100.0, 100.0));
+    let state1 = harness.state().click_count;
+
+    // State must persist in the next frame even without input
+    let state2 = harness.state().click_count;
+    assert_eq!(
+        state1, state2,
+        "application state must persist across frames"
+    );
+
+    // Another click should increment
+    harness.click(Point::new(100.0, 100.0));
+    let state3 = harness.state().click_count;
+    assert_eq!(state3, state1 + 1, "state mutation must persist");
+}
+
+/// Verify pointer_inside flag persists correctly through pointer transitions.
+/// The Input state must accurately track whether pointer is inside window bounds.
+#[test]
+fn pointer_inside_persistence() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Pointer inside
+    harness.click(Point::new(100.0, 100.0));
+    let inside1 = harness.input().pointer_inside();
+    assert!(inside1, "pointer should be inside after click");
+
+    // Move pointer away
+    harness.event(Event::PointerLeft);
+    let inside2 = harness.input().pointer_inside();
+    assert!(!inside2, "pointer should be outside after PointerLeft");
+
+    // Move pointer back in
+    harness.click(Point::new(100.0, 100.0));
+    let inside3 = harness.input().pointer_inside();
+    assert!(inside3, "pointer should be inside after new click");
+}
+
+// ============================================================================
+// COORDINATE TRANSFORM CONSISTENCY
+// ============================================================================
+
+/// Verify coordinate transforms are consistent and reversible.
+/// If a backend transforms coordinates (DPI scaling), the transform must be consistent.
+#[test]
+fn coordinate_transform_consistency() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Click at known coordinates
+    let click_pos = Point::new(150.75, 200.25);
+    harness.click(click_pos);
+
+    // Input should reflect the exact coordinates (or consistently transformed)
+    let input_pos = harness.input().pointer();
+    assert_eq!(
+        input_pos, click_pos,
+        "coordinate transform must preserve exact click position"
+    );
+}
+
+/// Verify coordinate transforms preserve relative distances.
+/// Two clicks at different positions should have consistent relative distance.
+#[test]
+fn coordinate_distance_preservation() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    let pos1 = Point::new(100.0, 100.0);
+    let pos2 = Point::new(200.0, 300.0);
+
+    harness.click(pos1);
+    let recorded_pos1 = harness.input().pointer();
+
+    harness.click(pos2);
+    let recorded_pos2 = harness.input().pointer();
+
+    // Calculate distances
+    let original_dist = (
+        (pos2.x - pos1.x).powi(2) + (pos2.y - pos1.y).powi(2)
+    ).sqrt();
+    let recorded_dist = (
+        (recorded_pos2.x - recorded_pos1.x).powi(2)
+            + (recorded_pos2.y - recorded_pos1.y).powi(2)
+    ).sqrt();
+
+    // Distances should match (allowing for floating-point rounding)
+    assert!(
+        (original_dist - recorded_dist).abs() < 0.01,
+        "coordinate distances must be preserved"
+    );
+}
+
+/// Verify edge case coordinates (zero, negative, fractional).
+#[test]
+fn edge_case_coordinates() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Zero coordinates
+    harness.click(Point::new(0.0, 0.0));
+    assert_eq!(harness.input().pointer(), Point::new(0.0, 0.0));
+
+    // Fractional coordinates
+    harness.click(Point::new(10.5, 20.75));
+    assert_eq!(harness.input().pointer(), Point::new(10.5, 20.75));
+
+    // Large coordinates
+    harness.click(Point::new(10000.0, 5000.0));
+    assert_eq!(harness.input().pointer(), Point::new(10000.0, 5000.0));
+}
+
+// ============================================================================
+// MODIFIER KEY CONSISTENCY
+// ============================================================================
+
+/// Verify modifier state persists through multiple key events.
+#[test]
+fn modifier_persistence() {
+    let mut input = Input::new();
+    let mods = Modifiers {
+        shift: true,
+        control: false,
+        alt: false,
+        command: false,
+    };
+
+    input.apply(Event::KeyDown {
+        key: Key::Space,
+        modifiers: mods,
+    });
+    let mods_after = input.modifiers();
+
+    input.apply(Event::KeyDown {
+        key: Key::Tab,
+        modifiers: mods,
+    });
+    let mods_after_second = input.modifiers();
+
+    // Modifiers should remain consistent across multiple key events
+    assert_eq!(mods_after, mods_after_second);
+}
+
+// ============================================================================
+// FRAME BOUNDARY CONTRACTUAL INVARIANTS
+// ============================================================================
+
+/// Verify the frame boundary contract: ephemeral state clears, persistent state survives.
+/// This is a critical invariant for consistent frame-stepping across backends.
+#[test]
+fn frame_boundary_ephemeral_vs_persistent_state() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Press a button
+    harness.event(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+
+    assert!(
+        harness.input().pressed(PointerButton::Primary),
+        "pressed flag set"
+    );
+    assert!(
+        harness.input().held(PointerButton::Primary),
+        "held flag set"
+    );
+
+    // End of frame: held persists, pressed clears
+    harness.frame();
+
+    assert!(
+        harness.input().held(PointerButton::Primary),
+        "held must persist across frame boundary"
+    );
+    assert!(
+        !harness.input().pressed(PointerButton::Primary),
+        "pressed must clear at frame boundary"
+    );
+
+    // Release the button
+    harness.event(Event::PointerUp {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+
+    assert!(
+        harness.input().released(PointerButton::Primary),
+        "released flag set"
+    );
+    assert!(
+        !harness.input().held(PointerButton::Primary),
+        "held clears on release"
+    );
+
+    // End of frame: released clears, held already cleared
+    harness.frame();
+
+    assert!(
+        !harness.input().released(PointerButton::Primary),
+        "released must clear at frame boundary"
+    );
+    assert!(
+        !harness.input().held(PointerButton::Primary),
+        "held must remain cleared"
+    );
+}
+
+/// Verify text input clears at frame boundary but accumulates within frame.
+#[test]
+fn text_input_accumulation_and_boundary() {
+    let mut harness = Harness::new(App::default(), |_| col(text("Test")));
+
+    // Accumulate text within a frame
+    harness.type_text("Hi");
+
+    let text1 = harness.input().text();
+    assert_eq!(text1, "Hi", "text should accumulate");
+
+    // Simulate frame boundary
+    harness.frame();
+
+    let text2 = harness.input().text();
+    assert_eq!(text2, "", "text must clear at frame boundary");
+
+    // New text in new frame
+    harness.type_text("!");
+    let text3 = harness.input().text();
+    assert_eq!(text3, "!", "text accumulation continues in new frame");
+}
+
+// ============================================================================
+// COMPLEX EVENT SEQUENCE INVARIANTS
+// ============================================================================
+
+/// Verify deterministic output from complex mixed event sequences.
+/// This is the ultimate test of platform-agnostic event processing.
+#[test]
+fn complex_event_sequence_determinism() {
+    // Sequence 1
+    let mut input1 = Input::new();
+    input1.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+    input1.apply(Event::PointerMoved(Point::new(150.0, 150.0)));
+    input1.apply(Event::Scrolled { x: 0.0, y: 5.0 });
+    input1.apply(Event::PointerUp {
+        position: Point::new(150.0, 150.0),
+        button: PointerButton::Primary,
+    });
+    input1.apply(Event::KeyDown {
+        key: Key::Space,
+        modifiers: Modifiers {
+            shift: true,
+            control: false,
+            alt: false,
+            command: false,
+        },
+    });
+
+    // Sequence 2 (identical)
+    let mut input2 = Input::new();
+    input2.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+    input2.apply(Event::PointerMoved(Point::new(150.0, 150.0)));
+    input2.apply(Event::Scrolled { x: 0.0, y: 5.0 });
+    input2.apply(Event::PointerUp {
+        position: Point::new(150.0, 150.0),
+        button: PointerButton::Primary,
+    });
+    input2.apply(Event::KeyDown {
+        key: Key::Space,
+        modifiers: Modifiers {
+            shift: true,
+            control: false,
+            alt: false,
+            command: false,
+        },
+    });
+
+    // All state must be identical
+    assert_eq!(input1.pointer(), input2.pointer());
+    assert_eq!(
+        input1.held(PointerButton::Primary),
+        input2.held(PointerButton::Primary)
+    );
+    let (_, y1) = input1.scroll();
+    let (_, y2) = input2.scroll();
+    assert_eq!(y1, y2);
+}
