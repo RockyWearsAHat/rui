@@ -327,10 +327,18 @@ fn window_backend_selector_gates_wasm_correctly() {
         platform_mod.contains("target_os = \"windows\""),
         "windows backend must be defined"
     );
+
+    // Phase 1 & 2: Wayland backend with feature flag
     assert!(
-        platform_mod
-            .contains("all(unix, not(target_os = \"macos\"), not(target_arch = \"wasm32\"))"),
-        "x11 backend must be selected for unix platforms excluding macos and wasm"
+        platform_mod.contains("target_os = \"linux\"")
+            && platform_mod.contains("feature = \"wayland\""),
+        "wayland backend must be conditionally selected with feature = \"wayland\""
+    );
+
+    // X11 backend (fallback for non-wayland Linux)
+    assert!(
+        platform_mod.contains("unix") && platform_mod.contains("not(feature = \"wayland\")"),
+        "x11 backend must be fallback for unix platforms when wayland feature is not enabled"
     );
 
     // Verify all backends are assigned to the mod named 'backend'
@@ -339,8 +347,8 @@ fn window_backend_selector_gates_wasm_correctly() {
         .collect::<Vec<_>>()
         .len();
     assert_eq!(
-        backend_assignments, 5,
-        "exactly 5 backend cfgs should each define 'mod backend;' (wasm, macos, windows, x11, unsupported)"
+        backend_assignments, 6,
+        "exactly 6 backend cfgs should each define 'mod backend;' (wasm, macos, windows, wayland, x11, unsupported)"
     );
 }
 
