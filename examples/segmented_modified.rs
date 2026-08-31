@@ -2,14 +2,14 @@
 //! This example follows the documented modification: changing ["Small", "Medium", "Large"]
 //! to different choices. This shows that the learning path is complete and working.
 
-use rui::{col, text, widgets, El};
+use rui_native::{col, text, widgets, El};
 
 struct App {
     selected: usize,
 }
 
-fn main() -> Result<(), rui::Error> {
-    rui::run("Segmented: Modified Example", App { selected: 0 }, view)
+fn main() -> Result<(), rui_native::Error> {
+    rui_native::run("Segmented: Modified Example", App { selected: 0 }, view)
 }
 
 fn view(app: &App) -> El<App> {

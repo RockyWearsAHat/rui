@@ -5,8 +5,8 @@
 //! the public surface only, so a thing these cannot say is a thing an
 //! application cannot say either.
 
-use rui::testing::Harness;
-use rui::{
+use rui_native::testing::Harness;
+use rui_native::{
     button, col, draw, field, panel, row, text, Align, Anchor, Drag, El, Key, Modifiers, Point,
     Size, Tone,
 };
@@ -124,9 +124,9 @@ fn a_drag_reports_where_the_pointer_is_for_as_long_as_it_is_held() {
     let mut harness = Harness::new(App::default(), |app: &App| {
         let volume = app.volume;
         col(draw(Size::new(200.0, 20.0), move |painter, rect| {
-            painter.fill(rect, rui::Radius::Pill, Tone::Sunken);
-            let filled = rui::Rect::new(rect.x, rect.y, rect.w * volume, rect.h);
-            painter.fill(filled, rui::Radius::Pill, Tone::Accent);
+            painter.fill(rect, rui_native::Radius::Pill, Tone::Sunken);
+            let filled = rui_native::Rect::new(rect.x, rect.y, rect.w * volume, rect.h);
+            painter.fill(filled, rui_native::Radius::Pill, Tone::Accent);
         })
         .key("volume")
         .w(200.0)

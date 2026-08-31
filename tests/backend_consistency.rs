@@ -12,9 +12,9 @@
 //! 5. Event ordering and queue semantics
 //! 6. State mutation consistency for identical event sequences
 
-use rui::input::{Event, Input, Key, Modifiers, PointerButton};
-use rui::testing::Harness;
-use rui::{col, text, El, Point};
+use rui_native::input::{Event, Input, Key, Modifiers, PointerButton};
+use rui_native::testing::Harness;
+use rui_native::{col, text, El, Point};
 
 #[derive(Clone, Debug, PartialEq, Default)]
 struct App {
@@ -2178,7 +2178,7 @@ fn keyboard_events_independent_of_pointer() {
 /// without requiring application restart or reconstruction.
 #[test]
 fn appearance_updates_reflect_immediately() {
-    use rui::theme::Appearance;
+    use rui_native::theme::Appearance;
 
     // Start with light mode
     let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);

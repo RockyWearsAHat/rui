@@ -1,8 +1,8 @@
 //! Tests for WASM event handling, particularly pointer events with button mapping.
 #![cfg(target_arch = "wasm32")]
 
-use rui::input::{Key, PointerButton};
-use rui::shell::event_mapping::{map_keyboard_code_to_key, map_pointer_button};
+use rui_native::input::{Key, PointerButton};
+use rui_native::shell::event_mapping::{map_keyboard_code_to_key, map_pointer_button};
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
@@ -59,7 +59,7 @@ fn test_wasm_keyboard_events() {
 #[wasm_bindgen_test::wasm_bindgen_test]
 fn test_wasm_text_input_event() {
     // Test that plain text characters are accepted and control characters are filtered
-    use rui::shell::event_mapping::filter_text_input_data;
+    use rui_native::shell::event_mapping::filter_text_input_data;
 
     // Verify that a simple character produces Event::Text
     assert_eq!(
@@ -92,7 +92,7 @@ fn test_wasm_text_input_event() {
 
 #[wasm_bindgen_test::wasm_bindgen_test]
 fn test_wasm_scroll_events() {
-    use rui::shell::event_mapping::normalize_wheel_delta;
+    use rui_native::shell::event_mapping::normalize_wheel_delta;
 
     // Test that positive wheel deltaY (scroll down) produces positive y scroll
     // W3C spec: positive deltaY = wheel moved away from user = content scrolls down

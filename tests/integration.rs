@@ -1,7 +1,7 @@
 //! Integration tests for widget combinations.
 
-use rui::testing::Harness;
-use rui::{col, text, Align};
+use rui_native::testing::Harness;
+use rui_native::{col, text, Align};
 
 /// State for split pane test.
 #[derive(Default, Clone)]
@@ -12,7 +12,7 @@ struct SplitState {
 #[test]
 fn split_pane_divider_appears_and_is_draggable() {
     let mut harness = Harness::new(SplitState { split_ratio: 0.5 }, |state: &SplitState| {
-        rui::split(
+        rui_native::split(
             col(text("Left pane")).align(Align::Start),
             col(text("Right pane")).align(Align::Start),
             state.split_ratio,
@@ -41,7 +41,7 @@ fn split_pane_divider_appears_and_is_draggable() {
     );
 
     // Drag the divider to 70% (280px)
-    harness.drag(divider.rect.center(), rui::Point::new(280.0, 100.0));
+    harness.drag(divider.rect.center(), rui_native::Point::new(280.0, 100.0));
 
     // Verify the state was updated
     assert!(

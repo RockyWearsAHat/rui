@@ -5,8 +5,8 @@
 //! the text size wide and a line is exactly one em, so a width in these tests
 //! is arithmetic and not a measurement pasted back from a run.
 
-use rui::testing::Harness;
-use rui::{col, panel, row, spacer, text, Align, Anchor, El, Justify, Length};
+use rui_native::testing::Harness;
+use rui_native::{col, panel, row, spacer, text, Align, Anchor, El, Justify, Length};
 
 /// Nothing to hold: these are about rectangles, not behaviour.
 #[derive(Default)]
@@ -312,7 +312,7 @@ fn padding_is_taken_off_before_anything_is_placed_inside() {
         col(spacer().grow().key("inside")).pad(12.0)
     });
     let inside = harness.find_key("inside").expect("what is inside").rect;
-    assert_eq!(inside, rui::Rect::new(12.0, 12.0, 76.0, 76.0));
+    assert_eq!(inside, rui_native::Rect::new(12.0, 12.0, 76.0, 76.0));
 }
 
 #[test]

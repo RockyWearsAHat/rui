@@ -9,8 +9,8 @@
 //! the rest, it costs nothing in the repository, and a change to the mark is a
 //! change to code that can be reviewed.
 
-use rui::style::Radius;
-use rui::{image, Appearance, Canvas, Color, Corner, Painter, Rect, Theme, Tone};
+use rui_native::style::Radius;
+use rui_native::{image, Appearance, Canvas, Color, Corner, Painter, Rect, Theme, Tone};
 
 /// The sizes an `.iconset` holds, and the name each must be filed under.
 ///
@@ -69,8 +69,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// proportions — one mark, in one place, so the icon on the Dock and the mark in
 /// the window cannot come to differ.
 fn draw_icon(canvas: &mut Canvas, size: f32) {
-    let fonts = rui::Fonts::new();
-    let theme = Theme::new(Appearance::Dark, rui::FontId::FIRST, rui::FontId::FIRST);
+    let fonts = rui_native::Fonts::new();
+    let theme = Theme::new(
+        Appearance::Dark,
+        rui_native::FontId::FIRST,
+        rui_native::FontId::FIRST,
+    );
     let mut painter = Painter::new(canvas, &fonts, &theme);
 
     let margin = size * MARGIN;

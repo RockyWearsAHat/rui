@@ -8,8 +8,8 @@
 //! instead of onto a screen.
 //!
 //! ```
-//! use rui::testing::Harness;
-//! use rui::{El, button, col, text};
+//! use rui_native::testing::Harness;
+//! use rui_native::{El, button, col, text};
 //!
 //! struct Counter {
 //!     count: i32,
