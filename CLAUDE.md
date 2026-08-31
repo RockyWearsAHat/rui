@@ -755,6 +755,195 @@ col((
 
 Done. The widget is ready to use anywhere state is a Rust struct with a `rating` field.
 
+### Recipe 3: Custom Control (Checkbox)
+
+**Commits:** 1 per verification gate; typically 1–2 total (the checkbox is already implemented in `tests/recipes.rs` as a proof that the pattern works).
+
+A checkbox is a small interactive control that answers clicks with a visual state change. Unlike the passive meter, a checkbox mutates state. Unlike the choice selector (segmented), it manages a single boolean. It demonstrates the simplest interactive control: binary state, visual distinction, click handler.
+
+**Files Touched:**
+- `tests/recipes.rs`: Checkbox implementation and tests (lines 34–164)
+- `src/widgets.rs`: Checkbox widget function (if promoted from example to library)
+
+**State and Appearance:**
+
+A checkbox control has two states: checked and unchecked. The visual representation is a small square box that changes color to indicate the state.
+
+```rust
+struct App {
+    notify: bool,  // true if checked, false if unchecked
+}
+```
+
+**The Implementation:**
+
+The checkbox is built from primitives in `tests/recipes.rs` (lines 34–54):
+
+```rust
+fn checkbox<S: 'static>(label: &str, checked: bool, toggle: impl Fn(&mut S) + 'static) -> El<S> {
+    row((
+        draw(
+            Size::new(15.0, 15.0),
+            move |painter: &mut Painter<'_>, rect: Rect| {
+                painter.fill(
+                    rect,
+                    Radius::Units(4.0),
+                    if checked { Tone::Accent } else { Tone::Sunken },
+                );
+                painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
+            },
+        )
+        .size(15.0, 15.0),
+        text(label),
+    ))
+    .gap(8.0)
+    .h(22.0)
+    .align(Align::Center)
+    .on_click(move |state: &mut S| toggle(state))
+}
+```
+
+**How It Works:**
+
+1. **State shape:** A single `bool` field in your application struct determines whether the checkbox is checked.
+
+2. **View function:** The checkbox draws itself using `draw()` with a custom `Painter` closure:
+   - Fills a 15×15px square with `Tone::Accent` (filled color) if checked, or `Tone::Sunken` (background color) if unchecked
+   - Strokes a 1px border in `Tone::Border` to show edges
+   - Uses rounded corners (`Radius::Units(4.0)`) for a polished look
+   - Places a text label beside the box using `row()`
+   - Aligns the text vertically with the box using `Align::Center`
+
+3. **Handler:** The `.on_click()` handler calls the `toggle` closure with mutable state as an argument. The handler is not a closure capturing references; it receives `&mut S` directly, eliminating the need for `Rc<RefCell<>>`.
+
+4. **Click target:** The entire row (box + label) is clickable, so users can click either the box or the label text to toggle the state.
+
+**Verification Gates:**
+
+**Phase 1: Basic Toggle**
+
+Test: `a_checkbox_answers_a_click_on_its_label_as_well_as_on_its_box` (lines 145–164)
+
+```bash
+cargo test --test recipes -- checkbox -- --nocapture
+```
+
+This test verifies:
+- Initial state is unchecked (`settings.notify` is `false`)
+- Clicking the label toggles the state to `true`
+- Clicking again toggles it back to `false` (it's a toggle, not a latch)
+
+Verification:
+```rust
+#[test]
+fn a_checkbox_answers_a_click_on_its_label_as_well_as_on_its_box() {
+    let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
+        col(checkbox(
+            "Notify on failure",
+            settings.notify,
+            |settings: &mut Settings| settings.notify = !settings.notify,
+        ))
+        .align(Align::Start)
+    });
+
+    harness.click_text("Notify on failure");
+    assert!(
+        harness.state().notify,
+        "clicking the word is clicking the control"
+    );
+
+    harness.click_text("Notify on failure");
+    assert!(!harness.state().notify, "and it is a toggle, not a latch");
+}
+```
+
+**Phase 2: Visual Distinction**
+
+Test: `a_checkbox_draws_differently_once_it_is_ticked` (lines 166–190)
+
+```bash
+cargo test --test recipes -- checkbox_draws -- --nocapture
+```
+
+This test verifies:
+- The unchecked checkbox renders to pixels (verified by frame capture)
+- The checked checkbox renders different pixels than the unchecked version
+- Visual state is observable (not just internal state that nobody can see)
+
+Verification:
+```rust
+#[test]
+fn a_checkbox_draws_differently_once_it_is_ticked() {
+    let mut off = Harness::new(Settings::default(), |settings: &Settings| {
+        col(checkbox("Notify", settings.notify, |_: &mut Settings| {}))
+            .align(Align::Start)
+    })
+    .size(200.0, 60.0);
+    let mut on = Harness::new(
+        Settings {
+            notify: true,
+            ..Settings::default()
+        },
+        |settings: &Settings| {
+            col(checkbox("Notify", settings.notify, |_: &mut Settings| {}))
+                .align(Align::Start)
+        },
+    )
+    .size(200.0, 60.0);
+
+    off.frame();
+    on.frame();
+    assert_ne!(
+        off.canvas().pixels(),
+        on.canvas().pixels(),
+        "a state nobody can see is not a state"
+    );
+}
+```
+
+**Full Verification Run:**
+
+```bash
+cargo test --test recipes -- checkbox
+```
+
+Both tests pass, confirming:
+1. Click handling works; state toggles correctly
+2. Visual feedback is present; checked and unchecked boxes render differently
+3. The handler is called with mutable state and can modify application data
+4. The control integrates with the testing harness (no window needed)
+
+**Key Insights:**
+
+- **Binary state is the pattern's foundation.** Checkboxes are the simplest example of "state → view → handler". A single `bool` determines appearance.
+- **Handlers receive mutable state.** The handler is `|settings: &mut Settings| settings.notify = !settings.notify`, not a closure that captures `notify` by reference.
+- **Visual feedback proves correctness.** The pixel comparison test ensures the checkbox is not just toggling an invisible flag; the UI actually reflects the state.
+- **Click target is intentionally wide.** Users can click the box or the label; both trigger the same handler. This is why the handler is `.on_click()` on the row, not just the box.
+
+**How to Extend:**
+
+To build on this pattern:
+1. **Checkbox group:** Manage multiple booleans in a `Vec<bool>` instead of a single bool. See `a_checkbox_group_manages_multiple_selections` (lines 580–673 in `tests/recipes.rs`) for a worked example.
+2. **Indeterminate state:** Add a third state (`None` for unchecked, `Some(bool)` for determined). Render differently when the state is indeterminate.
+3. **Disable state:** Pass a `bool disabled` parameter; skip the handler if disabled and render with `Tone::Muted` instead of `Tone::Accent`.
+
+**Cross-Module Coordination:**
+
+- **`draw()`:** Accepts a size and a `Painter` closure. The painter has access to colors via `painter.color(tone)`, which respects light/dark theme.
+- **`row()`:** Lays elements horizontally with optional gap and alignment.
+- **`.on_click()`:** Wires a handler that runs after the frame is drawn. State mutations in the handler are applied before the next frame, so the UI updates immediately.
+- **`Harness`:** The testing framework allows simulating clicks without a window. `harness.click_text()` finds and clicks an element by its text; `harness.frame()` redraws the app.
+
+**Testing Strategy:**
+
+The checkbox tests use the pattern:
+1. Create a `Harness` with initial state
+2. Call `harness.click_text()` or `harness.click()` to simulate user input
+3. Assert the state changed as expected
+4. Optionally call `harness.frame()` and compare pixels to verify visual feedback
+
+This pattern applies to all interactive controls: define state, build a view, write handlers, test with `Harness`.
+
 ## Workflow Notes
 
 - **Unsafe code:** Confined to `shell/platform/*.rs` (one file per OS). Everything above that—elements, layout, rendering, fonts—is safe Rust.
