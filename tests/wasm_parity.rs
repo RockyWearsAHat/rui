@@ -406,8 +406,17 @@ fn parity_frames_can_be_serialized_for_browser() {
 
 #[test]
 fn parity_frames_can_write_to_browser_directory() {
-    let temp_dir = std::env::temp_dir().join("rui_parity_test");
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let temp_dir = std::env::temp_dir().join(format!("rui_parity_test_{}", timestamp));
     let dir_str = temp_dir.to_string_lossy().to_string();
+
+    // Ensure directory exists
+    std::fs::create_dir_all(&temp_dir).expect("should create temporary directory");
 
     // Write frames to temporary directory
     write_parity_frames_to_directory(&dir_str).expect("should write parity frames to directory");
@@ -439,11 +448,17 @@ fn parity_frames_can_write_to_browser_directory() {
 
 #[test]
 fn programmatic_frames_match_example_output() {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     // Generate frames using the parity example (reference implementation)
-    let example_dir = std::env::temp_dir().join("rui_parity_example_verify");
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let example_dir = std::env::temp_dir().join(format!("rui_parity_example_verify_{}", timestamp));
     let example_dir_str = example_dir.to_string_lossy().to_string();
 
-    // Clean up any prior run
+    // Clean up any prior run (shouldn't exist, but be safe)
     let _ = std::fs::remove_dir_all(&example_dir);
 
     // Create directory for example output
