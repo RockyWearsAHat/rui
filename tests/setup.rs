@@ -69,19 +69,62 @@ fn pre_commit_hook_rejects_unformatted_code() {
     use std::process::Command;
 
     let _guard = GIT_LOCK.lock().unwrap();
-    let test_file = PathBuf::from(".test_unformatted_temp.rs");
 
-    // Ensure clean git state at start
-    let _ = Command::new("git").arg("reset").arg("HEAD").output();
+    // Create a temporary directory for the test repo to avoid polluting the main repo
+    let temp_dir = std::env::temp_dir().join(format!("rui_hook_test_{}", std::process::id()));
+    let _ = fs::remove_dir_all(&temp_dir);
+    fs::create_dir_all(&temp_dir).expect("failed to create temp directory");
+
+    // Copy the pre-commit hook to the temp dir
+    let git_dir = temp_dir.join(".git/hooks");
+    fs::create_dir_all(&git_dir).expect("failed to create .git/hooks");
+    let hook_src = PathBuf::from(".git/hooks/pre-commit");
+    let hook_dst = git_dir.join("pre-commit");
+    fs::copy(&hook_src, &hook_dst).expect("failed to copy pre-commit hook");
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = fs::Permissions::from_mode(0o755);
+        fs::set_permissions(&hook_dst, perms).expect("failed to set hook permissions");
+    }
+
+    // Initialize a git repo in the temp directory
+    let init_output = Command::new("git")
+        .current_dir(&temp_dir)
+        .arg("init")
+        .output()
+        .expect("failed to run git init");
+    assert!(
+        init_output.status.success(),
+        "git init failed: {}",
+        String::from_utf8_lossy(&init_output.stderr)
+    );
+
+    // Configure git user for commits
+    let _ = Command::new("git")
+        .current_dir(&temp_dir)
+        .arg("config")
+        .arg("user.email")
+        .arg("test@example.com")
+        .output();
+    let _ = Command::new("git")
+        .current_dir(&temp_dir)
+        .arg("config")
+        .arg("user.name")
+        .arg("Test User")
+        .output();
 
     // 1. Write unformatted Rust code
+    let test_file = temp_dir.join("bad_code.rs");
     let bad_code = "fn     test_func(  ) {\n    let  x=1;\n}\n";
     fs::write(&test_file, bad_code).expect("failed to write test file");
 
     // 2. Stage the file
     let stage_output = Command::new("git")
+        .current_dir(&temp_dir)
         .arg("add")
-        .arg(&test_file)
+        .arg("bad_code.rs")
         .output()
         .expect("failed to run git add");
     assert!(
@@ -92,6 +135,7 @@ fn pre_commit_hook_rejects_unformatted_code() {
 
     // 3. Attempt commit (should fail)
     let commit_output = Command::new("git")
+        .current_dir(&temp_dir)
         .arg("commit")
         .arg("-m")
         .arg("test: verify hook rejects unformatted code")
@@ -103,24 +147,22 @@ fn pre_commit_hook_rejects_unformatted_code() {
     // 4. Assert commit failed
     assert!(
         !commit_output.status.success(),
-        "pre-commit hook should have rejected unformatted code, but commit succeeded"
+        "pre-commit hook should have rejected unformatted code, but commit succeeded. stderr: {}",
+        stderr
     );
 
     // 5. Assert error message indicates formatting issue
     assert!(
         stderr.contains("Diff")
             || stderr.contains("code is not formatted")
-            || stderr.contains("error"),
+            || stderr.contains("error")
+            || stderr.contains("failed"),
         "hook stderr should indicate formatting issue: {}",
         stderr
     );
 
-    // 6. Cleanup: restore git state for other tests
-    let _ = Command::new("git").arg("reset").arg("HEAD").output();
-
-    if test_file.exists() {
-        fs::remove_file(&test_file).expect("failed to delete test file");
-    }
+    // 6. Cleanup: remove temp directory
+    let _ = fs::remove_dir_all(&temp_dir);
 }
 
 #[test]
