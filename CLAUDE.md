@@ -755,6 +755,110 @@ col((
 
 Done. The widget is ready to use anywhere state is a Rust struct with a `rating` field.
 
+#### Common Patterns & Gotchas
+
+**Pattern: Reusable component with a callback**
+
+Widgets often need to accept a callback that describes what to do when the user interacts. The pattern is:
+```rust
+pub fn my_widget<S: 'static>(
+    value: SomeType,
+    on_change: impl Fn(&mut S, NewValue) + Copy + 'static,
+) -> El<S> {
+    // ... widget here, calling on_change in handlers ...
+}
+```
+
+The key: `on_change` is `Copy + 'static`, not `Box<dyn Fn>`. This allows the handler to be copied into multiple closures without heap allocation. Callers pass a simple function or lambda: `|app, val| app.field = val`.
+
+**Gotcha: Handler capturing `Self` vs. State**
+
+Wrong:
+```rust
+.on_click(|self: &mut Self| { /* ... */ })  // Doesn't compile; closures can't take Self
+```
+
+Right:
+```rust
+.on_click(|app: &mut App| { /* ... */ })     // Take the state type directly
+```
+
+The handler receives the application state (`&mut S`), not a self reference. This is by design—it forces you to be explicit about what you're mutating.
+
+**Gotcha: Identity across frame rebuilds**
+
+If your widget renders a list and that list can reorder, use `.key()`:
+```rust
+for (id, item) in items.iter().enumerate() {
+    button(item.label)
+        .key(format!("item-{}-{}", item.id, id))  // Preserve state even if list reorders
+        .on_click(move |app: &mut App| app.select(item.id))
+}
+```
+
+Without `.key()`, if two items swap positions, their hover/focus state swaps too. The `.key()` function tells the rendering engine "this element's identity is stable across frames."
+
+**Pattern: Animated widgets**
+
+To animate a value over time, store progress in state and update it each frame:
+```rust
+struct App {
+    progress: f32,  // 0.0 to 1.0
+    animating: bool,
+}
+
+fn view(app: &App) -> El<App> {
+    col((
+        text(format!("{}%", (app.progress * 100.0) as u32)),
+        meter(app.progress, Tone::Accent),
+    ))
+    .on_frame(|app: &mut App, elapsed| {
+        if app.animating {
+            app.progress = (app.progress + elapsed.as_secs_f32() * 0.5).min(1.0);
+            if app.progress >= 1.0 {
+                app.animating = false;
+            }
+        }
+    })
+}
+```
+
+The `.on_frame()` handler is called once per animation frame, receiving the elapsed time since the last frame. Use this to smoothly update progress or any other animated property.
+
+**Pattern: Themed colors for better light/dark support**
+
+Always use semantic `Tone` values, not raw RGB:
+```rust
+// Good: respects light/dark theme
+painter.fill(rect, Radius::Pill, painter.color(Tone::Accent));
+
+// Bad: ignores theme
+painter.fill(rect, Radius::Pill, Color::rgb(0xFF, 0x00, 0x00));  // Always red, even in dark mode
+```
+
+The `Tone` enum has semantic names: `Surface`, `Muted`, `Accent`, `Warn`, `Ok`, `Bad`. The actual RGB values are looked up from the current theme at render time. A widget built with tones looks good in both light and dark modes without any changes.
+
+**Verification: Test all state combinations**
+
+For a choice widget with 3 options, your test should verify all 3 states:
+```rust
+#[test]
+fn segmented_renders_all_options() {
+    let mut harness = Harness::new(App { selected: 0 }, view);
+    assert!(harness.frame().shows("First"));   // selected = 0
+    
+    harness.state_mut().selected = 1;
+    harness.frame();
+    assert!(harness.frame().shows("Second"));  // selected = 1
+    
+    harness.state_mut().selected = 2;
+    harness.frame();
+    assert!(harness.frame().shows("Third"));   // selected = 2
+}
+```
+
+Test state changes, test edge cases (0%, 100% for progress), and test in both light and dark modes (call `harness.frame().set_appearance(Appearance::Dark)` to toggle).
+
 ## Workflow Notes
 
 - **Unsafe code:** Confined to `shell/platform/*.rs` (one file per OS). Everything above that—elements, layout, rendering, fonts—is safe Rust.
