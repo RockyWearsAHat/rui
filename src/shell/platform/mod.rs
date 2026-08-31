@@ -18,7 +18,17 @@ mod backend;
 #[allow(unsafe_code, reason = "the Win32 window and bitmap calls are C")]
 mod backend;
 
-#[cfg(all(unix, not(target_os = "macos"), not(target_arch = "wasm32")))]
+#[cfg(all(target_os = "linux", not(target_arch = "wasm32"), feature = "wayland"))]
+#[path = "wayland.rs"]
+#[allow(unsafe_code, reason = "Wayland protocol is C")]
+mod backend;
+
+#[cfg(all(
+    unix,
+    not(target_os = "macos"),
+    not(target_arch = "wasm32"),
+    not(feature = "wayland")
+))]
 #[path = "x11.rs"]
 #[allow(unsafe_code, reason = "Xlib is C")]
 mod backend;
