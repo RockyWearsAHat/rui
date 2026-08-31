@@ -3007,3 +3007,41 @@ fn appearance_toggle_preserves_layout_geometry() {
         );
     }
 }
+
+/// Verify appearance can be toggled on the same harness without rebuild.
+/// This tests "without restart or special handling" requirement: state and memory persist.
+#[test]
+fn appearance_toggle_on_same_harness_without_restart() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+
+    // Capture pixel in light mode
+    let light_pixel = harness.pixel(0, 0);
+
+    // Toggle appearance on the same harness instance (mutable method, no rebuild)
+    harness.set_appearance(Appearance::Dark);
+    harness.frame();
+
+    // Capture pixel in dark mode
+    let dark_pixel = harness.pixel(0, 0);
+
+    // Pixels should differ, proving appearance was applied immediately without restart
+    assert_ne!(
+        light_pixel, dark_pixel,
+        "mutable set_appearance should apply immediately on next frame"
+    );
+
+    // Toggle back to light on same harness
+    harness.set_appearance(Appearance::Light);
+    harness.frame();
+
+    let light_pixel_again = harness.pixel(0, 0);
+
+    // Should match the original light mode rendering
+    assert_eq!(
+        light_pixel, light_pixel_again,
+        "toggling back to light should restore original colors on same harness"
+    );
+}
