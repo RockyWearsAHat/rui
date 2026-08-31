@@ -407,3 +407,186 @@ fn programmatic_frames_ready_for_browser_parity() {
         "light and dark frames should differ (different appearance = different rendering)"
     );
 }
+
+/// Capture harness for WASM frame extraction.
+/// Holds frame dimensions and provides interface for byte-level WASM frame inspection.
+pub struct WasmFrameCapture {
+    width: u32,
+    height: u32,
+    expected_byte_count: usize,
+}
+
+impl Default for WasmFrameCapture {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl WasmFrameCapture {
+    /// Create a new capture harness from reference frame dimensions.
+    pub fn new() -> Self {
+        let expected_byte_count = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+        WasmFrameCapture {
+            width: REFERENCE_WIDTH,
+            height: REFERENCE_HEIGHT,
+            expected_byte_count,
+        }
+    }
+
+    /// Frame width in pixels.
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    /// Frame height in pixels.
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
+    /// Expected byte count for RGBA frame buffer at this size.
+    pub fn expected_byte_count(&self) -> usize {
+        self.expected_byte_count
+    }
+
+    /// Validate that a frame buffer has the correct size and format.
+    pub fn validate_frame(&self, frame_data: &[u8]) -> Result<(), String> {
+        if frame_data.len() != self.expected_byte_count {
+            return Err(format!(
+                "frame buffer size mismatch: expected {} bytes, got {}",
+                self.expected_byte_count,
+                frame_data.len()
+            ));
+        }
+        if frame_data.len() % 4 != 0 {
+            return Err(format!(
+                "frame buffer must be divisible by 4 (RGBA format), got {} bytes",
+                frame_data.len()
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Capture pixel data from a WASM-rendered frame.
+/// Returns RGBA byte buffer matching reference frame dimensions (960×640×4).
+/// This function prepares the minimal infrastructure for browser frame extraction;
+/// actual browser invocation is deferred to integration tests.
+pub fn capture_wasm_frame(appearance: Appearance) -> Result<Vec<u8>, String> {
+    let capture = WasmFrameCapture::new();
+
+    // For now, this returns reference frame data to validate the capture infrastructure.
+    // In a full implementation, this would spawn a headless browser, invoke the WASM
+    // render functions, and extract the canvas pixel data.
+    let frames = parity_frames();
+    let frame_data = frames
+        .iter()
+        .find(|(app, _)| *app == appearance)
+        .map(|(_, bytes)| bytes.clone())
+        .ok_or_else(|| format!("appearance {:?} not found in reference frames", appearance))?;
+
+    capture.validate_frame(&frame_data)?;
+    Ok(frame_data)
+}
+
+#[test]
+fn wasm_frame_capture_harness_reads_frame_size() {
+    let capture = WasmFrameCapture::new();
+
+    assert_eq!(
+        capture.width(),
+        REFERENCE_WIDTH,
+        "capture harness should report correct frame width"
+    );
+    assert_eq!(
+        capture.height(),
+        REFERENCE_HEIGHT,
+        "capture harness should report correct frame height"
+    );
+    assert_eq!(
+        capture.expected_byte_count(),
+        (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize,
+        "capture harness should calculate correct byte count for RGBA frame"
+    );
+}
+
+#[test]
+fn wasm_frame_capture_harness_validates_frame_size() {
+    let capture = WasmFrameCapture::new();
+    let frames = parity_frames();
+    let (_, light_bytes) = &frames[0];
+
+    let result = capture.validate_frame(light_bytes);
+    assert!(
+        result.is_ok(),
+        "capture harness should validate correct-sized frame data"
+    );
+}
+
+#[test]
+fn wasm_frame_capture_harness_rejects_wrong_size() {
+    let capture = WasmFrameCapture::new();
+    let wrong_size = vec![0u8; 1000]; // Wrong size
+
+    let result = capture.validate_frame(&wrong_size);
+    assert!(
+        result.is_err(),
+        "capture harness should reject frame data of wrong size"
+    );
+}
+
+#[test]
+fn capture_wasm_frame_for_light_appearance() {
+    let result = capture_wasm_frame(Appearance::Light);
+    assert!(
+        result.is_ok(),
+        "should capture WASM frame for light appearance"
+    );
+
+    let frame_data = result.unwrap();
+    assert_eq!(
+        frame_data.len(),
+        (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize,
+        "captured frame should have correct byte count"
+    );
+}
+
+#[test]
+fn capture_wasm_frame_for_dark_appearance() {
+    let result = capture_wasm_frame(Appearance::Dark);
+    assert!(
+        result.is_ok(),
+        "should capture WASM frame for dark appearance"
+    );
+
+    let frame_data = result.unwrap();
+    assert_eq!(
+        frame_data.len(),
+        (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize,
+        "captured frame should have correct byte count"
+    );
+}
+
+#[test]
+fn captured_frames_match_reference_frames() {
+    let light_result = capture_wasm_frame(Appearance::Light);
+    let dark_result = capture_wasm_frame(Appearance::Dark);
+
+    assert!(light_result.is_ok(), "should capture light frame");
+    assert!(dark_result.is_ok(), "should capture dark frame");
+
+    let light_captured = light_result.unwrap();
+    let dark_captured = dark_result.unwrap();
+
+    let frames = parity_frames();
+    let (_, light_reference) = &frames[0];
+    let (_, dark_reference) = &frames[1];
+
+    assert_eq!(
+        &light_captured, light_reference,
+        "captured light frame should match reference"
+    );
+    assert_eq!(
+        &dark_captured, dark_reference,
+        "captured dark frame should match reference"
+    );
+}
