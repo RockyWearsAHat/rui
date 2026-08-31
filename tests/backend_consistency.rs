@@ -2180,15 +2180,15 @@ fn keyboard_events_independent_of_pointer() {
 fn appearance_updates_reflect_immediately() {
     use rui_native::theme::Appearance;
 
-    // Start with light mode
+    // Create harness with light appearance
     let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
     harness.frame();
 
     // Get background pixel color in light mode
     let light_pixel = harness.pixel(0, 0);
 
-    // Toggle to dark mode by reassigning the harness with new appearance
-    let mut harness = harness.appearance(Appearance::Dark);
+    // Toggle to dark mode WITHOUT rebuilding harness (using mutable setter on same instance)
+    harness.set_appearance(Appearance::Dark);
     harness.frame();
 
     // Get the same background pixel in dark mode
@@ -2197,7 +2197,18 @@ fn appearance_updates_reflect_immediately() {
     // The pixels should be different because the appearance changed
     assert_ne!(
         light_pixel, dark_pixel,
-        "appearance toggle should change rendered background colors"
+        "appearance toggle should change rendered background colors without restart"
+    );
+
+    // Verify we can toggle back on the same instance
+    harness.set_appearance(Appearance::Light);
+    harness.frame();
+    let light_pixel_restored = harness.pixel(0, 0);
+
+    // Light mode colors should be restored
+    assert_eq!(
+        light_pixel, light_pixel_restored,
+        "toggling back to light should restore original colors without restart"
     );
 }
 
