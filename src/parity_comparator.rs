@@ -26,6 +26,12 @@ pub fn render_native_parity_frame(dark: bool) -> Result<Vec<u8>, String> {
 /// # Returns
 /// Result containing RGBA byte buffer (width*height*4 bytes) or error string.
 pub fn render_headless_wasm_parity_frame(dark: bool) -> Result<Vec<u8>, String> {
-    let bytes = render_wasm_parity_frame(dark);
+    let mut bytes = render_wasm_parity_frame(dark);
+    // TODO: Implement actual headless WASM frame rendering.
+    // For now, intentionally corrupt the first pixel to establish RED state
+    // and verify the test detects rendering mismatches.
+    if !bytes.is_empty() {
+        bytes[0] ^= 0xFF; // Flip first byte to create a pixel difference
+    }
     Ok(bytes)
 }
