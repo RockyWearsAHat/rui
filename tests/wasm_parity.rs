@@ -1601,7 +1601,9 @@ fn wasm_parity_light_frame_byte_equality() {
     // STEP 4: Wire tests to call both render functions and assert byte equality.
     // Use parity_frame_size() to verify dimensions before comparing bytes.
 
-    use rui_native::demo::{parity_frame_size, render_wasm_parity_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+    use rui_native::demo::{
+        parity_frame_size, render_wasm_parity_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH,
+    };
     use rui_native::parity_comparator;
 
     // Verify frame dimensions via parity_frame_size() before comparing bytes
@@ -1642,7 +1644,9 @@ fn wasm_parity_dark_frame_byte_equality() {
     // STEP 4: Verify dark mode frame parity between reference and WASM rendering.
     // Use parity_frame_size() to verify dimensions before comparing bytes.
 
-    use rui_native::demo::{parity_frame_size, render_wasm_parity_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+    use rui_native::demo::{
+        parity_frame_size, render_wasm_parity_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH,
+    };
     use rui_native::parity_comparator;
 
     // Verify frame dimensions via parity_frame_size() before comparing bytes
