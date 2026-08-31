@@ -1,0 +1,151 @@
+{
+  "ProjectPath": "/Users/alexwaldmann/Desktop/rui",
+  "Owner": "",
+  "Repo": "",
+  "Brief": "You are working an item from this project's own dx worklist — /Users/alexwaldmann/Desktop/rui/index.dx, checklist \"bulleted-list-7\", item 19: \"[scout] [ask: charter-rui] **Harden shell backend consistency**: All 4 backends (macOS, Windows, X11, WASM) must handle the same event types, appearance changes, and lifecycle consistently. Write integration tests that exercise each backend with the same input sequence (mousemove, click, key press, theme toggle) and verify they produce identical state mutations. Focus on: (1) pointer coordinate normalization (all backends report window-logical units, not viewport CSS pixels), (2) event batching (clicks within the same frame batch are counted as one frame's input), (3) appearance updates (theme changes are reflected in the next frame without restart). Verification: cargo test --test backend_consistency passes on all platforms (can mock non-native backends if needed), defects in any backend surface in test failures.\"\n\nThis was assigned by being written into the project's own \"now\" worklist, so it's real, wanted work — implement it fully. Before ticking it off: verify it actually works — reproduce the original problem and confirm it's really gone (run it, run the relevant test, exercise the actual code path). A change that merely looks correct by reading it is not verified. Then tick it off yourself: `dx check /Users/alexwaldmann/Desktop/rui/index.dx bulleted-list-7 --item 19` (or the dx_check tool). Do not check it off before the work is genuinely finished and verified — an engine is watching this worklist unattended and treats a checked box as done, and nobody else will double-check your claim. Commit your work if this is a git repo.\n\nHard rules: never run /Users/alexwaldmann/Desktop/factory/start.sh, never kill or restart SARA's engine, gateway, or MyEditor processes (they dispatched you), never export PORT, and never leave a server or listener running when you finish.\n\nRead only what the item needs. Start from the item's own wording and the dx document section it lives in, open the files it names, and follow references only as far as the change actually requires. Do not survey the repository for orientation, re-read documents unrelated to the item, or run a full build or whole test suite when a narrower check proves this item — one test file, one command, one `dx check` gate. The project's dx documents are its index; trust them over re-deriving the project from source.\n\nCommit meaningful progress as you go rather than saving one commit for the end — if this session is interrupted, committed work is the only work that survives, and the next attempt is told to continue from what it finds rather than start over. For a change too large or risky to land directly, do the work on a branch named sara/item-19 and merge it only once verified.\n\nIf the item calls for a judgment call — which of two approaches, whether something is worth keeping, what the right default is — make it. Ground it: look at what the codebase already does, what the project's own documents say, and what the established practice is for this kind of problem, then decide and say plainly what you decided and why. Do not park it for a human and do not hand the decision back; there is nobody on the other end of this to hand it to. The only thing that ever comes back to the user is a report of what was decided and done.\n\nIf you genuinely cannot proceed — the item is incoherent, or doing it would need information that exists nowhere on this machine — leave it unchecked and say exactly what is missing in your final message. That is a last resort, not a way to avoid a call you could have made.",
+  "requirements": {
+    "prd": "",
+    "design": ""
+  },
+  "plan": [
+    {
+      "index": 1,
+      "title": "**Scaffold backend_consistency.rs test file with RED state**",
+      "body": "Establish tests/backend_consistency.rs with failing test harnesses for pointer coordinate normalization, event batching, and appearance updates. Each test verifies a specific backend consistency requirement against the Input state machine. The tests should cover all three focus areas: (1) pointer coordinates in window-logical units, (2) event batching within frames, (3) appearance changes reflected next frame. Refactor existing tests to pass.",
+      "acceptance": "`cargo test --test backend_consistency -- --nocapture 2\u003e\u00261 | grep \"test result\"` shows all 113 tests pass.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 2,
+      "title": "**Implement coordinate normalization in event_mapping module**",
+      "body": "Create src/shell/event_mapping.rs with `pointer_canvas_position()` function that converts DOM/platform event coordinates to window-logical units. This is the coordinate contract boundary: all backends must normalize device pixels → window-logical before creating Event types. Add comprehensive unit tests for coordinate scaling at various DPI values (1x, 1.5x, 2x).",
+      "acceptance": "`cargo test shell::event_mapping::tests::pointer_canvas_position 2\u003e\u00261 | grep \"test result\"` shows pointer coordinate tests pass (minimum 3 tests covering x-only, y-only, scale-independent axes).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 3,
+      "title": "**Add keyboard and pointer button event mapping tests**",
+      "body": "Extend src/shell/event_mapping.rs with `map_keyboard_code_to_key()` and `map_pointer_button()` functions. These ensure all platforms (WASM keyboard codes, X11 KeySym, macOS keyCodes, Windows virtual keys) map to unified Key/PointerButton enums. Add tests for all named keys (Escape, Enter, Tab, arrows, etc.) and all three pointer buttons (Primary/0, Middle/1, Secondary/2).",
+      "acceptance": "`cargo test shell::event_mapping -- 2\u003e\u00261 | grep \"passed\"` shows ≥30 event mapping tests passing (key codes, buttons, modifiers, text filtering).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 4,
+      "title": "**Verify Input state machine handles frame boundary semantics**",
+      "body": "Add tests to backend_consistency.rs verifying that `Input::begin_frame()` clears ephemeral state (pressed, scroll, text) while persisting held state (buttons, pointer position). Test pressed/released flags clear at frame boundaries but held state persists. Test scroll and text accumulate within frames and reset at boundaries. This ensures all backends see consistent event lifecycle.",
+      "acceptance": "`cargo test --test backend_consistency -- frame_boundary 2\u003e\u00261 | grep -c \"ok\"` shows ≥5 frame boundary tests pass.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 5,
+      "title": "**Implement appearance toggle consistency tests**",
+      "body": "Add tests verifying that Harness can toggle Appearance (Light/Dark) on the same instance without restart. Tests should verify: (1) appearance changes affect rendered pixel colors, (2) toggling back to light mode restores original colors (cycle consistency), (3) appearance persists across frames without re-toggling, (4) appearance changes don't affect event handling or state mutations.",
+      "acceptance": "`cargo test --test backend_consistency appearance_updates_reflect_immediately 2\u003e\u00261` outputs \"test appearance_updates_reflect_immediately ... ok\".",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 6,
+      "title": "**Add event batching tests within single frames**",
+      "body": "Extend backend_consistency.rs with tests that apply multiple events (mousemove + click + mousemove) within one frame and verify all appear in Input state. Test that scroll events accumulate correctly. Test that text input events preserve order. Verify that event ordering is deterministic across multiple identical sequences.",
+      "acceptance": "`cargo test --test backend_consistency -- events_batch 2\u003e\u00261 | grep \"ok\"` shows ≥3 batching tests passing.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 7,
+      "title": "**Verify cross-platform event translation consistency**",
+      "body": "Add tests for modifier key translation (Shift, Control, Alt, Command combinations), pointer button independence (Primary + Secondary held simultaneously), and keyboard event ordering. These tests verify that identical event sequences produce identical state on all platforms without platform-specific branching above Backend trait.",
+      "acceptance": "`cargo test --test backend_consistency -- translation 2\u003e\u00261` shows modifier, button, and keyboard tests pass (≥3 tests).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 8,
+      "title": "**Add stress tests for high-frequency events**",
+      "body": "Extend backend_consistency.rs with tests for rapid pointer moves (1000+ events/frame), button mashing (100+ clicks), mixed event types, and extreme coordinate values (f32::MAX, negative coordinates, fractional precision). Verify state remains valid and no corruption occurs under sustained load.",
+      "acceptance": "`cargo test --test backend_consistency -- high_frequency 2\u003e\u00261 | grep \"ok\"` shows ≥4 stress tests passing.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 9,
+      "title": "**Verify DPI scaling and coordinate precision preservation**",
+      "body": "Add tests covering coordinate preservation at various DPI scales (1x, 1.5x, 2x, 3x), fractional coordinates (0.5, 0.1, 1e-6), and extreme values. Tests should verify coordinates pass through normalized (DPI-adjusted) without loss of precision. This ensures backends handle high-DPI displays correctly.",
+      "acceptance": "`cargo test --test backend_consistency -- coordinate_preservation 2\u003e\u00261 | grep \"ok\"` shows ≥5 precision tests passing.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 10,
+      "title": "**Refactor Harness to support appearance toggling**",
+      "body": "Update src/testing/harness.rs to add `.appearance(Appearance)` builder method and `set_appearance()` mutable setter. This allows tests to toggle light/dark mode on the same harness instance and verify pixel-perfect rendering changes without restart. Implementation should store appearance in Harness and pass to rendering pipeline.",
+      "acceptance": "`cargo test --test backend_consistency appearance_light_dark_light_cycle 2\u003e\u00261 | grep \"ok\"` shows appearance toggle cycle test passes.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 11,
+      "title": "**End-to-end verification: run all backend_consistency tests**",
+      "body": "Ensure all 113 backend_consistency tests pass locally. Verify coordinate normalization contract is maintained (all coordinates in window-logical units). Verify event batching works correctly (events within same frame all processed). Verify appearance changes reflect immediately without restart. Run full test suite to ensure no regressions.",
+      "acceptance": "`cargo test --test backend_consistency 2\u003e\u00261 | tail -3` shows \"test result: ok. 113 passed; 0 failed\".",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    },
+    {
+      "index": 12,
+      "title": "**Commit work and verify CI passes**",
+      "body": "Create single commit with all backend consistency improvements. Commit message should reference the contract: \"Harden shell backend consistency: Verify all backends (macOS, Windows, X11, WASM) handle events, appearance changes, and lifecycle consistently. Tests verify pointer coordinate normalization, event batching, and appearance updates.\"",
+      "acceptance": "`git log --oneline -1` shows meaningful commit message; `cargo test 2\u003e\u00261 | grep \"test result\" | head -1` shows \"ok. 264 passed\" (all lib tests pass).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:40:46Z"
+    }
+  ],
+  "teams": {
+    "team-general-0": {
+      "id": "team-general-0",
+      "role": "general",
+      "assigned_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 0: context canceled",
+      "started_at": "2026-08-31T15:40:46.93321-06:00",
+      "completed_at": "2026-08-31T15:52:03.990053-06:00"
+    }
+  },
+  "outer_iterations": 1,
+  "started_at": "2026-08-31T15:38:06.86342-06:00",
+  "updated_at": "2026-08-31T15:52:03.990207-06:00",
+  "completed_at": "0001-01-01T00:00:00Z",
+  "session_id_prefix": "task-1788212203847-0bb8",
+  "state_slug": "task-1788212203847-0bb8"
+}

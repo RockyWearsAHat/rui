@@ -1,0 +1,170 @@
+{
+  "ProjectPath": "/Users/alexwaldmann/Desktop/rui",
+  "Owner": "",
+  "Repo": "",
+  "Brief": "You are working an item from this project's own dx worklist — /Users/alexwaldmann/Desktop/rui/index.dx, checklist \"bulleted-list-7\", item 20: \"Document Recipe 2: X11 Backend — Reverse-engineer the commits that implemented the X11 backend from git history, document them in CLAUDE.md using the same structure as Recipe 1 (phases, file sequences, verification gates, cross-module coordination). This proves the \"Template for the Next Backend\" is correct and actionable. Verification: All referenced commits exist, all files mentioned exist, `cargo build` and `cargo test --lib` pass.\"\n\nThis was assigned by being written into the project's own \"now\" worklist, so it's real, wanted work — implement it fully. Before ticking it off: verify it actually works — reproduce the original problem and confirm it's really gone (run it, run the relevant test, exercise the actual code path). A change that merely looks correct by reading it is not verified. Then tick it off yourself: `dx check /Users/alexwaldmann/Desktop/rui/index.dx bulleted-list-7 --item 20` (or the dx_check tool). Do not check it off before the work is genuinely finished and verified — an engine is watching this worklist unattended and treats a checked box as done, and nobody else will double-check your claim. Commit your work if this is a git repo.\n\nHard rules: never run /Users/alexwaldmann/Desktop/factory/start.sh, never kill or restart SARA's engine, gateway, or MyEditor processes (they dispatched you), never export PORT, and never leave a server or listener running when you finish.\n\nRead only what the item needs. Start from the item's own wording and the dx document section it lives in, open the files it names, and follow references only as far as the change actually requires. Do not survey the repository for orientation, re-read documents unrelated to the item, or run a full build or whole test suite when a narrower check proves this item — one test file, one command, one `dx check` gate. The project's dx documents are its index; trust them over re-deriving the project from source.\n\nCommit meaningful progress as you go rather than saving one commit for the end — if this session is interrupted, committed work is the only work that survives, and the next attempt is told to continue from what it finds rather than start over. For a change too large or risky to land directly, do the work on a branch named sara/item-20 and merge it only once verified.\n\nIf the item calls for a judgment call — which of two approaches, whether something is worth keeping, what the right default is — make it. Ground it: look at what the codebase already does, what the project's own documents say, and what the established practice is for this kind of problem, then decide and say plainly what you decided and why. Do not park it for a human and do not hand the decision back; there is nobody on the other end of this to hand it to. The only thing that ever comes back to the user is a report of what was decided and done.\n\nIf you genuinely cannot proceed — the item is incoherent, or doing it would need information that exists nowhere on this machine — leave it unchecked and say exactly what is missing in your final message. That is a last resort, not a way to avoid a call you could have made.",
+  "requirements": {
+    "prd": "",
+    "design": ""
+  },
+  "plan": [
+    {
+      "index": 1,
+      "title": "**Verify Recipe 2 structure in CLAUDE.md matches Recipe 1 template**",
+      "body": "Recipe 1 has Phases (with Commits, Files touched, Why), Verification gates, Cross-module Concerns, and Template sections. Read CLAUDE.md Recipe 2; confirm it has identical sections with recipe-specific content (X11 instead of WASM).",
+      "acceptance": "`grep -A 3 \"^### Recipe 2\" /Users/alexwaldmann/Desktop/rui/CLAUDE.md | head -5` shows \"Phase 1\", \"Phase 2\", \"Phase 3\" subheadings.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T16:13:04-06:00"
+    },
+    {
+      "index": 2,
+      "title": "**Extract all commit hashes from Recipe 2 documentation**",
+      "body": "Parse Recipe 2 text for commit references (e.g., \"Commit a67d578\", \"Commits 80e3003 through 84ade0e\"). Build a list of all unique hashes to verify.",
+      "acceptance": "`grep -oE '[a-f0-9]{7}' /Users/alexwaldmann/Desktop/rui/CLAUDE.md | sort | uniq | wc -l` returns 10+.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T16:33:46-06:00"
+    },
+    {
+      "index": 3,
+      "title": "**Verify Phase 1 Foundation commit exists in git**",
+      "body": "Extract first commit hash from Recipe 2 Phase 1 (e.g., a67d578), confirm it's in git log.",
+      "acceptance": "`cd /Users/alexwaldmann/Desktop/rui \u0026\u0026 git log --oneline | grep -c a67d578` returns 1.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T16:38:08-06:00"
+    },
+    {
+      "index": 4,
+      "title": "**Verify Phase 2 Enhancement commit exists in git**",
+      "body": "Extract Phase 2 commit (e.g., c42c0f0), confirm in git log.",
+      "acceptance": "`cd /Users/alexwaldmann/Desktop/rui \u0026\u0026 git log --oneline | grep c42c0f0` returns 1 match.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:55:35Z"
+    },
+    {
+      "index": 5,
+      "title": "**Verify Phase 3 Integration commit range exists in git**",
+      "body": "Extract commit range for Phase 3 (e.g., 80e3003..84ade0e), confirm 8+ commits in that range.",
+      "acceptance": "`cd /Users/alexwaldmann/Desktop/rui \u0026\u0026 git log --oneline 80e3003..84ade0e 2\u003e/dev/null | wc -l` returns 8+.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:55:35Z"
+    },
+    {
+      "index": 6,
+      "title": "**Verify x11.rs backend implementation file exists**",
+      "body": "Check `src/shell/platform/x11.rs` file is present and non-empty.",
+      "acceptance": "`test -s /Users/alexwaldmann/Desktop/rui/src/shell/platform/x11.rs \u0026\u0026 echo ok` outputs \"ok\".",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:55:35Z"
+    },
+    {
+      "index": 7,
+      "title": "**Verify x11 integration test file exists**",
+      "body": "Check `tests/x11_parity.rs` and `tests/x11_integration.rs` (or equivalent named files) are present.",
+      "acceptance": "`test -f /Users/alexwaldmann/Desktop/rui/tests/x11_parity.rs \u0026\u0026 echo ok` outputs \"ok\".",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:55:35Z"
+    },
+    {
+      "index": 8,
+      "title": "**Spot-check Phase 1 documentation matches actual commit diff**",
+      "body": "Read Phase 1 docs \"Files touched\" list. Run `git show a67d578 --name-only` and verify listed files appear in actual commit.",
+      "acceptance": "`cd /Users/alexwaldmann/Desktop/rui \u0026\u0026 git show a67d578 --name-only 2\u003e/dev/null | grep -c x11.rs` returns 1.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:55:35Z"
+    },
+    {
+      "index": 9,
+      "title": "**Verify cross-module coordination section explains Backend trait usage**",
+      "body": "Read Recipe 2 \"Cross-Module Concerns\" section; confirm it documents why coordinate contract (DPI scaling, event translation) matters and how x11.rs integrates into mod.rs.",
+      "acceptance": "`grep -A 20 \"### Cross-Module Concerns\" /Users/alexwaldmann/Desktop/rui/CLAUDE.md | grep -q \"coordinate contract\"` returns 0 (match found).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:55:35Z"
+    },
+    {
+      "index": 10,
+      "title": "**Verify Template for Adding X11 section provides 6+ actionable steps**",
+      "body": "Read \"Template for Adding X11 or Similar Backends\" section. Confirm it lists numbered steps for adding a new platform backend.",
+      "acceptance": "`grep -A 30 \"Template for Adding X11\" /Users/alexwaldmann/Desktop/rui/CLAUDE.md | grep -E \"^[0-9]\\.\" | wc -l` returns 6+.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:55:35Z"
+    },
+    {
+      "index": 11,
+      "title": "**Build native target to confirm x11.rs compiles**",
+      "body": "Run `cargo build` in rui root directory; confirm exit code 0 and no errors about x11.",
+      "acceptance": "`cd /Users/alexwaldmann/Desktop/rui \u0026\u0026 cargo build 2\u003e\u00261 | tail -1` returns \"Finished\" or \"Compiling\".",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T21:55:35Z"
+    },
+    {
+      "index": 12,
+      "title": "**Run library tests to confirm Recipe 2 verification gates pass**",
+      "body": "Run `cargo test --lib` to verify the unit tests and examples tied to Recipe 2 (e.g., x11 platform tests) pass.",
+      "acceptance": "`cd /Users/alexwaldmann/Desktop/rui \u0026\u0026 cargo test --lib 2\u003e\u00261 | grep \"test result:\"` shows \"ok\".",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T16:06:21-06:00"
+    }
+  ],
+  "teams": {
+    "team-frontend-1": {
+      "id": "team-frontend-1",
+      "role": "frontend",
+      "assigned_steps": [
+        10
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-31T15:55:35.560045-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    },
+    "team-general-0": {
+      "id": "team-general-0",
+      "role": "general",
+      "assigned_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-31T15:55:35.551851-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    },
+    "team-general-2": {
+      "id": "team-general-2",
+      "role": "general",
+      "assigned_steps": [
+        11
+      ],
+      "status": "done",
+      "depends_on": null,
+      "started_at": "2026-08-31T15:55:35.574124-06:00",
+      "completed_at": "2026-08-31T16:06:21.660605-06:00"
+    }
+  },
+  "outer_iterations": 1,
+  "started_at": "2026-08-31T15:54:55.35965-06:00",
+  "updated_at": "2026-08-31T16:38:08.491952-06:00",
+  "completed_at": "0001-01-01T00:00:00Z",
+  "session_id_prefix": "task-1788213295335-bd00",
+  "state_slug": "task-1788213295335-bd00"
+}

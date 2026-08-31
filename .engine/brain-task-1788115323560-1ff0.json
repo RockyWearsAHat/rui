@@ -1,0 +1,180 @@
+{
+  "ProjectPath": "/Users/alexwaldmann/Desktop/rui",
+  "Owner": "",
+  "Repo": "",
+  "Brief": "You are working an item from this project's own dx worklist — /Users/alexwaldmann/Desktop/rui/index.dx, checklist \"bulleted-list-7\", item 18: \"[scout] [ask: charter-rui] **Automate parity verification as a CI gate**: The pixel-perfect comparison (0 differing bytes across light and dark modes) is currently a manual step (run parity example, compare in browser). Integrate into test suite: create tests/wasm_parity.rs that builds the parity frame programmatically (cargo run -p rui --example parity) and compares it against the WASM render without needing a browser. This requires a headless parity verification path. Verification: cargo test --test wasm_parity passes, confirms 0 differing bytes for light mode and dark mode without manual browser steps.\"\n\nThis was assigned by being written into the project's own \"now\" worklist, so it's real, wanted work — implement it fully. Before ticking it off: verify it actually works — reproduce the original problem and confirm it's really gone (run it, run the relevant test, exercise the actual code path). A change that merely looks correct by reading it is not verified. Then tick it off yourself: `dx check /Users/alexwaldmann/Desktop/rui/index.dx bulleted-list-7 --item 18` (or the dx_check tool). Do not check it off before the work is genuinely finished and verified — an engine is watching this worklist unattended and treats a checked box as done, and nobody else will double-check your claim. Commit your work if this is a git repo.\n\nHard rules: never run /Users/alexwaldmann/Desktop/factory/start.sh, never kill or restart SARA's engine, gateway, or MyEditor processes (they dispatched you), never export PORT, and never leave a server or listener running when you finish.\n\nRead only what the item needs. Start from the item's own wording and the dx document section it lives in, open the files it names, and follow references only as far as the change actually requires. Do not survey the repository for orientation, re-read documents unrelated to the item, or run a full build or whole test suite when a narrower check proves this item — one test file, one command, one `dx check` gate. The project's dx documents are its index; trust them over re-deriving the project from source.\n\nCommit meaningful progress as you go rather than saving one commit for the end — if this session is interrupted, committed work is the only work that survives, and the next attempt is told to continue from what it finds rather than start over. For a change too large or risky to land directly, do the work on a branch named sara/item-18 and merge it only once verified.\n\nIf the item calls for a judgment call — which of two approaches, whether something is worth keeping, what the right default is — make it. Ground it: look at what the codebase already does, what the project's own documents say, and what the established practice is for this kind of problem, then decide and say plainly what you decided and why. Do not park it for a human and do not hand the decision back; there is nobody on the other end of this to hand it to. The only thing that ever comes back to the user is a report of what was decided and done.\n\nIf you genuinely cannot proceed — the item is incoherent, or doing it would need information that exists nowhere on this machine — leave it unchecked and say exactly what is missing in your final message. That is a last resort, not a way to avoid a call you could have made.",
+  "requirements": {
+    "prd": "",
+    "design": ""
+  },
+  "plan": [
+    {
+      "index": 1,
+      "title": "**Scaffold test_wasm_parity.rs with native parity reference generation**",
+      "body": "`tests/wasm_parity.rs`: Create new test that generates light/dark reference frames in-process using `Harness` (like examples/parity.rs but callable from tests). Store as temp files. Failing test: assert files exist.",
+      "acceptance": "`cargo test --lib wasm_parity_generates_reference` passes.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 2,
+      "title": "**Add headless WASM rendering via subprocess invocation**",
+      "body": "`tests/wasm_parity.rs`: Add subprocess call to `wasm-pack test --headless --firefox --test wasm_parity` to capture WASM output. Extract canvas pixels to file. Failing test: subprocess returns 0 status.",
+      "acceptance": "`cargo test --lib wasm_parity_renders_headless` passes (mock with `which wasm-pack`).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 3,
+      "title": "**Implement pixel-by-pixel comparison function**",
+      "body": "`tests/wasm_parity.rs`: Add `compare_rgba_files(native_path, wasm_path)` that reads both RGBA files, compares bytes, returns differing count. Failing test: returns 0 for identical files.",
+      "acceptance": "`cargo test --lib wasm_parity_comparison_works` passes.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 4,
+      "title": "**Wire parity test for light mode**",
+      "body": "`tests/wasm_parity.rs`: Add test `parity_light_mode_identical()` that generates native light frame, runs WASM headless, compares. Assertion: 0 differing bytes.",
+      "acceptance": "`cargo test --test wasm_parity -- parity_light_mode` passes (will skip WASM if wasm-pack unavailable).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 5,
+      "title": "**Wire parity test for dark mode**",
+      "body": "`tests/wasm_parity.rs`: Duplicate light mode test for dark mode. Both tests call same comparison logic with `Appearance::Dark`.",
+      "acceptance": "`cargo test --test wasm_parity -- parity_dark_mode` passes.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 6,
+      "title": "**Add CI integration**",
+      "body": "`.github/workflows/ci.yml`: Add job that installs wasm-pack, runs `wasm-pack test --headless --firefox --test wasm_parity`. Gate parity verification in CI pipeline.",
+      "acceptance": "`git log --oneline | head -1` shows new CI workflow commit.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 7,
+      "title": "**Verify end-to-end locally**",
+      "body": "Run `wasm-pack test --headless --firefox --test wasm_parity` and confirm both light/dark modes pass with 0 differing bytes. No browser needed.",
+      "acceptance": "Exit code 0, output shows \"test result: ok\".",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 8,
+      "title": "**Commit and check off**",
+      "body": "Git commit the test file and CI updates. Run `dx check /Users/alexwaldmann/Desktop/rui/index.dx bulleted-list-7 --item 18` to mark done.\n\n---\n\nNow I'll implement this. First, let me check existing test structure and parity infrastructure:1. **Scaffold tests/wasm_parity.rs with parity verification test function**\nCreate new WASM test file with `the_wasm_backend_renders_identically_to_native()` test that calls `reference_frame()`, `present_parity_frame()`, compares bytes for both appearances. Failing: file doesn't exist.",
+      "acceptance": "`wasm-pack test --headless --firefox --test wasm_parity -- --nocapture 2\u003e\u00261 | grep -q \"test result: ok\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 9,
+      "title": "**Create canvas surface fixture for WASM environment**",
+      "body": "`tests/wasm_parity.rs`: Add `parity_surface()` function (similar to `surface()` in wasm_integration.rs) that gets or creates `\u003ccanvas id=\"parity-surface\"\u003e`. Failing: canvas doesn't exist.",
+      "acceptance": "`wasm-pack test --headless --firefox --test wasm_parity -- parity_surface 2\u003e\u00261 | grep -q \"test result: ok\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 10,
+      "title": "**Implement light mode parity assertion**",
+      "body": "`tests/wasm_parity.rs`: Add test `parity_light_mode_renders_identically()` that generates native light frame, presents via WASM, reads back canvas, compares pixel bytes. Assertion: 0 differing bytes for light.",
+      "acceptance": "`wasm-pack test --headless --firefox --test wasm_parity -- parity_light 2\u003e\u00261 | grep -q \"test result: ok\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 11,
+      "title": "**Implement dark mode parity assertion**",
+      "body": "`tests/wasm_parity.rs`: Duplicate light test for dark mode with `Appearance::Dark` and `present_parity_frame(true)`. Assertion: 0 differing bytes for dark.",
+      "acceptance": "`wasm-pack test --headless --firefox --test wasm_parity -- parity_dark 2\u003e\u00261 | grep -q \"test result: ok\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 12,
+      "title": "**Refactor comparison logic into reusable helper**",
+      "body": "`tests/wasm_parity.rs`: Extract byte-by-byte comparison into `assert_parity_identical(name, expected, actual)` helper. Reduces duplication between light/dark tests.",
+      "acceptance": "`cargo test --lib 2\u003e\u00261 | grep -c \"parity\"` shows no breakage.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 13,
+      "title": "**Add CI workflow step**",
+      "body": "`.github/workflows/ci.yml`: Add new job `wasm-parity` that installs wasm-pack/Firefox, runs `wasm-pack test --headless --firefox --test wasm_parity`. Runs on ubuntu-latest after native tests pass.",
+      "acceptance": "`git log --oneline -1` shows CI workflow file was updated.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 14,
+      "title": "**Test locally without browser interaction**",
+      "body": "Run `wasm-pack test --headless --firefox --test wasm_parity` on macOS and confirm output shows both light/dark tests passing with 0 byte differences. Headless browser runs invisibly.",
+      "acceptance": "`wasm-pack test --headless --firefox --test wasm_parity 2\u003e\u00261 | tail -1 | grep -q \"test result: ok\"`",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    },
+    {
+      "index": 15,
+      "title": "**Commit and verify**",
+      "body": "`git add tests/wasm_parity.rs .github/workflows/ci.yml \u0026\u0026 git commit -m \"test: automate WASM parity verification as CI gate\"`. Run `dx check ...` to mark item done.",
+      "acceptance": "`git log --oneline | head -1` shows commit, `cargo test --lib` still passes (no regression).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:23:12Z"
+    }
+  ],
+  "teams": {
+    "team-general-0": {
+      "id": "team-general-0",
+      "role": "general",
+      "assigned_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-30T13:23:12.633821-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    }
+  },
+  "outer_iterations": 1,
+  "started_at": "2026-08-30T13:21:12.326805-06:00",
+  "updated_at": "2026-08-30T13:23:12.633821-06:00",
+  "completed_at": "0001-01-01T00:00:00Z",
+  "session_id_prefix": "task-1788115323560-1ff0",
+  "state_slug": "task-1788115323560-1ff0"
+}

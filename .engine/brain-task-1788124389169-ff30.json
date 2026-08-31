@@ -1,0 +1,80 @@
+{
+  "ProjectPath": "/Users/alexwaldmann/Desktop/rui",
+  "Owner": "",
+  "Repo": "",
+  "Brief": "You are working an item from this project's own dx worklist — /Users/alexwaldmann/Desktop/rui/index.dx, checklist \"bulleted-list-7\", item 17: \"[scout] [ask: charter-rui] **Document Recipe 1 (WASM Backend Implementation) in CLAUDE.md Recipes section**: The first recipe should explain how the WASM backend was added, using it as a template for adding future backends. Document: (1) the ordered sequence of files touched (src/shell/clock.rs for platform-agnostic timing, then src/shell/mod.rs loop refactor, then src/shell/platform/wasm.rs for DOM integration) and why each came first; (2) verification gates at each phase (compiled verification vs. browser testing vs. parity checks); (3) how cross-module concerns were coordinated (clock seam, Backend trait, turn() abstraction, event mapping). Keep to one recipe, ≤200 lines, with exact file paths and commit references (77d4780+). Result: readers can see that each backend adds platform/foo.rs, implements Backend trait, and generic turn() drives both. Verify: dx text index.dx --section recipes contains the recipe with no TODOs, spot-check paths against actual commits, cargo test passes.\"\n\nThis was assigned by being written into the project's own \"now\" worklist, so it's real, wanted work — implement it fully. Before ticking it off: verify it actually works — reproduce the original problem and confirm it's really gone (run it, run the relevant test, exercise the actual code path). A change that merely looks correct by reading it is not verified. Then tick it off yourself: `dx check /Users/alexwaldmann/Desktop/rui/index.dx bulleted-list-7 --item 17` (or the dx_check tool). Do not check it off before the work is genuinely finished and verified — an engine is watching this worklist unattended and treats a checked box as done, and nobody else will double-check your claim. Commit your work if this is a git repo.\n\nHard rules: never run /Users/alexwaldmann/Desktop/factory/start.sh, never kill or restart SARA's engine, gateway, or MyEditor processes (they dispatched you), never export PORT, and never leave a server or listener running when you finish.\n\nRead only what the item needs. Start from the item's own wording and the dx document section it lives in, open the files it names, and follow references only as far as the change actually requires. Do not survey the repository for orientation, re-read documents unrelated to the item, or run a full build or whole test suite when a narrower check proves this item — one test file, one command, one `dx check` gate. The project's dx documents are its index; trust them over re-deriving the project from source.\n\nCommit meaningful progress as you go rather than saving one commit for the end — if this session is interrupted, committed work is the only work that survives, and the next attempt is told to continue from what it finds rather than start over. For a change too large or risky to land directly, do the work on a branch named sara/item-17 and merge it only once verified.\n\nIf the item calls for a judgment call — which of two approaches, whether something is worth keeping, what the right default is — make it. Ground it: look at what the codebase already does, what the project's own documents say, and what the established practice is for this kind of problem, then decide and say plainly what you decided and why. Do not park it for a human and do not hand the decision back; there is nobody on the other end of this to hand it to. The only thing that ever comes back to the user is a report of what was decided and done.\n\nIf you genuinely cannot proceed — the item is incoherent, or doing it would need information that exists nowhere on this machine — leave it unchecked and say exactly what is missing in your final message. That is a last resort, not a way to avoid a call you could have made.",
+  "requirements": {
+    "prd": "",
+    "design": ""
+  },
+  "plan": [
+    {
+      "index": 1,
+      "title": "**Verify no TODO markers in Recipe 1**",
+      "body": "Search Recipe 1 section for incomplete markers (TODO, FIXME, WIP). Documentation must be finished.",
+      "acceptance": "`sed -n '/^### Recipe 1:/,/^### Recipe 2:/p' /Users/alexwaldmann/Desktop/rui/CLAUDE.md | grep -i \"TODO\\|FIXME\\|WIP\" | wc -l` returns 0.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T15:16:47-06:00"
+    },
+    {
+      "index": 2,
+      "title": "**Spot-check file paths exist in current tree**",
+      "body": "Recipe names `src/shell/clock.rs`, `src/shell/mod.rs`, `src/shell/platform/wasm.rs`. All must exist.",
+      "acceptance": "`ls src/shell/{clock.rs,mod.rs,platform/wasm.rs}` succeeds with no missing files.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T15:21:25-06:00"
+    },
+    {
+      "index": 3,
+      "title": "**Verify commit references (77d4780+) exist in git log**",
+      "body": "Recipe cites phase commits starting 77d4780 (\"Split the loop's driving from the loop's frame\"). Must exist in history.",
+      "acceptance": "`git log --oneline | grep 77d4780` returns the commit; `git show 77d4780 --stat` shows clock.rs added.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T15:35:30-06:00"
+    },
+    {
+      "index": 4,
+      "title": "**Run cargo test to confirm no regressions**",
+      "body": "Full test suite must pass; recipe changes must not break builds or tests.",
+      "acceptance": "`cargo test --lib` exits 0; `cargo test --test recipes` exits 0.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T16:05:30-06:00"
+    },
+    {
+      "index": 5,
+      "title": "**Mark item complete via dx_check**",
+      "body": "Use dx_check tool to tick off item 17 in worklist. Signals to engine that work is done and verified.",
+      "acceptance": "`dx_check /Users/alexwaldmann/Desktop/rui/index.dx bulleted-list-7 --item 17` succeeds; worklist shows [x].",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T16:14:07-06:00"
+    }
+  ],
+  "teams": {
+    "team-general-0": {
+      "id": "team-general-0",
+      "role": "general",
+      "assigned_steps": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "status": "done",
+      "depends_on": null,
+      "started_at": "2026-08-30T15:13:59.070189-06:00",
+      "completed_at": "2026-08-30T16:14:07.323961-06:00"
+    }
+  },
+  "outer_iterations": 1,
+  "started_at": "2026-08-30T15:13:09.17908-06:00",
+  "updated_at": "2026-08-30T16:14:50.747899-06:00",
+  "completed_at": "2026-08-30T16:14:50.747899-06:00",
+  "session_id_prefix": "task-1788124389169-ff30",
+  "state_slug": "task-1788124389169-ff30"
+}

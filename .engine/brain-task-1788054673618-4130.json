@@ -1,0 +1,190 @@
+{
+  "ProjectPath": "/Users/alexwaldmann/Desktop/rui",
+  "Owner": "",
+  "Repo": "",
+  "Brief": "You are working an item from this project's own dx worklist — /Users/alexwaldmann/Desktop/rui/index.dx, checklist \"bulleted-list-7\", item 15: \"[scout] [ask: charter-rui] **Merge WASM backend from sara/item-1 into main** (CRITICAL): The complete WASM implementation (clock abstraction, frame-stepping, DOM event handling, embedded fonts, pixel-perfect parity) lives on sara/item-1 and is verified with zero differing bytes in light and dark modes. Main branch still contains placeholder code (wasm.rs TODOs, examples/counter.html with JS loop, client_x/y pointer bugs). Merge sara/item-1 and clean up: remove placeholder HTML harness, export rui::wasm module from lib.rs, ensure cargo build --target wasm32-unknown-unknown -p rui --example counter succeeds, verify parity test still shows 0 differing bytes. This is the gate blocking WASM as a shipped backend. Verification: main builds both native (cargo build) and WASM (cargo build --target wasm32-unknown-unknown) with no TODO comments, wasm-pack test --headless --firefox passes all 6 tests, git log shows commits from sara/item-1.\"\n\nThis was assigned by being written into the project's own \"now\" worklist, so it's real, wanted work — implement it fully. Before ticking it off: verify it actually works — reproduce the original problem and confirm it's really gone (run it, run the relevant test, exercise the actual code path). A change that merely looks correct by reading it is not verified. Then tick it off yourself: `dx check /Users/alexwaldmann/Desktop/rui/index.dx bulleted-list-7 --item 15` (or the dx_check tool). Do not check it off before the work is genuinely finished and verified — an engine is watching this worklist unattended and treats a checked box as done, and nobody else will double-check your claim. Commit your work if this is a git repo.\n\nHard rules: never run /Users/alexwaldmann/Desktop/factory/start.sh, never kill or restart SARA's engine, gateway, or MyEditor processes (they dispatched you), never export PORT, and never leave a server or listener running when you finish.\n\nRead only what the item needs. Start from the item's own wording and the dx document section it lives in, open the files it names, and follow references only as far as the change actually requires. Do not survey the repository for orientation, re-read documents unrelated to the item, or run a full build or whole test suite when a narrower check proves this item — one test file, one command, one `dx check` gate. The project's dx documents are its index; trust them over re-deriving the project from source.\n\nCommit meaningful progress as you go rather than saving one commit for the end — if this session is interrupted, committed work is the only work that survives, and the next attempt is told to continue from what it finds rather than start over. For a change too large or risky to land directly, do the work on a branch named sara/item-15 and merge it only once verified.\n\nIf the item calls for a judgment call — which of two approaches, whether something is worth keeping, what the right default is — make it. Ground it: look at what the codebase already does, what the project's own documents say, and what the established practice is for this kind of problem, then decide and say plainly what you decided and why. Do not park it for a human and do not hand the decision back; there is nobody on the other end of this to hand it to. The only thing that ever comes back to the user is a report of what was decided and done.\n\nIf you genuinely cannot proceed — the item is incoherent, or doing it would need information that exists nowhere on this machine — leave it unchecked and say exactly what is missing in your final message. That is a last resort, not a way to avoid a call you could have made.",
+  "requirements": {
+    "prd": "",
+    "design": ""
+  },
+  "plan": [
+    {
+      "index": 1,
+      "title": "Diff sara/item-1 against main",
+      "body": "Inspect wasm.rs, lib.rs, examples/counter.html, and the parity test on both branches with `git diff main sara/item-1 -- rui/src/wasm.rs rui/src/lib.rs rui/examples/counter.html`. Confirm which files hold placeholder TODOs versus the real clock/frame-stepping/DOM-event implementation.",
+      "acceptance": "`git log main..sara/item-1 --oneline` shows the item-1 commits; `grep -n TODO rui/src/wasm.rs` on main shows hits, confirming baseline is broken.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 2,
+      "title": "Reproduce the placeholder failure on main",
+      "body": "Attempt the native and WASM builds on main as-is to record the current failure/placeholder state before merging.",
+      "acceptance": "`cargo build --target wasm32-unknown-unknown -p rui --example counter` on main either fails or succeeds against placeholder JS; `grep -n TODO rui/src/wasm.rs` count \u003e 0 recorded as the \"before\" state.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 3,
+      "title": "Create sara/item-15 branch and merge sara/item-1",
+      "body": "Branch off main, merge sara/item-1, resolve any conflicts favoring sara/item-1's wasm.rs/lib.rs implementation over main's placeholders.",
+      "acceptance": "`git checkout -b sara/item-15 main \u0026\u0026 git merge sara/item-1` completes with no unresolved conflict markers (`grep -rl '\u003c\u003c\u003c\u003c\u003c\u003c\u003c' .` empty).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 4,
+      "title": "Remove placeholder HTML harness",
+      "body": "Delete or replace `examples/counter.html`'s JS-loop placeholder with sara/item-1's real harness (pixel-perfect parity version); remove the file entirely if item-1's build no longer needs a hand-written loop.",
+      "acceptance": "`git show HEAD:rui/examples/counter.html | grep -c 'requestAnimationFrame'` matches item-1's version, not main's old JS loop (diff against sara/item-1 is empty for this file).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 5,
+      "title": "Export rui::wasm module from lib.rs",
+      "body": "Add/confirm `pub mod wasm;` (or matching cfg-gated export) in `rui/src/lib.rs` so the wasm backend is reachable as a public module.",
+      "acceptance": "`cargo doc --target wasm32-unknown-unknown -p rui --no-deps 2\u003e\u00261 | grep -i wasm` shows the module documented, or `grep -n 'pub mod wasm' rui/src/lib.rs` returns a match.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 6,
+      "title": "Fix client_x/y pointer bugs",
+      "body": "Locate the pointer-event handler in wasm.rs merged from item-1; verify client_x/client_y are read correctly (not swapped/misscaled) against DOM event fields.",
+      "acceptance": "`grep -n 'client_x\\|client_y' rui/src/wasm.rs` shows correct field usage; unit/parity test covering pointer input passes (see step 8).",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 7,
+      "title": "Native build check",
+      "body": "Run the full native build to prove the merge didn't break the non-WASM target.",
+      "acceptance": "`cargo build -p rui` exits 0.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 8,
+      "title": "WASM build check",
+      "body": "Run the WASM target build for the counter example, the item's explicit gate.",
+      "acceptance": "`cargo build --target wasm32-unknown-unknown -p rui --example counter` exits 0.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 9,
+      "title": "Run parity test end-to-end",
+      "body": "Execute the automated WASM parity verification test (added in af6b8a2) plus `wasm-pack test --headless --firefox`, confirming 0 differing bytes in light and dark modes and all 6 tests pass — this is the real \"boot + interact + assert\" check for a library/backend deliverable.",
+      "acceptance": "`wasm-pack test --headless --firefox -- -p rui 2\u003e\u00261 | tail -20` shows \"6 passed; 0 failed\"; parity test output shows \"0 differing bytes\" for both light and dark modes.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 10,
+      "title": "Sweep for leftover TODOs and duplicate paths",
+      "body": "Grep the merged tree for stray TODO comments or duplicate placeholder code paths left from main's old wasm.rs; delete dead code.",
+      "acceptance": "`grep -rn TODO rui/src/wasm.rs rui/examples/counter.html` returns no output.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 11,
+      "title": "Merge sara/item-15 into main and push",
+      "body": "Fast-forward or merge-commit sara/item-15 into main now that native build, WASM build, and parity test all pass locally; push to the remote so the merge is public.",
+      "acceptance": "`git checkout main \u0026\u0026 git merge sara/item-15 \u0026\u0026 git push origin main` succeeds; `git log main --oneline -5` shows the item-1 commits present on main at the remote tip.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    },
+    {
+      "index": 12,
+      "title": "Tick off the worklist item",
+      "body": "Confirm the pushed main state matches all verification claims, then check the box.",
+      "acceptance": "`dx check /Users/alexwaldmann/Desktop/rui/index.dx bulleted-list-7 --item 15` reports item 15 marked done.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T01:51:34Z"
+    }
+  ],
+  "teams": {
+    "team-frontend-1": {
+      "id": "team-frontend-1",
+      "role": "frontend",
+      "assigned_steps": [
+        4
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-29T19:51:34.063532-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    },
+    "team-frontend-3": {
+      "id": "team-frontend-3",
+      "role": "frontend",
+      "assigned_steps": [
+        6,
+        7
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-29T19:51:34.072049-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    },
+    "team-general-0": {
+      "id": "team-general-0",
+      "role": "general",
+      "assigned_steps": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-29T19:51:34.061027-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    },
+    "team-general-2": {
+      "id": "team-general-2",
+      "role": "general",
+      "assigned_steps": [
+        5
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-29T19:51:34.065839-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    },
+    "team-general-4": {
+      "id": "team-general-4",
+      "role": "general",
+      "assigned_steps": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "status": "running",
+      "depends_on": null,
+      "started_at": "2026-08-29T19:51:34.072438-06:00",
+      "completed_at": "0001-01-01T00:00:00Z"
+    }
+  },
+  "outer_iterations": 1,
+  "started_at": "2026-08-29T19:51:13.625621-06:00",
+  "updated_at": "2026-08-29T19:51:34.072438-06:00",
+  "completed_at": "0001-01-01T00:00:00Z",
+  "session_id_prefix": "task-1788054673618-4130",
+  "state_slug": "task-1788054673618-4130"
+}
