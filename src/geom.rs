@@ -1,13 +1,22 @@
-//! Points, sizes, and rectangles, in logical units.
+//! Points, sizes, and rectangles, in window-logical units.
 //!
-//! Everything above the canvas works in *logical* coordinates — the units a
-//! layout is written in — and only [`crate::canvas::Canvas`] multiplies by the
-//! display scale to reach device pixels. Keeping the conversion in exactly one
-//! place is what stops a HiDPI screen from needing a second set of numbers
-//! threaded through the widgets.
+//! # Coordinate System Contract
 //!
-//! The origin is the top left and y grows downward, matching every windowing
-//! system this runs on and the memory order of the pixel buffer.
+//! Everything above the canvas works in **window-logical units** — DPI-adjusted coordinates
+//! that are platform-independent and already account for the display's scale factor. These
+//! are distinct from:
+//! - **Device pixels**: Raw pixels on the display (multiply logical units by scale factor)
+//! - **CSS pixels**: Web coordinates (not used by this crate)
+//!
+//! Only [`crate::canvas::Canvas`] multiplies by the display scale factor to reach device
+//! pixels. Keeping the conversion in exactly one place is what stops a HiDPI screen from
+//! needing a second set of numbers threaded through the widgets.
+//!
+//! ## Coordinate Origin
+//!
+//! The origin (0, 0) is at the top left corner of the window. The x-axis grows rightward and
+//! the y-axis grows downward, matching every windowing system this library runs on and the
+//! memory order of the pixel buffer.
 
 /// A position, in logical units.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
