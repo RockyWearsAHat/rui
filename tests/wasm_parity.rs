@@ -1601,7 +1601,7 @@ fn wasm_parity_light_frame_byte_equality() {
     // STEP 4: Wire tests to call both render functions and assert byte equality.
     // Use parity_frame_size() to verify dimensions before comparing bytes.
 
-    use rui_native::demo::{parity_frame_size, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+    use rui_native::demo::{parity_frame_size, render_wasm_parity_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
     use rui_native::parity_comparator;
 
     // Verify frame dimensions via parity_frame_size() before comparing bytes
@@ -1620,10 +1620,8 @@ fn wasm_parity_light_frame_byte_equality() {
     assert!(reference_result.is_ok());
     let reference_bytes = reference_result.unwrap();
 
-    // Get headless WASM-equivalent frame via parity_comparator
-    let wasm_result = parity_comparator::render_headless_wasm_parity_frame(false);
-    assert!(wasm_result.is_ok());
-    let wasm_bytes = wasm_result.unwrap();
+    // Get WASM-equivalent frame via demo module
+    let wasm_bytes = render_wasm_parity_frame(false);
 
     // Verify both frames have expected size
     let expected_size = width * height * 4;
@@ -1644,7 +1642,7 @@ fn wasm_parity_dark_frame_byte_equality() {
     // STEP 4: Verify dark mode frame parity between reference and WASM rendering.
     // Use parity_frame_size() to verify dimensions before comparing bytes.
 
-    use rui_native::demo::{parity_frame_size, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+    use rui_native::demo::{parity_frame_size, render_wasm_parity_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
     use rui_native::parity_comparator;
 
     // Verify frame dimensions via parity_frame_size() before comparing bytes
@@ -1663,10 +1661,8 @@ fn wasm_parity_dark_frame_byte_equality() {
     assert!(reference_result.is_ok());
     let reference_bytes = reference_result.unwrap();
 
-    // Get headless WASM-equivalent frame via parity_comparator
-    let wasm_result = parity_comparator::render_headless_wasm_parity_frame(true);
-    assert!(wasm_result.is_ok());
-    let wasm_bytes = wasm_result.unwrap();
+    // Get WASM-equivalent frame via demo module
+    let wasm_bytes = render_wasm_parity_frame(true);
 
     // Verify both frames have expected size
     let expected_size = width * height * 4;
