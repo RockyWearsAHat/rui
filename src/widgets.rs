@@ -283,6 +283,11 @@ pub fn meter<S>(fraction: f32, tone: impl Into<Tone>) -> El<S> {
 ///
 /// The way out of the widget set, for a sparkline, a logo, or a diagram.
 /// `intrinsic` is the size it asks for before the layout has its say.
+///
+/// # Coordinate System
+///
+/// The `Rect` passed to the paint closure is in **window-logical units** (DPI-adjusted),
+/// not device pixels or CSS pixels. All coordinates are already scaled for the display.
 pub fn draw<S>(intrinsic: Size, paint: impl Fn(&mut Painter<'_>, Rect) + 'static) -> El<S> {
     El::of(Node::Draw {
         intrinsic,
