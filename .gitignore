@@ -8,5 +8,5 @@ Cargo.lock
 # Internal build/cache artifacts and framework state
 .cache/
 .doc/
-.engine/comms.json
-.engine/memory/scribe/
+.engine/
+.claude/
