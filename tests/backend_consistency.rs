@@ -2728,7 +2728,7 @@ fn appearance_multiple_togles_each_take_effect() {
     let mut colors = vec![harness.pixel(0, 0)];
 
     // Toggle 5 times, capturing color after each toggle
-    let appearances = vec![
+    let appearances = [
         Appearance::Dark,
         Appearance::Light,
         Appearance::Dark,
