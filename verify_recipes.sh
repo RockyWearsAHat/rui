@@ -151,6 +151,53 @@ check "grep -q 'Recipe 3: Checkbox Control' CLAUDE.md" "Recipe 3 section header 
 check "[ $(grep -c 'Recipe [0-9]:' CLAUDE.md) -eq 3 ]" "Exactly 3 recipes documented"
 check "grep -c 'Recipe [0-9]' verify_recipes.sh | grep -q '[1-9]' && true" "Recipe checks present in verification script"
 
+# STEP 8: Examples Directory Verification Checks
+echo ""
+echo "STEP 8: Examples Directory Verification Checks"
+check "grep -q 'Examples Directory' CLAUDE.md" "Examples Directory section exists"
+check "grep -q '| Example | Purpose |' CLAUDE.md" "Examples table header exists in CLAUDE.md"
+
+# Verify each documented example file exists
+EXAMPLES=(
+    "counter"
+    "controls"
+    "gallery"
+    "checkbox"
+    "segmented"
+    "meter"
+    "parity"
+    "icon"
+    "segmented_modified"
+)
+
+echo ""
+echo "Checking example files exist..."
+for example in "${EXAMPLES[@]}"; do
+    check "test -f 'examples/$example.rs'" "Example file examples/$example.rs exists"
+done
+
+# Verify each example is documented with a purpose
+echo ""
+echo "Checking example documentation..."
+check "grep -q '\`counter\` |' CLAUDE.md" "counter example documented in table"
+check "grep -q '\`controls\` |' CLAUDE.md" "controls example documented in table"
+check "grep -q '\`gallery\` |' CLAUDE.md" "gallery example documented in table"
+check "grep -q '\`checkbox\` |' CLAUDE.md" "checkbox example documented in table"
+check "grep -q '\`segmented\` |' CLAUDE.md" "segmented example documented in table"
+check "grep -q '\`meter\` |' CLAUDE.md" "meter example documented in table"
+check "grep -q '\`parity\` |' CLAUDE.md" "parity example documented in table"
+check "grep -q '\`icon\` |' CLAUDE.md" "icon example documented in table"
+check "grep -q '\`segmented_modified\` |' CLAUDE.md" "segmented_modified example documented in table"
+
+# Verify learning path is documented
+echo ""
+echo "Checking learning path documentation..."
+check "grep -q 'Learning Path:' CLAUDE.md" "Learning path is documented"
+check "grep -q 'Start with \`counter\`' CLAUDE.md" "Learning path mentions counter as entry point"
+check "grep -q 'then \`checkbox\`' CLAUDE.md" "Learning path mentions checkbox"
+check "grep -q 'then \`segmented\`' CLAUDE.md" "Learning path mentions segmented"
+check "grep -q 'then \`meter\`' CLAUDE.md" "Learning path mentions meter"
+
 # Final report
 echo ""
 echo "============================================"
