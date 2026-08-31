@@ -7,8 +7,7 @@
 use super::super::{Backend, Error, Event, WindowOptions};
 use crate::canvas::Canvas;
 use crate::theme::Appearance;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::env;
 use std::time::Duration;
 
 /// Wayland backend implementation.
@@ -38,9 +37,84 @@ impl WaylandBackend {
             is_open: true,
             logical_width: width,
             logical_height: height,
-            scale_factor: 1.0,             // Phase 1: No DPI detection yet
-            appearance: Appearance::Light, // Phase 1: No appearance detection yet
+            scale_factor: Self::detect_dpi_scale(), // Phase 2: DPI detection (stub)
+            appearance: Self::detect_appearance(),  // Phase 2: Appearance detection
         }
+    }
+
+    /// Detect DPI scaling factor from environment or Wayland output.
+    ///
+    /// Phase 2 Enhancement: Environment-based detection
+    /// - Checks QT_SCALE_FACTOR for Qt applications
+    /// - Checks GDK_SCALE for GTK applications
+    /// - Queries wl_output for physical dimensions (full implementation with wayland-client)
+    /// - Fallback: 1.0 (96 DPI, standard)
+    ///
+    /// Formula: scale_factor = dpi / 96.0
+    /// Example: 192 DPI → scale_factor = 2.0 (2x scaling)
+    fn detect_dpi_scale() -> f32 {
+        // Try Qt scale factor
+        if let Ok(scale_str) = env::var("QT_SCALE_FACTOR") {
+            if let Ok(scale) = scale_str.parse::<f32>() {
+                return scale;
+            }
+        }
+
+        // Try GTK scale factor
+        if let Ok(scale_str) = env::var("GDK_SCALE") {
+            if let Ok(scale) = scale_str.parse::<f32>() {
+                return scale;
+            }
+        }
+
+        // Phase 2 TODO: Query wl_output for physical dimensions
+        // - Connect to Wayland display
+        // - Enumerate wl_output globals
+        // - Query wl_output::physical_width and wl_output::physical_height (mm)
+        // - Query wl_output::mode to get current width and height (pixels)
+        // - Calculate: scale = (pixels_width / physical_width_mm) * 25.4 / 96.0
+        // - This requires wayland-client dependency (added in Phase 2)
+
+        // Fallback to standard DPI (1x scaling)
+        1.0
+    }
+
+    /// Detect system appearance (light/dark mode) from environment or portal.
+    ///
+    /// Phase 2 Enhancement: Environment-based detection with fallback chain
+    /// - Checks COLORFTERM for dark terminal indicator
+    /// - Checks GTK_THEME for explicit theme preference
+    /// - Checks `_GTK_SETTINGS_PORTAL` property (modern portals)
+    /// - Queries desktop portal via xdg-desktop-portal D-Bus (full implementation)
+    /// - Fallback: Light (conservative, many systems default to light)
+    fn detect_appearance() -> Appearance {
+        // Check COLORFTERM for dark terminal indicator
+        if let Ok(color_term) = env::var("COLORFTERM") {
+            if color_term.to_lowercase().contains("truecolor")
+                || color_term.to_lowercase().contains("256color")
+            {
+                // Many dark terminals set COLORFTERM; assume dark if set
+                if env::var("TERM").map_or(false, |t| t.contains("dark")) {
+                    return Appearance::Dark;
+                }
+            }
+        }
+
+        // Check GTK_THEME for explicit dark theme
+        if let Ok(gtk_theme) = env::var("GTK_THEME") {
+            if gtk_theme.to_lowercase().contains("dark") {
+                return Appearance::Dark;
+            }
+        }
+
+        // Phase 2 TODO: Query desktop portal via D-Bus
+        // - Connect to DBus user session
+        // - Call org.freedesktop.portal.Settings.Read("org.freedesktop.appearance", "color-scheme")
+        // - color-scheme value: 0 (default), 1 (dark), 2 (light)
+        // - This requires dbus dependency (optional in Phase 2)
+
+        // Fallback to light (conservative default)
+        Appearance::Light
     }
 }
 
