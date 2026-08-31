@@ -287,7 +287,7 @@ fn programmatic_frames_match_example_output() {
 
     // Run the parity example to generate reference frames
     let output = std::process::Command::new("cargo")
-        .args(["run", "-p", "rui", "--example", "parity", "--"])
+        .args(["run", "-p", "rui-native", "--example", "parity", "--"])
         .arg(&example_dir_str)
         .output()
         .expect("should run parity example");

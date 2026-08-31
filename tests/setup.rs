@@ -395,7 +395,7 @@ fn wasm32_target_compiles_counter_example() {
         .arg("--target")
         .arg("wasm32-unknown-unknown")
         .arg("-p")
-        .arg("rui")
+        .arg("rui-native")
         .arg("--example")
         .arg("counter")
         .output()
@@ -432,11 +432,14 @@ fn wasm_pack_generates_web_bindings() {
     );
 
     // Verify generated artifacts exist
-    let pkg_exists = std::path::Path::new("pkg/rui_bg.wasm").exists();
-    assert!(pkg_exists, "wasm-pack should generate pkg/rui_bg.wasm");
+    let pkg_exists = std::path::Path::new("pkg/rui_native_bg.wasm").exists();
+    assert!(
+        pkg_exists,
+        "wasm-pack should generate pkg/rui_native_bg.wasm"
+    );
 
-    let js_exists = std::path::Path::new("pkg/rui.js").exists();
-    assert!(js_exists, "wasm-pack should generate pkg/rui.js");
+    let js_exists = std::path::Path::new("pkg/rui_native.js").exists();
+    assert!(js_exists, "wasm-pack should generate pkg/rui_native.js");
 }
 
 #[test]
