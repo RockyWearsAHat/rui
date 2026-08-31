@@ -7,7 +7,7 @@
 //! This example simulates uploading a file and updates the progress bar
 //! in real time. The meter responds to the app state, not to user clicks.
 
-use rui::{col, meter, text, Align, El};
+use rui_native::{col, meter, text, Align, El};
 
 #[derive(Default)]
 struct App {
@@ -23,7 +23,7 @@ fn view(app: &App) -> El<App> {
         //
         // The meter is passive—it has no handler. It just visualizes state.
         // To change progress, you must update app.progress in the event loop.
-        meter(app.progress, rui::Tone::Accent),
+        meter(app.progress, rui_native::Tone::Accent),
         text(format!("{:.0}%", app.progress * 100.0)),
     ))
     .gap(16.0)
@@ -31,6 +31,6 @@ fn view(app: &App) -> El<App> {
     .align(Align::Center)
 }
 
-fn main() -> Result<(), rui::Error> {
-    rui::run("meter", App::default(), view)
+fn main() -> Result<(), rui_native::Error> {
+    rui_native::run("meter", App::default(), view)
 }

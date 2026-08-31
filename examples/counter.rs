@@ -5,7 +5,7 @@
 //! State in, description out, and a loop that runs the two: that is the whole
 //! of the shape, and it is all that is left here. The description itself — the
 //! `Counter` and the `El` tree that is a pure function of it — is
-//! [`rui::demo::counter_view`], read it there.
+//! [`rui_native::demo::counter_view`], read it there.
 //!
 //! It lives in the library rather than in this file so that this example and
 //! the browser build in `src/wasm.rs` are not two similar programs but one
@@ -15,8 +15,8 @@
 //! `<canvas>`. A copy of the view pasted into each backend would have made that
 //! comparison meaningless the first time one copy was edited.
 
-use rui::demo::{counter_view, Counter};
+use rui_native::demo::{counter_view, Counter};
 
-fn main() -> Result<(), rui::Error> {
-    rui::run("Counter", Counter { count: 0 }, counter_view)
+fn main() -> Result<(), rui_native::Error> {
+    rui_native::run("Counter", Counter { count: 0 }, counter_view)
 }

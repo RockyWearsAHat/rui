@@ -4,10 +4,10 @@
 //! fonts on wasm targets) can successfully render text that is discoverable by
 //! Harness::shows().
 
-use rui::shell::load_system_fonts;
-use rui::testing::Harness;
-use rui::theme::{Appearance, Theme};
-use rui::{col, text, El};
+use rui_native::shell::load_system_fonts;
+use rui_native::testing::Harness;
+use rui_native::theme::{Appearance, Theme};
+use rui_native::{col, text, El};
 
 #[derive(Default)]
 struct State;

@@ -5,8 +5,8 @@
 //! appearance is reviewed: the renderer is pure, so a frame drawn with no
 //! display is the same frame a window would show.
 
-use rui::style::{Align, Justify, Length, Radius};
-use rui::{
+use rui_native::style::{Align, Justify, Length, Radius};
+use rui_native::{
     button, caption, code, col, divider, dot, draw, field, field_row, figure, heading, image,
     meter, micro, panel, paragraph, row, section, segmented, spacer, tabs, tag, title, App,
     Appearance, El, Size, Status, Tone,
@@ -41,7 +41,7 @@ fn masthead() -> El<Gallery> {
         draw(Size::new(24.0, 24.0), |painter, rect| {
             // An application's own drawing, on the same canvas every widget
             // here uses: three rack units, each with its lamp lit.
-            let corner = rui::Corner::Round(rect.w * 0.24);
+            let corner = rui_native::Corner::Round(rect.w * 0.24);
             let (light, deep) = (
                 painter.color(Tone::AccentLight),
                 painter.color(Tone::AccentDeep),
@@ -54,7 +54,7 @@ fn masthead() -> El<Gallery> {
             let ink = painter.color(Tone::OnAccent).fade(0.92);
             let lamp_color = painter.color(Tone::AccentLight);
             for index in 0..3 {
-                let unit = rui::Rect::new(
+                let unit = rui_native::Rect::new(
                     rect.x + margin,
                     rect.y + margin + spacing * index as f32,
                     rect.w - margin * 2.0,
@@ -62,7 +62,7 @@ fn masthead() -> El<Gallery> {
                 );
                 painter.canvas().fill_rect(unit, ink);
                 let lamp = height * 0.34;
-                let socket = rui::Rect::new(
+                let socket = rui_native::Rect::new(
                     unit.x + lamp,
                     unit.y + unit.h / 2.0 - lamp / 2.0,
                     lamp,
@@ -70,7 +70,7 @@ fn masthead() -> El<Gallery> {
                 );
                 painter
                     .canvas()
-                    .fill(socket, rui::Corner::Round(lamp / 2.0), lamp_color);
+                    .fill(socket, rui_native::Corner::Round(lamp / 2.0), lamp_color);
             }
         }),
         title("rui").bold(),
@@ -223,7 +223,7 @@ fn form(gallery: &Gallery) -> El<Gallery> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let directory = std::env::args().nth(1).unwrap_or_else(|| ".".into());
-    let mut fonts = rui::shell::load_system_fonts()?;
+    let mut fonts = rui_native::shell::load_system_fonts()?;
     let mut app = App::new(
         "Gallery",
         Gallery {

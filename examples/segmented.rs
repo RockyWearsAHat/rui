@@ -20,7 +20,7 @@
 //! - See `src/widgets.rs` line 333–365 for the segmented() implementation.
 //! - See `tests/recipes.rs` for more examples: checkbox, switch, slider, radio.
 
-use rui::{col, row, text, widgets, El};
+use rui_native::{col, row, text, widgets, El};
 
 // === STATE ===
 // This struct holds all the application's interactive state.
@@ -30,10 +30,10 @@ struct App {
     selected: usize,
 }
 
-fn main() -> Result<(), rui::Error> {
+fn main() -> Result<(), rui_native::Error> {
     // Initialize the app with default state and pass the view function.
     // The event loop calls view() once per frame, after processing input.
-    rui::run("Segmented Control", App { selected: 1 }, view)
+    rui_native::run("Segmented Control", App { selected: 1 }, view)
 }
 
 // === VIEW ===

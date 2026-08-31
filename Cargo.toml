@@ -1,12 +1,12 @@
 [package]
-name = "rui"
+name = "rui-native"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
 license = "MIT"
 repository = "https://github.com/RockyWearsAHat/rui"
 readme = "README.md"
-description = "A declarative interface library for Rust: structure, style, and behaviour in one language, drawn by its own renderer, with no dependencies."
+description = "A declarative interface library for Rust with native platform backends (macOS, Windows, X11, WASM): structure, style, and behaviour in one language, drawn by its own renderer, with no dependencies."
 keywords = ["gui", "ui", "declarative", "renderer", "no-std-deps"]
 categories = ["gui", "rendering"]
 exclude = ["/.github"]

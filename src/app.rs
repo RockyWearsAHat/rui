@@ -13,8 +13,8 @@
 //!     .center()
 //! }
 //!
-//! fn main() -> Result<(), rui::Error> {
-//!     rui::run("Counter", Counter { count: 0 }, view)
+//! fn main() -> Result<(), rui_native::Error> {
+//!     rui_native::run("Counter", Counter { count: 0 }, view)
 //! }
 //! ```
 //!

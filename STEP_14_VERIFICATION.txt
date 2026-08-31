@@ -1,0 +1,130 @@
+================================================================================
+STEP 14: CRATES.IO PUBLISHING & POST-RELEASE VERIFICATION
+================================================================================
+
+STATUS: IN PROGRESS
+DATE: 2026-08-30
+OBJECTIVE: Complete crates.io publication and handle naming conflicts
+
+================================================================================
+CURRENT STATE
+================================================================================
+
+✅ GitHub Release v0.1.0: Published
+   URL: https://github.com/RockyWearsAHat/rui/releases/tag/v0.1.0
+   Created: 2026-08-31T00:36:18Z
+   Status: Available for cargo install --git
+
+✅ Commits Pushed: 139 commits pushed to origin/main
+   Latest: 04d509a (fix: Correct harness appearance() usage)
+   Branch: main (tracking origin/main)
+
+⚠️  BLOCKING ISSUE: Crates.io Name Conflict
+   Existing package: rui v0.6.1 (experimental UI library)
+   Our version: rui v0.1.0 (declarative interface library)
+   Conflict: Cannot publish v0.1.0 under name "rui" without:
+     a) Claiming ownership of existing crate (if abandoned)
+     b) Renaming our package (e.g., "rui-declarative", "rui-native")
+     c) Seeking crate transfer from existing owner
+
+================================================================================
+RESOLUTION OPTIONS
+================================================================================
+
+OPTION A: Investigate Existing Crate
+--------
+Steps:
+  1. Check crates.io page for rui v0.6.1
+  2. Look for maintenance status
+  3. Contact owner if abandonware
+  4. Request crate transfer if possible
+
+OPTION B: Rename Package
+--------
+Alternative names to consider:
+  - rui-ui (follows convention of rui-X)
+  - declarative-ui (descriptive)
+  - rustic-ui (friendly)
+  - rui-native (emphasizes platform support)
+
+Steps:
+  1. Change [package] name in Cargo.toml
+  2. Update Cargo.toml repository description
+  3. Update README.md references
+  4. Create new tag (e.g., v0.1.0-renamed)
+  5. Publish new release
+  6. Workflow triggers automatic crates.io publication
+
+OPTION C: Patch Release Strategy (if approved for rename)
+--------
+If renaming: Publish as rui-native v0.1.0
+  - Clear naming: "rui-native" = rui with native platform support
+  - Avoids conflict immediately
+  - Can document why we chose this name
+
+================================================================================
+DEPENDENCIES & BLOCKERS
+================================================================================
+
+WORKFLOW SETUP:
+  ✅ Publish workflow configured (.github/workflows/publish.yml)
+  ✅ Workflow triggers on GitHub release published event
+  ⚠️  Requires CARGO_TOKEN secret in GitHub repo settings
+  ⚠️  Cannot publish to crates.io without valid token
+
+IMMEDIATE BLOCKER:
+  - Publishing under "rui" name will fail if crate is already claimed
+  - CARGO_TOKEN may not be configured (need user to add to GitHub secrets)
+
+================================================================================
+NEXT STEPS (AWAITING USER INPUT)
+================================================================================
+
+ACTION REQUIRED: User should specify one of:
+  1. Proceed with Option A (investigate + contact existing owner)
+  2. Proceed with Option B (rename package to X)
+  3. Alternative approach?
+
+After selecting option:
+  1. Implement the chosen solution
+  2. Re-tag GitHub release with new version/name if needed
+  3. Verify workflow runs and publishes successfully
+  4. Create docs.rs entry (automatic after crates.io publication)
+  5. Verify cargo install works with new package name
+
+================================================================================
+VERIFICATION CHECKLIST
+================================================================================
+
+When publishing is complete:
+  □ Can run: cargo install <package-name> --version 0.1.0
+  □ Package appears on crates.io: https://crates.io/crates/<package-name>
+  □ Documentation appears on docs.rs: https://docs.rs/<package-name>/
+  □ Cargo search finds new package: cargo search <package-name>
+  □ No warnings or issues in GitHub Actions publish workflow
+
+================================================================================
+GITHUB ACTIONS PUBLISH WORKFLOW STATUS
+================================================================================
+
+Workflow File: .github/workflows/publish.yml
+Trigger:
+  - release:types [published] (automatic on GitHub release)
+  - workflow_dispatch (manual trigger)
+
+Test Steps:
+  1. Build --all-targets
+  2. Test --all-targets
+  3. Test --doc
+
+Publish Step:
+  cargo publish --token ${{ secrets.CARGO_TOKEN }}
+
+Current Status: AWAITING DECISION
+  - Release exists (v0.1.0)
+  - Workflow should trigger but blocked by name conflict concern
+  - CARGO_TOKEN needs to be configured in GitHub repo secrets
+
+================================================================================
+DECISION: AWAITING USER INPUT ON NAMING STRATEGY
+================================================================================

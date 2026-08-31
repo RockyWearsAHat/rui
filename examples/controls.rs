@@ -27,8 +27,8 @@
 //! | [`El::on_drag`] | where the pointer is, continuously, while held |
 //! | [`El::on_key`], [`El::on_hover`], [`El::layer`] | the keyboard, the pointer arriving, and somewhere to put what opens |
 
-use rui::style::{Align, Anchor, Radius};
-use rui::{
+use rui_native::style::{Align, Anchor, Radius};
+use rui_native::{
     caption, code, col, draw, heading, panel, row, text, App, Appearance, Drag, El, Key, Modifiers,
     Painter, Rect, Size, Tone,
 };
@@ -177,7 +177,7 @@ fn radio_group<S: 'static>(
                         painter.stroke(rect, Radius::Pill, 1.0, Tone::Border);
                         if taken {
                             let inset = rect.w * 0.27;
-                            let dot = rect.inset(rui::Insets::uniform(inset));
+                            let dot = rect.inset(rui_native::Insets::uniform(inset));
                             painter.fill(dot, Radius::Pill, Tone::Accent);
                         }
                     },
@@ -309,7 +309,7 @@ fn labelled(name: &str, control: El<Panel>) -> El<Panel> {
         .min_h(24.0)
 }
 
-fn main() -> Result<(), rui::Error> {
+fn main() -> Result<(), rui_native::Error> {
     let state = Panel {
         notify: true,
         dark: true,
@@ -322,16 +322,19 @@ fn main() -> Result<(), rui::Error> {
     // With a directory, this draws itself and stops — the same frame a window
     // would show, on a machine that may not have one.
     if let Some(directory) = std::env::args().nth(1) {
-        let mut fonts = rui::shell::load_system_fonts()?;
+        let mut fonts = rui_native::shell::load_system_fonts()?;
         let mut app = App::new("Controls", state, view).size(520.0, 460.0);
         for (appearance, name) in [
             (Appearance::Light, "controls-light.png"),
             (Appearance::Dark, "controls-dark.png"),
         ] {
             let canvas = app.render(520, 460, 2.0, appearance, &mut fonts);
-            let bytes =
-                rui::image::png(canvas.width(), canvas.height(), &rui::image::rgba(&canvas))
-                    .expect("the frame should encode");
+            let bytes = rui_native::image::png(
+                canvas.width(),
+                canvas.height(),
+                &rui_native::image::rgba(&canvas),
+            )
+            .expect("the frame should encode");
             std::fs::write(std::path::Path::new(&directory).join(name), bytes)?;
         }
         return Ok(());

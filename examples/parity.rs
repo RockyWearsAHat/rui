@@ -18,8 +18,8 @@
 //! through the real browser backend, reads the `<canvas>` back with
 //! `getImageData`, and reports the first byte that differs — or that none does.
 
-use rui::demo::{reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
-use rui::{image, Appearance};
+use rui_native::demo::{reference_frame, REFERENCE_HEIGHT, REFERENCE_WIDTH};
+use rui_native::{image, Appearance};
 
 /// Every pixel is drawn at one device pixel per logical unit.
 ///

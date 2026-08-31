@@ -5,8 +5,8 @@
 //! are made where they were meant to be, that the same description twice is the
 //! same picture, and that an animation both moves and then stops.
 
-use rui::testing::Harness;
-use rui::{button, col, draw, row, spacer, text, Align, Appearance, El, Radius, Size, Tone};
+use rui_native::testing::Harness;
+use rui_native::{button, col, draw, row, spacer, text, Align, Appearance, El, Radius, Size, Tone};
 
 /// Nothing to hold: these are about pixels.
 #[derive(Default)]
@@ -50,7 +50,12 @@ fn text_makes_marks_where_the_layout_put_it() {
     let rect = harness.rect_of("abc").expect("the run is on screen");
     assert!(harness.marked(rect), "the run should have drawn something");
     assert!(
-        !harness.marked(rui::Rect::new(rect.max_x() + 20.0, rect.y, 40.0, rect.h)),
+        !harness.marked(rui_native::Rect::new(
+            rect.max_x() + 20.0,
+            rect.y,
+            40.0,
+            rect.h
+        )),
         "and nothing beyond its own end"
     );
 }
@@ -59,7 +64,7 @@ fn text_makes_marks_where_the_layout_put_it() {
 fn an_empty_window_is_marked_nowhere() {
     let mut harness = showing(|_| col(()));
     harness.frame();
-    assert!(!harness.marked(rui::Rect::new(0.0, 0.0, 200.0, 100.0)));
+    assert!(!harness.marked(rui_native::Rect::new(0.0, 0.0, 200.0, 100.0)));
 }
 
 #[test]
@@ -224,7 +229,7 @@ fn a_layer_is_drawn_over_what_it_covers() {
                     .size(200.0, 40.0)
                     .fill(Tone::Ok)
                     .key("over")
-                    .layer(rui::Anchor::Over),
+                    .layer(rui_native::Anchor::Over),
             ))
     });
     harness.frame();
@@ -307,7 +312,7 @@ fn wasm_backend_renders_to_canvas() {
     let red = harness.pixel(100, 50).expect("the rectangle covers it");
 
     let surface = surface_on_the_page(harness.canvas().width(), harness.canvas().height());
-    rui::shell::present(harness.canvas()).expect("the frame should reach the canvas");
+    rui_native::shell::present(harness.canvas()).expect("the frame should reach the canvas");
 
     // Read the pixels back out of the DOM, not out of rui.
     let context: web_sys::CanvasRenderingContext2d = surface
@@ -337,7 +342,7 @@ fn wasm_backend_event_listeners() {
     surface_on_the_page(200, 100);
 
     assert_eq!(
-        rui::shell::listen().expect("the listeners should attach"),
+        rui_native::shell::listen().expect("the listeners should attach"),
         Vec::new(),
         "a page nobody has touched has caught nothing"
     );
