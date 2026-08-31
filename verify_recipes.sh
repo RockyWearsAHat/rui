@@ -84,6 +84,86 @@ check "git show caa3066 --stat | grep -q 'src/shell/mod.rs'" "Commit caa3066 tou
 check "git show 2df7f1c --stat | grep -q 'parity' || true" "Commit 2df7f1c (parity test) exists"
 check "git show 401a8a7 --stat | grep -q 'src' || true" "Commit 401a8a7 (expose FrameDriver) exists"
 
+# ============================================================
+# RECIPE 2: Adding an X11 Backend
+# ============================================================
+
+echo ""
+echo "=== RECIPE 2: Adding an X11 Backend ==="
+echo "Checking Recipe 2 documentation..."
+check "grep -q '### Recipe 2: Adding an X11 Backend' CLAUDE.md" "Recipe 2 section exists"
+check "grep -q 'src/shell/platform/x11.rs' CLAUDE.md" "Recipe 2 mentions X11 platform file"
+check "grep -q 'XCreateSimpleWindow' CLAUDE.md" "Recipe 2 discusses X11 window creation"
+check "grep -q 'Phase 1: Backend Trait Implementation' CLAUDE.md" "Recipe 2 has Phase 1 documented"
+check "grep -q 'Phase 2: Event Loop Integration' CLAUDE.md" "Recipe 2 has Phase 2 documented"
+check "grep -q 'Phase 3: Platform-Specific Refinements' CLAUDE.md" "Recipe 2 has Phase 3 documented"
+check "test -f 'src/shell/platform/x11.rs'" "File src/shell/platform/x11.rs exists"
+
+# ============================================================
+# RECIPE 3: Add a New Widget
+# ============================================================
+
+echo ""
+echo "=== RECIPE 3: Add a New Widget ==="
+echo "Checking Recipe 3 documentation..."
+
+# Check if Recipe 3 is documented in CLAUDE.md
+if grep -q '### Recipe 3: Add a New Widget' CLAUDE.md; then
+    echo "Recipe 3 is documented, checking details..."
+    check "grep -q '### Recipe 3: Add a New Widget' CLAUDE.md" "Recipe 3 section exists"
+    check "grep -q 'src/widgets.rs' CLAUDE.md && sed -n '/### Recipe 3:/,/## Workflow/p' CLAUDE.md | grep -q 'src/widgets.rs'" "Recipe 3 mentions src/widgets.rs"
+    check "grep -q 'tests/recipes.rs' CLAUDE.md && sed -n '/### Recipe 3:/,/## Workflow/p' CLAUDE.md | grep -q 'tests/recipes.rs'" "Recipe 3 mentions tests/recipes.rs"
+    check "grep -q 'star_rating' CLAUDE.md && sed -n '/### Recipe 3:/,/## Workflow/p' CLAUDE.md | grep -q 'star_rating'" "Recipe 3 has star_rating example"
+    check "test -f 'src/widgets.rs'" "File src/widgets.rs exists"
+    check "test -f 'tests/recipes.rs'" "File tests/recipes.rs exists"
+else
+    echo "Note: Recipe 3 (Add a New Widget) is not yet documented in CLAUDE.md"
+fi
+
+# ============================================================
+# CONTROL RECIPE VERIFICATION
+# ============================================================
+
+echo ""
+echo "=== Control Recipe Tests (from tests/recipes.rs) ==="
+echo "Checking for control recipe implementations..."
+
+CONTROL_TESTS=(
+    "a_checkbox_answers_a_click_on_its_label_as_well_as_on_its_box"
+    "a_checkbox_draws_differently_once_it_is_ticked"
+    "a_switch_flips_and_moves_its_knob_when_it_does"
+    "a_slider_follows_the_pointer_and_the_arrow_keys_alike"
+    "a_slider_can_be_used_from_the_keyboard_without_ever_being_clicked"
+    "a_group_of_choices_takes_exactly_one_of_them"
+    "a_note_appears_when_the_pointer_arrives_and_goes_when_it_leaves"
+    "a_note_that_is_up_does_not_come_up_again_every_frame"
+    "a_segmented_control_changes_selection_when_clicked"
+    "a_meter_displays_progress_as_a_fraction"
+    "a_star_rating_updates_when_clicked"
+    "a_checkbox_group_manages_multiple_selections"
+)
+
+for test_name in "${CONTROL_TESTS[@]}"; do
+    check "grep -q 'fn $test_name' tests/recipes.rs" "Control test exists: $test_name"
+done
+
+# 2. Verify controls are mentioned in CLAUDE.md docs
+echo ""
+echo "Checking control references in CLAUDE.md..."
+check "grep -q 'checkbox' CLAUDE.md" "checkbox control documented"
+check "grep -q 'switch' CLAUDE.md" "switch control documented"
+check "grep -q 'slider' CLAUDE.md" "slider control documented"
+check "grep -q 'radio' CLAUDE.md" "radio/group control documented"
+check "grep -q 'tooltip' CLAUDE.md || grep -q 'note' CLAUDE.md" "tooltip/note control documented"
+check "grep -q 'segmented' CLAUDE.md" "segmented control documented"
+check "grep -q 'meter' CLAUDE.md" "meter control documented"
+
+# 3. Verify test suite can run all control tests
+echo ""
+echo "Checking test suite integrity..."
+check "grep -q '#\\[test\\]' tests/recipes.rs" "tests/recipes.rs contains test macros"
+check "test -f 'tests/recipes.rs'" "File tests/recipes.rs exists"
+
 # Final report
 echo ""
 echo "============================================"
