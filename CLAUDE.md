@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **View is a pure function of state.** The `view` function rebuilds the entire UI description from application data each frame—no retained widget tree.
 - **Handlers are functions of state, not closures.** `on_click(|app: &mut App| …)` receives mutable state as an argument, eliminating `Rc`, `RefCell`, and interior mutability.
 - **Roles, not values.** Colors are named by semantic role (`Tone::Surface`, `Tone::Muted`), so the same description works in light and dark modes.
-- **Foundations, not a catalogue.** The library provides primitives (`draw`, `on_drag`, `on_key`, `layer`) for building custom controls—no built-in checkbox or slider, because those constrain design.
+- **Foundations, not a catalogue.** The library provides primitives (`draw`, `on_drag`, `on_key`, `layer`) and recipes (e.g., `checkbox`, `segmented`, `meter`) for building custom controls. Recipes are blueprints, not constraints—copy and modify them freely.
 
 ## Setup & Requirements
 
@@ -60,13 +60,14 @@ All examples can be run with `cargo run -p rui --example <name>`. Each example d
 | `counter` | The simplest app: increment/decrement with persistent state. Entry point for learning rui. |
 | `controls` | Showcase of built-in widgets: button, checkbox, slider, segmented control, etc. |
 | `gallery` | Renders every UI element to PNG files (no window). Used to verify visual appearance without launching an app. |
+| `checkbox` | Exemplar: a minimal, self-contained binary toggle (26 lines). Copy and modify to build custom check/radio/toggle controls. |
 | `segmented` | Exemplar: a minimal, self-contained choice selector (33 lines). Copy and modify to build new interactive controls. |
 | `meter` | Exemplar: a passive progress bar showing how to build read-only widgets. |
 | `parity` | Builds a native reference frame for pixel-perfect WASM backend comparison. |
 | `icon` | Generates macOS `.iconset` and `.icns` app icons by drawing them at all required sizes. |
 | `segmented_modified` | Verification that the documented "Copy and Modify" path from CLAUDE.md actually works. |
 
-**Learning Path:** Start with `counter`, then `segmented` (to understand handlers), then `meter` (to understand passive widgets). Explore other examples as needed.
+**Learning Path:** Start with `counter` (state and event loop), then `checkbox` (binary toggle), then `segmented` (multiple choice), then `meter` (passive display). Explore other examples as needed.
 
 ## Test Suite
 
@@ -362,6 +363,151 @@ Once you understand this exemplar, here are common next steps:
 4. **Connect to the test:** Copy `tests/recipes.rs` line 410 as a template for verifying your custom control.
 
 5. **Explore other controls:** Look at `checkbox`, `switch`, `slider`, `radio` in `tests/recipes.rs`. Each follows the same state-view-handler pattern.
+
+### Checkbox Exemplar
+
+The `checkbox` widget is a minimal exemplar showing how to build a **binary interactive control**. Unlike segmented (which manages a choice among many), checkbox toggles a single boolean value.
+
+**Pattern at a Glance:**
+```
+State:   struct App { notify: bool }
+View:    fn view(app: &App) -> El<App> { checkbox("Enable notifications", app.notify, |app: &mut App| app.notify = !app.notify) }
+Handler: |app: &mut App| { app.notify = !app.notify }
+```
+State describes a boolean preference. View turns that boolean into a checkbox. Handler toggles it on click.
+
+It teaches:
+- How state shapes the view (checked vs. unchecked appearance)
+- How handlers update state (the handler function receives mutable state as an argument)
+- How to build toggle controls from primitives (`draw`, `on_click`, `Painter`)
+
+**Try it first:**
+```bash
+cargo run -p rui --example checkbox
+```
+Click the checkbox to toggle between ON and OFF; state persists across frames.
+
+**State:**
+```rust
+struct App {
+    notify: bool,  // the checked/unchecked state
+}
+```
+The state is just a boolean—no closures, no `Rc<RefCell<>>`. This simplicity is rui's design.
+
+**View:**
+```rust
+fn view(app: &App) -> El<App> {
+    col((
+        text("Your preferences:"),
+        widgets::checkbox("Enable notifications", app.notify, |app: &mut App| {
+            app.notify = !app.notify;
+        }),
+        row((text("Notifications: "), text(if app.notify { "ON" } else { "OFF" }))),
+    ))
+}
+```
+
+The handler is a function that receives mutable state as an argument. It toggles the boolean. This means you can freely modify `app` without any interior mutability tricks.
+
+**How to modify:**
+- Change `"Enable notifications"` to your own label text
+- Replace `app.notify` with any boolean field in your state
+- To add more checkboxes: call `widgets::checkbox()` multiple times, once per field
+- To change colors or size: call `.fill()` or `.w()` on the widget to style it
+
+**Implementation details:**
+The widget is built entirely from primitives; see `src/widgets.rs` line 259–283. It uses:
+- `draw()` to render a square checkbox (filled if checked, empty if unchecked)
+- `row()` to lay out the checkbox and label horizontally
+- `text()` to render the label text
+- `on_click()` to handle clicks and call the handler
+
+**Verification:**
+- Run the example: `cargo run -p rui --example checkbox`
+- Inspect the test: `tests/recipes.rs` line 414 shows `a_checkbox_draws_differently_once_it_is_ticked`
+- Copy the entire pattern to build new controls: state type → view function → handler closure
+
+**Getting Started: Copy and Modify**
+
+To build your own toggle control from this exemplar:
+
+1. **Copy the example file:**
+   ```bash
+   cp examples/checkbox.rs examples/my_toggle.rs
+   ```
+
+2. **Modify the state to fit your needs:**
+   ```rust
+   struct App {
+       darkMode: bool,  // Change the field name
+   }
+   ```
+
+3. **Update the view function to use your state:**
+   ```rust
+   fn view(app: &App) -> El<App> {
+       col((
+           text("Settings:"),
+           widgets::checkbox("Dark mode", app.darkMode, |app: &mut App| {
+               app.darkMode = !app.darkMode;
+           }),
+       ))
+   }
+   ```
+
+4. **Run your modified example:**
+   ```bash
+   cargo run -p rui --example my_toggle
+   ```
+
+5. **Write a test to verify it works (copy from `tests/recipes.rs` line 414):**
+   ```rust
+   #[test]
+   fn my_toggle_changes_state_when_clicked() {
+       let mut harness = Harness::new(App { darkMode: false }, view);
+       harness.click_text("Dark mode");
+       assert_eq!(harness.state().darkMode, true);
+   }
+   ```
+
+6. **Run your test:**
+   ```bash
+   cargo test my_toggle_changes_state_when_clicked
+   ```
+
+If your test passes, your custom toggle works. If it fails, the failure message will guide you to the issue.
+
+**Next: Building Multiple Checkboxes**
+
+Once you understand this exemplar, here are common next steps:
+
+1. **Add more boolean fields:**
+   ```rust
+   struct App {
+       notify: bool,
+       darkMode: bool,  // Add another toggle
+   }
+   ```
+
+2. **Render multiple checkboxes:**
+   ```rust
+   col((
+       widgets::checkbox("Notifications", app.notify, |app: &mut App| app.notify = !app.notify),
+       widgets::checkbox("Dark mode", app.darkMode, |app: &mut App| app.darkMode = !app.darkMode),
+   ))
+   ```
+
+3. **Use a helper function for DRY:**
+   ```rust
+   fn pref(label: &str, value: bool, setter: impl Fn(&mut App, bool)) -> El<App> {
+       widgets::checkbox(label, value, move |app: &mut App| setter(app, !value))
+   }
+   ```
+
+4. **Connect to the test:** Copy `tests/recipes.rs` line 414 as a template for verifying each checkbox.
+
+5. **Explore radio buttons and tabs:** Look at `radio`, `switch` in `tests/recipes.rs`. They follow the same pattern but with different state shapes (indices instead of booleans).
 
 ### Meter Widget Exemplar
 
