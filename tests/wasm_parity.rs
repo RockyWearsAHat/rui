@@ -1483,33 +1483,35 @@ fn render_wasm_parity_frame_produces_valid_output() {
 /// Run with: wasm-pack test --headless --firefox --test wasm_parity
 #[test]
 fn generates_native_reference_frame_bytes() {
-    // STEP 1: Verify render_parity_frame_rgba() generates valid native reference frame bytes
-    // for light mode, compatible with headless WASM parity verification.
-    // This calls the same underlying logic used by render_wasm_parity_frame() on WASM.
+    // STEP 1: Scaffold headless parity comparator + failing test.
+    // This test is designed to FAIL initially (error: "no such function")
+    // until the parity_comparator module exists and is wired.
+    //
+    // It tries to call a non-existent parity_comparator::render_native_parity_frame()
+    // that will be implemented in STEP 2 as a platform-agnostic wrapper
+    // around render_wasm_parity_frame().
 
-    let result = render_parity_frame_rgba(false); // false = light mode
+    use rui_native::parity_comparator;
+
+    // This will error "no such function" until STEP 2 creates the comparator module
+    let light_result = parity_comparator::render_native_parity_frame(false); // false = light mode
+
     assert!(
-        result.is_ok(),
-        "render_parity_frame_rgba(false) should succeed for light mode"
+        light_result.is_ok(),
+        "render_native_parity_frame should succeed"
     );
 
-    let frame_bytes = result.unwrap();
+    let frame_bytes = light_result.unwrap();
     let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
 
     assert_eq!(
         frame_bytes.len(),
         expected_size,
-        "light frame should have {} bytes ({}x{}*4), got {}",
+        "frame must be {} bytes, got {}",
         expected_size,
-        REFERENCE_WIDTH,
-        REFERENCE_HEIGHT,
         frame_bytes.len()
     );
-
-    assert!(
-        !frame_bytes.is_empty(),
-        "light frame should contain non-empty pixel data"
-    );
+    assert!(!frame_bytes.is_empty(), "frame must contain pixel data");
 }
 
 #[cfg(target_arch = "wasm32")]

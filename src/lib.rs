@@ -117,6 +117,7 @@ pub mod input;
 mod layout;
 pub mod memory;
 pub mod paint;
+pub mod parity_comparator;
 pub mod shell;
 pub mod style;
 pub mod syntax;
