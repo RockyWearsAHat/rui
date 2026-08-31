@@ -1514,6 +1514,37 @@ fn generates_native_reference_frame_bytes() {
     assert!(!frame_bytes.is_empty(), "frame must contain pixel data");
 }
 
+#[test]
+fn parity_comparator_renders_dark_mode_frame() {
+    // STEP 2: Verify parity_comparator extracts Dark mode reference frame.
+    // This extends STEP 1 to confirm both Light and Dark frames are available
+    // through the headless comparator module.
+
+    use rui_native::parity_comparator;
+
+    let dark_result = parity_comparator::render_native_parity_frame(true); // true = dark mode
+
+    assert!(
+        dark_result.is_ok(),
+        "render_native_parity_frame should succeed for dark mode"
+    );
+
+    let frame_bytes = dark_result.unwrap();
+    let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+
+    assert_eq!(
+        frame_bytes.len(),
+        expected_size,
+        "dark frame must be {} bytes, got {}",
+        expected_size,
+        frame_bytes.len()
+    );
+    assert!(
+        !frame_bytes.is_empty(),
+        "dark frame must contain pixel data"
+    );
+}
+
 #[cfg(target_arch = "wasm32")]
 pub fn render_wasm_parity_frame_directly_callable() {
     // Import render_wasm_parity_frame from the wasm module
