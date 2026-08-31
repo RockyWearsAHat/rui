@@ -37,12 +37,32 @@ echo ""
 echo "Checking Recipe 2 section header..."
 check "grep -q 'Recipe 2: X11 Backend Implementation' CLAUDE.md" "Recipe 2 section exists"
 
-# 2b. Verify Recipe 3 section header exists
+# 2b. Verify Recipe 2 phases are documented
+echo ""
+echo "Checking Recipe 2 phases..."
+check "grep -q 'Phase 1: Foundation (Commit a67d578)' CLAUDE.md" "Recipe 2 Phase 1 documented"
+check "grep -q 'Phase 2: Enhancement (Commit c42c0f0)' CLAUDE.md" "Recipe 2 Phase 2 documented"
+check "grep -q 'Phase 3: Platform Integration & Refinement' CLAUDE.md" "Recipe 2 Phase 3 documented"
+
+# 2c. Verify Recipe 2 verification gates are documented
+echo ""
+echo "Checking Recipe 2 verification gates..."
+check "grep -q 'cargo build --target x86_64-unknown-linux-gnu' CLAUDE.md" "Recipe 2 Phase 1 build command documented"
+check "grep -q 'cargo test --test x11_integration' CLAUDE.md" "Recipe 2 Phase 2 test command documented"
+check "grep -q 'cargo test --test x11_parity' CLAUDE.md" "Recipe 2 Phase 3 parity test documented"
+
+# 2d. Verify Recipe 2 cross-module concerns are documented
+echo ""
+echo "Checking Recipe 2 cross-module coordination..."
+check "grep -q 'coordinate contract' CLAUDE.md || grep -q 'Coordinate contract' CLAUDE.md" "Recipe 2 mentions coordinate contract"
+check "grep -q 'src/shell/platform/x11.rs' CLAUDE.md" "Recipe 2 mentions x11.rs implementation"
+
+# 2e. Verify Recipe 3 section header exists
 echo ""
 echo "Checking Recipe 3 section header..."
 check "grep -q 'Recipe 3: Checkbox Control' CLAUDE.md" "Recipe 3 section exists"
 
-# 2c. Verify Recipe 3 phases are documented
+# 2g. Verify Recipe 3 phases are documented
 echo ""
 echo "Checking Recipe 3 phases..."
 check "grep -q 'Phase 1: State Definition' CLAUDE.md" "Recipe 3 Phase 1 documented"
@@ -50,7 +70,7 @@ check "grep -q 'Phase 2: Element Tree Construction' CLAUDE.md" "Recipe 3 Phase 2
 check "grep -q 'Phase 3: Enhancement (Styling & Visual Polish)' CLAUDE.md" "Recipe 3 Phase 3 documented"
 check "grep -q 'Phase 4: Integration & Verification' CLAUDE.md" "Recipe 3 Phase 4 documented"
 
-# 2d. Verify Recipe 3 verification gates are documented
+# 2h. Verify Recipe 3 verification gates are documented
 echo ""
 echo "Checking Recipe 3 verification gates..."
 check "grep -q 'a_checkbox_changes_state_on_click' CLAUDE.md" "Recipe 3 Phase 1 test documented"
@@ -58,13 +78,13 @@ check "grep -q 'a_checkbox_draws_differently_once_it_is_ticked' CLAUDE.md" "Reci
 check "grep -q 'cargo test --test recipes -- checkbox' CLAUDE.md" "Recipe 3 Phase 3 test command documented"
 check "grep -q 'checkbox_preserves_state_across_frames' CLAUDE.md" "Recipe 3 Phase 4 test documented"
 
-# 2e. Verify Recipe 3 cross-module concerns are documented
+# 2i. Verify Recipe 3 cross-module concerns are documented
 echo ""
 echo "Checking Recipe 3 cross-module coordination..."
 check "grep -q 'src/widgets.rs' CLAUDE.md && grep -q 'src/widgets.rs.*checkbox' CLAUDE.md || grep -q 'widgets.rs.*checkbox' CLAUDE.md" "Recipe 3 mentions widgets.rs implementation"
 check "grep -q 'tests/recipes.rs.*checkbox' CLAUDE.md || grep -q 'checkbox.*tests/recipes.rs' CLAUDE.md" "Recipe 3 mentions tests/recipes.rs"
 
-# 2f. Verify Recipe 3 template for building custom controls is documented
+# 2j. Verify Recipe 3 template for building custom controls is documented
 echo ""
 echo "Checking Recipe 3 template..."
 check "grep -q 'Template for Building Custom Controls' CLAUDE.md" "Recipe 3 template section exists"
