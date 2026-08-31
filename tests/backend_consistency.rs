@@ -1509,216 +1509,220 @@ fn event_sequences_with_state_changes_are_deterministic() {
 // POINTER COORDINATE NORMALIZATION ACROSS EVENT TYPES
 // ============================================================================
 
-/// Verify pointer coordinates are normalized in window-logical units for PointerMoved.
-/// Test at origin (0,0), edge (800,600), and middle (400,300) positions.
-#[test]
-fn pointer_coordinates_normalized_pointer_moved_events() {
-    let mut input = Input::new();
+mod pointer_coordinates {
+    use super::*;
 
-    let test_positions = vec![
-        Point::new(0.0, 0.0),
-        Point::new(800.0, 600.0),
-        Point::new(400.0, 300.0),
-    ];
+    /// Verify pointer coordinates are normalized in window-logical units for PointerMoved.
+    /// Test at origin (0,0), edge (800,600), and middle (400,300) positions.
+    #[test]
+    fn normalized_pointer_moved_events() {
+        let mut input = Input::new();
 
-    for pos in test_positions {
-        input.apply(Event::PointerMoved(pos));
-        assert_eq!(
-            input.pointer(),
-            pos,
-            "PointerMoved should normalize coordinates to window-logical units"
-        );
+        let test_positions = vec![
+            Point::new(0.0, 0.0),
+            Point::new(800.0, 600.0),
+            Point::new(400.0, 300.0),
+        ];
+
+        for pos in test_positions {
+            input.apply(Event::PointerMoved(pos));
+            assert_eq!(
+                input.pointer(),
+                pos,
+                "PointerMoved should normalize coordinates to window-logical units"
+            );
+        }
     }
-}
 
-/// Verify pointer coordinates are normalized in window-logical units for PointerDown.
-/// Test at origin (0,0), edge (800,600), and middle (400,300) positions.
-#[test]
-fn pointer_coordinates_normalized_pointer_down_events() {
-    let mut input = Input::new();
+    /// Verify pointer coordinates are normalized in window-logical units for PointerDown.
+    /// Test at origin (0,0), edge (800,600), and middle (400,300) positions.
+    #[test]
+    fn normalized_pointer_down_events() {
+        let mut input = Input::new();
 
-    let test_positions = vec![
-        Point::new(0.0, 0.0),
-        Point::new(800.0, 600.0),
-        Point::new(400.0, 300.0),
-    ];
+        let test_positions = vec![
+            Point::new(0.0, 0.0),
+            Point::new(800.0, 600.0),
+            Point::new(400.0, 300.0),
+        ];
 
-    for pos in test_positions {
+        for pos in test_positions {
+            input.apply(Event::PointerDown {
+                position: pos,
+                button: PointerButton::Primary,
+            });
+            assert_eq!(
+                input.pointer(),
+                pos,
+                "PointerDown should normalize coordinates to window-logical units"
+            );
+            assert_eq!(
+                input.press_origin(PointerButton::Primary),
+                Some(pos),
+                "press origin should record normalized coordinates"
+            );
+            input.begin_frame();
+        }
+    }
+
+    /// Verify pointer coordinates are normalized in window-logical units for PointerUp.
+    /// Test at origin (0,0), edge (800,600), and middle (400,300) positions.
+    #[test]
+    fn normalized_pointer_up_events() {
+        let mut input = Input::new();
+
+        let test_positions = vec![
+            Point::new(0.0, 0.0),
+            Point::new(800.0, 600.0),
+            Point::new(400.0, 300.0),
+        ];
+
+        for pos in test_positions {
+            input.apply(Event::PointerDown {
+                position: pos,
+                button: PointerButton::Primary,
+            });
+            input.begin_frame();
+            input.apply(Event::PointerUp {
+                position: pos,
+                button: PointerButton::Primary,
+            });
+            assert_eq!(
+                input.pointer(),
+                pos,
+                "PointerUp should normalize coordinates to window-logical units"
+            );
+            input.begin_frame();
+        }
+    }
+
+    /// Verify drag coordinates are normalized across start, move, and end positions.
+    /// Drag detection uses normalized window-logical coordinates from PointerDown/Move/Up.
+    #[test]
+    fn normalized_across_drag_sequence() {
+        let mut input = Input::new();
+
+        let drag_start = Point::new(100.0, 100.0);
+        let drag_middle = Point::new(400.0, 300.0);
+        let drag_end = Point::new(800.0, 600.0);
+
+        // Press at start position
         input.apply(Event::PointerDown {
-            position: pos,
+            position: drag_start,
             button: PointerButton::Primary,
         });
         assert_eq!(
             input.pointer(),
-            pos,
-            "PointerDown should normalize coordinates to window-logical units"
+            drag_start,
+            "drag start position should be normalized"
         );
         assert_eq!(
             input.press_origin(PointerButton::Primary),
-            Some(pos),
-            "press origin should record normalized coordinates"
+            Some(drag_start),
+            "drag origin should be normalized"
         );
+
         input.begin_frame();
-    }
-}
 
-/// Verify pointer coordinates are normalized in window-logical units for PointerUp.
-/// Test at origin (0,0), edge (800,600), and middle (400,300) positions.
-#[test]
-fn pointer_coordinates_normalized_pointer_up_events() {
-    let mut input = Input::new();
+        // Move to middle position
+        input.apply(Event::PointerMoved(drag_middle));
+        assert_eq!(
+            input.pointer(),
+            drag_middle,
+            "drag middle position should be normalized"
+        );
+        assert_eq!(
+            input.press_origin(PointerButton::Primary),
+            Some(drag_start),
+            "drag origin should persist (still normalized)"
+        );
 
-    let test_positions = vec![
-        Point::new(0.0, 0.0),
-        Point::new(800.0, 600.0),
-        Point::new(400.0, 300.0),
-    ];
-
-    for pos in test_positions {
-        input.apply(Event::PointerDown {
-            position: pos,
-            button: PointerButton::Primary,
-        });
         input.begin_frame();
+
+        // Move to end position
+        input.apply(Event::PointerMoved(drag_end));
+        assert_eq!(
+            input.pointer(),
+            drag_end,
+            "drag end position should be normalized"
+        );
+        assert_eq!(
+            input.press_origin(PointerButton::Primary),
+            Some(drag_start),
+            "drag origin should persist across moves (still normalized)"
+        );
+
+        input.begin_frame();
+
+        // Release at end position
         input.apply(Event::PointerUp {
-            position: pos,
+            position: drag_end,
             button: PointerButton::Primary,
         });
         assert_eq!(
             input.pointer(),
-            pos,
-            "PointerUp should normalize coordinates to window-logical units"
+            drag_end,
+            "drag release position should be normalized"
         );
-        input.begin_frame();
     }
-}
 
-/// Verify drag coordinates are normalized across start, move, and end positions.
-/// Drag detection uses normalized window-logical coordinates from PointerDown/Move/Up.
-#[test]
-fn pointer_coordinates_normalized_across_drag_sequence() {
-    let mut input = Input::new();
+    /// Verify all pointer event types maintain coordinate consistency at critical positions.
+    /// Comprehensive test combining PointerMoved, PointerDown, PointerUp in one sequence.
+    #[test]
+    fn consistency_across_all_event_types() {
+        let mut input = Input::new();
 
-    let drag_start = Point::new(100.0, 100.0);
-    let drag_middle = Point::new(400.0, 300.0);
-    let drag_end = Point::new(800.0, 600.0);
+        // Test at origin (0, 0)
+        input.apply(Event::PointerMoved(Point::new(0.0, 0.0)));
+        assert_eq!(input.pointer(), Point::new(0.0, 0.0));
 
-    // Press at start position
-    input.apply(Event::PointerDown {
-        position: drag_start,
-        button: PointerButton::Primary,
-    });
-    assert_eq!(
-        input.pointer(),
-        drag_start,
-        "drag start position should be normalized"
-    );
-    assert_eq!(
-        input.press_origin(PointerButton::Primary),
-        Some(drag_start),
-        "drag origin should be normalized"
-    );
+        input.apply(Event::PointerDown {
+            position: Point::new(0.0, 0.0),
+            button: PointerButton::Primary,
+        });
+        assert_eq!(input.pointer(), Point::new(0.0, 0.0));
 
-    input.begin_frame();
+        input.begin_frame();
+        input.apply(Event::PointerUp {
+            position: Point::new(0.0, 0.0),
+            button: PointerButton::Primary,
+        });
+        assert_eq!(input.pointer(), Point::new(0.0, 0.0));
 
-    // Move to middle position
-    input.apply(Event::PointerMoved(drag_middle));
-    assert_eq!(
-        input.pointer(),
-        drag_middle,
-        "drag middle position should be normalized"
-    );
-    assert_eq!(
-        input.press_origin(PointerButton::Primary),
-        Some(drag_start),
-        "drag origin should persist (still normalized)"
-    );
+        // Test at edge (800, 600)
+        input.begin_frame();
+        input.apply(Event::PointerMoved(Point::new(800.0, 600.0)));
+        assert_eq!(input.pointer(), Point::new(800.0, 600.0));
 
-    input.begin_frame();
+        input.apply(Event::PointerDown {
+            position: Point::new(800.0, 600.0),
+            button: PointerButton::Primary,
+        });
+        assert_eq!(input.pointer(), Point::new(800.0, 600.0));
 
-    // Move to end position
-    input.apply(Event::PointerMoved(drag_end));
-    assert_eq!(
-        input.pointer(),
-        drag_end,
-        "drag end position should be normalized"
-    );
-    assert_eq!(
-        input.press_origin(PointerButton::Primary),
-        Some(drag_start),
-        "drag origin should persist across moves (still normalized)"
-    );
+        input.begin_frame();
+        input.apply(Event::PointerUp {
+            position: Point::new(800.0, 600.0),
+            button: PointerButton::Primary,
+        });
+        assert_eq!(input.pointer(), Point::new(800.0, 600.0));
 
-    input.begin_frame();
+        // Test at middle (400, 300)
+        input.begin_frame();
+        input.apply(Event::PointerMoved(Point::new(400.0, 300.0)));
+        assert_eq!(input.pointer(), Point::new(400.0, 300.0));
 
-    // Release at end position
-    input.apply(Event::PointerUp {
-        position: drag_end,
-        button: PointerButton::Primary,
-    });
-    assert_eq!(
-        input.pointer(),
-        drag_end,
-        "drag release position should be normalized"
-    );
-}
+        input.apply(Event::PointerDown {
+            position: Point::new(400.0, 300.0),
+            button: PointerButton::Primary,
+        });
+        assert_eq!(input.pointer(), Point::new(400.0, 300.0));
 
-/// Verify all pointer event types maintain coordinate consistency at critical positions.
-/// Comprehensive test combining PointerMoved, PointerDown, PointerUp in one sequence.
-#[test]
-fn pointer_coordinate_consistency_across_all_event_types() {
-    let mut input = Input::new();
-
-    // Test at origin (0, 0)
-    input.apply(Event::PointerMoved(Point::new(0.0, 0.0)));
-    assert_eq!(input.pointer(), Point::new(0.0, 0.0));
-
-    input.apply(Event::PointerDown {
-        position: Point::new(0.0, 0.0),
-        button: PointerButton::Primary,
-    });
-    assert_eq!(input.pointer(), Point::new(0.0, 0.0));
-
-    input.begin_frame();
-    input.apply(Event::PointerUp {
-        position: Point::new(0.0, 0.0),
-        button: PointerButton::Primary,
-    });
-    assert_eq!(input.pointer(), Point::new(0.0, 0.0));
-
-    // Test at edge (800, 600)
-    input.begin_frame();
-    input.apply(Event::PointerMoved(Point::new(800.0, 600.0)));
-    assert_eq!(input.pointer(), Point::new(800.0, 600.0));
-
-    input.apply(Event::PointerDown {
-        position: Point::new(800.0, 600.0),
-        button: PointerButton::Primary,
-    });
-    assert_eq!(input.pointer(), Point::new(800.0, 600.0));
-
-    input.begin_frame();
-    input.apply(Event::PointerUp {
-        position: Point::new(800.0, 600.0),
-        button: PointerButton::Primary,
-    });
-    assert_eq!(input.pointer(), Point::new(800.0, 600.0));
-
-    // Test at middle (400, 300)
-    input.begin_frame();
-    input.apply(Event::PointerMoved(Point::new(400.0, 300.0)));
-    assert_eq!(input.pointer(), Point::new(400.0, 300.0));
-
-    input.apply(Event::PointerDown {
-        position: Point::new(400.0, 300.0),
-        button: PointerButton::Primary,
-    });
-    assert_eq!(input.pointer(), Point::new(400.0, 300.0));
-
-    input.begin_frame();
-    input.apply(Event::PointerUp {
-        position: Point::new(400.0, 300.0),
-        button: PointerButton::Primary,
-    });
-    assert_eq!(input.pointer(), Point::new(400.0, 300.0));
+        input.begin_frame();
+        input.apply(Event::PointerUp {
+            position: Point::new(400.0, 300.0),
+            button: PointerButton::Primary,
+        });
+        assert_eq!(input.pointer(), Point::new(400.0, 300.0));
+    }
 }
