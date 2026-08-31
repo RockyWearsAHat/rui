@@ -42,6 +42,24 @@ jobs:
       - name: Test the documentation's own examples
         run: cargo test --doc
 
+  wasm:
+    name: test WASM target
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build WASM target
+        run: cargo build --target wasm32-unknown-unknown
+
+      - name: Verify WASM compilation succeeds
+        run: cargo build --target wasm32-unknown-unknown --release
+
   lint:
     name: lint
     runs-on: ubuntu-latest
