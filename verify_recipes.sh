@@ -291,6 +291,68 @@ check "grep -q '| \`memory\`' CLAUDE.md" "memory module documented in table"
 check "grep -q '| \`app\`' CLAUDE.md" "app module documented in table"
 check "grep -q '| \`testing\`' CLAUDE.md" "testing module documented in table"
 
+# 11. Verify Key Architectural Patterns section completeness
+echo ""
+echo "Key Architectural Patterns verification:"
+check "grep -q '## Key Architectural Patterns' CLAUDE.md" "Key Architectural Patterns section header exists"
+
+# Verify all architectural pattern subsections
+check "grep -q '### Event Loop' CLAUDE.md" "Event Loop pattern documented"
+check "grep -q '### Testing UI' CLAUDE.md" "Testing UI pattern documented"
+check "grep -q '### Segmented Control Exemplar' CLAUDE.md" "Segmented Control Exemplar pattern documented"
+check "grep -q '### Checkbox Exemplar' CLAUDE.md" "Checkbox Exemplar pattern documented"
+check "grep -q '### Meter Widget Exemplar' CLAUDE.md" "Meter Widget Exemplar pattern documented"
+check "grep -q '### Building Custom Controls' CLAUDE.md" "Building Custom Controls pattern documented"
+
+# Verify Event Loop documentation details
+check "grep -q 'loop:' CLAUDE.md" "Event Loop loop structure documented"
+check "grep -q 'wait for input' CLAUDE.md" "Event Loop wait step documented"
+check "grep -q 'call view(state)' CLAUDE.md" "Event Loop view call documented"
+check "grep -q 'Platform-specific code' CLAUDE.md" "Event Loop platform note documented"
+check "grep -q 'Backend trait' CLAUDE.md" "Backend trait documentation exists"
+check "grep -q 'six methods' CLAUDE.md" "Backend trait methods documented"
+
+# Verify Testing UI documentation details
+check "grep -q 'Harness' CLAUDE.md" "Testing Harness documented"
+check "grep -q 'harness.click_text' CLAUDE.md" "Harness click_text method documented"
+check "grep -q 'synthetic font' CLAUDE.md" "Testing UI synthetic font documented"
+check "grep -q 'tests/recipes.rs' CLAUDE.md" "Testing UI references recipes.rs"
+
+# Verify Segmented Control Exemplar details
+check "grep -q 'Pattern at a Glance' CLAUDE.md" "Segmented pattern summary documented"
+check "grep -q 'struct App { selected: usize }' CLAUDE.md" "Segmented state structure documented"
+check "grep -q 'cargo run.*example segmented' CLAUDE.md" "Segmented run command documented"
+check "grep -q 'state-view-handler pattern' CLAUDE.md" "State-view-handler pattern documented"
+
+# Verify Checkbox Exemplar details
+check "grep -q '### Checkbox Exemplar' CLAUDE.md" "Checkbox Exemplar header exists"
+check "grep -q 'binary interactive control' CLAUDE.md" "Checkbox purpose documented"
+check "grep -q 'struct App { notify: bool }' CLAUDE.md" "Checkbox state structure documented"
+check "grep -q 'cargo run.*example checkbox' CLAUDE.md" "Checkbox run command documented"
+
+# Verify Meter Widget Exemplar details
+check "grep -q '### Meter Widget Exemplar' CLAUDE.md" "Meter Exemplar header exists"
+check "grep -q 'passive/display-only' CLAUDE.md" "Meter purpose documented"
+check "grep -q 'struct App { progress: f32 }' CLAUDE.md" "Meter state structure documented"
+check "grep -q 'cargo run.*example meter' CLAUDE.md" "Meter run command documented"
+check "grep -q 'Passive widgets' CLAUDE.md" "Meter passive pattern documented"
+
+# Verify Building Custom Controls details
+check "grep -q '### Building Custom Controls' CLAUDE.md" "Building Custom Controls section exists"
+check "grep -q 'Copy a recipe' CLAUDE.md" "Copy recipe instruction documented"
+check "grep -q '.on_drag' CLAUDE.md" "on_drag handler pattern documented"
+check "grep -q '.on_key' CLAUDE.md" "on_key handler pattern documented"
+
+# Verify key architectural files exist and are referenced
+check "[ -f src/shell/mod.rs ]" "src/shell/mod.rs file exists"
+check "grep -q 'src/shell/mod.rs' CLAUDE.md" "src/shell/mod.rs documented in patterns"
+check "grep -q 'src/testing/' CLAUDE.md" "src/testing/ documented in patterns"
+check "grep -q 'tests/recipes.rs' CLAUDE.md" "tests/recipes.rs documented in patterns"
+
+# Verify exemplar running commands work in documentation
+check "grep -q 'cargo run -p rui --example' CLAUDE.md" "Exemplar run command documented"
+check "grep -q 'cargo test' CLAUDE.md" "Test command documented"
+
 # Final report
 echo ""
 echo "============================================"
