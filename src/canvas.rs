@@ -347,6 +347,11 @@ impl Canvas {
     }
 
     /// Fills a rectangle with square corners.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `rect` parameter is in **window-logical units**, not device pixels.
+    /// All coordinates are automatically scaled by the display's scale factor.
     pub fn fill_rect(&mut self, rect: Rect, color: Color) {
         self.fill(rect, Corner::Square, color);
     }
@@ -356,6 +361,11 @@ impl Canvas {
     /// The corner size is clamped to half the shorter side, so asking for more
     /// than the shape can hold yields a capsule — or, cut, a diamond — rather
     /// than an inverted corner.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `rect` parameter is in **window-logical units**, not device pixels.
+    /// All coordinates are automatically scaled by the display's scale factor.
     pub fn fill(&mut self, rect: Rect, corner: Corner, color: Color) {
         if !color.is_visible() || rect.is_empty() {
             return;
@@ -376,6 +386,11 @@ impl Canvas {
     /// which keeps this exactly as cheap as a flat fill; see the module's own
     /// notes. A gradient between two equal colours is a flat fill and is drawn
     /// as one.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `rect` parameter is in **window-logical units**, not device pixels.
+    /// All coordinates are automatically scaled by the display's scale factor.
     pub fn fill_vertical(&mut self, rect: Rect, corner: Corner, top: Color, bottom: Color) {
         if rect.is_empty() || (!top.is_visible() && !bottom.is_visible()) {
             return;
@@ -396,6 +411,11 @@ impl Canvas {
     /// is how a shadow is offset outward from a small control without the halo
     /// hugging its outline so tightly that it reads as a blurred border. The
     /// corner grows with it, so a cut panel is haloed by a cut shape.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `rect` and `blur`/`spread` parameters are in **window-logical units**.
+    /// All coordinates are automatically scaled by the display's scale factor.
     pub fn shadow(&mut self, rect: Rect, corner: Corner, blur: f32, spread: f32, color: Color) {
         if !color.is_visible() || rect.is_empty() || blur <= 0.0 {
             return;
@@ -411,6 +431,11 @@ impl Canvas {
     /// Centred rather than inside or outside because that is what makes a
     /// one-pixel border land on one row of pixels instead of straddling two and
     /// rendering as two grey rows.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `rect` and `thickness` parameters are in **window-logical units**.
+    /// All coordinates are automatically scaled by the display's scale factor.
     pub fn stroke(&mut self, rect: Rect, corner: Corner, thickness: f32, color: Color) {
         if !color.is_visible() || rect.is_empty() || thickness <= 0.0 {
             return;
