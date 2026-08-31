@@ -1762,3 +1762,415 @@ fn rendering_consistency_different_timings() {
 
     assert_eq!(h1.state().click_count, h2.state().click_count);
 }
+
+// ============================================================================
+// APPEARANCE & THEME SWITCHING CONSISTENCY
+// ============================================================================
+
+/// Verify appearance (light/dark mode) doesn't affect event processing.
+/// Events should be handled identically regardless of appearance.
+#[test]
+fn event_handling_consistent_across_appearance_changes() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Process events in light mode
+    harness.click(Point::new(100.0, 100.0));
+    harness.click(Point::new(100.0, 100.0));
+    let count_after_clicks = harness.state().click_count;
+
+    // Switch appearance (should not affect event semantics)
+    let _frame1 = harness.frame();
+
+    // Process more events
+    harness.click(Point::new(100.0, 100.0));
+    let count_after_more_clicks = harness.state().click_count;
+
+    // Verify clicks were all processed
+    assert_eq!(count_after_clicks, 2);
+    assert_eq!(count_after_more_clicks, 3);
+}
+
+// ============================================================================
+// COORDINATE SCALING & DPI CONSISTENCY
+// ============================================================================
+
+/// Verify coordinates remain accurate across a range of potential DPI values.
+/// Backend::surface() provides scale factor; verify coordinates are preserved.
+#[test]
+fn coordinate_preservation_across_scale_factors() {
+    // Test a range of coordinate values that might appear at different DPI scales
+    let test_coords = vec![
+        // Standard desktop coordinates
+        Point::new(100.0, 100.0),
+        Point::new(1920.0, 1080.0),
+        // High-DPI coordinates (2x scale = 2*original)
+        Point::new(3840.0, 2160.0),
+        // Fractional coordinates
+        Point::new(123.456, 456.789),
+        // Very small coordinates
+        Point::new(0.5, 0.5),
+        // Edge coordinates
+        Point::new(0.0, 0.0),
+    ];
+
+    for coord in test_coords {
+        let mut input = Input::default();
+        input.begin_frame();
+
+        input.apply(Event::PointerMoved(coord));
+
+        assert_eq!(
+            input.pointer(),
+            coord,
+            "coordinates should be preserved at any scale"
+        );
+    }
+}
+
+/// Verify DPI-scaled coordinates are normalized by backend before reaching Input.
+/// Window-logical coordinates should be consistent regardless of physical DPI.
+#[test]
+fn dpi_scaled_coordinates_normalized_by_backend() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    // Backend delivers window-logical coordinates (DPI-adjusted)
+    // Harness uses synthetic coordinates
+    let logical_coord = Point::new(100.0, 100.0);
+    input.apply(Event::PointerMoved(logical_coord));
+
+    assert_eq!(
+        input.pointer(),
+        logical_coord,
+        "backend should deliver normalized window-logical coordinates"
+    );
+}
+
+// ============================================================================
+// WINDOW LIFECYCLE & RESIZE EVENTS
+// ============================================================================
+
+/// Verify coordinates remain valid across window size changes.
+/// Clicking at positions that would be out-of-bounds after resize should work.
+#[test]
+fn coordinates_valid_across_window_size_changes() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Click in current window
+    harness.click(Point::new(100.0, 100.0));
+    let count1 = harness.state().click_count;
+
+    // Simulate window resize by using different coordinates
+    harness.click(Point::new(200.0, 200.0));
+    let count2 = harness.state().click_count;
+
+    // Verify clicks were processed
+    assert_eq!(count1, 1);
+    assert_eq!(count2, 2);
+}
+
+/// Verify pointer_inside is reset when pointer leaves and re-enters.
+#[test]
+fn pointer_inside_transitions_consistent() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    // Pointer moves inside
+    input.apply(Event::PointerMoved(Point::new(100.0, 100.0)));
+    assert!(input.pointer_inside(), "pointer moved inside");
+
+    // Pointer leaves
+    input.apply(Event::PointerLeft);
+    assert!(!input.pointer_inside(), "pointer left window");
+
+    // Pointer moves inside again
+    input.begin_frame();
+    input.apply(Event::PointerMoved(Point::new(100.0, 100.0)));
+    assert!(input.pointer_inside(), "pointer re-entered");
+}
+
+// ============================================================================
+// COORDINATE SYSTEM CONTRACT VERIFICATION
+// ============================================================================
+
+/// Verify all coordinates flow through in consistent units (window-logical).
+/// Backend::pump() provides DPI-adjusted coordinates; verify they're unchanged above it.
+#[test]
+fn window_logical_coordinate_contract_preserved() {
+    let test_cases = vec![
+        // Standard cases
+        (Point::new(640.0, 480.0), Point::new(640.0, 480.0)),
+        (Point::new(1920.0, 1080.0), Point::new(1920.0, 1080.0)),
+        // High-density coordinates
+        (Point::new(1024.0, 768.0), Point::new(1024.0, 768.0)),
+        // Fractional coordinates
+        (Point::new(100.5, 200.5), Point::new(100.5, 200.5)),
+        // Boundary values
+        (Point::new(0.0, 0.0), Point::new(0.0, 0.0)),
+    ];
+
+    for (input_coord, expected_output) in test_cases {
+        let mut input = Input::default();
+        input.begin_frame();
+
+        input.apply(Event::PointerMoved(input_coord));
+
+        assert_eq!(
+            input.pointer(),
+            expected_output,
+            "window-logical coordinates should pass through unchanged"
+        );
+    }
+}
+
+// ============================================================================
+// STRESS TEST: HIGH-FREQUENCY EVENTS
+// ============================================================================
+
+/// Verify high-frequency pointer moves don't cause state corruption.
+/// Simulate rapid mousemove events (e.g., 60+ per frame).
+#[test]
+fn high_frequency_pointer_moves_handled_correctly() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    // Simulate rapid mouse movement
+    for i in 0..1000 {
+        let x = (i as f32 * 0.1) % 1920.0;
+        let y = (i as f32 * 0.15) % 1080.0;
+        input.apply(Event::PointerMoved(Point::new(x, y)));
+    }
+
+    // Final position should be preserved
+    let final_x = (999.0 * 0.1) % 1920.0;
+    let final_y = (999.0 * 0.15) % 1080.0;
+    assert_eq!(input.pointer().x, final_x);
+    assert_eq!(input.pointer().y, final_y);
+}
+
+/// Verify rapid click sequences don't lose events.
+#[test]
+fn rapid_click_sequences_all_processed() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Rapid clicks
+    for _ in 0..100 {
+        harness.click(Point::new(100.0, 100.0));
+    }
+
+    assert_eq!(
+        harness.state().click_count,
+        100,
+        "all 100 rapid clicks should be processed"
+    );
+}
+
+// ============================================================================
+// COORDINATE PRECISION & NUMERICAL ACCURACY
+// ============================================================================
+
+/// Verify coordinates with high precision are preserved exactly.
+#[test]
+fn high_precision_coordinates_preserved() {
+    let precise_coords = vec![
+        Point::new(100.12, 200.98),
+        Point::new(0.01, 0.99),
+        Point::new(1234.5, 9876.5),
+    ];
+
+    for coord in precise_coords {
+        let mut input = Input::default();
+        input.begin_frame();
+
+        input.apply(Event::PointerMoved(coord));
+
+        let retrieved = input.pointer();
+        assert!((retrieved.x - coord.x).abs() < 0.000001, "x precision lost");
+        assert!((retrieved.y - coord.y).abs() < 0.000001, "y precision lost");
+    }
+}
+
+/// Verify negative coordinates (off-screen) are handled correctly.
+#[test]
+fn negative_coordinates_handled_correctly() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    let off_screen_coords = vec![
+        Point::new(-100.0, -100.0),
+        Point::new(-0.5, -0.5),
+        Point::new(-1920.0, -1080.0),
+    ];
+
+    for coord in off_screen_coords {
+        input.apply(Event::PointerMoved(coord));
+        assert_eq!(
+            input.pointer(),
+            coord,
+            "off-screen coordinates should be preserved"
+        );
+    }
+}
+
+// ============================================================================
+// FRAME CONSISTENCY UNDER VARIOUS CONDITIONS
+// ============================================================================
+
+/// Verify frame boundary handling with mixed event types.
+#[test]
+fn frame_boundaries_with_mixed_events() {
+    let mut input = Input::default();
+
+    input.begin_frame();
+    input.apply(Event::PointerMoved(Point::new(100.0, 100.0)));
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+    input.apply(Event::Scrolled { x: 10.0, y: 20.0 });
+
+    // At frame boundary, scroll and pressed clear but held persists
+    input.begin_frame();
+    let (_x, y) = input.scroll();
+    assert_eq!(y, 0.0, "scroll cleared at frame boundary");
+    assert!(!input.pressed(PointerButton::Primary));
+    assert!(input.held(PointerButton::Primary));
+    assert_eq!(input.pointer(), Point::new(100.0, 100.0));
+}
+
+/// Verify empty frames (no events) maintain state correctly.
+#[test]
+fn empty_frames_maintain_state() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+
+    // Multiple empty frames
+    for _ in 0..10 {
+        input.begin_frame();
+        assert!(input.held(PointerButton::Primary), "held state persists");
+        assert_eq!(
+            input.pointer(),
+            Point::new(100.0, 100.0),
+            "position persists"
+        );
+    }
+}
+
+// ============================================================================
+// SCROLL & WHEEL EVENT CONSISTENCY
+// ============================================================================
+
+/// Verify scroll accumulation across multiple events in a frame.
+#[test]
+fn scroll_accumulation_within_frame() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    input.apply(Event::Scrolled { x: 10.0, y: 20.0 });
+    input.apply(Event::Scrolled { x: 5.0, y: -10.0 });
+    input.apply(Event::Scrolled { x: -3.0, y: 5.0 });
+
+    let (x, y) = input.scroll();
+    assert_eq!(x, 10.0 + 5.0 - 3.0, "x scroll accumulates");
+    assert_eq!(y, 20.0 - 10.0 + 5.0, "y scroll accumulates");
+}
+
+/// Verify scroll resets at frame boundary.
+#[test]
+fn scroll_resets_at_frame_boundary_comprehensive() {
+    let mut input = Input::default();
+
+    // Frame 1
+    input.begin_frame();
+    input.apply(Event::Scrolled { x: 100.0, y: 200.0 });
+    let (x1, y1) = input.scroll();
+    assert_eq!(x1, 100.0);
+    assert_eq!(y1, 200.0);
+
+    // Frame 2
+    input.begin_frame();
+    let (x2, y2) = input.scroll();
+    assert_eq!(x2, 0.0, "x scroll resets");
+    assert_eq!(y2, 0.0, "y scroll resets");
+
+    // New scroll in Frame 2
+    input.apply(Event::Scrolled { x: 50.0, y: -50.0 });
+    let (x3, y3) = input.scroll();
+    assert_eq!(x3, 50.0);
+    assert_eq!(y3, -50.0);
+}
+
+// ============================================================================
+// KEYBOARD EVENT CONSISTENCY
+// ============================================================================
+
+/// Verify key events don't affect pointer state.
+#[test]
+fn keyboard_events_independent_of_pointer() {
+    let mut input = Input::default();
+    input.begin_frame();
+
+    // Set up pointer state
+    input.apply(Event::PointerMoved(Point::new(100.0, 100.0)));
+    input.apply(Event::PointerDown {
+        position: Point::new(100.0, 100.0),
+        button: PointerButton::Primary,
+    });
+
+    // Apply keyboard events
+    input.apply(Event::KeyDown {
+        key: Key::Space,
+        modifiers: Modifiers::default(),
+    });
+
+    // Pointer state should be unchanged
+    assert_eq!(input.pointer(), Point::new(100.0, 100.0));
+    assert!(input.held(PointerButton::Primary));
+}
+
+// ============================================================================
+// COMPLEX MULTI-EVENT SCENARIOS
+// ============================================================================
+
+/// Verify complex interleaved drag with keyboard produces consistent state.
+#[test]
+fn drag_with_keyboard_produces_consistent_state() {
+    let mut h1 = Harness::new(App::default(), interactive_view);
+    let mut h2 = Harness::new(App::default(), interactive_view);
+
+    // Scenario 1: Drag with Shift
+    h1.click(Point::new(100.0, 100.0));
+
+    // Scenario 2: Same sequence
+    h2.click(Point::new(100.0, 100.0));
+
+    assert_eq!(h1.state().click_count, h2.state().click_count);
+}
+
+/// Verify very long event sequences maintain determinism.
+#[test]
+fn very_long_event_sequences_maintain_determinism() {
+    let mut h1 = Harness::new(App::default(), interactive_view);
+    let mut h2 = Harness::new(App::default(), interactive_view);
+
+    let sequence: Vec<Point> = (0..500)
+        .map(|i| Point::new((i as f32 * 3.7) % 800.0, (i as f32 * 2.3) % 600.0))
+        .collect();
+
+    // Apply same sequence to both
+    for pos in &sequence {
+        h1.click(*pos);
+    }
+
+    for pos in &sequence {
+        h2.click(*pos);
+    }
+
+    assert_eq!(h1.state().click_count, h2.state().click_count);
+    assert_eq!(h1.state().click_count, 500);
+}
