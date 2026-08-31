@@ -1477,3 +1477,57 @@ fn render_wasm_parity_frame_produces_valid_output() {
         "Light and Dark frames from render_parity_frame_rgba should be visibly different"
     );
 }
+
+/// Test that directly calls render_wasm_parity_frame() on wasm32 targets.
+/// This test only compiles and runs on wasm32-unknown-unknown.
+/// Run with: wasm-pack test --headless --firefox --test wasm_parity
+#[cfg(target_arch = "wasm32")]
+pub fn render_wasm_parity_frame_directly_callable() {
+    // Import render_wasm_parity_frame from the wasm module
+    // This is available as a Rust function (not just exported to JavaScript)
+    use rui_native::wasm::render_wasm_parity_frame;
+
+    // Call render_wasm_parity_frame(false) for light mode
+    let light_result = render_wasm_parity_frame(false);
+    assert!(
+        light_result.is_ok(),
+        "render_wasm_parity_frame(false) should succeed"
+    );
+    let light_bytes = light_result.unwrap();
+    let expected_size = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+    assert_eq!(
+        light_bytes.len(),
+        expected_size,
+        "light frame from render_wasm_parity_frame should return {} bytes",
+        expected_size
+    );
+    assert!(
+        !light_bytes.is_empty(),
+        "light frame should contain pixel data"
+    );
+
+    // Call render_wasm_parity_frame(true) for dark mode
+    let dark_result = render_wasm_parity_frame(true);
+    assert!(
+        dark_result.is_ok(),
+        "render_wasm_parity_frame(true) should succeed"
+    );
+    let dark_bytes = dark_result.unwrap();
+    assert_eq!(
+        dark_bytes.len(),
+        expected_size,
+        "dark frame from render_wasm_parity_frame should return {} bytes",
+        expected_size
+    );
+    assert!(
+        !dark_bytes.is_empty(),
+        "dark frame should contain pixel data"
+    );
+
+    // Verify light and dark frames are visibly different
+    let (diff_pixels, total_pixels) = compare_frames(&light_bytes, &dark_bytes);
+    assert!(
+        diff_pixels > total_pixels / 100,
+        "Light and Dark frames from render_wasm_parity_frame should be visibly different"
+    );
+}
