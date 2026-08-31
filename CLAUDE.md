@@ -964,13 +964,57 @@ fn view(app: &App) -> El<App> {
 
 The handler is a closure that receives mutable state as an argument and modifies it (toggling the boolean). This is identical to the segmented and meter patterns; only the state shape changes. The checkbox is reusable: call it with any boolean field in any app state, and it works.
 
-**Cross-module notes:**
+#### Cross-Module Concerns
+
+**Why state shape matters for toggles**
+
+The checkbox pattern demonstrates that any boolean field in app state can be toggled independently. The pattern is minimal: state → view → handler → state update. Because the handler receives mutable state as an argument (not a closure capturing references), it can modify any field without interior mutability tricks.
 
 The checkbox implementation touches only two modules:
 1. **`src/widgets.rs`:** Builds the checkbox element from `draw()` and `on_click()` primitives. No new draw code; reuses existing shapes and colors. Line ~~350–370~~ (estimate; keep actual implementation tight).
 2. **`tests/recipes.rs`:** Adds one test verifying the toggle behavior. Uses `Harness` to click the checkbox and assert state changed.
 
 Both changes are shallow: `widgets.rs` adds a new function that composes existing primitives, and `tests/recipes.rs` adds one test. Nothing in the rendering, layout, or event handling pipeline changes.
+
+#### Template for Building Custom Controls
+
+To build your own interactive control from this checkbox exemplar:
+
+1. **Define state** — Copy the checkbox pattern, replacing `checked: bool` with your domain type.
+   ```rust
+   struct App {
+       my_field: MyType,  // Replace bool with your type
+   }
+   ```
+
+2. **Build the view** — Use primitives (`draw`, `on_click`, `on_drag`, `on_key`) to construct your control.
+   ```rust
+   fn view(app: &App) -> El<App> {
+       widgets::draw(Size::new(...), move |painter, rect| {
+           // Draw your control here
+       })
+       .on_click(|app: &mut App| {
+           app.my_field = /* new value */;
+       })
+   }
+   ```
+
+3. **Write a test** — Copy `tests/recipes.rs` line 410 as a template:
+   ```rust
+   #[test]
+   fn my_control_changes_state_when_clicked() {
+       let mut harness = Harness::new(App { my_field: /* ... */ }, view);
+       harness.click_text("Button text");
+       assert_eq!(harness.state().my_field, /* expected value */);
+   }
+   ```
+
+4. **Run the test** — Verify your control works before shipping.
+   ```bash
+   cargo test my_control_changes_state_when_clicked
+   ```
+
+**Getting started:** Copy the checkbox exemplar, replace state type and handler logic, write a test, run it. If the test passes, your control works.
 
 ## Workflow Notes
 
