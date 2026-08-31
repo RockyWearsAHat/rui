@@ -231,8 +231,9 @@ pub enum Justify {
 ///
 /// Named against the *anchor* rather than against the window — `Below` a
 /// button, not "at 240, 380" — because what a menu or a tooltip is actually
-/// about is the control it came from, and a position in window coordinates
-/// stops being right the moment anything above it changes size.
+/// about is the control it came from, and a position in window-logical coordinates
+/// stops being right the moment anything above it changes size. All coordinates
+/// are in window-logical units (DPI-adjusted), not device pixels or CSS pixels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Anchor {
     /// Covering the anchor exactly: a badge, an overlay, a spinner over a pane.
