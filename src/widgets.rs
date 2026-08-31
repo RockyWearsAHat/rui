@@ -250,6 +250,38 @@ pub fn dot<S>(status: Status, radius: f32) -> El<S> {
     )
 }
 
+/// A box that toggles when clicked, with a label beside it.
+///
+/// The checkbox draws a filled or empty square, responds to clicks on either the
+/// box or the label, and calls the handler with mutable state. State is toggled
+/// by the handler, not by the checkbox itself — the view reflects whatever the
+/// handler set.
+pub fn checkbox<S: 'static>(
+    label: &str,
+    checked: bool,
+    toggle: impl Fn(&mut S) + 'static,
+) -> El<S> {
+    row((
+        draw(
+            Size::new(15.0, 15.0),
+            move |painter: &mut Painter<'_>, rect: Rect| {
+                painter.fill(
+                    rect,
+                    Radius::Units(4.0),
+                    if checked { Tone::Accent } else { Tone::Sunken },
+                );
+                painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
+            },
+        )
+        .size(15.0, 15.0),
+        text(label),
+    ))
+    .gap(8.0)
+    .h(22.0)
+    .align(Align::Center)
+    .on_click(move |state: &mut S| toggle(state))
+}
+
 /// A bar filled to `fraction` of its width, on a track.
 ///
 /// The fraction is clamped, so a value derived from a stale total cannot overrun
