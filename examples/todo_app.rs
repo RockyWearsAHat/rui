@@ -4,8 +4,7 @@
 //! Run with: `cargo run -p rui-native --example todo_app`
 
 use rui_native::{
-    col, draw, heading, panel, row, text, widgets, El, Key, Modifiers, Painter, Radius, Rect, Size,
-    Tone,
+    col, draw, heading, panel, row, text, widgets, El, Painter, Radius, Rect, Size, Tone,
 };
 
 #[derive(Clone)]
