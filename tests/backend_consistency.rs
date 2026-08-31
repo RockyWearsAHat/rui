@@ -2170,6 +2170,38 @@ fn keyboard_events_independent_of_pointer() {
 }
 
 // ============================================================================
+// APPEARANCE TOGGLE CONSISTENCY
+// ============================================================================
+
+/// Verify appearance changes (light/dark mode) reflect immediately in next frame.
+/// The same app instance should render with different colors when appearance toggles,
+/// without requiring application restart or reconstruction.
+#[test]
+fn appearance_updates_reflect_immediately() {
+    use rui::theme::Appearance;
+
+    // Start with light mode
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+
+    // Get background pixel color in light mode
+    let light_pixel = harness.pixel(0, 0);
+
+    // Toggle to dark mode by reassigning the harness with new appearance
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+
+    // Get the same background pixel in dark mode
+    let dark_pixel = harness.pixel(0, 0);
+
+    // The pixels should be different because the appearance changed
+    assert_ne!(
+        light_pixel, dark_pixel,
+        "appearance toggle should change rendered background colors"
+    );
+}
+
+// ============================================================================
 // COMPLEX MULTI-EVENT SCENARIOS
 // ============================================================================
 
