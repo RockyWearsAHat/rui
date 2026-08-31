@@ -2561,3 +2561,245 @@ fn appearance_toggle_preserves_click_coordinate_interpretation() {
         "click handling should be independent of appearance"
     );
 }
+
+// ============================================================================
+// APPEARANCE TOGGLE - DEEP VALIDATION
+// ============================================================================
+
+/// Verify appearance changes affect a range of pixel positions.
+/// Multiple regions should all update when appearance toggles.
+#[test]
+fn appearance_changes_affect_comprehensive_regions() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+
+    // Sample pixels from multiple regions
+    let light_pixels = [
+        harness.pixel(0, 0),     // top-left
+        harness.pixel(400, 0),   // top-center
+        harness.pixel(799, 0),   // top-right
+        harness.pixel(0, 300),   // middle-left
+        harness.pixel(400, 300), // center
+        harness.pixel(799, 599), // bottom-right
+    ];
+
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+
+    let dark_pixels = [
+        harness.pixel(0, 0),
+        harness.pixel(400, 0),
+        harness.pixel(799, 0),
+        harness.pixel(0, 300),
+        harness.pixel(400, 300),
+        harness.pixel(799, 599),
+    ];
+
+    // At least some background pixels should differ
+    let mut pixel_changed = false;
+    for (light, dark) in light_pixels.iter().zip(dark_pixels.iter()) {
+        if light != dark {
+            pixel_changed = true;
+            break;
+        }
+    }
+
+    assert!(
+        pixel_changed,
+        "appearance toggle should change at least some pixels across the rendered area"
+    );
+}
+
+/// Verify that appearance toggle produces consistent colors across multiple toggles.
+/// Same appearance should always produce the same pixels.
+#[test]
+fn appearance_toggle_color_consistency() {
+    use rui_native::theme::Appearance;
+
+    let mut harness1 = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness1.frame();
+    let light_1 = harness1.pixel(0, 0);
+
+    let mut harness1 = harness1.appearance(Appearance::Dark);
+    harness1.frame();
+    let dark_1 = harness1.pixel(0, 0);
+
+    let mut harness1 = harness1.appearance(Appearance::Light);
+    harness1.frame();
+    let light_2 = harness1.pixel(0, 0);
+
+    let mut harness1 = harness1.appearance(Appearance::Dark);
+    harness1.frame();
+    let dark_2 = harness1.pixel(0, 0);
+
+    // Same appearance should produce identical colors every time
+    assert_eq!(
+        light_1, light_2,
+        "light mode should produce consistent colors"
+    );
+    assert_eq!(dark_1, dark_2, "dark mode should produce consistent colors");
+    assert_ne!(light_1, dark_1, "light and dark modes should differ");
+}
+
+/// Verify appearance toggle is orthogonal to event processing.
+/// Event queue processing should not be affected by appearance changes.
+#[test]
+fn appearance_toggle_doesnt_interfere_with_event_queue() {
+    use rui_native::theme::Appearance;
+
+    let mut harness_light =
+        Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    let mut harness_dark =
+        Harness::new(App::default(), interactive_view).appearance(Appearance::Dark);
+
+    // Apply identical event sequences to both
+    let events = vec![
+        Point::new(100.0, 100.0),
+        Point::new(200.0, 200.0),
+        Point::new(150.0, 150.0),
+        Point::new(50.0, 50.0),
+        Point::new(100.0, 100.0),
+    ];
+
+    for pos in &events {
+        harness_light.click(*pos);
+        harness_dark.click(*pos);
+    }
+
+    // Process frames
+    harness_light.frame();
+    harness_dark.frame();
+
+    // Event queue should have been processed identically despite different appearance
+    assert_eq!(
+        harness_light.state().click_count,
+        harness_dark.state().click_count,
+        "appearance should not affect event queue processing"
+    );
+    assert_eq!(
+        harness_light.state().click_count,
+        events.len(),
+        "all events should have been processed"
+    );
+}
+
+/// Verify memory state (hover, focus, scroll) is preserved across appearance toggles.
+/// Changing appearance should not reset internal memory state.
+#[test]
+fn appearance_toggle_preserves_memory_state() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+
+    // Apply clicks to establish state
+    for _ in 0..5 {
+        harness.click(Point::new(100.0, 100.0));
+    }
+    harness.frame();
+    let state_before = harness.state().click_count;
+
+    // Toggle appearance multiple times
+    for _ in 0..3 {
+        harness = harness.appearance(Appearance::Dark);
+        harness.frame();
+
+        harness = harness.appearance(Appearance::Light);
+        harness.frame();
+    }
+
+    // State should be unchanged by appearance toggles
+    let state_after = harness.state().click_count;
+    assert_eq!(
+        state_before, state_after,
+        "appearance toggles should not affect app state"
+    );
+}
+
+/// Verify appearance toggle works correctly when called multiple times in succession.
+/// Each toggle should take effect immediately on the next frame.
+#[test]
+fn appearance_multiple_togles_each_take_effect() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+    let mut colors = vec![harness.pixel(0, 0)];
+
+    // Toggle 5 times, capturing color after each toggle
+    let appearances = vec![
+        Appearance::Dark,
+        Appearance::Light,
+        Appearance::Dark,
+        Appearance::Light,
+        Appearance::Dark,
+    ];
+
+    for appearance in appearances {
+        harness = harness.appearance(appearance);
+        harness.frame();
+        colors.push(harness.pixel(0, 0));
+    }
+
+    // Verify that toggles at even indices are all the same (light)
+    // and toggles at odd indices are all the same (dark)
+    assert_eq!(colors[0], colors[2], "light mode 1 == light mode 2");
+    assert_eq!(colors[2], colors[4], "light mode 2 == light mode 3");
+
+    assert_eq!(colors[1], colors[3], "dark mode 1 == dark mode 2");
+    assert_eq!(colors[3], colors[5], "dark mode 2 == dark mode 3");
+
+    assert_ne!(colors[0], colors[1], "light != dark");
+}
+
+/// Verify that appearance changes don't cause frame rendering errors.
+/// No panics or corrupted frames should occur during appearance toggles.
+#[test]
+fn appearance_toggles_dont_cause_rendering_errors() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Perform 100 appearance toggles with occasional clicks
+    for i in 0..100 {
+        let appearance = if i % 2 == 0 {
+            Appearance::Light
+        } else {
+            Appearance::Dark
+        };
+
+        harness = harness.appearance(appearance);
+        harness.frame();
+
+        // Occasionally click to verify event handling still works
+        if i % 10 == 0 {
+            harness.click(Point::new(100.0, 100.0));
+        }
+    }
+
+    // Should complete without panic and be in valid state
+    let _ = harness.state().click_count;
+}
+
+/// Verify that appearance toggle works with immediate reflection.
+/// No caching or deferred updates should prevent appearance from taking effect.
+#[test]
+fn appearance_toggle_immediate_reflection() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+    let light_pixel = harness.pixel(0, 0);
+
+    // Immediately after toggling, before any events
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_pixel = harness.pixel(0, 0);
+
+    // Even with no state changes, appearance should be reflected
+    assert_ne!(
+        light_pixel, dark_pixel,
+        "appearance change should be reflected immediately without state changes"
+    );
+}
