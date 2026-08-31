@@ -1,0 +1,12 @@
+ITEMS TO APPEND TO index.dx BLOCK bulleted-list-7
+================================================
+
+Each line below is a checklist item ready to append:
+
+- [ ] [scout] [ask: charter-rui] Document Recipe 3: Checkbox Widget Implementation — Follow Recipe 1 (WASM Backend) and Recipe 2 (X11 Backend) structure in CLAUDE.md to document the checkbox widget from tests/recipes.rs line 34 as a complete worked example with phases, commits, and verification gates. Verification: CLAUDE.md section ### Recipe 3: Checkbox Widget contains explicit file references with line numbers, 2–3 phases showing state → view → handler pattern, and cross-module coordination of painter colors and memory state. `cargo test --test recipes -- checkbox` passes.
+
+- [ ] [scout] [ask: charter-rui] Verify parity verification CI gate integration — Confirm that commits 23fe3ce and 19c285f properly wire `cargo test --test wasm_parity` into GitHub Actions CI pipeline so the gate runs on every PR. Verification: `.github/workflows/ci.yml` contains explicit step running wasm parity test. Local `cargo test --test wasm_parity` passes on main branch.
+
+- [ ] [scout] [ask: charter-rui] Create v0.3.0 widget implementation template guide — Document patterns for building future form controls (text_input, select, combobox from ROADMAP v0.3.0) using primitives and recipe structure. Verification: New CLAUDE.md section shows text_input widget template with state, view, and on_key handler skeleton. Explanation of how focus and caret state live in memory module. Example test using Harness.
+
+- [ ] [scout] [ask: charter-rui] Audit examples documentation and availability — Verify all 8 examples listed in CLAUDE.md (counter, segmented, meter, gallery, controls, parity, icon, segmented_modified) exist in examples/ directory, are documented in index, and `cargo build --examples` succeeds. Verification: All 8 example files exist, `cargo build --examples` exits 0, no orphaned examples, each entry in CLAUDE.md examples table is accurate.
