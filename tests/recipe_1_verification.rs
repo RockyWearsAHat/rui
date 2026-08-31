@@ -286,3 +286,32 @@ fn recipe_1_page_used_in_wasm_loop() {
         "Page struct not instantiated in WASM run()"
     );
 }
+
+#[test]
+fn recipe_1_render_wasm_parity_frame_exists() {
+    let content = fs::read_to_string("src/wasm.rs").expect("Failed to read src/wasm.rs");
+
+    // Verify render_wasm_parity_frame is exported via #[wasm_bindgen]
+    assert!(
+        content.contains("render_wasm_parity_frame"),
+        "render_wasm_parity_frame() not found in src/wasm.rs"
+    );
+
+    // Verify it takes dark: bool parameter
+    assert!(
+        content.contains("fn render_wasm_parity_frame(dark: bool)"),
+        "render_wasm_parity_frame signature does not match expected pattern"
+    );
+
+    // Verify it returns Result<Vec<u8>, JsValue>
+    assert!(
+        content.contains("Result<Vec<u8>, JsValue>"),
+        "render_wasm_parity_frame return type should be Result<Vec<u8>, JsValue>"
+    );
+
+    // Verify it's #[wasm_bindgen] exported
+    assert!(
+        content.contains("#[wasm_bindgen]") && content.contains("render_wasm_parity_frame"),
+        "render_wasm_parity_frame should be exported with #[wasm_bindgen]"
+    );
+}
