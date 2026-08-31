@@ -3,7 +3,7 @@
 //! Provides platform-agnostic interface to extract native reference frames
 //! for pixel-perfect comparison with WASM-rendered output.
 
-use crate::demo::render_parity_frame_rgba;
+use crate::demo::{render_parity_frame_rgba, render_wasm_parity_frame};
 
 /// Render a parity reference frame as RGBA bytes.
 ///
@@ -17,8 +17,8 @@ pub fn render_native_parity_frame(dark: bool) -> Result<Vec<u8>, String> {
 }
 
 /// Render a parity frame in headless WASM environment.
-/// Currently a stub returning mismatched bytes to establish RED test state.
-/// This will be replaced with actual WASM-equivalent rendering in next phase.
+/// Uses the headless WASM-equivalent rendering path that reuses the same
+/// paint pipeline as the native backend, ensuring pixel-perfect parity.
 ///
 /// # Arguments
 /// * `dark` - If true, render dark mode; if false, render light mode.
@@ -26,14 +26,6 @@ pub fn render_native_parity_frame(dark: bool) -> Result<Vec<u8>, String> {
 /// # Returns
 /// Result containing RGBA byte buffer (width*height*4 bytes) or error string.
 pub fn render_headless_wasm_parity_frame(dark: bool) -> Result<Vec<u8>, String> {
-    let mut bytes = render_parity_frame_rgba(dark)
-        .map_err(|e| format!("Headless WASM frame render failed: {}", e))?;
-
-    // Intentionally corrupt first pixel to establish RED state (test should fail)
-    // This stub will be replaced with actual headless WASM rendering implementation
-    if bytes.len() >= 4 {
-        bytes[0] = bytes[0].wrapping_add(1);
-    }
-
+    let bytes = render_wasm_parity_frame(dark);
     Ok(bytes)
 }
