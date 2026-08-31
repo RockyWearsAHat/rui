@@ -37,6 +37,11 @@ echo ""
 echo "Checking Recipe 2 section header..."
 check "grep -q 'Recipe 2: X11 Backend Implementation' CLAUDE.md" "Recipe 2 section exists"
 
+# 2b. Verify Recipe 3 section header exists
+echo ""
+echo "Checking Recipe 3 section header..."
+check "grep -q 'Recipe 3: Checkbox Control' CLAUDE.md" "Recipe 3 section exists"
+
 # 3. Verify file paths that exist on main
 echo ""
 echo "Checking file paths that exist on main..."
