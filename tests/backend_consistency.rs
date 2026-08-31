@@ -4,6 +4,11 @@
 //! Backends may transform coordinates or handle events differently; these tests
 //! ensure the Input state and handler execution are consistent.
 //!
+//! STEP 4 Acceptance Criteria:
+//! Run: `cargo test --test backend_consistency appearance_updates_reflect_immediately`
+//! This verifies that appearance changes (light/dark mode) reflect immediately in the next frame
+//! without requiring restart or special handling.
+//!
 //! Test Categories:
 //! 1. Pointer coordinate normalization (scaling, DPI adjustments)
 //! 2. Keyboard event consistency (key codes, modifiers)
@@ -11,6 +16,7 @@
 //! 4. Focus state consistency across event sequences
 //! 5. Event ordering and queue semantics
 //! 6. State mutation consistency for identical event sequences
+//! 7. Appearance toggle consistency (light/dark mode)
 
 use rui_native::input::{Event, Input, Key, Modifiers, PointerButton};
 use rui_native::testing::Harness;

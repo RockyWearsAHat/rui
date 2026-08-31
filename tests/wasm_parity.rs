@@ -217,6 +217,8 @@ fn parity_frames_can_be_serialized_for_browser() {
         let appearance_name = match appearance {
             Appearance::Light => "light",
             Appearance::Dark => "dark",
+            Appearance::HighContrastLight => "high-contrast-light",
+            Appearance::HighContrastDark => "high-contrast-dark",
         };
 
         // Verify the bytes are in the format getImageData would return
