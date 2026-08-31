@@ -144,14 +144,6 @@ pub fn render_parity_frame_rgba(dark: bool) -> Result<Vec<u8>, String> {
     Ok(crate::image::rgba(&canvas))
 }
 
-/// Render a WASM parity frame and return its pixels as RGBA bytes.
-///
-/// Wrapper around [`render_parity_frame_rgba`] that unwraps the result.
-/// Used by tests to verify WASM parity with native rendering.
-pub fn render_wasm_parity_frame(dark: bool) -> Vec<u8> {
-    render_parity_frame_rgba(dark).expect("parity frame should render successfully")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -194,8 +186,8 @@ mod tests {
 
     #[test]
     fn render_wasm_parity_frame_light_produces_correct_buffer() {
-        // Test the underlying render_parity_frame_rgba function (dark: bool) -> Vec<u8>
-        let pixels = render_parity_frame_rgba(false).expect("parity frame should render");
+        // Test the pure, non-wasm-gated function with signature (dark: bool) -> Vec<u8>
+        let pixels = render_wasm_parity_frame(false);
         let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
         assert_eq!(
             pixels.len(),
@@ -210,8 +202,8 @@ mod tests {
 
     #[test]
     fn render_wasm_parity_frame_dark_produces_correct_buffer() {
-        // Test the underlying render_parity_frame_rgba function (dark: bool) -> Vec<u8>
-        let pixels = render_parity_frame_rgba(true).expect("parity frame should render");
+        // Test the pure, non-wasm-gated function with signature (dark: bool) -> Vec<u8>
+        let pixels = render_wasm_parity_frame(true);
         let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
         assert_eq!(
             pixels.len(),
