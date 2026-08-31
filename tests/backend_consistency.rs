@@ -2803,3 +2803,122 @@ fn appearance_toggle_immediate_reflection() {
         "appearance change should be reflected immediately without state changes"
     );
 }
+
+/// Verify appearance changes during animations maintain consistency.
+/// Animations should continue correctly regardless of appearance changes.
+#[test]
+fn appearance_toggle_during_animation() {
+    use rui_native::theme::Appearance;
+    use std::time::Duration;
+
+    let mut harness = Harness::new(App::default(), interactive_view)
+        .appearance(Appearance::Light)
+        .frame_time(Duration::from_millis(16));
+
+    // Start animation by clicking
+    harness.click_text("Backend Consistency Test");
+    harness.frame();
+    let light_pixel_frame1 = harness.pixel(100, 100);
+
+    // Advance animation
+    harness.frame();
+    harness.frame();
+    let _light_pixel_frame3 = harness.pixel(100, 100);
+
+    // Change appearance while animation is running
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_pixel_frame1 = harness.pixel(100, 100);
+
+    // Continue animation in dark mode
+    harness.frame();
+    harness.frame();
+
+    // Pixels should be different due to appearance change
+    assert_ne!(
+        light_pixel_frame1, dark_pixel_frame1,
+        "appearance should affect animation rendering"
+    );
+
+    // Frame should render successfully after appearance toggle
+    assert!(
+        harness.shows("Backend Consistency Test"),
+        "should continue rendering after appearance toggle during animation"
+    );
+}
+
+/// Verify multiple rapid appearance toggles during mouse events.
+/// Events and appearance changes should process independently.
+#[test]
+fn appearance_toggle_during_mouse_tracking() {
+    use rui_native::geom::Point;
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+
+    // Mouse move event
+    harness.move_pointer(Point::new(100.0, 100.0));
+    harness.frame();
+    let light_pixel = harness.pixel(100, 100);
+
+    // Toggle appearance during mouse tracking
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+    let dark_pixel = harness.pixel(100, 100);
+
+    // Continue mouse tracking in dark mode
+    harness.move_pointer(Point::new(150.0, 150.0));
+    harness.frame();
+
+    // Pixels should change due to appearance
+    assert_ne!(
+        light_pixel, dark_pixel,
+        "appearance should affect mouse tracking rendering"
+    );
+}
+
+/// Verify appearance toggle doesn't corrupt internal memory state.
+/// Memory (hover, focus, scroll) should survive appearance changes.
+#[test]
+fn appearance_toggle_preserves_internal_memory() {
+    use rui_native::theme::Appearance;
+
+    let mut harness = Harness::new(App::default(), interactive_view).appearance(Appearance::Light);
+    harness.frame();
+
+    // Set up some memory state (hover via click)
+    harness.click_text("Backend Consistency Test");
+    harness.frame();
+
+    // Toggle appearance
+    let mut harness = harness.appearance(Appearance::Dark);
+    harness.frame();
+
+    // Same element should still be findable
+    assert!(
+        harness.shows("Backend Consistency Test"),
+        "appearance toggle should not break element state"
+    );
+}
+
+/// Verify appearance toggle with no pixels rendered yet.
+/// Edge case: appearance changes before any frame is drawn.
+#[test]
+fn appearance_toggle_before_first_frame() {
+    use rui_native::theme::Appearance;
+
+    let harness = Harness::new(App::default(), interactive_view)
+        .appearance(Appearance::Light)
+        .appearance(Appearance::Dark);
+
+    // Frame should render with final appearance (Dark)
+    let mut harness = harness;
+    harness.frame();
+
+    // Should not panic or error
+    assert!(
+        harness.shows("Backend Consistency Test"),
+        "appearance toggle before first frame should work"
+    );
+}
