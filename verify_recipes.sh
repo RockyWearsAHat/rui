@@ -16,9 +16,17 @@ check() {
     fi
 }
 
-# 1. Verify commit references (on any branch, not just main)
+# ============================================================================
+# RECIPE VERIFICATION: BACKEND RECIPES (Platforms & Core Infrastructure)
+# ============================================================================
+
+# 1. Verify Recipe 1: WASM Backend commit references
 echo ""
-echo "Checking commits referenced..."
+echo "════════════════════════════════════════════════════════════════════"
+echo "RECIPE 1: WASM Backend (Backend Recipes)"
+echo "════════════════════════════════════════════════════════════════════"
+echo ""
+echo "Checking Recipe 1 commits referenced..."
 COMMITS=(
     "531214f" "9afc9b1" "b6a1b2c" "2ef3c2b" "caa3066"
     "b116ac8" "32bf53d" "d820ff6" "e41376e" "929899a" "830033c"
@@ -32,7 +40,11 @@ done
 # Reference commit 77d4780 (on origin/sara/item-1, not main)
 check "grep -q '77d4780' CLAUDE.md" "Foundational commit 77d4780 is referenced"
 
-# 2. Verify Recipe 2 section header exists
+# 2. Verify Recipe 2: X11 Backend section header exists
+echo ""
+echo "════════════════════════════════════════════════════════════════════"
+echo "RECIPE 2: X11 Backend (Backend Recipes)"
+echo "════════════════════════════════════════════════════════════════════"
 echo ""
 echo "Checking Recipe 2 section header..."
 check "grep -q 'Recipe 2: X11 Backend Implementation' CLAUDE.md" "Recipe 2 section exists"
@@ -57,12 +69,20 @@ echo "Checking Recipe 2 cross-module coordination..."
 check "grep -q 'coordinate contract' CLAUDE.md || grep -q 'Coordinate contract' CLAUDE.md" "Recipe 2 mentions coordinate contract"
 check "grep -q 'src/shell/platform/x11.rs' CLAUDE.md" "Recipe 2 mentions x11.rs implementation"
 
-# 2e. Verify Recipe 3 section header exists
+# ============================================================================
+# RECIPE VERIFICATION: CONTROL RECIPES (Widgets & UI Components)
+# ============================================================================
+
+# 3. Verify Recipe 3: Checkbox Control section header exists
+echo ""
+echo "════════════════════════════════════════════════════════════════════"
+echo "RECIPE 3: Checkbox Control (Control Recipes)"
+echo "════════════════════════════════════════════════════════════════════"
 echo ""
 echo "Checking Recipe 3 section header..."
 check "grep -q 'Recipe 3: Checkbox Control' CLAUDE.md" "Recipe 3 section exists"
 
-# 2g. Verify Recipe 3 phases are documented
+# 3a. Verify Recipe 3 phases are documented
 echo ""
 echo "Checking Recipe 3 phases..."
 check "grep -q 'Phase 1: State Definition' CLAUDE.md" "Recipe 3 Phase 1 documented"
@@ -70,7 +90,7 @@ check "grep -q 'Phase 2: Element Tree Construction' CLAUDE.md" "Recipe 3 Phase 2
 check "grep -q 'Phase 3: Enhancement (Styling & Visual Polish)' CLAUDE.md" "Recipe 3 Phase 3 documented"
 check "grep -q 'Phase 4: Integration & Verification' CLAUDE.md" "Recipe 3 Phase 4 documented"
 
-# 2h. Verify Recipe 3 verification gates are documented
+# 3b. Verify Recipe 3 verification gates are documented
 echo ""
 echo "Checking Recipe 3 verification gates..."
 check "grep -q 'a_checkbox_changes_state_on_click' CLAUDE.md" "Recipe 3 Phase 1 test documented"
@@ -78,18 +98,22 @@ check "grep -q 'a_checkbox_draws_differently_once_it_is_ticked' CLAUDE.md" "Reci
 check "grep -q 'cargo test --test recipes -- checkbox' CLAUDE.md" "Recipe 3 Phase 3 test command documented"
 check "grep -q 'checkbox_preserves_state_across_frames' CLAUDE.md" "Recipe 3 Phase 4 test documented"
 
-# 2i. Verify Recipe 3 cross-module concerns are documented
+# 3c. Verify Recipe 3 cross-module concerns are documented
 echo ""
 echo "Checking Recipe 3 cross-module coordination..."
 check "grep -q 'src/widgets.rs' CLAUDE.md && grep -q 'src/widgets.rs.*checkbox' CLAUDE.md || grep -q 'widgets.rs.*checkbox' CLAUDE.md" "Recipe 3 mentions widgets.rs implementation"
 check "grep -q 'tests/recipes.rs.*checkbox' CLAUDE.md || grep -q 'checkbox.*tests/recipes.rs' CLAUDE.md" "Recipe 3 mentions tests/recipes.rs"
 
-# 2j. Verify Recipe 3 template for building custom controls is documented
+# 3d. Verify Recipe 3 template for building custom controls is documented
 echo ""
 echo "Checking Recipe 3 template..."
 check "grep -q 'Template for Building Custom Controls' CLAUDE.md" "Recipe 3 template section exists"
 
-# 3. Verify file paths that exist on main (unchanged)
+# ============================================================================
+# UNIFIED RECIPE COMPLETENESS VERIFICATION
+# ============================================================================
+
+# 4. Verify file paths that exist on main (unchanged)
 echo ""
 echo "Checking file paths that exist on main..."
 FILES=(
@@ -105,14 +129,14 @@ for file in "${FILES[@]}"; do
     check "test -f '$file'" "File $file exists on main"
 done
 
-# 4. Verify each phase has verification gates documented
+# 5. Verify each phase has verification gates documented
 echo ""
 echo "Checking verification gates..."
 check "grep -q 'Phase 1: Clock Abstraction' CLAUDE.md" "Phase 1 verification documented"
 check "grep -q 'Phase 2: FrameDriver Refactor' CLAUDE.md" "Phase 2 verification documented"
 check "grep -q 'Phase 3: WASM Integration' CLAUDE.md" "Phase 3 verification documented"
 
-# 5. Verify verification gates have test commands
+# 6. Verify verification gates have test commands
 echo ""
 echo "Checking test commands..."
 check "grep -q 'cargo test --lib' CLAUDE.md" "cargo test --lib command documented"
@@ -120,40 +144,54 @@ check "grep -q 'cargo build --target wasm32-unknown-unknown' CLAUDE.md" "WASM bu
 check "grep -q 'wasm-pack test --headless --firefox' CLAUDE.md" "Browser test command documented"
 check "grep -q 'cargo run -p rui --example parity' CLAUDE.md" "Parity test command documented"
 
-# 6. Verify template is actionable
+# 7. Verify template is actionable
 echo ""
 echo "Checking template for next backend..."
 check "grep -q 'Template for the Next Backend' CLAUDE.md" "Template section exists"
 check "grep -q 'src/shell/platform/wayland.rs' CLAUDE.md" "Template mentions src/shell/platform/wayland.rs"
 check "grep -q 'Backend' CLAUDE.md" "Template mentions Backend trait"
 
-# 7. Verify cross-module coordination is documented
+# 8. Verify cross-module coordination is documented
 echo ""
 echo "Checking cross-module coordination..."
 check "grep -q 'Cross-Module Concerns' CLAUDE.md" "Cross-module coordination section exists"
 check "grep -c 'shell::clock' CLAUDE.md | grep -qE '[2-9]|[0-9][0-9]' && true || false" "shell::clock mentioned ≥ 2 times"
 check "grep -c 'Backend' CLAUDE.md | grep -qE '[0-9][0-9]' && true || false" "Backend mentioned ≥ 10 times"
 
-# 8. Verify git history is accurate (commits that are on main)
+# 9. Verify git history is accurate (commits that are on main)
 echo ""
 echo "Checking git history accuracy (commits on main)..."
 check "git show caa3066 --stat | grep -q 'src/shell/mod.rs'" "Commit caa3066 touches src/shell/mod.rs as documented"
 check "git show 2df7f1c --stat | grep -q 'parity' || true" "Commit 2df7f1c (parity test) exists"
 check "git show 401a8a7 --stat | grep -q 'src' || true" "Commit 401a8a7 (expose FrameDriver) exists"
 
-# STEP 6: Final Recipe Completeness Check
+# 10. Final Recipe Completeness Check
 # Verify that all documented recipes are properly verified
 echo ""
-echo "STEP 6: Final Recipe Completeness Check"
+echo "════════════════════════════════════════════════════════════════════"
+echo "FINAL RECIPE COMPLETENESS CHECK"
+echo "════════════════════════════════════════════════════════════════════"
+echo ""
 check "grep -q 'Recipe 1: Adding a WASM Backend' CLAUDE.md" "Recipe 1 section header exists in CLAUDE.md"
 check "grep -q 'Recipe 2: X11 Backend Implementation' CLAUDE.md" "Recipe 2 section header exists in CLAUDE.md"
 check "grep -q 'Recipe 3: Checkbox Control' CLAUDE.md" "Recipe 3 section header exists in CLAUDE.md"
 check "[ $(grep -c 'Recipe [0-9]:' CLAUDE.md) -eq 3 ]" "Exactly 3 recipes documented"
 check "grep -c 'Recipe [0-9]' verify_recipes.sh | grep -q '[1-9]' && true" "Recipe checks present in verification script"
-
-# STEP 8: Examples Directory Verification Checks
 echo ""
-echo "STEP 8: Examples Directory Verification Checks"
+echo "Backend Recipes (Platforms & Infrastructure):"
+check "grep -q 'Recipe 1:.*WASM' CLAUDE.md" "Recipe 1: WASM Backend documented"
+check "grep -q 'Recipe 2:.*X11' CLAUDE.md" "Recipe 2: X11 Backend documented"
+echo ""
+echo "Control Recipes (Widgets & UI Components):"
+check "grep -q 'Recipe 3:.*Checkbox' CLAUDE.md" "Recipe 3: Checkbox Control documented"
+
+# ============================================================================
+# SUPPORTING DOCUMENTATION & EXAMPLES VERIFICATION
+# ============================================================================
+
+# 11. Examples Directory Verification Checks
+echo ""
+echo "Examples Directory Verification:"
 check "grep -q 'Examples Directory' CLAUDE.md" "Examples Directory section exists"
 check "grep -q '| Example | Purpose |' CLAUDE.md" "Examples table header exists in CLAUDE.md"
 
@@ -198,9 +236,9 @@ check "grep -q 'then \`checkbox\`' CLAUDE.md" "Learning path mentions checkbox"
 check "grep -q 'then \`segmented\`' CLAUDE.md" "Learning path mentions segmented"
 check "grep -q 'then \`meter\`' CLAUDE.md" "Learning path mentions meter"
 
-# Verify Test Suite section
+# 12. Test Suite Verification
 echo ""
-echo "Checking Test Suite documentation..."
+echo "Test Suite Verification:"
 check "grep -q 'Test Suite' CLAUDE.md" "Test Suite section header exists"
 check "grep -q 'All tests can be run with \`cargo test\`' CLAUDE.md" "Test command documented"
 check "grep -q '| Test File | Purpose |' CLAUDE.md" "Test table structure documented"
@@ -245,9 +283,12 @@ check "grep -q 'cargo test --test setup' CLAUDE.md" "setup test command document
 check "grep -q 'cargo test --test recipes' CLAUDE.md" "recipes test command documented"
 check "grep -q 'wasm-pack test' CLAUDE.md" "WASM test command documented"
 
-# 10. Verify Module Structure section completeness
+# 13. Module Structure Verification
 echo ""
-echo "Module Structure verification:"
+echo "════════════════════════════════════════════════════════════════════"
+echo "MODULE STRUCTURE VERIFICATION"
+echo "════════════════════════════════════════════════════════════════════"
+echo ""
 check "grep -q '## Module Structure' CLAUDE.md" "Module Structure section header exists"
 check "grep -q '| Module | Purpose |' CLAUDE.md" "Module Structure table header exists"
 
@@ -291,9 +332,12 @@ check "grep -q '| \`memory\`' CLAUDE.md" "memory module documented in table"
 check "grep -q '| \`app\`' CLAUDE.md" "app module documented in table"
 check "grep -q '| \`testing\`' CLAUDE.md" "testing module documented in table"
 
-# 11. Verify Key Architectural Patterns section completeness
+# 14. Key Architectural Patterns Verification
 echo ""
-echo "Key Architectural Patterns verification:"
+echo "════════════════════════════════════════════════════════════════════"
+echo "KEY ARCHITECTURAL PATTERNS VERIFICATION"
+echo "════════════════════════════════════════════════════════════════════"
+echo ""
 check "grep -q '## Key Architectural Patterns' CLAUDE.md" "Key Architectural Patterns section header exists"
 
 # Verify all architectural pattern subsections
@@ -353,9 +397,12 @@ check "grep -q 'tests/recipes.rs' CLAUDE.md" "tests/recipes.rs documented in pat
 check "grep -q 'cargo run -p rui --example' CLAUDE.md" "Exemplar run command documented"
 check "grep -q 'cargo test' CLAUDE.md" "Test command documented"
 
-# Verify Workflow Notes section
+# 15. Workflow Notes Verification
 echo ""
-echo "Checking Workflow Notes section..."
+echo "════════════════════════════════════════════════════════════════════"
+echo "WORKFLOW NOTES & BEST PRACTICES VERIFICATION"
+echo "════════════════════════════════════════════════════════════════════"
+echo ""
 check "grep -q '## Workflow Notes' CLAUDE.md" "Workflow Notes section header exists"
 check "grep -qi 'Unsafe code.*confined to.*shell/platform' CLAUDE.md" "Workflow Notes: Unsafe code note documented"
 check "grep -q 'No dependencies.*build within the crate' CLAUDE.md" "Workflow Notes: No dependencies note documented"
@@ -363,17 +410,20 @@ check "grep -q 'Identity & keys.*unique identity' CLAUDE.md" "Workflow Notes: Id
 check "grep -q 'Appearance.*light/dark mode' CLAUDE.md" "Workflow Notes: Appearance note documented"
 check "grep -q 'Text inherits.*layout does not' CLAUDE.md" "Workflow Notes: Text inheritance note documented"
 
-# Verify Git & CI section
+# 16. Git & CI Verification
 echo ""
-echo "Checking Git & CI section..."
+echo "Git & CI Section:"
 check "grep -q '## Git & CI' CLAUDE.md" "Git & CI section header exists"
 check "grep -q 'Pre-commit runs.*cargo fmt.*cargo clippy' CLAUDE.md" "Git & CI: Pre-commit hook documented"
 check "grep -q 'Cache/state files ignored' CLAUDE.md" "Git & CI: Ignored files documented"
 check "grep -q 'Commits.*Prefix with the platform' CLAUDE.md" "Git & CI: Commit convention documented"
 
-# Verify Troubleshooting section
+# 17. Troubleshooting Documentation Verification
 echo ""
-echo "Checking Troubleshooting section..."
+echo "════════════════════════════════════════════════════════════════════"
+echo "TROUBLESHOOTING DOCUMENTATION VERIFICATION"
+echo "════════════════════════════════════════════════════════════════════"
+echo ""
 check "grep -q '## Troubleshooting' CLAUDE.md" "Troubleshooting section header exists"
 
 # Build & Compilation subsection
