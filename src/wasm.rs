@@ -193,8 +193,8 @@ pub fn parity_frame_size() -> Vec<u32> {
     vec![demo::REFERENCE_WIDTH, demo::REFERENCE_HEIGHT]
 }
 
-/// WASM export wrapper for render_wasm_parity_frame (JavaScript binding).
-#[wasm_bindgen(js_name = render_wasm_parity_frame)]
-pub fn render_wasm_parity_frame_wasm(dark: bool) -> Result<Vec<u8>, JsValue> {
+/// Render a parity frame for WASM-based headless testing.
+#[wasm_bindgen]
+pub fn render_wasm_parity_frame(dark: bool) -> Result<Vec<u8>, JsValue> {
     demo::render_parity_frame_rgba(dark).map_err(|error| JsValue::from_str(&error))
 }
