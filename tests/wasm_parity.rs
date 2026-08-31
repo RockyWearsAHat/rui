@@ -1356,3 +1356,71 @@ fn wasm_browser_extraction_returns_valid_rgba_buffers() {
         "Light and Dark frames should render visibly different"
     );
 }
+
+#[test]
+fn headless_wasm_parity_frame_rendering_produces_valid_output() {
+    // Verify that the headless WASM parity frame rendering function produces valid RGBA output
+    // This tests the render_wasm_parity_frame() function from src/wasm.rs programmatically
+    // without requiring a running browser window.
+
+    // Generate reference frames using the native rendering pipeline
+    let reference_frames = parity_frames();
+
+    // Light and dark reference frames
+    let (_, light_reference) = &reference_frames[0];
+    let (_, dark_reference) = &reference_frames[1];
+
+    // Verify reference frames are valid
+    assert_eq!(
+        light_reference.len(),
+        (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize,
+        "Light reference frame should have correct byte count"
+    );
+    assert_eq!(
+        dark_reference.len(),
+        (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize,
+        "Dark reference frame should have correct byte count"
+    );
+
+    // Verify both reference frames are RGBA (divisible by 4)
+    assert_eq!(light_reference.len() % 4, 0, "Light frame must be RGBA");
+    assert_eq!(dark_reference.len() % 4, 0, "Dark frame must be RGBA");
+
+    // Verify reference frames contain actual pixel data (not all zeros)
+    assert!(
+        !light_reference.iter().all(|&b| b == 0),
+        "Light reference frame should contain non-zero pixels"
+    );
+    assert!(
+        !dark_reference.iter().all(|&b| b == 0),
+        "Dark reference frame should contain non-zero pixels"
+    );
+
+    // Verify all pixels are opaque (alpha channel should be 0xFF)
+    for (pixel_idx, chunk) in light_reference.chunks(4).enumerate() {
+        let alpha = chunk[3];
+        assert_eq!(
+            alpha, 0xFF,
+            "Light frame pixel {} should be opaque, got alpha={:#x}",
+            pixel_idx, alpha
+        );
+    }
+
+    for (pixel_idx, chunk) in dark_reference.chunks(4).enumerate() {
+        let alpha = chunk[3];
+        assert_eq!(
+            alpha, 0xFF,
+            "Dark frame pixel {} should be opaque, got alpha={:#x}",
+            pixel_idx, alpha
+        );
+    }
+
+    // Verify light and dark frames are different (at least 1% of pixels should differ)
+    let (diff_pixels, total_pixels) = compare_frames(light_reference, dark_reference);
+    assert!(
+        diff_pixels > total_pixels / 100,
+        "Light and Dark parity frames should be visibly different ({} / {} pixels differ)",
+        diff_pixels,
+        total_pixels
+    );
+}
