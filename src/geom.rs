@@ -36,7 +36,7 @@ impl Point {
     /// The origin.
     pub const ZERO: Self = Self { x: 0.0, y: 0.0 };
 
-    /// This point moved by `dx` and `dy`.
+    /// This point moved by `dx` and `dy`, in **window-logical units**.
     pub fn offset(self, dx: f32, dy: f32) -> Self {
         Self {
             x: self.x + dx,

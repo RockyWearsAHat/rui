@@ -494,6 +494,11 @@ impl<S: 'static> Harness<S> {
     /// would have been drawn at that height rather than against one flat
     /// colour, because the window is filled with a slight vertical gradient and
     /// no two rows of it are the same.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `rect` parameter is in **window-logical units**, accounting for DPI scaling.
+    /// It will be converted to device pixels internally for the comparison.
     pub fn marked(&self, rect: Rect) -> bool {
         let ground = self.ground();
         let scale = self.canvas.scale();

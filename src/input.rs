@@ -383,7 +383,10 @@ impl Input {
         PointerButton::ALL.iter().any(|&button| self.held(button))
     }
 
-    /// How far this frame scrolled, in logical units.
+    /// How far this frame scrolled, in **window-logical units** (DPI-adjusted).
+    ///
+    /// This follows the coordinate system contract: all coordinate values are
+    /// reported in window-logical units, never device pixels or CSS pixels.
     pub fn scroll(&self) -> (f32, f32) {
         self.scroll
     }
