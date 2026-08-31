@@ -146,6 +146,11 @@ impl Rect {
     ///
     /// A negative extent is clamped to zero rather than kept, so that every
     /// rectangle in the system satisfies `max >= min`.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The position coordinates `(x, y)` must be expressed in **window-logical units**,
+    /// which are DPI-adjusted and platform-independent. Never pass device pixels or CSS pixels.
     pub fn new(x: f32, y: f32, w: f32, h: f32) -> Self {
         Self {
             x,
@@ -156,11 +161,21 @@ impl Rect {
     }
 
     /// A rectangle from its top-left corner and its size.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The origin point must be expressed in **window-logical units**, which are DPI-adjusted
+    /// and platform-independent. Never pass device pixels or CSS pixels.
     pub fn from_origin(origin: Point, size: Size) -> Self {
         Self::new(origin.x, origin.y, size.w, size.h)
     }
 
     /// A rectangle from two opposite corners, in either order.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// Both corner points must be expressed in **window-logical units**, which are DPI-adjusted
+    /// and platform-independent. Never pass device pixels or CSS pixels.
     pub fn from_corners(a: Point, b: Point) -> Self {
         Self {
             x: a.x.min(b.x),
@@ -223,6 +238,12 @@ impl Rect {
     ///
     /// Half-open on purpose: two rectangles that share an edge must not both
     /// claim a pointer sitting on it, or adjacent buttons would both light up.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// All coordinates are expressed in **window-logical units**, which are DPI-adjusted
+    /// and platform-independent. They are never device pixels or CSS pixels. The `point`
+    /// must be in the same coordinate system as the rectangle (both window-logical).
     pub fn contains(self, point: Point) -> bool {
         point.x >= self.x && point.x < self.max_x() && point.y >= self.y && point.y < self.max_y()
     }
