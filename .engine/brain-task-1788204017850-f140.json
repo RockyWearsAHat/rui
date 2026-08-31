@@ -1,0 +1,113 @@
+{
+  "ProjectPath": "/Users/alexwaldmann/Desktop/rui",
+  "Owner": "",
+  "Repo": "",
+  "Brief": "You are working an item from this project's own dx worklist — /Users/alexwaldmann/Desktop/rui/index.dx, checklist \"bulleted-list-7\", item 20: \"Document Recipe 2: X11 Backend — Reverse-engineer the commits that implemented the X11 backend from git history, document them in CLAUDE.md using the same structure as Recipe 1 (phases, file sequences, verification gates, cross-module coordination). This proves the \"Template for the Next Backend\" is correct and actionable. Verification: All referenced commits exist, all files mentioned exist, `cargo build` and `cargo test --lib` pass.\"\n\nThis was assigned by being written into the project's own \"now\" worklist, so it's real, wanted work — implement it fully. Before ticking it off: verify it actually works — reproduce the original problem and confirm it's really gone (run it, run the relevant test, exercise the actual code path). A change that merely looks correct by reading it is not verified. Then tick it off yourself: `dx check /Users/alexwaldmann/Desktop/rui/index.dx bulleted-list-7 --item 20` (or the dx_check tool). Do not check it off before the work is genuinely finished and verified — an engine is watching this worklist unattended and treats a checked box as done, and nobody else will double-check your claim. Commit your work if this is a git repo.\n\nHard rules: never run /Users/alexwaldmann/Desktop/factory/start.sh, never kill or restart SARA's engine, gateway, or MyEditor processes (they dispatched you), never export PORT, and never leave a server or listener running when you finish.\n\nRead only what the item needs. Start from the item's own wording and the dx document section it lives in, open the files it names, and follow references only as far as the change actually requires. Do not survey the repository for orientation, re-read documents unrelated to the item, or run a full build or whole test suite when a narrower check proves this item — one test file, one command, one `dx check` gate. The project's dx documents are its index; trust them over re-deriving the project from source.\n\nCommit meaningful progress as you go rather than saving one commit for the end — if this session is interrupted, committed work is the only work that survives, and the next attempt is told to continue from what it finds rather than start over. For a change too large or risky to land directly, do the work on a branch named sara/item-20 and merge it only once verified.\n\nIf the item calls for a judgment call — which of two approaches, whether something is worth keeping, what the right default is — make it. Ground it: look at what the codebase already does, what the project's own documents say, and what the established practice is for this kind of problem, then decide and say plainly what you decided and why. Do not park it for a human and do not hand the decision back; there is nobody on the other end of this to hand it to. The only thing that ever comes back to the user is a report of what was decided and done.\n\nIf you genuinely cannot proceed — the item is incoherent, or doing it would need information that exists nowhere on this machine — leave it unchecked and say exactly what is missing in your final message. That is a last resort, not a way to avoid a call you could have made.",
+  "requirements": {
+    "prd": "",
+    "design": ""
+  },
+  "plan": [
+    {
+      "index": 1,
+      "title": "**Extract Recipe 2 commit references from CLAUDE.md and verify they exist in git**",
+      "body": "Extract commit hashes from Recipe 2 section (Phase 1: a67d578, Phase 2: c42c0f0, Phase 3: 80e3003–84ade0e); run `git log --oneline` to confirm each exists; spot-check phase descriptions against actual commit messages.",
+      "acceptance": "`git log --oneline | grep -E 'a67d578|c42c0f0|80e3003'` returns 3+ matches.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T19:21:09Z"
+    },
+    {
+      "index": 2,
+      "title": "**Verify Phase 1 files mentioned in CLAUDE.md (Foundation) exist and are accurate**",
+      "body": "Read CLAUDE.md Phase 1 section; confirm `src/shell/platform/x11.rs` exists with Backend trait implementation; verify `src/shell/mod.rs` line ~152 has platform selector with X11 gate.",
+      "acceptance": "`grep -n \"x11\" src/shell/mod.rs` shows conditional compilation, `test -f src/shell/platform/x11.rs` returns 0.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T19:21:09Z"
+    },
+    {
+      "index": 3,
+      "title": "**Verify Phase 2 enhancement files and structure match documentation**",
+      "body": "Confirm Phase 2 references correct files (`src/shell/platform/x11.rs` enhanced, font loading, appearance detection); spot-check a few implementation details (e.g., DPI scaling logic, appearance fallback chain).",
+      "acceptance": "`grep -c \"scale_factor\\|appearance\" src/shell/platform/x11.rs` ≥ 2.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T19:21:09Z"
+    },
+    {
+      "index": 4,
+      "title": "**Verify coordinate contract documentation matches code reality**",
+      "body": "Check that Recipe 2 cross-module concerns section accurately describes device→logical coordinate transformation; grep code for scale factor application.",
+      "acceptance": "`grep -n \"logical\\|device\" src/shell/platform/x11.rs | head -5` shows transform logic exists.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T19:21:09Z"
+    },
+    {
+      "index": 5,
+      "title": "**Build native target and run core tests to ensure no regressions**",
+      "body": "Run `cargo build` (native build, default target) and `cargo test --lib` to confirm the documented changes don't break compilation or library tests.",
+      "acceptance": "`cargo build 2\u003e\u00261 | tail -1` shows \"Finished\", `cargo test --lib 2\u003e\u00261 | tail -1` shows \"test result: ok\".",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T19:21:09Z"
+    },
+    {
+      "index": 6,
+      "title": "**Tick off the item in dx worklist**",
+      "body": "Use dx_check to mark item 20 complete in bulleted-list-7 of index.dx.",
+      "acceptance": "`dx_check returns 0`, `dx_source index.dx | grep \"item 20\"` shows `[x]`.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-31T19:21:09Z"
+    }
+  ],
+  "teams": {
+    "team-frontend-1": {
+      "id": "team-frontend-1",
+      "role": "frontend",
+      "assigned_steps": [
+        4
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 4: step timed out after 24 turns",
+      "started_at": "2026-08-31T13:21:14.213274-06:00",
+      "completed_at": "2026-08-31T13:21:16.051227-06:00"
+    },
+    "team-general-0": {
+      "id": "team-general-0",
+      "role": "general",
+      "assigned_steps": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 0: step timed out after 24 turns",
+      "started_at": "2026-08-31T13:21:09.192712-06:00",
+      "completed_at": "2026-08-31T13:21:11.007484-06:00"
+    },
+    "team-general-2": {
+      "id": "team-general-2",
+      "role": "general",
+      "assigned_steps": [
+        5
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 5: step timed out after 24 turns",
+      "started_at": "2026-08-31T13:21:19.215492-06:00",
+      "completed_at": "2026-08-31T13:21:21.038821-06:00"
+    }
+  },
+  "outer_iterations": 1,
+  "started_at": "2026-08-31T13:20:17.874466-06:00",
+  "updated_at": "2026-08-31T13:21:21.038821-06:00",
+  "completed_at": "0001-01-01T00:00:00Z",
+  "session_id_prefix": "task-1788204017850-f140",
+  "state_slug": "task-1788204017850-f140"
+}

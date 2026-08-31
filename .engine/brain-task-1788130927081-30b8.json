@@ -1,0 +1,160 @@
+{
+  "ProjectPath": "/Users/alexwaldmann/Desktop/rui",
+  "Owner": "",
+  "Repo": "",
+  "Brief": "You are working an item from this project's own dx worklist — /Users/alexwaldmann/Desktop/rui/index.dx, checklist \"bulleted-list-7\", item 19: \"[scout] [ask: charter-rui] **Harden shell backend consistency**: All 4 backends (macOS, Windows, X11, WASM) must handle the same event types, appearance changes, and lifecycle consistently. Write integration tests that exercise each backend with the same input sequence (mousemove, click, key press, theme toggle) and verify they produce identical state mutations. Focus on: (1) pointer coordinate normalization (all backends report window-logical units, not viewport CSS pixels), (2) event batching (clicks within the same frame batch are counted as one frame's input), (3) appearance updates (theme changes are reflected in the next frame without restart). Verification: cargo test --test backend_consistency passes on all platforms (can mock non-native backends if needed), defects in any backend surface in test failures.\"\n\nThis was assigned by being written into the project's own \"now\" worklist, so it's real, wanted work — implement it fully. Before ticking it off: verify it actually works — reproduce the original problem and confirm it's really gone (run it, run the relevant test, exercise the actual code path). A change that merely looks correct by reading it is not verified. Then tick it off yourself: `dx check /Users/alexwaldmann/Desktop/rui/index.dx bulleted-list-7 --item 19` (or the dx_check tool). Do not check it off before the work is genuinely finished and verified — an engine is watching this worklist unattended and treats a checked box as done, and nobody else will double-check your claim. Commit your work if this is a git repo.\n\nHard rules: never run /Users/alexwaldmann/Desktop/factory/start.sh, never kill or restart SARA's engine, gateway, or MyEditor processes (they dispatched you), never export PORT, and never leave a server or listener running when you finish.\n\nRead only what the item needs. Start from the item's own wording and the dx document section it lives in, open the files it names, and follow references only as far as the change actually requires. Do not survey the repository for orientation, re-read documents unrelated to the item, or run a full build or whole test suite when a narrower check proves this item — one test file, one command, one `dx check` gate. The project's dx documents are its index; trust them over re-deriving the project from source.\n\nCommit meaningful progress as you go rather than saving one commit for the end — if this session is interrupted, committed work is the only work that survives, and the next attempt is told to continue from what it finds rather than start over. For a change too large or risky to land directly, do the work on a branch named sara/item-19 and merge it only once verified.\n\nIf the item calls for a judgment call — which of two approaches, whether something is worth keeping, what the right default is — make it. Ground it: look at what the codebase already does, what the project's own documents say, and what the established practice is for this kind of problem, then decide and say plainly what you decided and why. Do not park it for a human and do not hand the decision back; there is nobody on the other end of this to hand it to. The only thing that ever comes back to the user is a report of what was decided and done.\n\nIf you genuinely cannot proceed — the item is incoherent, or doing it would need information that exists nowhere on this machine — leave it unchecked and say exactly what is missing in your final message. That is a last resort, not a way to avoid a call you could have made.",
+  "requirements": {
+    "prd": "",
+    "design": ""
+  },
+  "plan": [
+    {
+      "index": 1,
+      "title": "Create Backend Consistency Test File",
+      "body": "`tests/backend_consistency.rs` — scaffold a new test file with basic test infrastructure that uses Harness to inject events. First failing test attempts to verify pointer coordinate normalization by clicking at (100, 100) and checking Input state reflects that position. Acceptance: `cargo test --test backend_consistency::pointer_coordinates_are_normalized -- --nocapture` fails because test doesn't exist yet.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T18:08:53-06:00"
+    },
+    {
+      "index": 2,
+      "title": "Test Pointer Coordinate Normalization Across Event Types",
+      "body": "`tests/backend_consistency.rs` — add tests for PointerMoved, PointerDown, PointerUp, Drag all reporting coordinates in window-logical units. Verify clicks at (0,0), (800,600), and middle positions all normalize correctly. Acceptance: `cargo test --test backend_consistency::pointer_coordinates -- --nocapture` passes; positions match expected logical coordinates.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T18:27:33-06:00"
+    },
+    {
+      "index": 3,
+      "title": "Test Event Batching Consistency",
+      "body": "`tests/backend_consistency.rs` — add tests that inject multiple events (mousemove + click + mousemove) in one frame and verify all events appear in Input state in same frame. Acceptance: `cargo test --test backend_consistency::events_batch_in_same_frame` passes; verifies Input accumulates all events before frame boundary.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T18:36:57-06:00"
+    },
+    {
+      "index": 4,
+      "title": "Test Appearance Toggle Consistency",
+      "body": "`tests/backend_consistency.rs` — add tests verifying that appearance changes (light/dark mode) reflect immediately in next frame without requiring restart or special handling. Acceptance: `cargo test --test backend_consistency::appearance_updates_reflect_immediately` passes.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T23:45:29Z"
+    },
+    {
+      "index": 5,
+      "title": "Test Key Event Consistency",
+      "body": "`tests/backend_consistency.rs` — add tests for KeyDown, KeyUp, Text events with different modifiers. Verify same key sequences produce identical Input state. Acceptance: `cargo test --test backend_consistency::key_events_consistent` passes.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T23:45:29Z"
+    },
+    {
+      "index": 6,
+      "title": "Test Scroll Event Consistency",
+      "body": "`tests/backend_consistency.rs` — add tests for scroll events (wheel, trackpad). Verify scroll amounts accumulate correctly. Acceptance: `cargo test --test backend_consistency::scroll_events_consistent` passes.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T23:45:29Z"
+    },
+    {
+      "index": 7,
+      "title": "Test Pointer Button Consistency",
+      "body": "`tests/backend_consistency.rs` — add tests for all three buttons (Primary, Secondary, Middle) with press/release sequences. Verify button tracking is consistent. Acceptance: `cargo test --test backend_consistency::pointer_buttons_consistent` passes.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T23:45:29Z"
+    },
+    {
+      "index": 8,
+      "title": "Verify Platform-Specific Coordinate Transforms Match Spec",
+      "body": "Add unit tests directly to platform backend files (macos.rs, windows.rs, x11.rs, wasm.rs) validating coordinate conversion functions handle scale factors uniformly. Acceptance: `cargo test --lib pixel_conversion` and `cargo test --lib shell` pass; coordinate transform tests verify scale-aware normalization.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T23:45:29Z"
+    },
+    {
+      "index": 9,
+      "title": "Test Event Sequencing With State Mutations",
+      "body": "`tests/backend_consistency.rs` — add end-to-end test simulating complete interaction sequence: move pointer → press button → drag → release → key press → toggle appearance → verify state is consistent after each step. Acceptance: `cargo test --test backend_consistency::interaction_sequence_is_consistent` passes.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T23:45:29Z"
+    },
+    {
+      "index": 10,
+      "title": "Run Full Backend Consistency Test Suite",
+      "body": "Execute `cargo test --test backend_consistency` to run all consistency checks. Verify no platform-specific deviations in event handling. Acceptance: All tests pass; no platform-conditional branches in event processing above Backend trait.",
+      "done": true,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T19:02:02-06:00"
+    },
+    {
+      "index": 11,
+      "title": "Document Coordinate System Contract",
+      "body": "Add doc comment to Event enum and Backend trait clarifying all coordinate events report window-logical units, never device pixels or CSS pixels. Update shell/mod.rs module docs. Acceptance: `cargo doc --no-deps` builds cleanly; coordinate contract is explicit.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T23:45:29Z"
+    },
+    {
+      "index": 12,
+      "title": "Final Verification Across Platforms",
+      "body": "Run `cargo test --test backend_consistency` on all available platforms (macOS is primary). Verify WASM coordinate handling via `wasm-pack test --headless --firefox`. Acceptance: `cargo test --test backend_consistency` passes on native; `wasm-pack test --headless --firefox --test backend_consistency` passes in browser if WASM target is built.",
+      "done": false,
+      "attempts": 0,
+      "updatedAt": "2026-08-30T23:45:29Z"
+    }
+  ],
+  "teams": {
+    "team-frontend-1": {
+      "id": "team-frontend-1",
+      "role": "frontend",
+      "assigned_steps": [
+        9
+      ],
+      "status": "done",
+      "depends_on": null,
+      "started_at": "2026-08-30T17:45:29.952961-06:00",
+      "completed_at": "2026-08-30T19:02:02.98275-06:00"
+    },
+    "team-general-0": {
+      "id": "team-general-0",
+      "role": "general",
+      "assigned_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 3: context canceled",
+      "started_at": "2026-08-30T17:45:29.961096-06:00",
+      "completed_at": "2026-08-30T19:22:03.858581-06:00"
+    },
+    "team-general-2": {
+      "id": "team-general-2",
+      "role": "general",
+      "assigned_steps": [
+        10,
+        11
+      ],
+      "status": "failed",
+      "depends_on": null,
+      "feedback": "Error on step 10: step timed out after 24 turns",
+      "started_at": "2026-08-30T17:45:29.957104-06:00",
+      "completed_at": "2026-08-30T19:14:48.351965-06:00"
+    }
+  },
+  "outer_iterations": 1,
+  "started_at": "2026-08-30T17:43:57.465402-06:00",
+  "updated_at": "2026-08-30T19:22:03.858774-06:00",
+  "completed_at": "0001-01-01T00:00:00Z",
+  "session_id_prefix": "task-1788130927081-30b8",
+  "state_slug": "task-1788130927081-30b8"
+}
