@@ -193,20 +193,6 @@ pub fn parity_frame_size() -> Vec<u32> {
     vec![demo::REFERENCE_WIDTH, demo::REFERENCE_HEIGHT]
 }
 
-/// Render the parity frame and return its pixels as RGBA bytes.
-///
-/// Non-WASM-gated pure function that generates WASM-equivalent parity frame pixels.
-/// Callable from native test binaries without a browser or WASM runtime.
-/// Reuses the proven paint pipeline: [`crate::demo::reference_frame`] + [`crate::image::rgba`].
-///
-/// Returns the RGBA bytes (4 bytes per pixel, 960×640 = 2,457,600 bytes)
-/// encoded in the same format as [`crate::image::rgba`].
-/// Panics if rendering fails (appropriate for test binaries).
-pub fn render_wasm_parity_frame(dark: bool) -> Vec<u8> {
-    demo::render_parity_frame_rgba(dark)
-        .unwrap_or_else(|error| panic!("render_wasm_parity_frame failed: {error}"))
-}
-
 /// WASM export wrapper for render_wasm_parity_frame (JavaScript binding).
 #[wasm_bindgen(js_name = render_wasm_parity_frame)]
 pub fn render_wasm_parity_frame_wasm(dark: bool) -> Result<Vec<u8>, JsValue> {
