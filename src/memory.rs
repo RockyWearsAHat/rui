@@ -68,7 +68,10 @@ fn fnv1a(seed: u64, bytes: &[u8]) -> u64 {
 /// What an element's interaction amounted to this frame.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Response {
-    /// Where it was drawn.
+    /// Where it was drawn, expressed in **window-logical units**.
+    ///
+    /// Window-logical units are DPI-adjusted and platform-independent coordinates
+    /// that account for the display's scale factor.
     pub rect: Rect,
     /// Where the pointer is within it while it is being dragged.
     ///
