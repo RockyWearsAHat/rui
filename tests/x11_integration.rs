@@ -10,8 +10,7 @@ use std::path::Path;
 #[test]
 fn x11_is_integrated_in_platform_mod() {
     let mod_path = Path::new("src/shell/platform/mod.rs");
-    let content =
-        fs::read_to_string(mod_path).expect("platform/mod.rs must be readable");
+    let content = fs::read_to_string(mod_path).expect("platform/mod.rs must be readable");
 
     // Verify x11 module is referenced
     assert!(
@@ -24,8 +23,7 @@ fn x11_is_integrated_in_platform_mod() {
 #[test]
 fn x11_backend_module_structure() {
     let x11_path = Path::new("src/shell/platform/x11.rs");
-    let content = fs::read_to_string(x11_path)
-        .expect("x11.rs must be readable");
+    let content = fs::read_to_string(x11_path).expect("x11.rs must be readable");
 
     // Verify module declares the Window struct/type
     assert!(
@@ -37,8 +35,7 @@ fn x11_backend_module_structure() {
 
     // Verify it implements the Backend trait
     assert!(
-        content.contains("impl Backend for Window")
-            || content.contains("impl Backend for"),
+        content.contains("impl Backend for Window") || content.contains("impl Backend for"),
         "x11.rs must implement the Backend trait"
     );
 }
@@ -47,14 +44,11 @@ fn x11_backend_module_structure() {
 #[test]
 fn x11_backend_handles_events() {
     let x11_path = Path::new("src/shell/platform/x11.rs");
-    let content = fs::read_to_string(x11_path)
-        .expect("x11.rs must be readable");
+    let content = fs::read_to_string(x11_path).expect("x11.rs must be readable");
 
     // Verify event handling infrastructure is present
     assert!(
-        content.contains("Event")
-            || content.contains("event")
-            || content.contains("XEvent"),
+        content.contains("Event") || content.contains("event") || content.contains("XEvent"),
         "x11.rs must reference event handling"
     );
 }

@@ -13,8 +13,7 @@ fn x11_backend_exists() {
 
     assert!(x11_path.exists(), "x11.rs backend must exist");
 
-    let metadata =
-        fs::metadata(x11_path).expect("x11.rs metadata must be readable");
+    let metadata = fs::metadata(x11_path).expect("x11.rs metadata must be readable");
 
     assert!(
         metadata.len() > 0,
@@ -27,8 +26,7 @@ fn x11_backend_exists() {
 #[test]
 fn x11_backend_implements_trait() {
     let x11_path = Path::new("src/shell/platform/x11.rs");
-    let content = fs::read_to_string(x11_path)
-        .expect("x11.rs must be readable");
+    let content = fs::read_to_string(x11_path).expect("x11.rs must be readable");
 
     // Verify all required Backend trait methods are present
     assert!(
@@ -61,8 +59,7 @@ fn x11_backend_implements_trait() {
 #[test]
 fn x11_backend_is_complete() {
     let x11_path = Path::new("src/shell/platform/x11.rs");
-    let content = fs::read_to_string(x11_path)
-        .expect("x11.rs must be readable");
+    let content = fs::read_to_string(x11_path).expect("x11.rs must be readable");
 
     // Warn if there are unimplemented!() calls
     if content.contains("unimplemented!()") {
@@ -73,10 +70,7 @@ fn x11_backend_is_complete() {
     let lines: Vec<&str> = content.lines().collect();
     for (i, line) in lines.iter().enumerate() {
         if line.contains("TODO") && !line.trim().starts_with("//") {
-            panic!(
-                "x11.rs line {}: TODO marker in non-comment code",
-                i + 1
-            );
+            panic!("x11.rs line {}: TODO marker in non-comment code", i + 1);
         }
     }
 }
