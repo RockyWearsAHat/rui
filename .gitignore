@@ -4,3 +4,9 @@ Cargo.lock
 
 # What the examples write when they are asked to draw with no window open.
 *.png
+
+# Internal build/cache artifacts and framework state
+.cache/
+.doc/
+.engine/comms.json
+.engine/memory/scribe/
