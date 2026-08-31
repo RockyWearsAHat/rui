@@ -49,6 +49,8 @@ pub type Action<S> = Box<dyn Fn(&mut S)>;
 pub type TextAction<S> = Box<dyn Fn(&mut S, String)>;
 
 /// What dragging does, given where the pointer is within the element.
+///
+/// The [`Drag`] contains positions in **window-logical units** (DPI-adjusted, not device pixels).
 pub type DragAction<S> = Box<dyn Fn(&mut S, Drag)>;
 
 /// What a keypress does, given which key it was and what was held with it.
@@ -61,6 +63,15 @@ pub type ScrollAction<S> = Box<dyn Fn(&mut S, f32, f32)>;
 pub type HoverAction<S> = Box<dyn Fn(&mut S, bool)>;
 
 /// An application's own drawing, given the painter and the room it was placed in.
+///
+/// The [`Rect`] is in **window-logical units** (DPI-adjusted), not device pixels or CSS pixels.
+/// It represents the area that the layout assigned to this element.
+///
+/// # Coordinate System Contract
+///
+/// All coordinates are in window-logical units, which means they are already adjusted for the
+/// display's DPI/scale factor. A coordinate of (100, 100) in a 2x scale display corresponds
+/// to device pixels at (200, 200).
 pub type Drawing = Box<dyn Fn(&mut Painter<'_>, Rect)>;
 
 /// What an element actually is, underneath its style.
