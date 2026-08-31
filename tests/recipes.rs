@@ -576,3 +576,98 @@ fn a_star_rating_updates_when_clicked() {
         "after clicking 5th star, rating is 5"
     );
 }
+
+#[test]
+fn a_checkbox_group_manages_multiple_selections() {
+    // Recipe 3: A more complex widget managing state for multiple items.
+    // This demonstrates:
+    // - State as a Vec<bool> for multiple items
+    // - Building checkboxes from primitives for each item
+    // - Handling separate click handlers for each checkbox
+    // - Using element keys for proper identity across frames
+
+    struct SettingsState {
+        notifications: Vec<bool>,
+    }
+
+    let mut harness = Harness::new(
+        SettingsState {
+            notifications: vec![false, false, false],
+        },
+        |state: &SettingsState| {
+            col((
+                text("Notification Settings:"),
+                rui::widgets::checkbox_group(
+                    &["Email", "SMS", "Push"],
+                    &state.notifications,
+                    |state: &mut SettingsState, index| {
+                        if index < state.notifications.len() {
+                            state.notifications[index] = !state.notifications[index];
+                        }
+                    },
+                )
+                .key("notifications-group"),
+            ))
+        },
+    );
+
+    // Verify initial state
+    assert_eq!(
+        harness.state().notifications,
+        vec![false, false, false],
+        "all notifications initially disabled"
+    );
+
+    // Click first checkbox (Email)
+    harness.click_text("Email");
+    assert!(
+        harness.state().notifications[0],
+        "email notification enabled after click"
+    );
+    assert!(
+        !harness.state().notifications[1],
+        "sms notification still disabled"
+    );
+    assert!(
+        !harness.state().notifications[2],
+        "push notification still disabled"
+    );
+
+    // Click second checkbox (SMS)
+    harness.click_text("SMS");
+    assert!(
+        harness.state().notifications[0],
+        "email notification still enabled"
+    );
+    assert!(
+        harness.state().notifications[1],
+        "sms notification now enabled"
+    );
+    assert!(
+        !harness.state().notifications[2],
+        "push notification still disabled"
+    );
+
+    // Click third checkbox (Push)
+    harness.click_text("Push");
+    assert_eq!(
+        harness.state().notifications,
+        vec![true, true, true],
+        "all notifications now enabled"
+    );
+
+    // Click first checkbox again to toggle it off
+    harness.click_text("Email");
+    assert!(
+        !harness.state().notifications[0],
+        "email notification toggled off"
+    );
+    assert!(
+        harness.state().notifications[1],
+        "sms notification still enabled"
+    );
+    assert!(
+        harness.state().notifications[2],
+        "push notification still enabled"
+    );
+}
