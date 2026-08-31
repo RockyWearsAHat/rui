@@ -353,6 +353,92 @@ check "grep -q 'tests/recipes.rs' CLAUDE.md" "tests/recipes.rs documented in pat
 check "grep -q 'cargo run -p rui --example' CLAUDE.md" "Exemplar run command documented"
 check "grep -q 'cargo test' CLAUDE.md" "Test command documented"
 
+# Verify Workflow Notes section
+echo ""
+echo "Checking Workflow Notes section..."
+check "grep -q '## Workflow Notes' CLAUDE.md" "Workflow Notes section header exists"
+check "grep -qi 'Unsafe code.*confined to.*shell/platform' CLAUDE.md" "Workflow Notes: Unsafe code note documented"
+check "grep -q 'No dependencies.*build within the crate' CLAUDE.md" "Workflow Notes: No dependencies note documented"
+check "grep -q 'Identity & keys.*unique identity' CLAUDE.md" "Workflow Notes: Identity & keys note documented"
+check "grep -q 'Appearance.*light/dark mode' CLAUDE.md" "Workflow Notes: Appearance note documented"
+check "grep -q 'Text inherits.*layout does not' CLAUDE.md" "Workflow Notes: Text inheritance note documented"
+
+# Verify Git & CI section
+echo ""
+echo "Checking Git & CI section..."
+check "grep -q '## Git & CI' CLAUDE.md" "Git & CI section header exists"
+check "grep -q 'Pre-commit runs.*cargo fmt.*cargo clippy' CLAUDE.md" "Git & CI: Pre-commit hook documented"
+check "grep -q 'Cache/state files ignored' CLAUDE.md" "Git & CI: Ignored files documented"
+check "grep -q 'Commits.*Prefix with the platform' CLAUDE.md" "Git & CI: Commit convention documented"
+
+# Verify Troubleshooting section
+echo ""
+echo "Checking Troubleshooting section..."
+check "grep -q '## Troubleshooting' CLAUDE.md" "Troubleshooting section header exists"
+
+# Build & Compilation subsection
+check "grep -q '### Build & Compilation' CLAUDE.md" "Troubleshooting: Build & Compilation subsection exists"
+check "grep -q 'error: could not compile rui' CLAUDE.md" "Troubleshooting: Compilation error documented"
+check "grep -q 'Check Rust version' CLAUDE.md" "Troubleshooting: Rust version check documented"
+check "grep -q 'Check dependencies.*cargo tree' CLAUDE.md" "Troubleshooting: Dependency check documented"
+check "grep -q 'Clean build artifacts.*cargo clean' CLAUDE.md" "Troubleshooting: Clean build documented"
+check "grep -q 'error: failed to resolve' CLAUDE.md" "Troubleshooting: Undeclared crate error documented"
+check "grep -q 'Verify your current directory' CLAUDE.md" "Troubleshooting: Directory verification documented"
+
+# Tests subsection
+check "grep -q '### Tests' CLAUDE.md" "Troubleshooting: Tests subsection exists"
+check "grep -q 'cargo test --lib.*fails with' CLAUDE.md" "Troubleshooting: Test failure documented"
+check "grep -q 'Read the failure message' CLAUDE.md" "Troubleshooting: Failure message reading documented"
+check "grep -q 'Run a single test.*cargo test --lib test_name' CLAUDE.md" "Troubleshooting: Single test execution documented"
+check "grep -q 'cargo test --test setup.*fails' CLAUDE.md" "Troubleshooting: Setup test failure documented"
+check "grep -q 'Ensure clean git state' CLAUDE.md" "Troubleshooting: Git state check documented"
+check "grep -q 'Run hook manually.*pre-commit' CLAUDE.md" "Troubleshooting: Hook manual run documented"
+check "grep -q 'Fix formatting.*cargo fmt' CLAUDE.md" "Troubleshooting: Cargo fmt documented"
+check "grep -q 'Run clippy to fix lints' CLAUDE.md" "Troubleshooting: Clippy fix documented"
+
+# Examples subsection
+check "grep -q '### Examples' CLAUDE.md" "Troubleshooting: Examples subsection exists"
+check "grep -q 'Example fails to build or run' CLAUDE.md" "Troubleshooting: Example failure documented"
+check "grep -q 'Verify the example exists.*ls examples' CLAUDE.md" "Troubleshooting: Example existence check documented"
+check "grep -q 'Run with output.*stderr' CLAUDE.md" "Troubleshooting: Error output capture documented"
+check "grep -q 'Check platform requirements' CLAUDE.md" "Troubleshooting: Platform requirements documented"
+
+# Platform-Specific Setup subsection
+check "grep -q '### Platform-Specific Setup' CLAUDE.md" "Troubleshooting: Platform-Specific Setup subsection exists"
+check "grep -q 'macOS' CLAUDE.md" "Troubleshooting: macOS setup documented"
+check "grep -q 'Windows' CLAUDE.md" "Troubleshooting: Windows setup documented"
+check "grep -q 'Linux (X11)' CLAUDE.md" "Troubleshooting: Linux X11 setup documented"
+check "grep -q 'Requires X11 server' CLAUDE.md" "Troubleshooting: X11 server requirement documented"
+check "grep -q 'X11 development headers' CLAUDE.md" "Troubleshooting: X11 headers documented"
+check "grep -q 'cannot open display' CLAUDE.md" "Troubleshooting: Display error documented"
+check "grep -q 'X connection broken.*Linux' CLAUDE.md" "Troubleshooting: X connection error documented"
+check "grep -q 'Check X11 is running.*DISPLAY' CLAUDE.md" "Troubleshooting: X11 status check documented"
+check "grep -q 'Verify XServer installation.*Xvfb' CLAUDE.md" "Troubleshooting: Xvfb setup documented"
+check "grep -q 'Run in Xvfb.*xvfb-run' CLAUDE.md" "Troubleshooting: Xvfb execution documented"
+
+# WASM Backend subsection
+check "grep -q '### WASM Backend' CLAUDE.md" "Troubleshooting: WASM Backend subsection exists"
+check "grep -q 'wasm-pack build.*fails with' CLAUDE.md" "Troubleshooting: wasm-pack build failure documented"
+check "grep -q 'Install WASM target.*rustup target add wasm32' CLAUDE.md" "Troubleshooting: WASM target installation documented"
+check "grep -q 'Verify wasm-pack is installed' CLAUDE.md" "Troubleshooting: wasm-pack verification documented"
+check "grep -q 'WASM browser example shows blank canvas' CLAUDE.md" "Troubleshooting: Blank canvas issue documented"
+check "grep -q 'Check browser console.*F12' CLAUDE.md" "Troubleshooting: Browser console check documented"
+check "grep -q 'Verify serving locally.*file://' CLAUDE.md" "Troubleshooting: Local serving documented"
+check "grep -q 'Test in Firefox' CLAUDE.md" "Troubleshooting: Firefox testing documented"
+
+# Performance & Debugging subsection
+check "grep -q '### Performance & Debugging' CLAUDE.md" "Troubleshooting: Performance & Debugging subsection exists"
+check "grep -q 'Application is slow or rendering is stuttering' CLAUDE.md" "Troubleshooting: Slow app issue documented"
+check "grep -q 'Use.*--release.*build' CLAUDE.md" "Troubleshooting: Release build documented"
+check "grep -q 'Check for infinite loops' CLAUDE.md" "Troubleshooting: Infinite loop check documented"
+check "grep -q 'Profile with Xcode Instruments' CLAUDE.md" "Troubleshooting: Profiling documented"
+
+# Getting Help subsection
+check "grep -q '### Getting Help' CLAUDE.md" "Troubleshooting: Getting Help subsection exists"
+check "grep -q 'Check git history.*git log' CLAUDE.md" "Troubleshooting: Git history help documented"
+check "grep -q 'Search for similar issues.*grep' CLAUDE.md" "Troubleshooting: Error search documented"
+check "grep -q 'Read test examples.*tests/recipes.rs' CLAUDE.md" "Troubleshooting: Test examples help documented"
+
 # Final report
 echo ""
 echo "============================================"
