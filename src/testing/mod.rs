@@ -202,6 +202,11 @@ impl<S: 'static> Harness<S> {
         self
     }
 
+    /// Sets the appearance for the next frame (mutable variant).
+    pub fn set_appearance(&mut self, appearance: Appearance) {
+        self.appearance = appearance;
+    }
+
     /// Takes every frame to have lasted this long.
     ///
     /// What makes an animation assertable: nothing here reads a clock, so a
