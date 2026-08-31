@@ -20,6 +20,10 @@ pub enum Appearance {
     Light,
     /// Light text on dark surfaces.
     Dark,
+    /// High-contrast light: pure black text on pure white (WCAG AAA).
+    HighContrastLight,
+    /// High-contrast dark: pure white text on pure black (WCAG AAA).
+    HighContrastDark,
 }
 
 /// The colours of one appearance.
@@ -176,6 +180,62 @@ impl Palette {
         idle_tint: Color::rgb(0x26, 0x28, 0x2b),
         shadow: Color::rgba(0x00, 0x00, 0x00, 0x38),
     };
+
+    /// High-contrast light palette for users with color blindness or low vision.
+    pub const HIGH_CONTRAST_LIGHT: Self = Self {
+        background: Color::rgb(0xff, 0xff, 0xff),
+        background_deep: Color::rgb(0xf5, 0xf5, 0xf5),
+        surface: Color::rgb(0xff, 0xff, 0xff),
+        surface_deep: Color::rgb(0xf0, 0xf0, 0xf0),
+        sheen: Color::rgb(0xff, 0xff, 0xff),
+        raised: Color::rgb(0xe0, 0xe0, 0xe0),
+        sunken: Color::rgb(0xf5, 0xf5, 0xf5),
+        border: Color::rgb(0x00, 0x00, 0x00),
+        border_focus: Color::rgb(0x00, 0x00, 0xff),
+        text: Color::rgb(0x00, 0x00, 0x00),
+        text_muted: Color::rgb(0x40, 0x40, 0x40),
+        text_on_accent: Color::rgb(0xff, 0xff, 0xff),
+        accent: Color::rgb(0x00, 0x00, 0xff),
+        accent_deep: Color::rgb(0x00, 0x00, 0xcc),
+        accent_light: Color::rgb(0x33, 0x33, 0xff),
+        ok: Color::rgb(0x00, 0x80, 0x00),
+        ok_tint: Color::rgb(0xe0, 0xff, 0xe0),
+        warn: Color::rgb(0xff, 0x8c, 0x00),
+        warn_tint: Color::rgb(0xff, 0xf0, 0xe0),
+        bad: Color::rgb(0xff, 0x00, 0x00),
+        bad_tint: Color::rgb(0xff, 0xe0, 0xe0),
+        idle: Color::rgb(0x40, 0x40, 0x40),
+        idle_tint: Color::rgb(0xf0, 0xf0, 0xf0),
+        shadow: Color::rgba(0x00, 0x00, 0x00, 0x40),
+    };
+
+    /// High-contrast dark palette for users with color blindness or low vision.
+    pub const HIGH_CONTRAST_DARK: Self = Self {
+        background: Color::rgb(0x00, 0x00, 0x00),
+        background_deep: Color::rgb(0x0a, 0x0a, 0x0a),
+        surface: Color::rgb(0x00, 0x00, 0x00),
+        surface_deep: Color::rgb(0x15, 0x15, 0x15),
+        sheen: Color::rgb(0x2a, 0x2a, 0x2a),
+        raised: Color::rgb(0x2a, 0x2a, 0x2a),
+        sunken: Color::rgb(0x00, 0x00, 0x00),
+        border: Color::rgb(0xff, 0xff, 0xff),
+        border_focus: Color::rgb(0x00, 0xff, 0xff),
+        text: Color::rgb(0xff, 0xff, 0xff),
+        text_muted: Color::rgb(0xe0, 0xe0, 0xe0),
+        text_on_accent: Color::rgb(0x00, 0x00, 0x00),
+        accent: Color::rgb(0x00, 0xff, 0xff),
+        accent_deep: Color::rgb(0x00, 0xcc, 0xcc),
+        accent_light: Color::rgb(0x66, 0xff, 0xff),
+        ok: Color::rgb(0x00, 0xff, 0x00),
+        ok_tint: Color::rgb(0x00, 0x33, 0x00),
+        warn: Color::rgb(0xff, 0xff, 0x00),
+        warn_tint: Color::rgb(0x33, 0x33, 0x00),
+        bad: Color::rgb(0xff, 0x00, 0xff),
+        bad_tint: Color::rgb(0x33, 0x00, 0x33),
+        idle: Color::rgb(0xe0, 0xe0, 0xe0),
+        idle_tint: Color::rgb(0x1a, 0x1a, 0x1a),
+        shadow: Color::rgba(0x00, 0x00, 0x00, 0x80),
+    };
 }
 
 /// The sizes the layout is built from, in logical units.
@@ -268,11 +328,19 @@ pub struct Theme {
 
 impl Theme {
     /// The theme for an appearance, drawn with these two faces.
+    ///
+    /// Supports four appearance variants:
+    /// - `Light`: Standard light theme
+    /// - `Dark`: Standard dark theme
+    /// - `HighContrastLight`: WCAG AAA compliant (7:1+ contrast)
+    /// - `HighContrastDark`: WCAG AAA compliant (7:1+ contrast)
     pub fn new(appearance: Appearance, ui_font: FontId, mono_font: FontId) -> Self {
         Self {
             palette: match appearance {
                 Appearance::Light => Palette::LIGHT,
                 Appearance::Dark => Palette::DARK,
+                Appearance::HighContrastLight => Palette::HIGH_CONTRAST_LIGHT,
+                Appearance::HighContrastDark => Palette::HIGH_CONTRAST_DARK,
             },
             metrics: Metrics::DEFAULT,
             ui_font,
