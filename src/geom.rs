@@ -214,6 +214,11 @@ impl Rect {
     }
 
     /// Top-left corner.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The returned `Point` is in **window-logical units**, not device pixels.
+    /// It represents the same coordinate system as the rectangle it was extracted from.
     pub fn origin(self) -> Point {
         Point::new(self.x, self.y)
     }
@@ -224,6 +229,11 @@ impl Rect {
     }
 
     /// The point at the middle of the rectangle.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The returned `Point` is in **window-logical units**, not device pixels.
+    /// It represents the center position in the same coordinate system as the rectangle.
     pub fn center(self) -> Point {
         Point::new(self.x + self.w / 2.0, self.y + self.h / 2.0)
     }
@@ -249,6 +259,11 @@ impl Rect {
     }
 
     /// This rectangle shrunk by `insets`, never smaller than empty.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `insets` parameter and returned `Rect` are in **window-logical units**,
+    /// not device pixels. All coordinates remain in the same coordinate system.
     pub fn inset(self, insets: Insets) -> Self {
         Self::new(
             self.x + insets.left,
@@ -259,6 +274,11 @@ impl Rect {
     }
 
     /// This rectangle grown by `insets`.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `insets` parameter and returned `Rect` are in **window-logical units**,
+    /// not device pixels. All coordinates remain in the same coordinate system.
     pub fn expand(self, insets: Insets) -> Self {
         Self::new(
             self.x - insets.left,
@@ -269,6 +289,11 @@ impl Rect {
     }
 
     /// This rectangle moved by `dx` and `dy`.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `dx` and `dy` parameters are in **window-logical units**, not device pixels.
+    /// The translation is applied in the same coordinate system as the rectangle.
     pub fn translate(self, dx: f32, dy: f32) -> Self {
         Self {
             x: self.x + dx,
@@ -278,6 +303,11 @@ impl Rect {
     }
 
     /// The overlap of two rectangles, empty when they do not overlap.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// Both rectangles and the returned `Rect` are in **window-logical units**, not device pixels.
+    /// Both rectangles must be in the same coordinate system for the intersection to be meaningful.
     pub fn intersect(self, other: Self) -> Self {
         let x = self.x.max(other.x);
         let y = self.y.max(other.y);
@@ -287,6 +317,11 @@ impl Rect {
     }
 
     /// The smallest rectangle containing both.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// Both rectangles and the returned `Rect` are in **window-logical units**, not device pixels.
+    /// Both rectangles must be in the same coordinate system for the union to be meaningful.
     pub fn union(self, other: Self) -> Self {
         if self.is_empty() {
             return other;
@@ -318,6 +353,11 @@ impl Rect {
     ///
     /// Cutting more than there is yields the whole rectangle and an empty
     /// remainder rather than overshooting past the edge.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `amount` parameter and returned `Rect` values are in **window-logical units**,
+    /// not device pixels. All coordinates remain in the same coordinate system.
     pub fn split_top(self, amount: f32) -> (Self, Self) {
         let taken = amount.clamp(0.0, self.h);
         (
@@ -327,6 +367,11 @@ impl Rect {
     }
 
     /// Cuts `amount` off the bottom, answering `(top, bottom)`.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `amount` parameter and returned `Rect` values are in **window-logical units**,
+    /// not device pixels. All coordinates remain in the same coordinate system.
     pub fn split_bottom(self, amount: f32) -> (Self, Self) {
         let taken = amount.clamp(0.0, self.h);
         (
@@ -336,6 +381,11 @@ impl Rect {
     }
 
     /// Cuts `amount` off the left, answering `(left, right)`.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `amount` parameter and returned `Rect` values are in **window-logical units**,
+    /// not device pixels. All coordinates remain in the same coordinate system.
     pub fn split_left(self, amount: f32) -> (Self, Self) {
         let taken = amount.clamp(0.0, self.w);
         (
@@ -345,6 +395,11 @@ impl Rect {
     }
 
     /// Cuts `amount` off the right, answering `(left, right)`.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `amount` parameter and returned `Rect` values are in **window-logical units**,
+    /// not device pixels. All coordinates remain in the same coordinate system.
     pub fn split_right(self, amount: f32) -> (Self, Self) {
         let taken = amount.clamp(0.0, self.w);
         (
@@ -354,6 +409,11 @@ impl Rect {
     }
 
     /// A rectangle of `size` centred inside this one.
+    ///
+    /// # Coordinate System Contract
+    ///
+    /// The `size` parameter and returned `Rect` are in **window-logical units**,
+    /// not device pixels. The result is positioned in the same coordinate system as the source rectangle.
     pub fn centered(self, size: Size) -> Self {
         Self::new(
             self.x + (self.w - size.w) / 2.0,
