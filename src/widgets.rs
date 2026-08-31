@@ -503,6 +503,58 @@ pub fn split<S: 'static>(
     ))
 }
 
+/// A star rating widget: display 1–5 stars, clickable to set the rating.
+///
+/// This widget demonstrates Recipe 2 (Add a New Widget) from CLAUDE.md:
+/// an interactive widget built entirely from primitives (draw, on_click).
+/// No special widget support is needed; it's just an El<S> with handlers.
+///
+/// # Example
+///
+/// ```ignore
+/// pub fn star_rating<S: 'static>(
+///     rating: usize,
+///     set_rating: impl Fn(&mut S, usize) + Copy + 'static,
+/// ) -> El<S> {
+///     row((1..=5).map(|i| {
+///         let filled = i <= rating;
+///         draw(Size::new(16.0, 16.0), move |painter: &mut Painter<'_>, rect: Rect| {
+///             let color = if filled { Tone::Accent } else { Tone::Muted };
+///             painter.fill(rect, Radius::None, painter.color(color));
+///         })
+///         .key(format!("star-{}", i))
+///         .on_click(move |state: &mut S| set_rating(state, i))
+///     }).collect::<Vec<_>>())
+///     .gap(4.0)
+/// }
+/// ```
+///
+/// # Verification
+///
+/// This widget is tested in `tests/recipes.rs::a_star_rating_updates_when_clicked`
+/// to verify that clicking each star updates the rating correctly. The test
+/// demonstrates the Recipe 2 pattern: state → view → handlers → test.
+pub fn star_rating<S: 'static>(
+    rating: usize,
+    set_rating: impl Fn(&mut S, usize) + Copy + 'static,
+) -> El<S> {
+    row((1..=5)
+        .map(|i| {
+            let filled = i <= rating;
+            draw(
+                Size::new(16.0, 16.0),
+                move |painter: &mut Painter<'_>, rect: Rect| {
+                    let color = if filled { Tone::Accent } else { Tone::Muted };
+                    painter.fill(rect, Radius::None, painter.color(color));
+                },
+            )
+            .key(format!("star-{}", i))
+            .on_click(move |state: &mut S| set_rating(state, i))
+        })
+        .collect::<Vec<_>>())
+    .gap(4.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

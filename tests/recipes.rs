@@ -511,3 +511,68 @@ fn a_meter_displays_progress_as_a_fraction() {
         "meter displays when progress exceeds 1.0"
     );
 }
+
+/// A star rating widget: display 1–5 stars, clickable to set the rating.
+///
+/// This is Recipe 2 (Add a New Widget) from CLAUDE.md verified in practice.
+/// The widget is built entirely from primitives and demonstrates the pattern:
+/// state → view function → handler that receives &mut state as argument.
+#[test]
+fn a_star_rating_updates_when_clicked() {
+    struct RatingState {
+        rating: usize,
+    }
+
+    let mut harness = Harness::new(RatingState { rating: 0 }, |state: &RatingState| {
+        col((
+            text("Rate this content:"),
+            rui::widgets::star_rating(state.rating, |state: &mut RatingState, r| {
+                state.rating = r;
+            })
+            .key("star-rating"),
+        ))
+    });
+
+    // Verify initial state
+    assert_eq!(harness.state().rating, 0, "initial rating is 0");
+
+    // Find the star rating widget to determine its layout
+    let rating_rect = harness
+        .find_key("star-rating")
+        .expect("star rating widget is on screen")
+        .rect;
+
+    // Stars are arranged horizontally with 4px gap
+    // Each star is 16px wide: 16 + 4 + 16 + 4 + 16 + 4 + 16 + 4 + 16 = 96px total
+    // Calculate position of each star's center within the widget
+    let star_width = 16.0;
+    let gap = 4.0;
+    let star_spacing = star_width + gap;
+
+    // Click the 4th star
+    let star4_x = rating_rect.x + (3.0 * star_spacing) + star_width / 2.0;
+    harness.click(Point::new(star4_x, rating_rect.y + star_width / 2.0));
+    assert_eq!(
+        harness.state().rating,
+        4,
+        "after clicking 4th star, rating is 4"
+    );
+
+    // Click the 1st star to change rating
+    let star1_x = rating_rect.x + star_width / 2.0;
+    harness.click(Point::new(star1_x, rating_rect.y + star_width / 2.0));
+    assert_eq!(
+        harness.state().rating,
+        1,
+        "after clicking 1st star, rating is 1"
+    );
+
+    // Click the 5th star to max out rating
+    let star5_x = rating_rect.x + (4.0 * star_spacing) + star_width / 2.0;
+    harness.click(Point::new(star5_x, rating_rect.y + star_width / 2.0));
+    assert_eq!(
+        harness.state().rating,
+        5,
+        "after clicking 5th star, rating is 5"
+    );
+}
