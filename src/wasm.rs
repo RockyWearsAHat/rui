@@ -203,18 +203,5 @@ pub fn parity_frame_size() -> Vec<u32> {
 /// encoded in the same format as [`crate::image::rgba`].
 #[wasm_bindgen]
 pub fn render_wasm_parity_frame(dark: bool) -> Result<Vec<u8>, JsValue> {
-    let appearance = if dark {
-        Appearance::Dark
-    } else {
-        Appearance::Light
-    };
-    let canvas = demo::reference_frame(
-        demo::REFERENCE_WIDTH,
-        demo::REFERENCE_HEIGHT,
-        1.0,
-        appearance,
-    )
-    .map_err(|error| JsValue::from_str(&format!("the parity frame could not be drawn: {error}")))?;
-
-    Ok(crate::image::rgba(&canvas))
+    demo::render_parity_frame_rgba(dark).map_err(|error| JsValue::from_str(&error))
 }
