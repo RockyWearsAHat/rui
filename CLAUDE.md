@@ -927,22 +927,21 @@ The pattern holds: platform isolation (one file per OS), trait implementation (s
 
 ### Recipe 3: Checkbox Control
 
-**Commits:** 1 total, focused on state definition and pattern foundation.
+**Phase 1: State Definition**
 
-The checkbox is the simplest interactive control: a boolean that toggles on click. Unlike segmented or complex widgets, checkbox has no enumerated state—just checked or unchecked. This simplicity makes it an ideal recipe for learning the state-view-handler pattern. It is too small to justify being a full recipe (just 20 lines of code), but too foundational not to document as a worked example.
-
-**Phase 1: State Definition (Commit a_checkbox_changes_state_on_click)**
-
-Files touched:
-- `src/widgets.rs`: Add `checkbox(label: &str, checked: bool, on_click: impl Fn(&mut S)) -> El<S>` function that builds a checkbox element from primitives (`draw`, `on_click`). No new widget type; reuse existing drawing and event handling infrastructure.
-- `tests/recipes.rs`: Add test `a_checkbox_changes_state_on_click` verifying state toggles on click.
-
-**State definition:**
 ```rust
 struct App {
     checked: bool,
 }
 ```
+
+**Commits:** 1 total, focused on state definition and pattern foundation.
+
+The checkbox is the simplest interactive control: a boolean that toggles on click. Unlike segmented or complex widgets, checkbox has no enumerated state—just checked or unchecked. This simplicity makes it an ideal recipe for learning the state-view-handler pattern.
+
+Files touched:
+- `src/widgets.rs`: Add `checkbox(label: &str, checked: bool, on_click: impl Fn(&mut S)) -> El<S>` function that builds a checkbox element from primitives (`draw`, `on_click`). No new widget type; reuse existing drawing and event handling infrastructure.
+- `tests/recipes.rs`: Add test `a_checkbox_changes_state_on_click` verifying state toggles on click.
 
 The state is a single boolean. No enum, no tagged variant, no Option. Checkbox is binary: ticked or not. This is why checkbox is the minimal interactive control—it requires only one boolean field.
 
@@ -963,6 +962,43 @@ fn view(app: &App) -> El<App> {
 ```
 
 The handler is a closure that receives mutable state as an argument and modifies it (toggling the boolean). This is identical to the segmented and meter patterns; only the state shape changes. The checkbox is reusable: call it with any boolean field in any app state, and it works.
+
+**Why this order:** State definition is the foundation. By defining the simplest possible state shape (a single bool), we establish the contract that all interactive controls follow: state → view → handler → state mutation. Checkbox serves as the minimal exemplar of this pattern.
+
+**Phase 2: Enhancement (Styling & Visual Polish)**
+
+Files touched:
+- `src/widgets.rs`: Enhance checkbox with platform-appropriate styling (rounded corners, focus ring, disabled state, hover highlight). Add `.fill()` customization to allow theme colors. Verify the checkbox visually matches native platform controls.
+- `examples/controls.rs`: Add checkbox to the control showcase with various label lengths and disabled states.
+- `tests/recipes.rs`: Add tests `a_checkbox_displays_visual_feedback_on_hover` and `a_checkbox_appears_disabled_when_disabled_true` verifying visual state changes.
+
+**Why this order:** Once state definition works, visual polish ensures the control looks correct across light/dark modes and matches the library's design. The enhancement touches only appearance (no behavior changes); the handler logic from Phase 1 remains identical.
+
+**Verification gate:** 
+```bash
+cargo test --test recipes -- checkbox  # All checkbox tests pass
+cargo run -p rui --example controls    # Visual inspection: checkbox looks polished and matches platform style
+```
+
+Both tests pass and visual inspection confirms checkbox matches the rui design system across light and dark modes.
+
+**Phase 3: Integration & Verification**
+
+Files touched:
+- `tests/recipes.rs`: Add comprehensive integration tests `a_checkbox_preserves_state_across_frames` and `a_checkbox_works_with_multiple_instances` verifying state persists and multiple checkboxes can coexist independently.
+- `src/testing/harness.rs` (if needed): Ensure `Harness` can click checkboxes by label and verify state transitions correctly.
+- `CLAUDE.md` (this file): Document the checkbox pattern as a replicable exemplar in the Template section.
+
+**Why this order:** After state and styling work, integration verification ensures the checkbox pattern is sound and replicable. Tests confirm independent state management and cross-frame persistence (key to correctness in an immediate-mode UI).
+
+**Verification gates:**
+```bash
+cargo test --test recipes -- checkbox_preserves_state_across_frames       # State persists across 10 frames
+cargo test --test recipes -- checkbox_works_with_multiple_instances       # Two checkboxes maintain independent state
+cargo test --lib memory                                                    # Memory module correctly tracks checkbox focus/hover state
+```
+
+All tests pass; state persistence and memory management are proven correct.
 
 #### Cross-Module Concerns
 
