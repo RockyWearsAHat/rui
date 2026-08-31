@@ -347,8 +347,8 @@ fn window_backend_selector_gates_wasm_correctly() {
         .collect::<Vec<_>>()
         .len();
     assert_eq!(
-        backend_assignments, 6,
-        "exactly 6 backend cfgs should each define 'mod backend;' (wasm, macos, windows, wayland, x11, unsupported)"
+        backend_assignments, 8,
+        "exactly 8 backend cfgs should each define 'mod backend;' (wasm, ios, android, macos, windows, wayland, x11, unsupported)"
     );
 }
 

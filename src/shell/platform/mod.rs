@@ -8,6 +8,16 @@
 #[path = "wasm.rs"]
 mod backend;
 
+#[cfg(target_os = "ios")]
+#[path = "ios.rs"]
+#[allow(unsafe_code, reason = "UIKit and Metal are Objective-C and C")]
+mod backend;
+
+#[cfg(target_os = "android")]
+#[path = "android.rs"]
+#[allow(unsafe_code, reason = "Android NDK is C and Java")]
+mod backend;
+
 #[cfg(target_os = "macos")]
 #[path = "macos.rs"]
 #[allow(unsafe_code, reason = "AppKit and Core Graphics are C and Objective-C")]
@@ -36,6 +46,8 @@ mod backend;
 #[cfg(not(any(
     target_os = "macos",
     target_os = "windows",
+    target_os = "ios",
+    target_os = "android",
     unix,
     target_arch = "wasm32"
 )))]
