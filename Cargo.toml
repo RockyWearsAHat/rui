@@ -11,6 +11,12 @@ keywords = ["gui", "ui", "declarative", "renderer", "no-std-deps"]
 categories = ["gui", "rendering"]
 exclude = ["/.github"]
 
+[features]
+# Use Wayland backend instead of X11 on Linux (Phase 1 Foundation)
+# Phase 2 will add actual wayland-client and wayland-protocols dependencies
+default = []
+wayland = []
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
