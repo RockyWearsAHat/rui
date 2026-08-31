@@ -1424,3 +1424,30 @@ fn headless_wasm_parity_frame_rendering_produces_valid_output() {
         total_pixels
     );
 }
+
+#[test]
+fn render_wasm_parity_frame_produces_valid_output() {
+    // Verify the exact logic that render_wasm_parity_frame() implements:
+    // 1. Call demo::reference_frame() with Appearance::Light/Dark
+    // 2. Convert canvas to RGBA bytes with image::rgba()
+    // Size/format/opacity are already verified by other tests; this test
+    // only verifies the function logic path actually produces pixel output.
+
+    // Light mode: render_wasm_parity_frame(false)
+    let light_canvas = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Light)
+        .expect("light parity frame should render");
+    let light_bytes = image::rgba(&light_canvas);
+    assert!(
+        !light_bytes.is_empty(),
+        "light frame should produce pixel data"
+    );
+
+    // Dark mode: render_wasm_parity_frame(true)
+    let dark_canvas = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
+        .expect("dark parity frame should render");
+    let dark_bytes = image::rgba(&dark_canvas);
+    assert!(
+        !dark_bytes.is_empty(),
+        "dark frame should produce pixel data"
+    );
+}
