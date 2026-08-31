@@ -466,6 +466,11 @@ impl<S: 'static> Harness<S> {
         &self.canvas
     }
 
+    /// The current input state, including pointer position and events from the last frame.
+    pub fn input(&self) -> &Input {
+        &self.input
+    }
+
     /// The colour of one device pixel, or `None` outside the surface.
     ///
     /// In *device* pixels, not logical units: this is a question about what was
