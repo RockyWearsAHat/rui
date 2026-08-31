@@ -25,6 +25,11 @@ pub const REFERENCE_WIDTH: u32 = 960;
 /// The height the parity frame is drawn at, matching [`crate::WindowOptions`].
 pub const REFERENCE_HEIGHT: u32 = 640;
 
+/// Get the parity frame dimensions as [width, height].
+pub fn parity_frame_size() -> Vec<u32> {
+    vec![REFERENCE_WIDTH, REFERENCE_HEIGHT]
+}
+
 /// Everything this program knows.
 pub struct Counter {
     /// How far the counter has been counted.
