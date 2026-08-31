@@ -963,8 +963,6 @@ fn view(app: &App) -> El<App> {
 
 The handler is a closure that receives mutable state as an argument and modifies it (toggling the boolean). This is identical to the segmented and meter patterns; only the state shape changes. The checkbox is reusable: call it with any boolean field in any app state, and it works.
 
-**Why this order:** State definition is the foundation. By defining the simplest possible state shape (a single bool), we establish the contract that all interactive controls follow: state → view → handler → state mutation. Checkbox serves as the minimal exemplar of this pattern.
-
 **Phase 2: Enhancement (Styling & Visual Polish)**
 
 Files touched:
