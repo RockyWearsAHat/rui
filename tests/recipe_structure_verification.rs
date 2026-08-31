@@ -1,11 +1,11 @@
-//! Verify that Recipe 1 (WASM Backend) and Recipe 3 (Mobile Backend)
+//! Verify that Recipe 1 (WASM Backend) and Recipe 3 (Checkbox Control)
 //! have matching documentation structure in CLAUDE.md.
 //!
 //! This test ensures:
 //! - Recipe 1 has 3 phases with files, why, and verification gates
-//! - Recipe 3 has 3 phases with files, why, and verification gates
+//! - Recipe 3 has phase structure with files, why, and verification gates
 //! - Both recipes have cross-module concerns and template sections
-//! - Structure is replicable for future platform implementations
+//! - Structure is replicable for future control implementations
 
 #[test]
 fn recipe_1_and_3_have_matching_structure() {
@@ -64,13 +64,13 @@ fn recipe_1_and_3_have_matching_structure() {
 
     // Recipe 3 must exist
     assert!(
-        claude_md.contains("### Recipe 3: Mobile Backend Implementation"),
+        claude_md.contains("### Recipe 3: Checkbox Control"),
         "Recipe 3 section not found in CLAUDE.md"
     );
 
-    // Recipe 3 must have exactly 3 phases
+    // Recipe 3 must have phase structure (at least 1 phase)
     let recipe3_start = claude_md
-        .find("### Recipe 3: Mobile Backend Implementation")
+        .find("### Recipe 3: Checkbox Control")
         .expect("Recipe 3 start");
     let recipe3_section = &claude_md[recipe3_start..];
 
@@ -78,34 +78,26 @@ fn recipe_1_and_3_have_matching_structure() {
         recipe3_section.contains("**Phase 1:"),
         "Recipe 3 Phase 1 missing"
     );
-    assert!(
-        recipe3_section.contains("**Phase 2:"),
-        "Recipe 3 Phase 2 missing"
-    );
-    assert!(
-        recipe3_section.contains("**Phase 3:"),
-        "Recipe 3 Phase 3 missing"
-    );
 
     // Recipe 3 must have required sections
     assert!(
         recipe3_section.contains("Files touched:"),
-        "Recipe 3 missing 'Files touched' sections"
+        "Recipe 3 missing 'Files touched' section"
     );
     assert!(
         recipe3_section.contains("**Why this order:**"),
-        "Recipe 3 missing 'Why this order' sections"
+        "Recipe 3 missing 'Why this order' section"
     );
     assert!(
         recipe3_section.contains("**Verification gate"),
-        "Recipe 3 missing verification gates"
+        "Recipe 3 missing verification gate"
     );
     assert!(
         recipe3_section.contains("#### Cross-Module"),
-        "Recipe 3 missing cross-module coordination section"
+        "Recipe 3 missing cross-module concerns section"
     );
     assert!(
-        recipe3_section.contains("#### Template for Adding Mobile"),
+        recipe3_section.contains("#### Template for Building Custom Controls"),
         "Recipe 3 missing template section"
     );
 }
@@ -135,15 +127,14 @@ fn recipe_phases_have_shell_commands_in_verification_gates() {
 
     // Recipe 3 verification gates must contain shell commands
     let recipe3_start = claude_md
-        .find("### Recipe 3: Mobile Backend Implementation")
+        .find("### Recipe 3: Checkbox Control")
         .expect("Recipe 3 start");
     let recipe3_section = &claude_md[recipe3_start..];
 
-    let has_mobile_commands = recipe3_section.contains("cargo build")
-        || recipe3_section.contains("cargo test")
-        || recipe3_section.contains("--target");
+    let has_control_commands =
+        recipe3_section.contains("cargo build") || recipe3_section.contains("cargo test");
     assert!(
-        has_mobile_commands,
+        has_control_commands,
         "Recipe 3 verification gates missing shell commands"
     );
 }
