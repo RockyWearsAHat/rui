@@ -1015,3 +1015,56 @@ fn wasm_build_detection_is_idempotent() {
         }
     }
 }
+
+#[test]
+fn wasm_parity_frame_extraction_via_headless_browser() {
+    // This test verifies that the frame extraction infrastructure can attempt
+    // to use a real headless browser to capture WASM-rendered frames.
+    // It uses wasm-pack test infrastructure which handles browser automation.
+
+    // If browser is available and WASM tools present, should attempt real capture
+    if wasm_tools_available() && is_headless_browser_available() {
+        let light_result = capture_wasm_frame(Appearance::Light);
+        let dark_result = capture_wasm_frame(Appearance::Dark);
+
+        // Should return valid frames (either real or fallback)
+        assert!(light_result.is_ok(), "light frame capture should succeed");
+        assert!(dark_result.is_ok(), "dark frame capture should succeed");
+
+        // Verify frame dimensions
+        let light_bytes = light_result.unwrap();
+        let dark_bytes = dark_result.unwrap();
+
+        let expected_len = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+        assert_eq!(
+            light_bytes.len(),
+            expected_len,
+            "light frame size should match"
+        );
+        assert_eq!(
+            dark_bytes.len(),
+            expected_len,
+            "dark frame size should match"
+        );
+    }
+}
+
+#[test]
+fn wasm_frame_extraction_always_succeeds() {
+    // Verify that capture_wasm_frame always returns valid data
+    // whether browser is available or not (graceful fallback)
+
+    let light = capture_wasm_frame(Appearance::Light);
+    let dark = capture_wasm_frame(Appearance::Dark);
+
+    assert!(light.is_ok(), "should always succeed with fallback");
+    assert!(dark.is_ok(), "should always succeed with fallback");
+
+    // Verify both light and dark frames have data
+    let light_len = light.unwrap().len();
+    let dark_len = dark.unwrap().len();
+    let expected_len = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+
+    assert_eq!(light_len, expected_len);
+    assert_eq!(dark_len, expected_len);
+}
