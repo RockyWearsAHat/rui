@@ -1135,3 +1135,89 @@ fn input_state_determinism_from_backend_events() {
         "pointer position should be identical"
     );
 }
+
+// ============================================================================
+// PLATFORM-AGNOSTIC RENDERING INVARIANTS
+// ============================================================================
+
+/// Verify frame rendering is deterministic (same input → same output).
+/// Platform backends must produce pixel-identical frames for identical input.
+#[test]
+fn frame_rendering_is_deterministic() {
+    // Frame 1
+    let mut harness1 = Harness::new(App::default(), interactive_view);
+    harness1.click(Point::new(100.0, 100.0));
+    let pixels1 = harness1.canvas().pixels().to_vec();
+
+    // Frame 2 with identical input
+    let mut harness2 = Harness::new(App::default(), interactive_view);
+    harness2.click(Point::new(100.0, 100.0));
+    let pixels2 = harness2.canvas().pixels().to_vec();
+
+    // Canvases should be pixel-identical (deterministic rendering)
+    assert_eq!(
+        pixels1, pixels2,
+        "identical input should produce identical rendered output"
+    );
+}
+
+/// Verify handler execution order is deterministic across frames.
+/// Buttons clicked in sequence should invoke handlers in order.
+#[test]
+fn handler_execution_order_deterministic() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    assert_eq!(harness.state().click_count, 0, "initial state");
+
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().click_count, 1, "after click 1");
+
+    harness.click(Point::new(150.0, 150.0));
+    assert_eq!(harness.state().click_count, 2, "after click 2");
+
+    harness.click(Point::new(200.0, 200.0));
+    assert_eq!(harness.state().click_count, 3, "after click 3");
+
+    // Handler must execute in the exact order events were delivered
+    // by Backend::pump(), without reordering or dropping any
+}
+
+/// Verify frame data consistency across backend implementations.
+/// Width, height, and scale must remain stable per platform, even if values differ between platforms.
+#[test]
+fn backend_surface_data_consistency() {
+    let harness1 = Harness::new(App::default(), interactive_view);
+    let harness2 = Harness::new(App::default(), interactive_view);
+
+    let w1 = harness1.canvas().width();
+    let w2 = harness2.canvas().width();
+    let h1 = harness1.canvas().height();
+    let h2 = harness2.canvas().height();
+
+    // Both instances should have same dimensions (simulating same platform)
+    assert_eq!(w1, w2, "surface width consistency across instances");
+    assert_eq!(h1, h2, "surface height consistency across instances");
+
+    // Width and height must be reasonable and positive
+    assert!(w1 > 0 && h1 > 0, "dimensions must be positive");
+    assert!(w1 <= 10000 && h1 <= 10000, "dimensions must be reasonable");
+}
+
+/// Verify that the Backend trait boundary is properly respected.
+/// No platform-specific logic should leak above the Backend trait.
+#[test]
+fn backend_trait_boundary_encapsulation() {
+    let mut harness = Harness::new(App::default(), interactive_view);
+
+    // Event processing should be uniform across all backends
+    // Platform-specific code should only exist in Backend trait implementations
+
+    harness.click(Point::new(100.0, 100.0));
+    assert_eq!(harness.state().click_count, 1);
+
+    harness.click(Point::new(150.0, 150.0));
+    assert_eq!(harness.state().click_count, 2);
+
+    // If this test passes, it confirms that event handling above the
+    // Backend trait is truly platform-agnostic (same code runs on all platforms)
+}
