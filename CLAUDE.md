@@ -906,7 +906,7 @@ done
 grep -c "fn " src/shell/mod.rs | grep "trait Backend" -A 50 | wc -l
 ```
 
-**Tests passing (expected: 379 tests):**
+**Tests passing (expected: 380 tests):**
 ```bash
 cargo test --lib -- --nocapture 2>&1 | grep "test result:"
 ```
