@@ -620,6 +620,81 @@ impl Theme {
             Status::Idle => (self.palette.idle, self.palette.idle_tint),
         }
     }
+
+    /// Resolve a text role to its [`TextStyle`] in this theme.
+    pub fn text_role(&self, role: TextRole) -> TextStyle {
+        match role {
+            TextRole::Title => self.title(),
+            TextRole::Heading => self.heading(),
+            TextRole::Body => self.body(),
+            TextRole::BodyStrong => self.body_strong(),
+            TextRole::Caption => self.caption(),
+            TextRole::Figure => self.figure(),
+            TextRole::State => self.state(),
+            TextRole::Mono => self.micro(),
+            TextRole::Micro => self.micro(),
+        }
+    }
+
+    /// Resolve a spacing level to its gap value in this theme.
+    pub fn spacing(&self, space: Space) -> f32 {
+        match space {
+            Space::Small => self.metrics.gap_small,
+            Space::Default => self.metrics.gap,
+            Space::Large => self.metrics.gap_large,
+        }
+    }
+
+    /// Resolve a height standard to its pixel value in this theme.
+    pub fn height(&self, h: Height) -> f32 {
+        match h {
+            Height::Control => self.metrics.control_height,
+            Height::Row => self.metrics.row_height,
+        }
+    }
+}
+
+/// A role in the type scale, resolved to a [`TextStyle`] by a [`Theme`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextRole {
+    /// Large, distinctive text for titles and pane names.
+    Title,
+    /// Small, muted section labels with letter-spacing.
+    Heading,
+    /// Ordinary running text.
+    Body,
+    /// Strong body text, for emphasis within a paragraph.
+    BodyStrong,
+    /// Small aside text for units, explanations, and timestamps.
+    Caption,
+    /// Large, glanceable figure text (counts, totals, metrics).
+    Figure,
+    /// Small state labels with letter-spacing.
+    State,
+    /// Fixed-width machine output (fallback for Mono).
+    Mono,
+    /// Smallest annotation in fixed-width face.
+    Micro,
+}
+
+/// A spacing level, resolved to an f32 gap by a [`Theme`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Space {
+    /// Gap between closely-related items.
+    Small,
+    /// Standard gap between items in a list or row.
+    Default,
+    /// Gap between sections.
+    Large,
+}
+
+/// A control height standard, resolved to an f32 by a [`Theme`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Height {
+    /// Height of a button or text field control.
+    Control,
+    /// Height of one row in a list or table.
+    Row,
 }
 
 /// How something is doing, in the four ways the palette can show.
@@ -955,5 +1030,40 @@ mod tests {
                 "{appearance:?} outlines its panels in their own fill"
             );
         }
+    }
+
+    #[test]
+    fn text_role_resolves_all_variants() {
+        let theme_val = theme(Appearance::Dark);
+        assert_eq!(theme_val.text_role(TextRole::Title), theme_val.title());
+        assert_eq!(theme_val.text_role(TextRole::Heading), theme_val.heading());
+        assert_eq!(theme_val.text_role(TextRole::Body), theme_val.body());
+        assert_eq!(
+            theme_val.text_role(TextRole::BodyStrong),
+            theme_val.body_strong()
+        );
+        assert_eq!(theme_val.text_role(TextRole::Caption), theme_val.caption());
+        assert_eq!(theme_val.text_role(TextRole::Figure), theme_val.figure());
+        assert_eq!(theme_val.text_role(TextRole::State), theme_val.state());
+        assert_eq!(theme_val.text_role(TextRole::Mono), theme_val.micro());
+        assert_eq!(theme_val.text_role(TextRole::Micro), theme_val.micro());
+    }
+
+    #[test]
+    fn spacing_resolves_all_variants() {
+        let theme_val = theme(Appearance::Dark);
+        assert_eq!(theme_val.spacing(Space::Small), theme_val.metrics.gap_small);
+        assert_eq!(theme_val.spacing(Space::Default), theme_val.metrics.gap);
+        assert_eq!(theme_val.spacing(Space::Large), theme_val.metrics.gap_large);
+    }
+
+    #[test]
+    fn height_resolves_all_variants() {
+        let theme_val = theme(Appearance::Dark);
+        assert_eq!(
+            theme_val.height(Height::Control),
+            theme_val.metrics.control_height
+        );
+        assert_eq!(theme_val.height(Height::Row), theme_val.metrics.row_height);
     }
 }

@@ -1,0 +1,10 @@
+// Implementation plan for R1
+// 1. Add three enums before Status enum
+// 2. Add three methods to Theme impl
+// 3. Add three tests at end of tests module
+
+TextRole enum: 9 variants - Title, Heading, Body, BodyStrong, Caption, Figure, State, Mono, Micro
+Space enum: 3 variants - Small, Default, Large
+Height enum: 2 variants - Control, Row
+
+Each method maps enum variant to concrete value from Metrics/Palette/TextStyle
