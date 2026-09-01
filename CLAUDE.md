@@ -509,7 +509,7 @@ Click buttons to change selection; state persists across frames.
 - [ ] Replace the label with your description
 - [ ] Extend or shrink the choices array
 - [ ] Change colors with `.fill()` method
-- [ ] Copy from `src/widgets.rs` line 333–365 to customize appearance
+- [ ] Copy from `src/widgets.rs` line 367–398 to customize appearance
 
 **Verification:**
 - `cargo run -p rui --example segmented` works
@@ -570,7 +570,7 @@ Watch the meter animate from 0% to 100%.
 
 **Modification checklist:**
 - [ ] Change `Tone::Accent` to `Tone::Success`, `Tone::Warning`, etc.
-- [ ] Customize bar width/height by copying `src/widgets.rs` line 259–280
+- [ ] Customize bar width/height by copying `src/widgets.rs` line 284–309
 - [ ] Animate `app.progress` over time in your event loop
 - [ ] Copy the pattern for other display-only visualizations (volume, status lights, gauges)
 
@@ -609,7 +609,7 @@ Pattern: State → view function → handler closure. That is the entire pattern
 
 ```bash
 # Full test suite
-cargo test -p rui                       # 474 tests, headless
+cargo test -p rui                       # 375 tests, headless
 
 # Run the gallery (visual verification)
 cargo run -p rui --example gallery -- .
