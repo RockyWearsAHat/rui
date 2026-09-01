@@ -57,7 +57,7 @@ The rui library is organized into 19 core modules (see `rui.dx` for the complete
 - **accessibility.rs** — The element tree IS the accessibility tree; audit() finds violations; `El::takes_focus` unifies focusable check
 
 **Application Loop and Backends:**
-- **app.rs** + **shell/** — App loop, `Backend` trait (open/pump/surface/appearance/present/is_open — 6 methods), platform backends (macOS/Windows/X11/WASM, confined to unsafe)
+- **app.rs** + **shell/** — App loop, `Backend` trait (12 methods: window/input/clipboard/accessibility/composition), platform backends (macOS/Windows/X11/WASM, confined to unsafe)
 - **reload.rs** — (feature="reload" only, compiled out of release) Running window notices executable changed, saves state, restarts in place
 
 **Testing:**
@@ -116,19 +116,26 @@ struct App {
 
 ### Backend Trait Pattern
 
-Platform-specific code implements a 6-method trait:
+Platform-specific code implements a core trait with 12 methods (simplified view of essential methods shown below; see `src/shell/mod.rs` line 183 for complete definition):
+
 ```rust
-pub trait Backend {
-    fn open(&mut self) -> Result<()>;
-    fn pump(&mut self) -> Vec<Event>;
-    fn surface(&mut self) -> &mut [u32];
-    fn appearance(&self) -> Appearance;
-    fn present(&mut self);
+pub trait Backend: Sized {
+    fn open(options: &WindowOptions) -> Result<Self, Error>;
+    fn pump(&mut self, timeout: Duration, events: &mut Vec<Event>, redraw: &mut dyn FnMut(&Self)) -> Result<(), Error>;
+    fn surface(&self) -> (u32, u32, f32);  // width, height, scale_factor
+    fn appearance(&self) -> Appearance;    // light or dark
+    fn present(&self, canvas: &Canvas) -> Result<(), Error>;
     fn is_open(&self) -> bool;
+    fn is_fullscreen(&self) -> bool;
+    fn set_fullscreen(&self, filling: bool) -> Result<(), Error>;
+    fn clipboard_text(&self) -> Result<Option<String>, Error>;
+    fn set_clipboard_text(&self, text: &str) -> Result<(), Error>;
+    fn set_composition_area(&self, area: Option<Rect>) -> Result<(), Error>;
+    fn update_accessibility(&self, update: &AccessUpdate) -> Result<(), Error>;
 }
 ```
 
-All platform-agnostic code (layout, paint, handlers) sits above this line. Each backend (macOS, Windows, X11, WASM) implements these six methods; everything else is shared.
+All platform-agnostic code (layout, paint, handlers) sits above this line. Each backend (macOS, Windows, X11, WASM) implements these methods; everything else is shared. Core methods are open/pump/surface/appearance/present; additional methods support fullscreen, clipboard, composition input, and accessibility.
 
 ### Testing with Harness
 
@@ -207,7 +214,7 @@ WASM backend for browser environments. Allows identical UI code to run in a brow
 
 ### Cross-Module Concerns
 1. **Clock seam** (src/shell/clock.rs ↔ src/shell/mod.rs): `Surface::draw()` measures time via `Moment` API, hiding platform differences
-2. **Backend trait** (src/shell/mod.rs lines 68–88): All backends implement 6 methods (open, pump, surface, appearance, present, is_open)
+2. **Backend trait** (src/shell/mod.rs line 183+): All backends implement the trait with 12 core methods (window, input, clipboard, accessibility)
 3. **Generic turn() function** (src/shell/mod.rs line 313+): Works for any backend; native and WASM both call it
 4. **Event flow**: Native backends call `pump()` (blocking); WASM collects from DOM listeners; both return `Vec<Event>` to `turn()`
 5. **State persistence** (src/memory.rs): `Memory` holds hover, focus, scroll, animation state; queried by both native and WASM
@@ -219,7 +226,7 @@ When implementing a new backend, follow this checklist:
 
 **Phase 1: Foundation**
 - [ ] Add platform abstraction if needed (time, events, etc.)
-- [ ] Implement `Backend` trait in src/shell/platform/{backend}.rs (all 6 methods)
+- [ ] Implement `Backend` trait in src/shell/platform/{backend}.rs (all 12 methods)
 - [ ] Verify compilation with `cargo build --target <target>`
 - [ ] Verify no clippy warnings
 
@@ -235,7 +242,7 @@ When implementing a new backend, follow this checklist:
 - [ ] Test cross-platform behavior consistency
 - [ ] Document in CLAUDE.md
 
-**Pattern**: Add platform/foo.rs implementing `Backend` trait, call `turn()` from any loop or callback. Everything above `Backend` is unchanged. Proof: WASM's src/shell/platform/wasm.rs implements all 6 methods; src/shell/mod.rs:412+ has wasm-specific run(); src/wasm.rs exports browser entry points; tests/shell_stepping.rs verifies turn() works independently (commits 77d4780+).
+**Pattern**: Add platform/foo.rs implementing `Backend` trait (12 methods), call `turn()` from any loop or callback. Everything above `Backend` is unchanged. Proof: WASM's src/shell/platform/wasm.rs implements all trait methods; src/shell/mod.rs has wasm-specific run(); src/wasm.rs exports browser entry points; tests/shell_stepping.rs verifies turn() works independently (commits 77d4780+).
 
 ---
 
@@ -244,7 +251,7 @@ When implementing a new backend, follow this checklist:
 **Status**: Complete — Verified against 10 git commits; all three phases documented.
 
 ### Overview
-X11 backend for Linux systems using the X11 protocol. Implements the Backend trait with 6 core methods (open, pump, surface, appearance, present, is_open) and full event translation (11 X11 event types → rui Events with modifier support).
+X11 backend for Linux systems using the X11 protocol. Implements the Backend trait (12 methods including window, input, clipboard, accessibility) and full event translation (11 X11 event types → rui Events with modifier support).
 
 ### Files
 - **Core implementation**: src/shell/platform/x11.rs (1368 lines, Phase 1–3)
@@ -435,7 +442,7 @@ When implementing a new interactive control, follow this pattern:
 When implementing a new platform backend, follow the Recipe 2 three-phase pattern:
 
 **Phase 1: Foundation**
-- [ ] Implement Backend trait (6 methods: open, pump, surface, appearance, present, is_open)
+- [ ] Implement Backend trait (12 methods across window, input, clipboard, accessibility)
 - [ ] Create platform-specific file: src/shell/platform/{backend}.rs
 - [ ] Verify compilation with `cargo build --target <target>`
 - [ ] Verify no clippy warnings and code is formatted
