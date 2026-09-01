@@ -288,8 +288,7 @@ X11 backend for Linux systems using the X11 protocol. Implements the Backend tra
 - **Verification**:
   ```bash
   cargo test --test x11_integration
-  cargo test keyboard_translation
-  cargo test scale_factor_validation
+  cargo test --lib  # Verify keyboard and scale_factor logic
   ```
 
 ### Phase 3: Integration
@@ -302,8 +301,7 @@ X11 backend for Linux systems using the X11 protocol. Implements the Backend tra
 - **Verification**:
   ```bash
   cargo test --test interaction  # Pointer and keyboard handling
-  cargo test --test integration  # Cross-module scenarios
-  cargo test parity::cross_platform  # Visual output consistency
+  cargo test --test x11_parity  # Cross-platform consistency
   ```
 
 ### Key Contracts
