@@ -190,3 +190,72 @@ fn recipe_2_claude_md_cross_module_concerns_identified() {
         );
     }
 }
+
+#[test]
+fn recipe_2_phase_1_line_count_matches_git_history() {
+    let sha = "a67d578";
+    let claimed_lines = 748;
+    let actual = get_file_line_count(sha, "src/shell/platform/x11.rs");
+    assert_eq!(
+        actual, claimed_lines,
+        "Phase 1 commit {} claims {} lines but git shows {}",
+        sha, claimed_lines, actual
+    );
+}
+
+#[test]
+fn recipe_2_phase_2_line_count_matches_git_history() {
+    let sha = "c42c0f0";
+    let claimed_lines = 1220;
+    let actual = get_file_line_count(sha, "src/shell/platform/x11.rs");
+    assert_eq!(
+        actual, claimed_lines,
+        "Phase 2 commit {} claims {} lines but git shows {}",
+        sha, claimed_lines, actual
+    );
+}
+
+#[test]
+fn recipe_2_phase_3_line_count_matches_git_history() {
+    let sha = "80e3003";
+    let claimed_lines = 1321;
+    let actual = get_file_line_count(sha, "src/shell/platform/x11.rs");
+    assert_eq!(
+        actual, claimed_lines,
+        "Phase 3 commit {} claims {} lines but git shows {}",
+        sha, claimed_lines, actual
+    );
+}
+
+#[test]
+fn recipe_2_polish_line_count_matches_git_history() {
+    let sha = "991167a";
+    let claimed_lines = 1368;
+    let actual = get_file_line_count(sha, "src/shell/platform/x11.rs");
+    assert_eq!(
+        actual, claimed_lines,
+        "Polish commit {} claims {} lines but git shows {}",
+        sha, claimed_lines, actual
+    );
+}
+
+fn get_file_line_count(sha: &str, filepath: &str) -> usize {
+    use std::process::Command;
+
+    let output = Command::new("git")
+        .args(["show", &format!("{}:{}", sha, filepath)])
+        .output()
+        .unwrap_or_else(|_| panic!("Failed to run git show for {}:{}", sha, filepath));
+
+    if !output.status.success() {
+        panic!(
+            "git show failed for {}:{}: {}",
+            sha,
+            filepath,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    let content = String::from_utf8(output.stdout).expect("git output not valid UTF-8");
+    content.lines().count()
+}
