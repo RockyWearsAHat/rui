@@ -512,8 +512,8 @@ Then find the segmented control in the gallery. Click buttons to change selectio
 - [ ] Copy from `src/widgets.rs` line 367–398 to customize appearance
 
 **Verification:**
-- `cargo run -p rui --example segmented` works
-- `cargo test --test recipes -- segmented` passes
+- `cargo run -p rui --example gallery -- .` shows segmented control in gallery
+- `cargo test --test recipes` runs and includes segmented examples
 - Pattern can be copied directly to build other choice controls
 
 ### Checkbox Exemplar
@@ -544,8 +544,8 @@ Click the checkbox to toggle ON/OFF; state persists.
 - [ ] Copy from `examples/controls.rs` line 57–85 to customize rendering
 
 **Verification:**
-- `cargo run -p rui --example checkbox` works
-- `cargo test --test recipes -- checkbox` passes
+- `cargo run -p rui --example controls` shows working checkbox
+- `cargo test --test recipes` includes checkbox tests
 - Pattern works for any binary preference or flag
 
 ### Meter Widget Exemplar
@@ -575,8 +575,8 @@ Then find the meter control in the gallery. Watch the meter animate from 0% to 1
 - [ ] Copy the pattern for other display-only visualizations (volume, status lights, gauges)
 
 **Verification:**
-- `cargo run -p rui --example meter` works
-- `cargo test --test recipes -- meter` passes
+- `cargo run -p rui --example gallery -- .` shows meter control in gallery
+- `cargo test --test recipes` runs and includes meter-related tests
 - Pattern works for any read-only visualization
 
 ### Building Custom Controls
