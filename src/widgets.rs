@@ -27,7 +27,9 @@ use crate::element::{Children, El, Node};
 use crate::geom::{Rect, Size};
 use crate::paint::Painter;
 use crate::style::{Align, Axis, Length, Radius, Tone};
-use crate::theme::Status;
+use crate::theme::{
+    CAPTION_SIZE, CODE_SIZE, FIGURE_SIZE, HEADING_SIZE, MICRO_SIZE, Status, TITLE_SIZE,
+};
 
 /// The size ordinary text is set at.
 ///
@@ -36,27 +38,6 @@ use crate::theme::Status;
 /// inside it. This is that same number, named, for a caller sizing something
 /// against ordinary text.
 pub const BODY_SIZE: f32 = 13.0;
-
-/// The size a pane's name is set at.
-pub const TITLE_SIZE: f32 = 15.0;
-
-/// The size a section label is set at.
-pub const HEADING_SIZE: f32 = 10.5;
-
-/// The size an aside is set at.
-pub const CAPTION_SIZE: f32 = 11.5;
-
-/// The size the smallest annotation is set at.
-pub const MICRO_SIZE: f32 = 9.5;
-
-/// The size a figure meant to be read at a glance is set at.
-pub const FIGURE_SIZE: f32 = 21.0;
-
-/// The size text the machine produced is set at.
-///
-/// Smaller than [`BODY_SIZE`], because a fixed-width face at the same size
-/// reads larger than a proportional one beside it.
-pub const CODE_SIZE: f32 = 11.5;
 
 /// How far a section label's letters are opened up.
 ///
