@@ -334,7 +334,7 @@ logical_y = device_y / scale_factor
 ```bash
 cargo build --target x86_64-unknown-linux-gnu
 cargo clippy --target x86_64-unknown-linux-gnu -- -D warnings
-grep -n "fn open\|fn pump\|fn surface\|fn appearance\|fn present\|fn is_open" src/shell/platform/x11.rs
+grep -n "fn open\|fn pump\|fn surface\|fn appearance\|fn present\|fn is_open\|fn is_fullscreen\|fn set_fullscreen\|fn clipboard_text\|fn set_clipboard_text\|fn set_composition_area\|fn update_accessibility" src/shell/platform/x11.rs
 cargo fmt --check
 cargo test --lib  # Verify no test regressions
 ```
@@ -342,21 +342,14 @@ cargo test --lib  # Verify no test regressions
 **Phase 2: Integration Verification**
 ```bash
 cargo build --release
-cargo test --test "*x11_integration*"
-grep "pub(crate) use backend::Window" src/shell/platform/mod.rs
+cargo test --test x11_integration
 cargo test --lib  # Full suite (375+ tests)
 ```
 
 **Phase 3: Parity Verification**
 ```bash
-cargo test --test "*x11_parity*"
-cargo test coordinate_contract
-cargo test event_mapping
-cargo test modifiers
-cargo test parity::cross_platform
+cargo test --test x11_parity
 ```
-
-For complete verification workflow details, see STEP_13_RECIPE_2_VERIFICATION.md.
 
 ---
 
