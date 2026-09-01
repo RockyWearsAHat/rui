@@ -273,7 +273,7 @@ X11 backend for Linux systems using the X11 protocol. Implements the Backend tra
 **Phase 1: Foundation**
 - Commit: `a67d578eea41560c26fd7a6548c0d089223f3d70`
 - Message: "Give the interface library a foundation you can build controls on"
-- Lines: ~100 initial implementation
+- Lines: 748 initial implementation
 
 **Phase 2: Enhancement**
 - Commit: `c42c0f05b3d75976665377a16257c36c472debc1`
