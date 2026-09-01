@@ -731,6 +731,98 @@ For complete roadmap details, see `rui.dx` under "Library roadmap toward those p
 
 ---
 
+## Common Patterns and Edge Cases
+
+### Key Path Identity
+
+Elements are identified by their position in the tree. When lists reorder, state follows the old position. Use `El::key()` to fix identity:
+
+```rust
+// WITHOUT key: state stays at position [0]
+for (i, item) in items.iter().enumerate() {
+    button(&item.name, handler)
+}
+
+// WITH key: state follows the item
+for (i, item) in items.iter().enumerate() {
+    button(&item.name, handler).key(item.id)
+}
+```
+
+### Coordinate Transformation
+
+All layout uses logical units. Display scale is only multiplied when reaching device pixels in `canvas.rs`:
+
+```
+logical_point = device_point / scale_factor
+device_point = logical_point * scale_factor
+```
+
+Every platform backend transforms X11/Win32/Cocoa coordinates to logical units before sending events.
+
+### Focus Management
+
+`El::takes_focus` is the single source of truth for focusability:
+
+```rust
+// Don't read .focusable and .disabled separately
+// El::takes_focus is focusable && !disabled
+// The focus walk, focus ring, and audit all read it the same way
+.focusable(true)
+.disabled(false)
+.on_key(handler)
+```
+
+### Text Measurement and Drawing
+
+Text measure is exact to draw because all text uses one advance path. Wrapped text inside a growing child measures at its actual width, not a placeholder:
+
+```rust
+// The view is rebuilt and text re-measured every frame
+// So wrapped text measures at the actual width it will draw at
+// measure_stack re-measures at the real width being dealt
+```
+
+### Empty State Handling
+
+Empty states must be furnished:
+
+```rust
+if items.is_empty() {
+    col((
+        text("No items yet"),    // one muted line
+        button("Add item", |a| a.add_item()),  // one action
+    )).tone(Tone::Idle)          // Idle tone
+} else {
+    // list of items
+}
+```
+
+### Animation and Easing
+
+Time is always injected, never read from a clock. Tests can step time exactly:
+
+```rust
+// In view: read from Memory, never from Instant::now()
+let elapsed = memory.elapsed();  // injected time
+
+// In tests:
+let mut h = Harness::new(state, view);
+h.frames(10);  // Step 10 frames of animation
+```
+
+### Graceful Shutdown
+
+Windows close cleanly and destructors run. On macOS, `terminate:` closes all windows instead of tearing down:
+
+```rust
+// Application ends when loop notices no visible window
+// App::run returns and destructors run
+// No special cleanup needed
+```
+
+---
+
 ## Contributor Workflow
 
 ### Adding a New Widget
