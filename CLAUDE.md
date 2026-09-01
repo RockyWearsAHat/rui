@@ -207,13 +207,13 @@ WASM backend for browser environments. Allows identical UI code to run in a brow
 - **Goal**: Platform-specific window + event pump working
 - **Scope**: Create src/shell/platform/{backend}.rs implementing all 12 Backend trait methods
 - **Verification**: `cargo build --target <target>` succeeds
-- **Example file**: src/shell/platform/wasm.rs (Phase 1 implementation)
+- **Pattern example**: For reference, see src/shell/platform/x11.rs Phase 1 (fundamental trait implementation)
 
 **Phase 2: Enhancement** — Add platform-specific features
 - **Goal**: Full feature parity with other backends
 - **Scope**: DPI detection, event translation, keyboard support, clipboard
 - **Verification**: Platform-specific test suite passes; `cargo test --lib` succeeds
-- **Example file**: src/shell/platform/wasm.rs (Phase 2 additions)
+- **Pattern example**: For reference, see src/shell/platform/x11.rs Phase 2 (platform-specific enhancements)
 
 **Phase 3: Integration** — Wire into shared systems
 - **Goal**: Seamless cross-platform operation
@@ -594,7 +594,7 @@ widgets::draw(Size::new(160.0, 18.0), move |painter, rect| {
 ```
 
 **Next steps:**
-1. Copy `examples/segmented.rs` to `examples/my_control.rs`
+1. Copy `examples/gallery.rs` to `examples/my_control.rs`
 2. Modify state struct to fit your domain
 3. Update view function to use your state
 4. Run `cargo run -p rui --example my_control`
