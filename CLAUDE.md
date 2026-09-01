@@ -79,7 +79,7 @@ The rui library is organized into 19 core modules (see `rui.dx` for the complete
 **Testing:**
 - **testing/** — `Harness`: real pipeline headless, no window; synthetic font (char = size/2) so layout tests assert exact numbers
 
-See `rui.dx` for complete module responsibilities and 20+ invariants that must not be broken.
+See `rui.dx` for complete module responsibilities and 18 load-bearing invariants that must not be broken.
 
 ## Key Invariants
 
@@ -222,7 +222,7 @@ WASM backend for browser environments. Allows identical UI code to run in a brow
 - **Example file**: src/shell/mod.rs (platform selector logic)
 
 ### Cross-Module Concerns
-1. **Clock seam** (src/shell/clock.rs ↔ src/shell/mod.rs): `Surface::draw()` measures time via `Moment` API, hiding platform differences
+1. **Time injection** (src/shell/mod.rs): Platform loop injects elapsed time; `Memory::begin_frame()` receives it, never reads wall clock
 2. **Backend trait** (src/shell/mod.rs line 183+): All backends implement the trait with 12 core methods (window, input, clipboard, accessibility)
 3. **Generic draw() function** (src/shell/mod.rs line 305+): Works for any backend; native and WASM both call it
 4. **Event flow**: Native backends call `pump()` (blocking); WASM collects from DOM listeners; both return `Vec<Event>` to `draw()`
@@ -415,7 +415,7 @@ fn checkbox<S: 'static>(label: &str, checked: bool, toggle: impl Fn(&mut S) + 's
 ### Phase 4: Integration & Persistence
 - **Problem**: Can multiple checkbox instances coexist with independent state?
 - **Solution**: Verify state persists across frames and multiple instances manage their own identity
-- **Files**: tests/recipes.rs (integration tests), src/testing/harness.rs (if needed)
+- **Files**: tests/recipes.rs (integration tests), src/testing/mod.rs (Harness implementation)
 - **Tests**:
   ```bash
   cargo test --test recipes -- checkbox_preserves_state_across_frames
