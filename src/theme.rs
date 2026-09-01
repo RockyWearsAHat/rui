@@ -1034,37 +1034,82 @@ mod tests {
 
     #[test]
     fn text_role_resolves_all_variants() {
+        // Asserts against independently-known expected values (hardcoded sizes),
+        // not implementation output. Catches bugs: if Mono incorrectly mapped to
+        // micro(), this would fail because 11.5 != 9.5.
         let theme_val = theme(Appearance::Dark);
-        assert_eq!(theme_val.text_role(TextRole::Title), theme_val.title());
-        assert_eq!(theme_val.text_role(TextRole::Heading), theme_val.heading());
-        assert_eq!(theme_val.text_role(TextRole::Body), theme_val.body());
+
+        // Title: 15.0 pt
+        assert_eq!(theme_val.text_role(TextRole::Title).size, 15.0);
+
+        // Heading: 10.5 pt
+        assert_eq!(theme_val.text_role(TextRole::Heading).size, 10.5);
+
+        // Body: 13.0 pt
+        assert_eq!(theme_val.text_role(TextRole::Body).size, 13.0);
+
+        // BodyStrong: 13.5 pt
+        assert_eq!(theme_val.text_role(TextRole::BodyStrong).size, 13.5);
+
+        // Caption: 11.5 pt
+        assert_eq!(theme_val.text_role(TextRole::Caption).size, 11.5);
+
+        // Figure: 21.0 pt
+        assert_eq!(theme_val.text_role(TextRole::Figure).size, 21.0);
+
+        // State: 10.5 pt
+        assert_eq!(theme_val.text_role(TextRole::State).size, 10.5);
+
+        // Mono: 11.5 pt fixed-width (CRITICAL: not 9.5 pt)
+        assert_eq!(theme_val.text_role(TextRole::Mono).size, 11.5);
         assert_eq!(
-            theme_val.text_role(TextRole::BodyStrong),
-            theme_val.body_strong()
+            theme_val.text_role(TextRole::Mono).font,
+            theme_val.mono_font
         );
-        assert_eq!(theme_val.text_role(TextRole::Caption), theme_val.caption());
-        assert_eq!(theme_val.text_role(TextRole::Figure), theme_val.figure());
-        assert_eq!(theme_val.text_role(TextRole::State), theme_val.state());
-        assert_eq!(theme_val.text_role(TextRole::Mono), theme_val.mono());
-        assert_eq!(theme_val.text_role(TextRole::Micro), theme_val.micro());
+
+        // Micro: 9.5 pt fixed-width
+        assert_eq!(theme_val.text_role(TextRole::Micro).size, 9.5);
+        assert_eq!(
+            theme_val.text_role(TextRole::Micro).font,
+            theme_val.mono_font
+        );
     }
 
     #[test]
     fn spacing_resolves_all_variants() {
+        // Asserts against independently-known gap values, not implementation output.
         let theme_val = theme(Appearance::Dark);
-        assert_eq!(theme_val.spacing(Space::Small), theme_val.metrics.gap_small);
-        assert_eq!(theme_val.spacing(Space::Default), theme_val.metrics.gap);
-        assert_eq!(theme_val.spacing(Space::Large), theme_val.metrics.gap_large);
+        assert_eq!(
+            theme_val.spacing(Space::Small),
+            4.0,
+            "Space::Small should be 4.0"
+        );
+        assert_eq!(
+            theme_val.spacing(Space::Default),
+            8.0,
+            "Space::Default should be 8.0"
+        );
+        assert_eq!(
+            theme_val.spacing(Space::Large),
+            16.0,
+            "Space::Large should be 16.0"
+        );
     }
 
     #[test]
     fn height_resolves_all_variants() {
+        // Asserts against independently-known height values, not implementation output.
         let theme_val = theme(Appearance::Dark);
         assert_eq!(
             theme_val.height(Height::Control),
-            theme_val.metrics.control_height
+            28.0,
+            "Height::Control should be 28.0"
         );
-        assert_eq!(theme_val.height(Height::Row), theme_val.metrics.row_height);
+        assert_eq!(
+            theme_val.height(Height::Row),
+            22.0,
+            "Height::Row should be 22.0"
+        );
     }
 
     #[test]
