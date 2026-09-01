@@ -196,37 +196,30 @@ Documentation files created per recipe:
 
 ## Recipe 1: Adding a WASM Backend
 
-**Status**: Complete — Verified against 17 git commits; all three phases documented.
+**Purpose**: Exemplar pattern for cross-platform backend implementation. The three-phase structure applies to any new backend (Wayland, DirectX, game engine, etc.).
 
 ### Overview
-WASM backend for browser environments. Allows identical UI code to run in a browser by implementing the `Backend` trait and using a shared `turn()` function instead of a platform-specific event loop.
+WASM backend for browser environments. Allows identical UI code to run in a browser by implementing the `Backend` trait and using a shared frame-loop function instead of a platform-specific event pump.
 
-### Commits and Phases
-**Commits**: 17 total (77d4780 through 2df7f1c), grouped in three phases: clock abstraction, FrameDriver refactor, and WASM integration.
+### The Three-Phase Pattern
 
-### Phase 1: Clock Abstraction
-- **Commits**: 1 (77d4780)
-- **Files**: src/shell/clock.rs (new); src/shell/mod.rs, src/app.rs, Cargo.toml modified
-- **Problem**: `std::time::Instant::now()` panics on `wasm32-unknown-unknown` (no system clock in browser)
-- **Solution**: `Moment` type abstracts time; Desktop uses `Instant`, WASM uses `performance.now()`
-- **Verification**: `cargo test --lib` passes; `Moment::now()` works on both platforms
+**Phase 1: Foundation** — Implement the Backend trait
+- **Goal**: Platform-specific window + event pump working
+- **Scope**: Create src/shell/platform/{backend}.rs implementing all 12 Backend trait methods
+- **Verification**: `cargo build --target <target>` succeeds
+- **Example file**: src/shell/platform/wasm.rs (Phase 1 implementation)
 
-### Phase 2: FrameDriver Refactor
-- **Commits**: 5 (531214f, 9afc9b1, b6a1b2c, 2ef3c2b, caa3066)
-- **Files**: src/shell/mod.rs (extract loop body); tests/shell_stepping.rs (new)
-- **Problem**: WASM cannot block on events; native `while window.is_open()` loop must split into reusable `turn()` function
-- **Solution**: Extract loop body into `turn()` function called by both native loop and WASM requestAnimationFrame
-- **Verification**: `cargo test --test shell_stepping && cargo build` pass
+**Phase 2: Enhancement** — Add platform-specific features
+- **Goal**: Full feature parity with other backends
+- **Scope**: DPI detection, event translation, keyboard support, clipboard
+- **Verification**: Platform-specific test suite passes; `cargo test --lib` succeeds
+- **Example file**: src/shell/platform/wasm.rs (Phase 2 additions)
 
-### Phase 3: WASM Integration
-- **Commits**: 8+ (b116ac8 through 2df7f1c)
-- **Files**: src/shell/mod.rs (wasm-specific run), src/shell/clock.rs (edge cases), src/wasm.rs (new), src/shell/platform/wasm.rs (new)
-- **What**: Full WASM backend with canvas rendering, DOM event listeners, appearance detection, browser entry points
-- **Verification**:
-  - `cargo build --target wasm32-unknown-unknown -p rui --example counter` succeeds
-  - `cargo test --lib` passes; memory state persists across frames
-  - `wasm-pack test --headless --firefox` confirms events and state work
-  - `examples/parity.html` pixel-matches native desktop (0 differing bytes, light & dark modes)
+**Phase 3: Integration** — Wire into shared systems
+- **Goal**: Seamless cross-platform operation
+- **Scope**: Event translation, coordinate transformation, feature gates in src/shell/mod.rs
+- **Verification**: Parity tests pass; visual output identical to other backends; `cargo build --all-features` succeeds
+- **Example file**: src/shell/mod.rs (platform selector logic)
 
 ### Cross-Module Concerns
 1. **Clock seam** (src/shell/clock.rs ↔ src/shell/mod.rs): `Surface::draw()` measures time via `Moment` API, hiding platform differences
@@ -258,42 +251,60 @@ When implementing a new backend, follow this checklist:
 - [ ] Test cross-platform behavior consistency
 - [ ] Document in CLAUDE.md
 
-**Pattern**: Add platform/foo.rs implementing `Backend` trait (12 methods), call `turn()` from any loop or callback. Everything above `Backend` is unchanged. Proof: WASM's src/shell/platform/wasm.rs implements all trait methods; src/shell/mod.rs has wasm-specific run(); src/wasm.rs exports browser entry points; tests/shell_stepping.rs verifies turn() works independently (commits 77d4780+).
+**Pattern**: Add platform/foo.rs implementing `Backend` trait (12 methods), call a shared event loop from platform-specific entry point. Everything above the trait boundary is platform-agnostic. Proof: See src/shell/platform/ for macOS/Windows/X11 implementations; each implements all 12 trait methods identically; src/shell/mod.rs handles platform selection via `#[cfg(...)]`; src/app.rs calls Backend generically.
 
 ---
 
 ## Recipe 2: X11 Backend Implementation
 
-**Status**: Complete — Verified against 10 git commits; all three phases documented.
+**Purpose**: Detailed exemplar of the three-phase pattern applied to a real platform backend. Reference implementation for Linux X11 systems.
 
 ### Overview
-X11 backend for Linux systems using the X11 protocol. Implements the Backend trait (12 methods including window, input, clipboard, accessibility) and full event translation (11 X11 event types → rui Events with modifier support).
+X11 backend for Linux systems using the X11 protocol. Implements the Backend trait (12 methods) and full event translation (pointer, keyboard, window lifecycle, DPI changes).
 
-### Files
-- **Core implementation**: src/shell/platform/x11.rs (1368 lines, Phase 1–3)
-- **Feature gate**: `--features x11` (default, fallback to headless if unavailable)
-- **Verification workflow**: See STEP_13_RECIPE_2_VERIFICATION.md for complete phase gates
+### Example Implementation
+- **File**: src/shell/platform/x11.rs (1368 lines, all three phases)
+- **Feature gate**: `--features x11` (included by default, optional for embedded builds)
+- **Coordinate contract**: device pixels → logical (logical = device / scale_factor)
+- **Event translation**: X11 event types → rui Event with modifier masks
 
 ### Phase 1: Foundation
-- **Commits**: 1 (a67d578)
-- **Files**: src/shell/platform/x11.rs added
-- **What**: Backend trait implementation with basic window creation and event pump
-- **Invariants**: Coordinate contract (device→logical: logical = device / scale_factor)
-- **Verification**: `cargo build --target x86_64-unknown-linux-gnu && cargo test --lib`
+- **Scope**: Basic window creation, event pump loop, display connection
+- **Key methods**: `Backend::open()`, `Backend::pump()`, `Backend::surface()`, `Backend::present()`
+- **Coordinate handling**: Establish scale factor and display metrics
+- **Files modified**: src/shell/platform/x11.rs (window setup), src/shell/mod.rs (platform selector)
+- **Verification**: 
+  ```bash
+  cargo build --target x86_64-unknown-linux-gnu
+  cargo test --lib  # Core library tests unchanged
+  ```
 
 ### Phase 2: Enhancement
-- **Commits**: 1 (c42c0f0)
-- **Files**: src/shell/platform/x11.rs extended
-- **What**: DPI detection, keyboard event translation, scale factor validation
-- **Invariants**: Scale factor 1.0–4.0 range; key translation with shift/control/alt modifiers
-- **Verification**: `cargo test --test x11_backend_phases -- dpi_scale keyboard_translation`
+- **Scope**: DPI scaling, keyboard event translation, modifier key handling, accessibility setup
+- **Event types**: MotionNotify → pointer moved, ButtonPress/Release → pointer pressed/released, KeyPress/Release → key events
+- **Keyboard translation**: Map X11 KeyCode → rui Key with shift/control/alt modifiers
+- **Scale factor**: Detect DPI and validate range (1.0–4.0)
+- **Files modified**: src/shell/platform/x11.rs (event handling), src/input.rs (Event → Input translation)
+- **Verification**:
+  ```bash
+  cargo test --test x11_integration
+  cargo test keyboard_translation
+  cargo test scale_factor_validation
+  ```
 
 ### Phase 3: Integration
-- **Commits**: 8 (80e3003–84ade0e)
-- **Files**: src/shell/platform/x11.rs finalized; src/app.rs, src/shell/mod.rs coordinated
-- **What**: Frame loop integration, event translation in turn(), cross-module consistency
-- **Invariants**: Platform transparency (app works identically at any DPI scale); parity with other backends
-- **Verification**: `cargo test --test interaction && cargo test --test integration`
+- **Scope**: Frame loop wiring, cross-module coordination, parity validation
+- **Files modified**: src/shell/mod.rs (platform selector, event dispatch), src/app.rs (backend trait boundary), src/accessibility.rs (X11 node objects)
+- **Invariants**: 
+  - Platform transparency (identical behavior at any DPI)
+  - Parity with other backends (macOS/Windows)
+  - Single dispatch path for all input sources
+- **Verification**:
+  ```bash
+  cargo test --test interaction  # Pointer and keyboard handling
+  cargo test --test integration  # Cross-module scenarios
+  cargo test parity::cross_platform  # Visual output consistency
+  ```
 
 ### Key Contracts
 
