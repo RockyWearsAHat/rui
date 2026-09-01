@@ -630,6 +630,61 @@ Distilled from SwiftUI/HIG, Material, GPUI, Linear, Zed, and rui's peers (egui, 
 - Disabled = 0.38 content alpha, never a new grey.
 - Focus ring is keyboard-only, offset, ≥3:1, drawn by library — never the same mark as selection. Focus and selection are different facts.
 
+**Keyboard and Accessibility:**
+- Everything mouse-doable is keyboard-doable, in declaration order, proven by the Harness. `assert_tab_order()` verifies Tab reaches exactly what it should.
+- Focus walk, focus ring, and accessibility audit all ask `El::takes_focus` (`focusable && !disabled`), so they cannot disagree.
+
+**Loading and Empty States:**
+- Nothing under 300ms shows a loading state; keep stale data visible and marked stale.
+- Never draw a fetch-in-progress as an empty state — the UI must not claim what it hasn't learned.
+- Empty states are furnished, not blank: one muted line, one action, Idle tone.
+
+**Interaction Safety:**
+- Destructive actions arm before they fire; the failure hue appears only at the confirmation step.
+- Instruments hold their geometry: rows reserve their slots, readouts change value not position, the primary control never moves between states.
+
+**Layout and Performance:**
+- True two-pass layout, never last-frame size caching — frame 1 renders at final size.
+- Idle windows draw zero frames; ease/phase/after are the only wakeup sources.
+- Deterministic clock, golden pixels: all motion reads injected time; snapshot widget × state × theme and diff exact pixels.
+
+**Visual Refinement:**
+- Optical over geometric: center text on cap-height, align icons to optical center.
+
+## Library Roadmap
+
+The library is under active development. Key items landed and in progress:
+
+### Landed (2026-08-10)
+
+**Core primitives for remote-desktop viewports:**
+- `Canvas::blit_bgra` + `Bgra` — 1:1 device pixel blitting with clip, negative origin, stride padding, crops, Retina support
+- `El::on_key_up` + `Input::released_keys` — Every key pressed is always reported coming up; strokes is the single source
+- `El::on_raw_key` + `KeyCode`/`KeyStroke` — Platform key positions flow through all backends unchanged
+- `App::redraw()` → `Redraw` — Thread-safe notification for frames arriving on other threads
+
+**Contrast and focus improvements:**
+- `Color::contrast_ratio()` + `Palette::assert_legible()` — WCAG compliance for all palettes (text ≥7, secondary ≥4.5)
+- `Memory::FocusSource` — Focus ring renders only on keyboard focus; fields keep source always
+- `El::on_pointer_move` + `Pointing { at, rect }` — Pointer movement tracking (fires on motion, not presence)
+- `El::takes_focus` consistency — One place reads `focusable && !disabled`; focus walk, ring, and audit all agree
+
+**Interaction completeness:**
+- Caret blinking in text fields (1.1s phase, solid while typing)
+- Graceful application shutdown (macOS `terminate:` closes windows and lets destructors run)
+
+### In Roadmap (priority order)
+
+- **R1** Theme roles end-to-end: TextRole/Space/Height enums; delete duplicate size constants
+- **R2** Motion kit: Easing set, springs with bounce control, enter/exit transitions, Memory::after for delays
+- **R4** Pressed style struct and disabled = 0.38 alpha convention
+- **R6** Pixel-grid crispness: hairline snap, glyph raster cache, gamma-boost LUT
+- **R7–R10** Elevation ramp, overlay semantics, scrollbar as control, loading/empty recipes
+- **R12** Golden-image regression net (currently auditing tab order only)
+- **R13** Palette::derive for theme generation
+
+For complete roadmap details, see `rui.dx` under "Library roadmap toward those practices".
+
 ## Conventions
 
 ### State and Views
