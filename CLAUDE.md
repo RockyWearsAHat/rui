@@ -616,8 +616,9 @@ cargo run -p rui --example gallery -- .
 cargo run -p rui --release --example cost
 
 # Platform-specific tests
-cargo test --test x11_backend_phases
-cargo test --test integration
+cargo test --test x11_integration
+cargo test --test x11_parity
+cargo test --test interaction
 ```
 
 ## Stellar UI Practices
