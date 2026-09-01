@@ -24,6 +24,78 @@ Key invariants:
 
 See `rui.dx` for the complete module map and `README.md` for the narrative introduction.
 
+## Module Structure
+
+The rui library is organized into distinct modules, each with a specific responsibility:
+
+- **element.rs** — `El<S>`: Node type, Style, children, handlers; every builder setter
+- **layout.rs** — Two-pass layout (measure → place), stack/flow, distribute, shrink
+- **style.rs** — `Style`, `Tone` (color roles), `Length` (Auto/Fixed/Fill/Fraction), alignment
+- **color.rs** — `Color` (8-bit sRGB), blending, contrast ratio validation
+- **theme.rs** — `Theme`, `Palette`, `Metrics`, type scales, corner styles
+- **widgets.rs** — Constructor functions: button, field, tabs, segmented, meter, text, etc.
+- **paint.rs** — `Painter`: tree walk, drawing, handler resolution, animations
+- **canvas.rs** — CPU rasterizer: signed distance fields, shapes, pixels
+- **text.rs** + **font/** — TrueType engine: SFNT parsing, glyf rasterization, kerning
+- **memory.rs** — Interaction state: focus, scroll, easing, IME composition
+- **input.rs** — `Event` → `Input` translation, key handling, drag tracking
+- **accessibility.rs** — Element tree auditing, keyboard navigation verification
+- **app.rs** + **shell/** — App loop, `Backend` trait, platform backends (macOS/Windows/X11/WASM)
+- **testing/** — `Harness`: headless pipeline, synthetic font for exact assertions
+
+## Key Architectural Patterns
+
+### View-State-Handler Pattern
+
+**View is a pure function of state:**
+```rust
+fn view(app: &App) -> El<App> {
+    col((
+        text("Click to increment:"),
+        button("Increment", |app: &mut App| app.count += 1),
+    ))
+}
+```
+
+**State describes your data:**
+```rust
+struct App {
+    count: usize,
+}
+```
+
+**Handlers update state without closures:**
+```rust
+|app: &mut App| app.count += 1  // receives mutable state as argument
+```
+
+### Backend Trait Pattern
+
+Platform-specific code implements a 6-method trait:
+```rust
+pub trait Backend {
+    fn open(&mut self) -> Result<()>;
+    fn pump(&mut self) -> Vec<Event>;
+    fn surface(&mut self) -> &mut [u32];
+    fn appearance(&self) -> Appearance;
+    fn present(&mut self);
+    fn is_open(&self) -> bool;
+}
+```
+
+All platform-agnostic code (layout, paint, handlers) sits above this line. Each backend (macOS, Windows, X11, WASM) implements these six methods; everything else is shared.
+
+### Testing with Harness
+
+Drive the real pipeline headless, no window:
+```rust
+let mut h = Harness::new(App { count: 0 }, view);
+h.click_text("Increment");
+assert_eq!(h.state().count, 1);
+```
+
+The synthetic test font makes every character exactly half the text size wide, so width assertions are exact and deterministic.
+
 ## Recipe Infrastructure
 
 Recipes document major features through three sequential phases:
@@ -229,6 +301,129 @@ When implementing a new platform backend, follow the Recipe 2 three-phase patter
 - [ ] Test cross-platform behavior consistency
 - [ ] Verify platform transparency (no scale-factor visual bugs)
 - [ ] Document in STEP_XX_RECIPE_2_VERIFICATION.md
+
+---
+
+## Widget Exemplars
+
+### Segmented Control Exemplar
+
+The `segmented` widget demonstrates building an interactive choice selector from primitives. It is self-contained (59 lines total) and shows the state-view-handler pattern clearly.
+
+**Pattern:**
+```
+State:   struct App { selected: usize }
+View:    fn view(app: &App) -> El<App> { segmented(&choices, app.selected, handler) }
+Handler: |app: &mut App, index| { app.selected = index; }
+```
+
+**Key insight:** The handler receives `&mut S`, not a closure capturing a reference. This eliminates `Rc<RefCell<>>` and interior mutability.
+
+**Try it:**
+```bash
+cargo run -p rui --example segmented
+```
+
+Click buttons to change selection; state persists across frames.
+
+**Modification checklist:**
+- [ ] Change `["Small", "Medium", "Large"]` to your own choices
+- [ ] Replace the label with your description
+- [ ] Extend or shrink the choices array
+- [ ] Change colors with `.fill()` method
+- [ ] Copy from `src/widgets.rs` line 333–365 to customize appearance
+
+**Verification:**
+- `cargo run -p rui --example segmented` works
+- `cargo test --test recipes -- segmented` passes
+- Pattern can be copied directly to build other choice controls
+
+### Checkbox Exemplar
+
+The `checkbox` widget demonstrates a binary toggle control. Unlike segmented (one choice among many), checkbox toggles a single boolean value.
+
+**Pattern:**
+```
+State:   struct App { notify: bool }
+View:    fn view(app: &App) -> El<App> { checkbox("Enable notifications", app.notify, handler) }
+Handler: |app: &mut App| { app.notify = !app.notify }
+```
+
+**Key insight:** Toggle controls flip a boolean. The handler is simple: receive `&mut S`, invert the field, done.
+
+**Try it:**
+```bash
+cargo run -p rui --example checkbox
+```
+
+Click the checkbox to toggle ON/OFF; state persists.
+
+**Modification checklist:**
+- [ ] Change `"Enable notifications"` to your own label
+- [ ] Replace `app.notify` with any boolean field in your state
+- [ ] Add more checkboxes by calling `checkbox()` multiple times
+- [ ] Change colors or size with `.fill()` or `.w()` methods
+- [ ] Copy from `src/widgets.rs` line 259–283 to customize rendering
+
+**Verification:**
+- `cargo run -p rui --example checkbox` works
+- `cargo test --test recipes -- checkbox` passes
+- Pattern works for any binary preference or flag
+
+### Meter Widget Exemplar
+
+The `meter` widget demonstrates a passive/read-only control. Unlike segmented or checkbox (which respond to input), meter simply displays a value as a progress bar. No handler needed.
+
+**Pattern:**
+```
+State:   struct App { progress: f32 }
+View:    fn view(app: &App) -> El<App> { meter(app.progress, Tone::Accent) }
+Handler: (none — display-only)
+```
+
+**Key insight:** Passive widgets read state and display it. No user interaction, no handlers.
+
+**Try it:**
+```bash
+cargo run -p rui --example meter
+```
+
+Watch the meter animate from 0% to 100%.
+
+**Modification checklist:**
+- [ ] Change `Tone::Accent` to `Tone::Success`, `Tone::Warning`, etc.
+- [ ] Customize bar width/height by copying `src/widgets.rs` line 259–280
+- [ ] Animate `app.progress` over time in your event loop
+- [ ] Copy the pattern for other display-only visualizations (volume, status lights, gauges)
+
+**Verification:**
+- `cargo run -p rui --example meter` works
+- `cargo test --test recipes -- meter` passes
+- Pattern works for any read-only visualization
+
+### Building Custom Controls
+
+Copy an exemplar and modify freely. All widgets are built from primitives:
+
+```rust
+widgets::draw(Size::new(160.0, 18.0), move |painter, rect| {
+    let (filled, _) = rect.split_left(rect.w * value);
+    painter.fill(rect, Radius::Pill, Tone::Sunken);
+    painter.fill(filled, Radius::Pill, Tone::Accent);
+})
+.on_drag(|app: &mut App, drag| app.volume = drag.fraction().x)
+.on_key(|app: &mut App, key, _| app.nudge(key))
+```
+
+**Next steps:**
+1. Copy `examples/segmented.rs` to `examples/my_control.rs`
+2. Modify state struct to fit your domain
+3. Update view function to use your state
+4. Run `cargo run -p rui --example my_control`
+5. Copy test from `tests/recipes.rs` and verify behavior
+6. Run `cargo test my_control_changes_state_when_clicked`
+
+Pattern: State → view function → handler closure. That is the entire pattern. Build custom controls from primitives in `widgets.rs` (row, col, draw, button, field, etc.); they compose to form any interface.
 
 ---
 
