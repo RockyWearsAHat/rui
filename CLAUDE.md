@@ -268,6 +268,28 @@ X11 backend for Linux systems using the X11 protocol. Implements the Backend tra
 - **Coordinate contract**: device pixels → logical (logical = device / scale_factor)
 - **Event translation**: X11 event types → rui Event with modifier masks
 
+### Commit list
+
+**Phase 1: Foundation**
+- Commit: `a67d578eea41560c26fd7a6548c0d089223f3d70`
+- Message: "Give the interface library a foundation you can build controls on"
+- Lines: ~100 initial implementation
+
+**Phase 2: Enhancement**
+- Commit: `c42c0f05b3d75976665377a16257c36c472debc1`
+- Message: "Bring the library up to the selfhost workspace's current state: a full vector canvas (paths, strokes, gradients, SDF text effects), geometry primitives, image decoding and scaling, signed-distance-field rendering, accessibility tree, font kerning, interaction tests, the reload feature, and the icon example"
+- Lines: 1220 (full Backend trait + event translation + DPI/keyboard/clipboard)
+
+**Phase 3: Integration**
+- Commit: `80e3003563c26952e4d63c52d8eb8f5052cb463c`
+- Message: "The four primitives a remote-desktop viewport needs, and the practices document"
+- Lines: 1321 (Canvas::blit_bgra, key_up, on_raw_key, on_pointer_move, takes_focus consistency)
+
+**Polish**
+- Commit: `991167a3898d643199a6e0b9dfa461be31cae264`
+- Message: "Recipe 2: Implement star_rating widget exemplar with test"
+- Lines: 1368 (documentation refinements + star_rating widget exemplar)
+
 ### Phase 1: Foundation
 - **Scope**: Basic window creation, event pump loop, display connection
 - **Key methods**: `Backend::open()`, `Backend::pump()`, `Backend::surface()`, `Backend::present()`
