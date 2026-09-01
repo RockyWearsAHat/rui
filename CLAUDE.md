@@ -373,19 +373,21 @@ struct App {
 ### Phase 2: Element Tree Construction
 - **Problem**: How do state changes flow through the view function into visual appearance?
 - **Solution**: Build checkbox from primitives; state parameter determines conditional styling
-- **Implementation** (src/widgets.rs lines 259–283):
+- **Implementation** (examples/controls.rs lines 57–85):
 ```rust
-pub fn checkbox<S: 'static>(
-    label: &str,
-    checked: bool,
-    toggle: impl Fn(&mut S) + 'static,
-) -> El<S> {
+fn checkbox<S: 'static>(label: &str, checked: bool, toggle: impl Fn(&mut S) + 'static) -> El<S> {
     row((
-        draw(Size::new(15.0, 15.0), move |painter, rect| {
-            let tone = if checked { Tone::Accent } else { Tone::Sunken };
-            painter.fill(rect, Radius::Units(4.0), tone);
-            painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
-        }),
+        draw(
+            Size::new(15.0, 15.0),
+            move |painter: &mut Painter<'_>, rect: Rect| {
+                let fill = if checked { Tone::Accent } else { Tone::Sunken };
+                painter.fill(rect, Radius::Units(4.0), fill);
+                painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
+                if checked {
+                    painter.fill(tick(rect), Radius::Units(1.0), Tone::OnAccent);
+                }
+            },
+        ),
         text(label),
     ))
     .gap(8.0)
@@ -393,7 +395,7 @@ pub fn checkbox<S: 'static>(
 }
 ```
 - **Key insight**: `checked` parameter flows as an upvalue into the `draw()` closure; conditional styling proves state determines appearance
-- **Verification**: `cargo test --test recipes -- a_checkbox_draws_differently_once_it_is_ticked` passes
+- **Verification**: `cargo run -p rui --example controls` shows working checkbox
 
 ### Phase 3: Enhancement (Styling & Visual Polish)
 - **Problem**: Does the checkbox look correct across light/dark modes and match the design system?
@@ -535,11 +537,11 @@ cargo run -p rui --example checkbox
 Click the checkbox to toggle ON/OFF; state persists.
 
 **Modification checklist:**
-- [ ] Change `"Enable notifications"` to your own label
+- [ ] Change `"notifications"` to your own label
 - [ ] Replace `app.notify` with any boolean field in your state
 - [ ] Add more checkboxes by calling `checkbox()` multiple times
-- [ ] Change colors or size with `.fill()` or `.w()` methods
-- [ ] Copy from `src/widgets.rs` line 259–283 to customize rendering
+- [ ] Change colors or size in the draw closure
+- [ ] Copy from `examples/controls.rs` line 57–85 to customize rendering
 
 **Verification:**
 - `cargo run -p rui --example checkbox` works
