@@ -631,7 +631,7 @@ impl Theme {
             TextRole::Caption => self.caption(),
             TextRole::Figure => self.figure(),
             TextRole::State => self.state(),
-            TextRole::Mono => self.micro(),
+            TextRole::Mono => self.mono(),
             TextRole::Micro => self.micro(),
         }
     }
@@ -1045,7 +1045,7 @@ mod tests {
         assert_eq!(theme_val.text_role(TextRole::Caption), theme_val.caption());
         assert_eq!(theme_val.text_role(TextRole::Figure), theme_val.figure());
         assert_eq!(theme_val.text_role(TextRole::State), theme_val.state());
-        assert_eq!(theme_val.text_role(TextRole::Mono), theme_val.micro());
+        assert_eq!(theme_val.text_role(TextRole::Mono), theme_val.mono());
         assert_eq!(theme_val.text_role(TextRole::Micro), theme_val.micro());
     }
 
