@@ -35,7 +35,7 @@ use crate::theme::Status;
 /// [`Ink`](crate::Ink) so that a size set on a container reaches everything
 /// inside it. This is that same number, named, for a caller sizing something
 /// against ordinary text.
-pub const BODY_SIZE: f32 = 13.5;
+pub const BODY_SIZE: f32 = 13.0;
 
 /// The size a pane's name is set at.
 pub const TITLE_SIZE: f32 = 15.0;
