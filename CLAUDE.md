@@ -365,7 +365,7 @@ cargo test --lib  # Verify no test regressions
 ```bash
 cargo build --release
 cargo test --test x11_integration
-cargo test --lib  # Full suite (375+ tests)
+cargo test --lib  # Full suite (379 tests)
 ```
 
 **Phase 3: Parity Verification**
@@ -633,7 +633,7 @@ Pattern: State → view function → handler closure. That is the entire pattern
 
 ```bash
 # Full test suite
-cargo test -p rui                       # 375 tests, headless
+cargo test -p rui                       # 379 tests, headless
 
 # Run the gallery (visual verification)
 cargo run -p rui --example gallery -- .
@@ -906,7 +906,7 @@ done
 grep -c "fn " src/shell/mod.rs | grep "trait Backend" -A 50 | wc -l
 ```
 
-**Tests passing (expected: 375 tests):**
+**Tests passing (expected: 379 tests):**
 ```bash
 cargo test --lib -- --nocapture 2>&1 | grep "test result:"
 ```
