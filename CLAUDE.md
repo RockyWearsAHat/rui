@@ -54,6 +54,74 @@ Documentation files created per recipe:
 
 ---
 
+## Recipe 1: Adding a WASM Backend
+
+**Status**: Complete — Verified against 17 git commits; all three phases documented.
+
+### Overview
+WASM backend for browser environments. Allows identical UI code to run in a browser by implementing the `Backend` trait and using a shared `turn()` function instead of a platform-specific event loop.
+
+### Commits and Phases
+**Commits**: 17 total (77d4780 through 2df7f1c), grouped in three phases: clock abstraction, FrameDriver refactor, and WASM integration.
+
+### Phase 1: Clock Abstraction
+- **Commits**: 1 (77d4780)
+- **Files**: src/shell/clock.rs (new); src/shell/mod.rs, src/app.rs, Cargo.toml modified
+- **Problem**: `std::time::Instant::now()` panics on `wasm32-unknown-unknown` (no system clock in browser)
+- **Solution**: `Moment` type abstracts time; Desktop uses `Instant`, WASM uses `performance.now()`
+- **Verification**: `cargo test --lib` passes; `Moment::now()` works on both platforms
+
+### Phase 2: FrameDriver Refactor
+- **Commits**: 5 (531214f, 9afc9b1, b6a1b2c, 2ef3c2b, caa3066)
+- **Files**: src/shell/mod.rs (extract loop body); tests/shell_stepping.rs (new)
+- **Problem**: WASM cannot block on events; native `while window.is_open()` loop must split into reusable `turn()` function
+- **Solution**: Extract loop body into `turn()` function called by both native loop and WASM requestAnimationFrame
+- **Verification**: `cargo test --test shell_stepping && cargo build` pass
+
+### Phase 3: WASM Integration
+- **Commits**: 8+ (b116ac8 through 2df7f1c)
+- **Files**: src/shell/mod.rs (wasm-specific run), src/shell/clock.rs (edge cases), src/wasm.rs (new), src/shell/platform/wasm.rs (new)
+- **What**: Full WASM backend with canvas rendering, DOM event listeners, appearance detection, browser entry points
+- **Verification**:
+  - `cargo build --target wasm32-unknown-unknown -p rui --example counter` succeeds
+  - `cargo test --lib` passes; memory state persists across frames
+  - `wasm-pack test --headless --firefox` confirms events and state work
+  - `examples/parity.html` pixel-matches native desktop (0 differing bytes, light & dark modes)
+
+### Cross-Module Concerns
+1. **Clock seam** (src/shell/clock.rs ↔ src/shell/mod.rs): `Surface::draw()` measures time via `Moment` API, hiding platform differences
+2. **Backend trait** (src/shell/mod.rs lines 68–88): All backends implement 6 methods (open, pump, surface, appearance, present, is_open)
+3. **Generic turn() function** (src/shell/mod.rs line 313+): Works for any backend; native and WASM both call it
+4. **Event flow**: Native backends call `pump()` (blocking); WASM collects from DOM listeners; both return `Vec<Event>` to `turn()`
+5. **State persistence** (src/memory.rs): `Memory` holds hover, focus, scroll, animation state; queried by both native and WASM
+6. **Platform branching** (src/app.rs): `App::run()` calls `shell::run()` with two implementations gated by `#[cfg(target_arch)]`
+
+### Template for Next Backend (e.g., Wayland, Game Engine)
+
+When implementing a new backend, follow this checklist:
+
+**Phase 1: Foundation**
+- [ ] Add platform abstraction if needed (time, events, etc.)
+- [ ] Implement `Backend` trait in src/shell/platform/{backend}.rs (all 6 methods)
+- [ ] Verify compilation with `cargo build --target <target>`
+- [ ] Verify no clippy warnings
+
+**Phase 2: Enhancement**
+- [ ] Extract platform-specific event loop differences (if any)
+- [ ] Implement keyboard and input event translation
+- [ ] Write integration tests in tests/{backend}_integration.rs
+
+**Phase 3: Integration**
+- [ ] Wire into src/shell/mod.rs platform selector with `#[cfg(...)]`
+- [ ] Create platform-specific `run()` function
+- [ ] Write parity tests in tests/{backend}_parity.rs
+- [ ] Test cross-platform behavior consistency
+- [ ] Document in CLAUDE.md
+
+**Pattern**: Add platform/foo.rs implementing `Backend` trait, call `turn()` from any loop or callback. Everything above `Backend` is unchanged. Proof: WASM's src/shell/platform/wasm.rs implements all 6 methods; src/shell/mod.rs:412+ has wasm-specific run(); src/wasm.rs exports browser entry points; tests/shell_stepping.rs verifies turn() works independently (commits 77d4780+).
+
+---
+
 ## Recipe 2: X11 Backend Implementation
 
 **Status**: Complete — Verified against 10 git commits; all three phases documented.
