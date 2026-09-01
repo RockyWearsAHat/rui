@@ -368,6 +368,27 @@ impl Metrics {
     };
 }
 
+/// The size a pane's name is set at.
+pub const TITLE_SIZE: f32 = 15.0;
+
+/// The size a section label is set at.
+pub const HEADING_SIZE: f32 = 10.5;
+
+/// The size an aside is set at.
+pub const CAPTION_SIZE: f32 = 11.5;
+
+/// The size the smallest annotation is set at.
+pub const MICRO_SIZE: f32 = 9.5;
+
+/// The size a figure meant to be read at a glance is set at.
+pub const FIGURE_SIZE: f32 = 21.0;
+
+/// The size text the machine produced is set at.
+///
+/// Smaller than the body text size, because a fixed-width face at the same size
+/// reads larger than a proportional one beside it.
+pub const CODE_SIZE: f32 = 11.5;
+
 /// Which shape every framed thing's corners take.
 ///
 /// The whole interface's character in one word. A rounded corner is the corner
@@ -1126,27 +1147,27 @@ mod tests {
 
         // Text size mappings: constant → Theme method
         assert_eq!(
-            widgets::TITLE_SIZE,
+            TITLE_SIZE,
             theme_val.title().size,
             "title() widget constructor uses TITLE_SIZE"
         );
         assert_eq!(
-            widgets::HEADING_SIZE,
+            HEADING_SIZE,
             theme_val.heading().size,
             "heading() and tag() widget constructors use HEADING_SIZE"
         );
         assert_eq!(
-            widgets::CAPTION_SIZE,
+            CAPTION_SIZE,
             theme_val.caption().size,
             "caption() widget constructor uses CAPTION_SIZE"
         );
         assert_eq!(
-            widgets::MICRO_SIZE,
+            MICRO_SIZE,
             theme_val.micro().size,
             "micro() widget constructor uses MICRO_SIZE"
         );
         assert_eq!(
-            widgets::FIGURE_SIZE,
+            FIGURE_SIZE,
             theme_val.figure().size,
             "figure() widget constructor uses FIGURE_SIZE"
         );
@@ -1154,7 +1175,7 @@ mod tests {
         // exists yet; it's currently unnamed. When R2 Motion kit is complete,
         // CODE_SIZE may need its own State or Code variant.
         assert_eq!(
-            widgets::CODE_SIZE,
+            CODE_SIZE,
             theme_val.caption().size,
             "code() and field() widget constructors use CODE_SIZE, which matches caption size"
         );
