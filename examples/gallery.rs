@@ -21,9 +21,12 @@ use rui::{
 
 /// What the gallery is showing, so the interactive parts have something to say.
 pub struct Gallery {
-    tab: usize,
-    mode: usize,
-    name: String,
+    /// Currently selected tab (Overview, Definition, Output).
+    pub tab: usize,
+    /// Currently selected mode (Manual, At boot, On demand).
+    pub mode: usize,
+    /// Service name being edited.
+    pub name: String,
 }
 
 /// What the gallery opens showing.
