@@ -499,10 +499,10 @@ Handler: |app: &mut App, index| { app.selected = index; }
 
 **Try it:**
 ```bash
-cargo run -p rui --example segmented
+cargo run -p rui --example gallery -- .
 ```
 
-Click buttons to change selection; state persists across frames.
+Then find the segmented control in the gallery. Click buttons to change selection; state persists across frames.
 
 **Modification checklist:**
 - [ ] Change `["Small", "Medium", "Large"]` to your own choices
@@ -531,7 +531,7 @@ Handler: |app: &mut App| { app.notify = !app.notify }
 
 **Try it:**
 ```bash
-cargo run -p rui --example checkbox
+cargo run -p rui --example controls
 ```
 
 Click the checkbox to toggle ON/OFF; state persists.
@@ -563,10 +563,10 @@ Handler: (none — display-only)
 
 **Try it:**
 ```bash
-cargo run -p rui --example meter
+cargo run -p rui --example gallery -- .
 ```
 
-Watch the meter animate from 0% to 100%.
+Then find the meter control in the gallery. Watch the meter animate from 0% to 100%.
 
 **Modification checklist:**
 - [ ] Change `Tone::Accent` to `Tone::Success`, `Tone::Warning`, etc.
