@@ -274,3 +274,17 @@ Before committing:
 | **Layout engine** | Read `src/layout.rs` and `tests/layout.rs` for flexbox-like stacking and wrapping |
 | **WASM porting** | Read Recipe 1 commits; verify with `cargo test --test recipe_1_verification` |
 | **Testing** | Use `Harness` in `tests/recipes.rs` examples; see `src/testing/harness.rs` for API |
+
+## Current Worklist (2026-09-01)
+
+The following items are ready for dispatch:
+
+- [ ] [scout] [ask: charter-rui] Fix documentation accuracy: clarify X11-only support on Linux — CLAUDE.md and README currently state "X11/Wayland (via X11 server)" but only X11 backend is implemented. Update to clarify that Wayland is not yet supported (planned for v0.2.0). Verification: grep for "Wayland" in CLAUDE.md and README returns only v0.2.0 ROADMAP references and template examples, no claims of current support. Examples on X11-only systems run without error.
+
+- [ ] [scout] [ask: charter-rui] Document 3 undocumented examples (calculator, theme_switcher, todo_app) — Currently CLAUDE.md lists only 8 examples but 11 exist in examples/. Add calculator (numeric input), theme_switcher (appearance toggle), and todo_app (list rendering, stateful updates) to the examples table with descriptions and learning path placement. Verification: CLAUDE.md examples table lists all 11 .rs files with accurate descriptions, `cargo build --examples` exits 0, each example's docstring matches its CLAUDE.md description.
+
+- [ ] [scout] [ask: charter-rui] Implement Wayland backend (src/shell/platform/wayland.rs) — Add native Wayland backend following Backend trait pattern established by X11 (Recipe 2). Handle pointer events, keyboard input, system appearance detection via wayland-client bindings. Auto-detect and use Wayland when available, fallback to X11. Verification: `cargo build --target x86_64-unknown-linux-gnu` succeeds, backend-selection logic compiles and chooses correct platform, `cargo test --lib` passes (platform module doesn't affect core logic), basic event handling works via protocol mocks in unit tests.
+
+- [ ] [scout] [ask: charter-rui] Implement accessibility (a11y) framework foundation — Add optional semantic annotations to El<S>: `accessible_name`, `accessible_role`, `accessible_description` fields. No backend integration yet; framework only. Verify existing code patterns (segmented, checkbox, meter) still build and render unchanged. Verification: El<S> API compiles with new optional fields, `cargo test --lib` passes 100% (all 260+ tests), existing examples/counter runs unchanged, new fields are properly documented in rustdoc.
+
+- [ ] [scout] [ask: charter-rui] Create v0.3.0 form widget template documentation — Document patterns for text_input, select, combobox widgets (ROADMAP v0.3.0) using primitives and memory module for caret/selection state. Provide skeleton implementations showing state shape, view function with text layout, keyboard handler (arrow keys, backspace), and Harness test patterns. Update CLAUDE.md with new "v0.3.0 Widget Patterns" section. Verification: CLAUDE.md contains text_input skeleton with complete handler signature, test skeleton using Harness showing keyboard event simulation, reference to memory module for caret persistence, no actual widget implementation (template only).
