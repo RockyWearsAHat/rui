@@ -290,6 +290,8 @@ X11 backend for Linux systems using the X11 protocol. Implements the Backend tra
 - Message: "Recipe 2: Implement star_rating widget exemplar with test"
 - Lines: 1368 (documentation refinements + star_rating widget exemplar)
 
+**Line counts verified** by tests/claude_md_recipe2.rs via `git show --stat` for each commit SHA. Regression test ensures documentation remains grounded in real git history.
+
 ### Phase 1: Foundation
 - **Scope**: Basic window creation, event pump loop, display connection
 - **Key methods**: `Backend::open()`, `Backend::pump()`, `Backend::surface()`, `Backend::present()`
