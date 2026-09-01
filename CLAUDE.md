@@ -59,11 +59,12 @@ Documentation files created per recipe:
 **Status**: Complete — Verified against 10 git commits; all three phases documented.
 
 ### Overview
-X11 backend for Linux systems using the X11 protocol. Implements the Backend trait with 6 core methods (open, pump, surface, present, close, platform_scale) and full event translation (11 X11 event types → rui Events with modifier support).
+X11 backend for Linux systems using the X11 protocol. Implements the Backend trait with 6 core methods (open, pump, surface, appearance, present, is_open) and full event translation (11 X11 event types → rui Events with modifier support).
 
 ### Files
-- **Core implementation**: src/shell/platform/x11.rs (786 lines, Phase 1–3)
+- **Core implementation**: src/shell/platform/x11.rs (1368 lines, Phase 1–3)
 - **Feature gate**: `--features x11` (default, fallback to headless if unavailable)
+- **Verification workflow**: See STEP_13_RECIPE_2_VERIFICATION.md for complete phase gates
 
 ### Phase 1: Foundation
 - **Commits**: 1 (a67d578)
@@ -110,37 +111,56 @@ logical_y = device_y / scale_factor
 
 ### Verification Gates
 
-Run these commands in sequence to verify each phase:
-
+**Phase 1: Compilation Verification**
 ```bash
-# Phase 1: Foundation compiles
-git show a67d578:src/shell/platform/x11.rs | wc -l
 cargo build --target x86_64-unknown-linux-gnu
-cargo test --lib
-
-# Phase 2: Enhancement features complete
-git show c42c0f0:src/shell/platform/x11.rs | grep "scale_factor"
-cargo test --test x11_backend_phases -- dpi_scale
-cargo test --test x11_backend_phases -- keyboard_translation
-
-# Phase 3: Integration verified
-git log 80e3003..84ade0e --oneline -- src/shell/platform/x11.rs
-cargo test --test interaction
-cargo test --test integration
+cargo clippy --target x86_64-unknown-linux-gnu -- -D warnings
+grep -n "fn open\|fn pump\|fn surface\|fn appearance\|fn present\|fn is_open" src/shell/platform/x11.rs
+cargo fmt --check
+cargo test --lib  # Verify no test regressions
 ```
+
+**Phase 2: Integration Verification**
+```bash
+cargo build --release
+cargo test --test "*x11_integration*"
+grep "pub(crate) use backend::Window" src/shell/platform/mod.rs
+cargo test --lib  # Full suite (375+ tests)
+```
+
+**Phase 3: Parity Verification**
+```bash
+cargo test --test "*x11_parity*"
+cargo test coordinate_contract
+cargo test event_mapping
+cargo test modifiers
+cargo test parity::cross_platform
+```
+
+For complete verification workflow details, see STEP_13_RECIPE_2_VERIFICATION.md.
 
 ### For Next Backends (Template Checklist)
 
-When implementing a new platform backend:
+When implementing a new platform backend, follow the Recipe 2 three-phase pattern:
 
-- [ ] Define Backend trait methods in app.rs (no new trait methods; reuse the 6-method boundary)
+**Phase 1: Foundation**
+- [ ] Implement Backend trait (6 methods: open, pump, surface, appearance, present, is_open)
 - [ ] Create platform-specific file: src/shell/platform/{backend}.rs
-- [ ] Implement coordinate transformation and document the contract
-- [ ] Map platform event types to rui Events (see x11.rs for pattern)
-- [ ] Integrate into platform selection logic (shell/mod.rs feature gates)
-- [ ] Write 3-phase documentation with commit IDs and verification commands
-- [ ] Verify DPI scaling doesn't break layout (platform transparency test)
-- [ ] Verify cross-module consistency (focus, input, memory state)
+- [ ] Verify compilation with `cargo build --target <target>`
+- [ ] Verify no clippy warnings and code is formatted
+
+**Phase 2: Enhancement**
+- [ ] Add DPI/scale factor detection and coordinate transformation
+- [ ] Implement keyboard and input event translation
+- [ ] Write integration tests in tests/{backend}_integration.rs
+- [ ] Verify platform selector logic in shell/mod.rs
+
+**Phase 3: Integration**
+- [ ] Wire event translation into the frame loop (app.rs)
+- [ ] Write parity tests in tests/{backend}_parity.rs
+- [ ] Test cross-platform behavior consistency
+- [ ] Verify platform transparency (no scale-factor visual bugs)
+- [ ] Document in STEP_XX_RECIPE_2_VERIFICATION.md
 
 ---
 
