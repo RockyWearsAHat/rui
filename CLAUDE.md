@@ -26,22 +26,67 @@ See `rui.dx` for the complete module map and `README.md` for the narrative intro
 
 ## Module Structure
 
-The rui library is organized into distinct modules, each with a specific responsibility:
+The rui library is organized into 19 core modules (see `rui.dx` for the complete technical map):
 
-- **element.rs** — `El<S>`: Node type, Style, children, handlers; every builder setter
-- **layout.rs** — Two-pass layout (measure → place), stack/flow, distribute, shrink
-- **style.rs** — `Style`, `Tone` (color roles), `Length` (Auto/Fixed/Fill/Fraction), alignment
-- **color.rs** — `Color` (8-bit sRGB), blending, contrast ratio validation
-- **theme.rs** — `Theme`, `Palette`, `Metrics`, type scales, corner styles
-- **widgets.rs** — Constructor functions: button, field, tabs, segmented, meter, text, etc.
-- **paint.rs** — `Painter`: tree walk, drawing, handler resolution, animations
-- **canvas.rs** — CPU rasterizer: signed distance fields, shapes, pixels
-- **text.rs** + **font/** — TrueType engine: SFNT parsing, glyf rasterization, kerning
-- **memory.rs** — Interaction state: focus, scroll, easing, IME composition
-- **input.rs** — `Event` → `Input` translation, key handling, drag tracking
-- **accessibility.rs** — Element tree auditing, keyboard navigation verification
-- **app.rs** + **shell/** — App loop, `Backend` trait, platform backends (macOS/Windows/X11/WASM)
-- **testing/** — `Harness`: headless pipeline, synthetic font for exact assertions
+**Core Element System:**
+- **lib.rs** — Crate documentation, design rationale, flat module re-exports, text! and code! macros
+- **element.rs** — `El<S>`: Node kind, Style, children, handlers; every builder setter (w/h/grow/gap/pad/flow/scroll/wrap/on_click/on_key/...)
+- **style.rs** — `Style`, `Tone` (color roles, never raw RGB), `Length` (Auto/Fixed/Fill/Fraction), alignment enums
+
+**Layout and Measurement:**
+- **layout.rs** — Two-pass layout (measure → place), stack/flow, distribute (multi-pass grow shares honoring max), shrink (content-sized give first, growers to minimums second)
+- **geom.rs** — Point/Size/Rect/Insets in logical units; only canvas.rs multiplies by display scale to reach device pixels
+
+**Rendering and Graphics:**
+- **color.rs** — `Color` (8-bit sRGB), blend_over (straight alpha, not gamma-corrected to match OS compositors), contrast ratio validation
+- **canvas.rs** — CPU rasterizer: every shape from signed distance fields, 0xAARRGGBB words, vertical-only gradients, Bgra blit primitive
+- **sdf.rs** — Composable signed-distance-field shape algebra: Shape as distance function, Fill/Stroke/Glow/Bevel all derived from one field
+- **image.rs** — From-scratch PNG writer (stored deflate blocks, no compressor) so a frame can be saved for inspection
+- **paint.rs** — `Painter`: one tree walk draws AND resolves input; handlers deferred to frame end; ease/phase animation values
+
+**Typography:**
+- **text.rs** + **font/** — From-scratch TrueType engine (SFNT, glyf, analytic scanline raster, kern+GPOS); one advance path so text can never measure at one width and draw at another; wrap breaks at spaces and hyphens; grapheme.rs implements UAX #29
+
+**Theming:**
+- **theme.rs** — `Theme` = Palette + Metrics + CornerStyle + type scale; apps swap palette/corners via with_palette/with_corners
+- **widgets.rs** — Constructor functions (button, col, row, field, tabs, segmented, meter, title/heading/text/caption/micro/code...); each sets a Role
+
+**Interaction and Input:**
+- **memory.rs** — Interaction state that outlives a frame: focus, scroll, easing, IME composition; time is injected, never read from clock
+- **input.rs** — `Event` → `Input` translation; pressed vs held; pointer_moved (cleared each frame); IME composition; Key (meaning) vs KeyCode (position); shortcut(); Drag and Pointing share fraction_within
+- **accessibility.rs** — The element tree IS the accessibility tree; audit() finds violations; `El::takes_focus` unifies focusable check
+
+**Application Loop and Backends:**
+- **app.rs** + **shell/** — App loop, `Backend` trait (open/pump/surface/appearance/present/is_open — 6 methods), platform backends (macOS/Windows/X11/WASM, confined to unsafe)
+- **reload.rs** — (feature="reload" only, compiled out of release) Running window notices executable changed, saves state, restarts in place
+
+**Testing:**
+- **testing/** — `Harness`: real pipeline headless, no window; synthetic font (char = size/2) so layout tests assert exact numbers
+
+See `rui.dx` for complete module responsibilities and 20+ invariants that must not be broken.
+
+## Key Invariants
+
+These invariants are load-bearing—future editors must not break them:
+
+1. **Description rebuilt every frame** — No retained widget tree; Memory holds only interaction state (focus, scroll, easing, IME). Stale-screen bugs are unwritable by design.
+2. **No wall-clock reads** — Nothing calls `std::time::Instant::now()`; elapsed time is injected via `Memory::begin_frame()`. Tests can step time exactly.
+3. **Identity is path-based** — Elements are identified by their position in the tree. `El::key()` overrides to make state follow reordered rows.
+4. **Single dispatch path** — An accessibility activation runs the same handler a mouse click would; one action, not two.
+5. **Coordinate transformation** — Display scale is only multiplied in canvas.rs when reaching device pixels; all layout in logical units.
+6. **Layout stability** — Spare room dealt to growers in proportion and re-dealt when one hits max; short room taken from content-sized children first, then growers down to minimums.
+7. **Text measure-draw parity** — measure_stack re-measures at real width; wrapped text in a growing child measures at its actual width. One advance path ensures measure and draw use identical dimensions.
+8. **Shape algebra from SDF** — Every shape is a signed distance field; Round and Cut corners cost the same; gradients are vertical-only (one color per row).
+9. **Blending contracts** — Deliberately not gamma-corrected (matches OS compositors); buffer always opaque; alpha is replaced in blit_bgra, never honoured.
+10. **No hostile fonts** — All font-file reads are bounds-checked Options; a malformed font fails to load, never panics.
+11. **Identical frames never presented** — Loop runs 8ms only while animating, else idle_timeout; a Redraw handle may shorten wait but never idle timeout; a turn that nothing asked for draws nothing.
+12. **Stroke completeness** — Every key pressed is reported coming up; strokes is the single source; keys()/released_keys() are filters, not independent. A press without release is unwritable.
+13. **Key identity** — `Key` is the layout's answer (for widgets); `KeyCode` is platform position (for forwarding). A stroke with neither is dropped.
+14. **Bitmap precision** — blit_bgra copies, never scales or resamples; alpha replaced, not honoured. Bgra::new is the one place frame sizes are checked against buffer.
+15. **Focus consistency** — `El::takes_focus` is `focusable && !disabled`, read nowhere else. Focus walk, focus ring, and Harness probes all ask it, so audit and walk cannot disagree.
+16. **Pointer motion semantics** — on_pointer_move reports movement, never presence; fires only when `Input::pointer_moved` is true for that frame. Resting hand and animating window run no handler.
+17. **Graceful shutdown** — Application ends by loop noticing no visible window; `App::run` returns and application destructors run. macOS `terminate:` closes windows and cancels, never lets AppKit tear down under the stack.
+18. **unsafe confinement** — unsafe code confined to shell/platform/; rest of crate forbids it. Platform boundaries are the only place.
 
 ## Key Architectural Patterns
 
@@ -549,6 +594,34 @@ cargo run -p rui --release --example cost
 cargo test --test x11_backend_phases
 cargo test --test integration
 ```
+
+## Stellar UI Practices
+
+Distilled from SwiftUI/HIG, Material, GPUI, Linear, Zed, and rui's peers (egui, iced, Xilem, Slint). These are behaviors the library enforces, not suggestions:
+
+**Spacing, Scale, and Typography:**
+- All spacing from one 4-based named scale; raw f32 gaps are a defect. Proximity groups before boxes or lines.
+- One type ramp with few sizes; roles, not numbers. Hierarchy from weight and ink (muted vs primary), not new sizes.
+- Mono only for machine output (paths, logs, fingerprints, addresses); placeholders are not machine output.
+- Tabular digits for anything that updates in place — jittering readouts read as broken instrumentation.
+
+**Color and Contrast:**
+- Every color reaches the screen through a role; status ink and tint travel inseparably.
+- Amber/red only with cause; motion only with cause. Budget ≤2 live animation loops, asserted mechanically.
+- One accent; chrome stays neutral. Never alias status onto brand channel.
+- Contrast is CI, not review: text/bg ≥ 7, secondary ≥ 4.5, UI boundaries and focus ≥ 3. Asserted over every palette the theme accepts via `Color::contrast_ratio()`.
+
+**Elevation and Visual Depth:**
+- Dark elevation is lightness, not shadow; shadow only under genuinely floating things, fainter in dark.
+- Hairlines are 1 physical pixel on grid, rationed: separate first by spacing and value. Border only where surfaces actually meet.
+
+**Interaction and Motion:**
+- Instant acknowledge, then animate: pressed lands the same frame as mouse-down; only the consequence animates; release eases ~100ms.
+- Motion bands: micro 50–200ms, transitions 120–300ms, nothing past 600ms; exit ≈ 2/3 of enter; decelerate in, accelerate out; linear only for continuous progress.
+- Springs (bounce 0) for anything interruptible; a redirected animation that jumps is a bug.
+- Hover is one value step up; pressed is sunken; selection is persistent and distinct from hover.
+- Disabled = 0.38 content alpha, never a new grey.
+- Focus ring is keyboard-only, offset, ≥3:1, drawn by library — never the same mark as selection. Focus and selection are different facts.
 
 ## Conventions
 
