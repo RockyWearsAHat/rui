@@ -224,8 +224,8 @@ WASM backend for browser environments. Allows identical UI code to run in a brow
 ### Cross-Module Concerns
 1. **Clock seam** (src/shell/clock.rs ↔ src/shell/mod.rs): `Surface::draw()` measures time via `Moment` API, hiding platform differences
 2. **Backend trait** (src/shell/mod.rs line 183+): All backends implement the trait with 12 core methods (window, input, clipboard, accessibility)
-3. **Generic turn() function** (src/shell/mod.rs line 313+): Works for any backend; native and WASM both call it
-4. **Event flow**: Native backends call `pump()` (blocking); WASM collects from DOM listeners; both return `Vec<Event>` to `turn()`
+3. **Generic draw() function** (src/shell/mod.rs line 305+): Works for any backend; native and WASM both call it
+4. **Event flow**: Native backends call `pump()` (blocking); WASM collects from DOM listeners; both return `Vec<Event>` to `draw()`
 5. **State persistence** (src/memory.rs): `Memory` holds hover, focus, scroll, animation state; queried by both native and WASM
 6. **Platform branching** (src/app.rs): `App::run()` calls `shell::run()` with two implementations gated by `#[cfg(target_arch)]`
 
