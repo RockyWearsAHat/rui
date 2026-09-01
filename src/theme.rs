@@ -1066,4 +1066,59 @@ mod tests {
         );
         assert_eq!(theme_val.height(Height::Row), theme_val.metrics.row_height);
     }
+
+    #[test]
+    fn widget_constants_agree_with_theme_methods() {
+        // R1 goal: Widget constants must not disagree with Theme. This test
+        // documents the mapping and ensures all constants can be eliminated by
+        // using Theme methods instead. Widget constructors currently use
+        // hardcoded constants; this test verifies those values match their
+        // Theme counterparts, ensuring that when widgets are refactored to use
+        // Theme methods, the visual output is identical.
+        use crate::widgets;
+
+        let theme_val = theme(Appearance::Dark);
+
+        // Text size mappings: constant → Theme method
+        assert_eq!(
+            widgets::TITLE_SIZE,
+            theme_val.title().size,
+            "title() widget constructor uses TITLE_SIZE"
+        );
+        assert_eq!(
+            widgets::HEADING_SIZE,
+            theme_val.heading().size,
+            "heading() and tag() widget constructors use HEADING_SIZE"
+        );
+        assert_eq!(
+            widgets::CAPTION_SIZE,
+            theme_val.caption().size,
+            "caption() widget constructor uses CAPTION_SIZE"
+        );
+        assert_eq!(
+            widgets::MICRO_SIZE,
+            theme_val.micro().size,
+            "micro() widget constructor uses MICRO_SIZE"
+        );
+        assert_eq!(
+            widgets::FIGURE_SIZE,
+            theme_val.figure().size,
+            "figure() widget constructor uses FIGURE_SIZE"
+        );
+        // CODE_SIZE is mono face at caption height (11.5). No dedicated TextRole
+        // exists yet; it's currently unnamed. When R2 Motion kit is complete,
+        // CODE_SIZE may need its own State or Code variant.
+        assert_eq!(
+            widgets::CODE_SIZE,
+            theme_val.caption().size,
+            "code() and field() widget constructors use CODE_SIZE, which matches caption size"
+        );
+        // BODY_SIZE should match theme.body() (13.0), not theme.body_strong() (13.5).
+        // The constant disagreement documented in the roadmap.
+        assert_eq!(
+            widgets::BODY_SIZE,
+            theme_val.body().size,
+            "BODY_SIZE must match theme.body() so widgets can use Theme"
+        );
+    }
 }
