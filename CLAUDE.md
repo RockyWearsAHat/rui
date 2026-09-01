@@ -455,7 +455,7 @@ When implementing a new interactive control, follow this pattern:
 - [ ] Verify state persists across 10+ frames
 - [ ] Use `.key()` for reordered lists
 
-**Pattern proof**: Checkbox is 25 lines of code. Zero framework support required. No special widget class, no retained tree, no lifecycle. Just state → view function → handlers. This pattern works for button, segmented, slider, radio, custom charts—any interactive element.
+**Pattern proof**: Checkbox is 29 lines of code (examples/controls.rs lines 57–85). Zero framework support required. No special widget class, no retained tree, no lifecycle. Just state → view function → handlers. This pattern works for button, segmented, slider, radio, custom charts—any interactive element.
 
 ### For Next Backends (Template Checklist)
 
@@ -486,7 +486,7 @@ When implementing a new platform backend, follow the Recipe 2 three-phase patter
 
 ### Segmented Control Exemplar
 
-The `segmented` widget demonstrates building an interactive choice selector from primitives. It is self-contained (59 lines total) and shows the state-view-handler pattern clearly.
+The `segmented` widget demonstrates building an interactive choice selector from primitives. It is self-contained (32 lines, src/widgets.rs lines 367–398) and shows the state-view-handler pattern clearly.
 
 **Pattern:**
 ```
