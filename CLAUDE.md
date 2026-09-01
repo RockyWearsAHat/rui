@@ -24,6 +24,22 @@ Key invariants:
 
 See `rui.dx` for the complete module map and `README.md` for the narrative introduction.
 
+## Quick Reference
+
+Use this guide to navigate CLAUDE.md and the project:
+
+| Question | Answer |
+|----------|--------|
+| **How do I build a UI?** | Read "View-State-Handler Pattern" (view = `Fn(&S) -> El<S>`, state is your data, handlers are `Fn(&mut S)`) |
+| **How do I add a new widget?** | Copy "Checkbox Exemplar" or "Widget Exemplars" section; use primitives from `widgets.rs` |
+| **How do I implement a platform backend?** | Follow "Recipe 2: X11 Backend Implementation" three-phase pattern (Foundation, Enhancement, Integration) |
+| **How do I test my code?** | Use `Harness` (read "Testing with Harness") for headless pipeline tests with exact pixel assertions |
+| **What are the design principles?** | See "Stellar UI Practices" for spacing, color, contrast, interaction, and motion rules |
+| **What invariants must I preserve?** | Read "Key Invariants" section — 18 load-bearing constraints for future editors |
+| **How do I debug a regression?** | See "Debugging a Regression" under Contributor Workflow |
+| **What's been implemented and what's next?** | Check "Library Roadmap" for landed features and priority items |
+| **Where's the authoritative source for everything?** | `rui.dx` is the working document with full module map, invariants, and implementation status |
+
 ## Module Structure
 
 The rui library is organized into 19 core modules (see `rui.dx` for the complete technical map):
@@ -745,6 +761,74 @@ assert_eq!(h.state().field, expected);
 ```
 
 If a pixel assertion fails, render the frame with `h.render().save_png("debug.png")` and compare.
+
+---
+
+## Verification and Quality Checks
+
+Developers can verify that patterns and practices are working correctly:
+
+### Code Verification
+
+**Module organization:**
+```bash
+# Verify all 19 core modules exist
+for mod in lib element style layout geom color canvas sdf image paint text theme widgets \
+           memory input accessibility app shell reload testing; do
+  test -f "src/${mod}.rs" || test -d "src/${mod}" || echo "Missing: $mod"
+done
+```
+
+**Backend trait compliance (12 methods):**
+```bash
+# Count Backend trait methods (should be 12)
+grep -c "fn " src/shell/mod.rs | grep "trait Backend" -A 50 | wc -l
+```
+
+**Tests passing (expected: 375 tests):**
+```bash
+cargo test --lib -- --nocapture 2>&1 | grep "test result:"
+```
+
+### Documentation Verification
+
+**Recipes exist:**
+```bash
+grep -c "## Recipe" CLAUDE.md  # Should be 3 (WASM, X11, Checkbox)
+```
+
+**Key sections present:**
+```bash
+for section in "Module Structure" "Key Invariants" "Stellar UI Practices" \
+               "Library Roadmap" "Conventions" "Contributor Workflow"; do
+  grep -q "## $section" CLAUDE.md && echo "✓ $section" || echo "✗ Missing: $section"
+done
+```
+
+**Cross-references to rui.dx:**
+```bash
+grep -c "rui.dx" CLAUDE.md  # Should be multiple references
+```
+
+### Best Practices Verification
+
+**No Rc/RefCell in view functions:**
+```bash
+# Check that Rc/RefCell aren't used in typical view patterns
+grep -r "Rc<\|RefCell<" src/ | grep -v "platform/" && echo "WARNING: Found Rc/RefCell" || echo "✓ Clean"
+```
+
+**Unsafe code confined to platform boundaries:**
+```bash
+# Verify unsafe only in shell/platform/
+find src -name "*.rs" ! -path "*/shell/platform/*" -exec grep -l "unsafe" {} \;
+```
+
+**Accessible color contrast:**
+```bash
+# Run contrast validation test
+cargo test theme::tests::the_battery_rejects_an_illegible_palette
+```
 
 ---
 
