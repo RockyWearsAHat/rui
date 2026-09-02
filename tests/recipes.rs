@@ -840,3 +840,57 @@ fn r1_ink_default_size_stays_in_sync_with_theme() {
         "Ink::default().size must match Theme::text_size(TextRole::Body)"
     );
 }
+
+#[test]
+fn r1_theme_methods_resolve_enums_to_values() {
+    // R1 end-to-end: TextRole/Space/Height enums are resolved against Theme
+    use rui::{Appearance, FontId, Height, Space, TextRole, Theme};
+
+    let theme = Theme::new(Appearance::Light, FontId::FIRST, FontId::FIRST);
+
+    // TextRole enum resolves to concrete sizes via Theme::text_size()
+    let title_size = theme.text_size(TextRole::Title);
+    let heading_size = theme.text_size(TextRole::Heading);
+    let body_size = theme.text_size(TextRole::Body);
+    let caption_size = theme.text_size(TextRole::Caption);
+    let micro_size = theme.text_size(TextRole::Micro);
+    let code_size = theme.text_size(TextRole::Code);
+
+    assert!(title_size > 0.0, "Title size should be positive");
+    assert!(heading_size > 0.0, "Heading size should be positive");
+    assert!(body_size > 0.0, "Body size should be positive");
+    assert!(caption_size > 0.0, "Caption size should be positive");
+    assert!(micro_size > 0.0, "Micro size should be positive");
+    assert!(code_size > 0.0, "Code size should be positive");
+
+    // Verify type scale ordering (from largest to smallest)
+    assert!(title_size > body_size, "Title should be larger than body");
+    assert!(
+        body_size > caption_size,
+        "Body should be larger than caption"
+    );
+    assert!(
+        caption_size > micro_size,
+        "Caption should be larger than micro"
+    );
+    assert_eq!(
+        code_size, caption_size,
+        "Code and caption should be same size"
+    );
+
+    // Space enum resolves to concrete values via Theme::spacing()
+    let small = theme.spacing(Space::Small);
+    let normal = theme.spacing(Space::Normal);
+    let large = theme.spacing(Space::Large);
+
+    assert!(small < normal, "Small spacing should be less than normal");
+    assert!(normal < large, "Normal spacing should be less than large");
+    assert!(small > 0.0, "All spacing values should be positive");
+
+    // Height enum resolves to concrete values via Theme::control_height()
+    let control = theme.control_height(Height::Control);
+    let row = theme.control_height(Height::Row);
+
+    assert!(control > 0.0, "Control height should be positive");
+    assert!(row > 0.0, "Row height should be positive");
+}
