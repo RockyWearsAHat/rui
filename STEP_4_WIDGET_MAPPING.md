@@ -1,7 +1,8 @@
 # STEP 4: Widget-to-Constant Mapping
 
-**Status**: Complete
+**Status**: Complete (with corrections)
 **Date**: 2026-09-01
+**Last Updated**: 2026-09-01 (Added missing UNMATCHED comments for tabs/segmented text sizes; corrected comment for section widget)
 **Task**: Map affected widgets and document which widget functions reference hardcoded constants found in STEP 3
 
 ## Acceptance Criteria
@@ -69,14 +70,14 @@ All 27 widget functions in `src/widgets.rs` have been mapped to their constant u
 
 #### Selectors
 20. **tabs** (line 325) — Tab row selector
-    - **Hardcoded 12.5** (line 336) — text size
+    - **Hardcoded 12.5** (line 336) — text size (UNMATCHED comment added)
     - **Hardcoded 26.0** (line 337) — tab row height
     - **Hardcoded 2.0** (line 340) — indicator bar height
     - Uses Metrics::DEFAULT.padding (line 338)
     - Uses Metrics::DEFAULT.control_height (line 354)
 
 21. **segmented** (line 361) — Multi-button choice
-    - **Hardcoded 12.0** (line 374) — text size
+    - **Hardcoded 12.0** (line 374) — text size (UNMATCHED comment added)
     - **Hardcoded 3.0** (line 390) — internal padding
     - **Hardcoded 2.0** (line 391) — button gap
     - Uses Metrics::DEFAULT.row_height (line 377)
@@ -88,7 +89,7 @@ All 27 widget functions in `src/widgets.rs` have been mapped to their constant u
 
 #### Organizers
 23. **section** (line 489) — Label with rule to edge
-    - **Hardcoded 14.0** (line 498) — label row height
+    - **Hardcoded 14.0** (line 498) — section header height
     - Uses Metrics::DEFAULT.hairline (line 493)
     - Uses Metrics::DEFAULT.gap (line 499)
 
