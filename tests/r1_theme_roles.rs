@@ -50,12 +50,12 @@ fn theme_resolves_control_heights() {
     let theme = Theme::new(Appearance::Light, FontId::default(), FontId::default());
 
     // Verify each Height level resolves to a positive value
-    assert!(theme.height(Height::Control) > 0.0);
-    assert!(theme.height(Height::Row) > 0.0);
+    assert!(theme.control_height(Height::Control) > 0.0);
+    assert!(theme.control_height(Height::Row) > 0.0);
 
     // Both heights should be distinct values
-    let control = theme.height(Height::Control);
-    let row = theme.height(Height::Row);
+    let control = theme.control_height(Height::Control);
+    let row = theme.control_height(Height::Row);
     assert_ne!(control, 0.0);
     assert_ne!(row, 0.0);
 }
@@ -67,7 +67,7 @@ fn theme_r1_api_is_complete() {
     // Verify that the three R1 resolution methods exist and work
     let _ = theme.text_size(TextRole::Title);
     let _ = theme.spacing(Space::Normal);
-    let _ = theme.height(Height::Control);
+    let _ = theme.control_height(Height::Control);
 }
 
 #[test]
@@ -95,7 +95,10 @@ fn theme_roles_work_in_both_appearances() {
         dark.text_size(TextRole::Title)
     );
     assert_eq!(light.spacing(Space::Normal), dark.spacing(Space::Normal));
-    assert_eq!(light.height(Height::Control), dark.height(Height::Control));
+    assert_eq!(
+        light.control_height(Height::Control),
+        dark.control_height(Height::Control)
+    );
 }
 
 #[test]
@@ -144,6 +147,6 @@ fn all_height_variants_accessible() {
     let theme = Theme::new(Appearance::Light, FontId::default(), FontId::default());
 
     // All Height variants should resolve to a value
-    let _ = theme.height(Height::Control);
-    let _ = theme.height(Height::Row);
+    let _ = theme.control_height(Height::Control);
+    let _ = theme.control_height(Height::Row);
 }
