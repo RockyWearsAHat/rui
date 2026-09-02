@@ -1,49 +1,54 @@
 //! STEP 3: Verify duplicate widget constants are extracted and used through Metrics/Theme
 //!
 //! This test module verifies that STEP 3 extraction analysis is correct and can be used
-//! for refactoring. After STEP 3, widgets should use Metrics::DEFAULT values instead of
-//! hardcoded constants where possible.
+//! for refactoring. After STEP 3, widgets use Metrics::DEFAULT values instead of
+//! hardcoded constants where a match exists.
 
 #[test]
-fn step3_analysis_shows_correct_duplicates() {
-    // STEP 3 identified these high-priority duplicates in src/widgets.rs:
-    // - 28.0 (control_height): 5 instances on lines 167,187,341,376,524
-    // - 12.0 (padding): 3 instances on lines 140,168,325
-    // - 8.0 (gap): 3 instances on lines 482,505,527
-    // - 1.0 (hairline): 2 instances on lines 146,478
-    // - 22.0 (row_height): 1 instance on line 364
+fn step3_metrics_default_used_in_widgets() {
+    // STEP 3 refactoring replaced hardcoded constants with Metrics::DEFAULT:
+    // - control_height: .h(Metrics::DEFAULT.control_height) in button, field, tabs, segmented, field_row
+    // - padding: .pad(Metrics::DEFAULT.padding) in panel, button, tabs
+    // - gap: .gap(Metrics::DEFAULT.gap) in field, tags, section, field_row, field_group
+    // - hairline: .h(Metrics::DEFAULT.hairline) in divider, section
+    // - row_height: .h(Metrics::DEFAULT.row_height) in segmented
+    // - gap_small: .gap(Metrics::DEFAULT.gap_small) in star_rating
 
     let src = std::fs::read_to_string("src/widgets.rs").expect("Read src/widgets.rs");
 
-    // Verify the duplicates still exist (baseline for refactoring)
-    let control_height_count = src.matches(".h(28.0)").count();
-    let _padding_count = src
-        .matches(".pad")
-        .filter(|_| src.contains(".pad(12.0)") || src.contains(".pad_x(12.0)"))
-        .count();
-    let gap_count = src.matches(".gap(8.0)").count();
-    let hairline_count = src.matches(".h(1.0)").count();
-    let row_height_count = src.matches(".h(22.0)").count();
+    // Count Metrics::DEFAULT usage for each refactored field
+    let control_height_count = src.matches("Metrics::DEFAULT.control_height").count();
+    let padding_count = src.matches("Metrics::DEFAULT.padding").count();
+    let gap_count = src.matches("Metrics::DEFAULT.gap").count();
+    let hairline_count = src.matches("Metrics::DEFAULT.hairline").count();
+    let row_height_count = src.matches("Metrics::DEFAULT.row_height").count();
+    let gap_small_count = src.matches("Metrics::DEFAULT.gap_small").count();
 
-    println!("STEP 3 Baseline — Hardcoded duplicates found:");
-    println!(
-        "  28.0 (control_height): {} instances",
-        control_height_count
-    );
-    println!(
-        "  12.0 (padding): {} instances found",
-        src.matches("12.0").count()
-    );
-    println!("  8.0 (gap): {} instances", gap_count);
-    println!("  1.0 (hairline): {} instances", hairline_count);
-    println!("  22.0 (row_height): {} instances", row_height_count);
+    println!("STEP 3 Refactoring — Metrics::DEFAULT usage:");
+    println!("  control_height: {} instances", control_height_count);
+    println!("  padding: {} instances", padding_count);
+    println!("  gap: {} instances", gap_count);
+    println!("  hairline: {} instances", hairline_count);
+    println!("  row_height: {} instances", row_height_count);
+    println!("  gap_small: {} instances", gap_small_count);
 
-    // The baseline should match STEP 3 analysis
+    // Verify refactoring replaced the high-priority duplicates
     assert!(
-        control_height_count >= 5,
-        "Should find 28.0 hardcoded instances"
+        control_height_count >= 4,
+        "Should find Metrics::DEFAULT.control_height in at least 4 places"
     );
-    assert!(gap_count >= 3, "Should find 8.0 gap instances");
+    assert!(
+        padding_count >= 2,
+        "Should find Metrics::DEFAULT.padding in at least 2 places"
+    );
+    assert!(
+        gap_count >= 3,
+        "Should find Metrics::DEFAULT.gap in at least 3 places"
+    );
+    assert!(
+        hairline_count >= 2,
+        "Should find Metrics::DEFAULT.hairline in at least 2 places"
+    );
 }
 
 #[test]
@@ -85,26 +90,29 @@ fn step3_metrics_default_values_exist() {
 }
 
 #[test]
-fn step3_cross_reference_summary() {
-    // STEP 3 acceptance produced a cross-reference showing:
-    // - Which constants are matched to Metrics (✓)
-    // - Which are not matched (e.g., BODY_SIZE, HEADING_TRACKING)
+fn step3_unmatched_literals_documented() {
+    // STEP 3 identified literals without Metrics counterparts that should be left as-is:
+    // - 18.0 in tag() — widget-specific height, not a general control height
+    // - 78.0 in field_row() — label width for layout alignment, not a general metric
 
-    let widgets_src = std::fs::read_to_string("src/widgets.rs").expect("Read src/widgets.rs");
-    let _theme_src = std::fs::read_to_string("src/theme.rs").expect("Read src/theme.rs");
+    let src = std::fs::read_to_string("src/widgets.rs").expect("Read src/widgets.rs");
 
-    // BODY_SIZE (13.0) is not matched to Metrics
-    let body_size_in_widgets = widgets_src.contains("const BODY_SIZE");
-    assert!(body_size_in_widgets, "BODY_SIZE constant should exist");
-    println!("✓ BODY_SIZE (13.0): NOT MATCHED to Metrics (typography-specific)");
+    // Verify these unmatched literals remain (deliberately not refactored)
+    let tag_height_18 = src.matches(".h(18.0)").count();
+    let label_width_78 = src.matches(".w(78.0)").count();
 
-    // HEADING_TRACKING (0.9) is not matched to Metrics
-    let heading_tracking_in_widgets = widgets_src.contains("const HEADING_TRACKING");
+    println!("STEP 3 Unmatched literals (deliberately left):");
+    println!("  .h(18.0) in tag(): {} instance", tag_height_18);
+    println!("  .w(78.0) in field_row(): {} instances", label_width_78);
+
     assert!(
-        heading_tracking_in_widgets,
-        "HEADING_TRACKING constant should exist"
+        tag_height_18 >= 1,
+        "tag() height 18.0 should remain (no Metrics match)"
     );
-    println!("✓ HEADING_TRACKING (0.9): NOT MATCHED to Metrics (typography parameter)");
+    assert!(
+        label_width_78 >= 2,
+        "field_row() label width 78.0 should remain (widget-specific)"
+    );
 
-    println!("✓ STEP 3 cross-reference complete and verified");
+    println!("✓ Unmatched literals correctly preserved");
 }
