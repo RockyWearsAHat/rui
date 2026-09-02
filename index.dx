@@ -70,6 +70,30 @@ grep -n "enum TextRole\|enum Space\|enum Height\|struct Metrics\|fn spacing" src
 688:pub enum TextRole {
 705:pub enum Height {
 
+## r2-motion-kit
+
+**R2 Motion Kit — Physics-Based Animation System**
+
+Motion Kit introduces declarative animations with Spring physics, Enter/Exit lifecycle animations, standard Easing curves, and deferred action callbacks for post-animation cleanup.
+
+**Components:**
+- **Spring**: Physics solver with stiffness, damping, and velocity inheritance for momentum transfer
+- **EnterExit**: Lifecycle animations (Fade, Slide, Scale) for element appearance/disappearance
+- **Easing**: 6 standard curves (Linear, EaseIn, EaseOut, EaseInOut, EaseInCirc, EaseOutCirc) plus CubicBezier for custom curves
+- **Deferred Actions**: Memory::after_animation() for post-animation state changes and cleanup
+- **Accessibility**: Metrics.is_motion_enabled() respects prefers-reduced-motion; animations complete instantly when disabled
+- **Animation Budget**: Maximum 2 animations per frame enforced; exceeding indicates UI design issue
+
+::code
+reads=src/memory.rs
+runs=bash
+---
+grep -n "pub struct Spring\|pub enum Easing\|pub enum EnterExit" src/memory.rs
+::output
+230:pub struct Spring {
+290:pub enum Easing {
+313:pub enum EnterExit {
+
 ## r1-widget-constants-extraction
 
 ::code
