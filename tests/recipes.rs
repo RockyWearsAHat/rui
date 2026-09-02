@@ -637,3 +637,41 @@ fn captured(width: u32, height: u32, color: Color) -> Screen {
         bytes,
     }
 }
+
+// STEP 20 Phase 2: Spring Physics Acceptance Tests (Gap 1)
+
+#[test]
+fn spring_physics_exists_and_compiles() {
+    use rui::memory::Spring;
+    let spring = Spring::new(100.0);
+    assert_eq!(spring.target, 100.0);
+    assert_eq!(spring.stiffness, 1.0);
+    assert_eq!(spring.damping, 0.7);
+}
+
+#[test]
+fn spring_constructor_accepts_customization() {
+    use rui::memory::Spring;
+    let spring = Spring::new(50.0).with_stiffness(1.5).with_damping(0.5);
+    assert_eq!(spring.target, 50.0);
+    assert_eq!(spring.stiffness, 1.5);
+    assert_eq!(spring.damping, 0.5);
+}
+
+#[test]
+fn spring_physics_solver_steps_toward_target() {
+    use rui::memory::Spring;
+    let spring = Spring::new(100.0);
+    let (pos, vel) = spring.step(0.0, 0.0, 0.016); // 1 frame at 60fps
+    assert!(pos > 0.0, "position should increase toward target");
+    assert!(vel > 0.0, "velocity should be positive toward target");
+}
+
+#[test]
+fn spring_physics_includes_velocity() {
+    use rui::memory::{Spring, Velocity};
+    let velocity = Velocity::new(50.0, 1.0);
+    let spring = Spring::new(100.0).with_velocity(velocity);
+    assert!(spring.velocity.is_some());
+    assert_eq!(spring.velocity.unwrap().magnitude(), 50.0);
+}
