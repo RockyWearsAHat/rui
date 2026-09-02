@@ -596,6 +596,11 @@ fn decorate<S>(el: &El<S>, frame: &mut Frame<'_>, response: &Response, lit: f32)
         if let Some(hover) = el.hover().border {
             color = color.mix(hover.resolve(theme), lit);
         }
+        if response.held {
+            if let Some(pressed) = el.pressed_style().border {
+                color = pressed.resolve(theme);
+            }
+        }
         if el.disabled {
             color = color.fade(0.6);
         }
@@ -636,7 +641,10 @@ fn surface<S>(base: Color, el: &El<S>, response: &Response, lit: f32, theme: &Th
     // feel smooth, and a press is the person acting, which must land on the
     // frame they pressed.
     if response.held {
-        lift(hovered, 0.0, true)
+        match el.pressed_style().fill {
+            Some(tone) => base.mix(tone.resolve(theme), 1.0),
+            None => lift(hovered, 0.0, true),
+        }
     } else {
         hovered
     }
@@ -654,6 +662,11 @@ fn content<'tree, S>(
     let mut ink = el.ink;
     if let Some(hover) = el.hover().ink {
         ink.tone = Tone::Exact(ink.tone.resolve(theme).mix(hover.resolve(theme), lit));
+    }
+    if response.held {
+        if let Some(pressed) = el.pressed_style().ink {
+            ink.tone = Tone::Exact(pressed.resolve(theme));
+        }
     }
     if el.disabled {
         ink.tone = Tone::Exact(ink.tone.resolve(theme).fade(0.55));

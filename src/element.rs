@@ -1069,6 +1069,15 @@ impl<S> El<S> {
             self.style.hover
         }
     }
+
+    /// The pressed treatment in force, which a disabled element does not have.
+    pub(crate) fn pressed_style(&self) -> Pressed {
+        if self.disabled {
+            Pressed::default()
+        } else {
+            self.style.pressed
+        }
+    }
 }
 
 impl From<f32> for Length {
