@@ -678,6 +678,40 @@ impl Memory {
         self.cycles.remove(&id);
     }
 
+    /// Animates a value toward a target using spring physics.
+    ///
+    /// Creates or updates a spring animation stored under `id`. On the first call,
+    /// initializes position from context and velocity from spring.velocity if present.
+    /// Solves the spring equation each frame and settles when close enough to target.
+    pub fn spring(&mut self, id: Id, spring: Spring) -> f32 {
+        let dt = self.delta;
+
+        let entry = self.springs.entry(id).or_insert_with(|| {
+            let initial_velocity = spring.velocity.map(|v| v.magnitude()).unwrap_or(0.0);
+            (spring, 0.0, initial_velocity)
+        });
+
+        let (spring_def, current_pos, current_vel) = entry;
+
+        // Solve spring physics for this frame.
+        let (new_pos, new_vel) = spring_def.step(*current_pos, *current_vel, dt);
+        *current_pos = new_pos;
+        *current_vel = new_vel;
+
+        // Capture target before removing entry.
+        let target = spring_def.target;
+        let is_settled = spring_def.is_settled(new_pos, new_vel);
+
+        // Check if settled; if so, clean up and return final target.
+        if is_settled {
+            self.springs.remove(&id);
+            target
+        } else {
+            self.animating = true;
+            new_pos
+        }
+    }
+
     /// Settles the frame's interaction state.
     ///
     /// A press is released here rather than where it was drawn, so that letting
