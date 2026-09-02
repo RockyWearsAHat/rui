@@ -11,7 +11,7 @@
 //! - Transition helper for declarative animations
 
 use rui::memory::Memory;
-use rui::motion::{Easing, Spring};
+use rui::motion::{Easing, SlideDirection, Spring, Transition};
 use std::time::Duration;
 
 /// Easing functions should exist for standard animation curves.
@@ -167,4 +167,63 @@ fn memory_enables_deferred_operations() {
     // Operation should fire exactly once
     memory.begin_frame(Duration::from_secs_f32(0.0167));
     assert!(!memory.should_defer_fire(id), "Should only fire once");
+}
+
+/// Enter/exit transitions should have builders for common cases.
+#[test]
+fn transitions_have_builder_methods() {
+    // Fade transition
+    let fade_in = Transition::fade_in(0.3);
+    assert_eq!(fade_in.duration(), 0.3);
+    assert_eq!(fade_in.easing(), Easing::EaseOut);
+
+    // Slide transition
+    let slide_left = Transition::slide_in(SlideDirection::Left, 0.4);
+    assert_eq!(slide_left.duration(), 0.4);
+
+    // Scale transition
+    let scale_up = Transition::scale_in(0.8, 0.25);
+    assert_eq!(scale_up.duration(), 0.25);
+}
+
+/// Transition directions should match the specified slide direction.
+#[test]
+fn transitions_preserve_slide_direction() {
+    let directions = vec![
+        SlideDirection::Left,
+        SlideDirection::Right,
+        SlideDirection::Up,
+        SlideDirection::Down,
+    ];
+
+    for dir in directions {
+        let trans = Transition::slide_in(dir, 0.3);
+        if let Transition::Slide { direction, .. } = trans {
+            assert_eq!(direction, dir);
+        } else {
+            panic!("Expected Slide transition");
+        }
+    }
+}
+
+/// Fade and scale transitions should have symmetric out variants.
+#[test]
+fn transitions_have_symmetric_variants() {
+    let fade_in = Transition::fade_in(0.3);
+    let fade_out = Transition::fade_out(0.3);
+
+    // Same duration
+    assert_eq!(fade_in.duration(), fade_out.duration());
+
+    // Different easing (ease-out vs ease-in)
+    assert_eq!(fade_in.easing(), Easing::EaseOut);
+    assert_eq!(fade_out.easing(), Easing::EaseIn);
+
+    // Scale should also have symmetric variants
+    let scale_in = Transition::scale_in(0.8, 0.25);
+    let scale_out = Transition::scale_out(0.5, 0.25);
+
+    assert_eq!(scale_in.duration(), scale_out.duration());
+    assert_eq!(scale_in.easing(), Easing::EaseOut);
+    assert_eq!(scale_out.easing(), Easing::EaseIn);
 }
