@@ -138,6 +138,7 @@ pub mod image;
 pub mod input;
 mod layout;
 pub mod memory;
+pub mod motion;
 pub mod paint;
 #[cfg(feature = "reload")]
 pub mod reload;
@@ -161,6 +162,7 @@ pub use input::{
     PointerButton, Pointing,
 };
 pub use memory::{FocusSource, Id, Memory, Response};
+pub use motion::{Easing, Spring};
 pub use paint::{Painter, Visual};
 pub use sdf::{
     Paint, Sculpt, Shape, arc, bevel, capsule, circle, linear, ngon, polygon, radial, rect, ring,
