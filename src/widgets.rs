@@ -369,10 +369,10 @@ pub fn segmented<S: 'static>(
         .enumerate()
         .map(|(index, label)| {
             let chosen = index == selected;
-            // used by: segmented() line 362, scrollbar() line 558
             row(text(*label)
                 .grow()
                 .text_align(Align::Center)
+                // used by: segmented() line 362, scrollbar() line 558
                 .text_size(12.0)) // UNMATCHED: segmented text size, widget-specific sizing
             .key(*label)
             .grow()
