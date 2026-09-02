@@ -12,11 +12,12 @@
 
 ## Executive Summary
 
-All 27 widget functions in `src/widgets.rs` have been mapped to their constant usages. The mapping reveals:
+All 27 widget functions in `src/widgets.rs` have been mapped to their constant usages and hardcoded numeric duplicates identified. The mapping reveals:
 - **25 public widget constructors** (re-exported via lib.rs) + **1 public but internal widget** (scrollbar) + **1 private helper** (word_for) = 27 total functions
 - **4 widget-specific constants** defined at file top (BODY_SIZE, HEADING_TRACKING, TAG_HEIGHT, FIELD_ROW_LABEL_WIDTH)
 - **14 theme constants** imported from `theme.rs` (Metrics, type scale sizes)
 - **6 widgets with hardcoded literals** not yet extracted to constants (meter, tabs, segmented, star_rating, section, scrollbar)
+- **15 duplicate constants/values** identified: 6 theme-defined constants (used by 15 widgets) + 9 hardcoded numeric duplicates (used across 36+ widget references)
 
 ## Widget Function Registry
 
@@ -137,9 +138,9 @@ All 27 widget functions in `src/widgets.rs` have been mapped to their constant u
 
 ## Duplicate Constants Analysis
 
-**Definition**: Constants referenced by 2 or more widget functions.
+**Definition**: Constants or hardcoded values referenced by 2 or more widget functions.
 
-### Duplicate Constants Summary
+### Theme-Defined Duplicate Constants
 
 | Constant | Usage Count | Widget Functions | Line Numbers |
 |----------|-------------|------------------|--------------|
@@ -150,7 +151,29 @@ All 27 widget functions in `src/widgets.rs` have been mapped to their constant u
 | **Metrics::DEFAULT.gap** | 5 | field, tag, field_row, field_group, section | 198, 217, 522, 547, 499 |
 | **Metrics::DEFAULT.control_height** | 5 | button, field, tabs, segmented, field_group | 177, 197, 354, 389, 543 |
 
-**Total**: 6 duplicate constants across 15 widget references
+**Subtotal**: 6 theme-defined duplicates across 15 widget references
+
+### Hardcoded Numeric Duplicates (same value across multiple widgets)
+
+Analysis of hardcoded numeric literals reveals actual duplicates—same numbers appearing in multiple widgets that could potentially be extracted:
+
+| Value | Occurrences | Widgets | Context | Line Numbers |
+|-------|-------------|---------|---------|--------------|
+| **1.0** | 8 | button, field, meter (2×), panel, scrollbar, segmented, star_rating | Stroke widths, opacity, unit values | 147, 180, 202, 277, 284, 393, 443, 578 |
+| **2.0** | 8 | dot (4×), meter, segmented, tabs | Border thickness, indicator height, gaps | 237, 244, 245, 280, 292, 340, 391 |
+| **0.0** | 6 | meter, scrollbar (2×), star_rating (2×) | Position offsets, start values | 277, 287, 431, 452, 570, 578 |
+| **16.0** | 4 | star_rating (4×) | Icon size for star glyphs | 405, 407 |
+| **6.0** | 3 | meter (3×) | Meter bar height and metrics | 278, 279, 296 |
+| **12.0** | 2 | scrollbar, segmented | Text size / control dimensions | 374, 562 |
+| **20.0** | 2 | field_group, field_row | Label area width / spacing | 523, 548 |
+| **5** | 2 | segmented, star_rating | Rating count / item count | 397, 402 |
+| **80.0** | 2 | meter (2×) | Meter width measurement | 278, 279 |
+
+**Subtotal**: 9 hardcoded numeric duplicates across 36+ widget references
+
+**Key insight:** Most duplicates (1.0, 2.0, 0.0) are generic values used for strokes, gaps, and offsets. Only larger values (12.0, 16.0, 20.0) are widget-specific. The frequent use of 1.0 and 2.0 suggests these could benefit from named constants (e.g., `HAIRLINE_WIDTH = 1.0`, `THIN_STROKE = 2.0`), but meter's use of 80.0 and 6.0 is widget-specific.
+
+**Total duplicates identified**: 15 distinct duplicate constants/values across 51+ widget references
 
 ### Non-Duplicate Constants (single use)
 
@@ -195,6 +218,27 @@ These 6 widgets have widget-specific dimensions marked UNMATCHED (not Metrics du
 6. **scrollbar**: 12.0 (width) — scrollbar thumb width specific
 
 These are intentional widget customizations, not duplicates of Metrics values.
+
+### Hardcoded Numeric Patterns
+
+Three patterns emerge from hardcoded numeric analysis:
+
+1. **Generic stroke/offset values** (1.0, 2.0, 0.0):
+   - 1.0 appears 8 times (button, field, meter, panel, scrollbar, segmented, star_rating)
+   - 2.0 appears 8 times (dot, meter, segmented, tabs)
+   - These could benefit from constants like `HAIRLINE_WIDTH`, `THIN_STROKE`
+
+2. **Widget-specific sizing** (12.0, 14.0, 16.0, 26.0, 80.0):
+   - 12.0 (scrollbar width, segmented text)
+   - 14.0 (section header height)
+   - 16.0 (star icon size)
+   - 26.0 (tab row height)
+   - 80.0 (meter bar width)
+   - These are intentional widget customizations, marked UNMATCHED
+
+3. **Layout spacing** (20.0, gaps):
+   - 20.0 appears 2 times (field_row, field_group label width)
+   - Could be extracted as `LABEL_COLUMN_WIDTH`
 
 ### Unused Constants
 - **BODY_SIZE** (13.0) — Defined as reference but not used by any widget
