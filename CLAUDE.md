@@ -407,6 +407,27 @@ cargo test --test x11_parity
 ### Overview
 Checkbox demonstrates the minimal interactive control: a single boolean that toggles on click. It proves that even the smallest custom widget follows the state-view-handler pattern without requiring any special framework support.
 
+### Extracted Documentation
+
+Complete documentation for Recipe 3 checkbox widget pattern:
+
+- **STEP_5_RECIPE_3_ANALYSIS.md** — Four-phase breakdown with implementation details, scope, state shape, and cross-module interactions for each phase
+- **STEP_5_RECIPE_3_VERIFICATION_GATES.md** — Phase-by-phase acceptance criteria, test commands, and debugging checklist; gates at each phase prevent regressions
+- **STEP_5_RECIPE_3_CROSS_MODULE_CONCERNS.md** — Four key interactions (identity & persistence, state flow, handlers, theme colors) with module diagrams, common pitfalls, and verification examples
+- **STEP_5_RECIPE_3_SUMMARY.md** — Quick reference for implementers: when to use which document, testing checklist, common mistakes, and debugging commands
+
+### How to Implement Custom Widgets (Using Recipe 3 Documentation)
+
+**For new implementers:**
+
+1. **Start here**: STEP_5_RECIPE_3_SUMMARY.md — Understand the architecture and which documents to read in what order
+2. **Create Phase 1 plan**: Read STEP_5_RECIPE_3_ANALYSIS.md (Phase 1 section) + STEP_5_RECIPE_3_VERIFICATION_GATES.md (Phase 1 gates)
+3. **Understand state flow**: Read STEP_5_RECIPE_3_CROSS_MODULE_CONCERNS.md section "State Flow" before writing draw() closures
+4. **Check module interactions**: Read STEP_5_RECIPE_3_CROSS_MODULE_CONCERNS.md to identify friction points and how other widgets solved them
+5. **Run verification**: Use gates from STEP_5_RECIPE_3_VERIFICATION_GATES.md at end of each phase
+
+**Proof of pattern validity**: Checkbox is 29 lines of code with zero framework magic. Same pattern applies to button, slider, radio, toggle, custom charts—any interactive element.
+
 ### Phase 1: State Definition
 - **Problem**: How do we know if a control needs any special framework support to work?
 - **Solution**: Define the simplest possible state (a single bool) and build from there
