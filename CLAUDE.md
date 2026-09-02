@@ -414,6 +414,7 @@ Complete documentation for Recipe 3 checkbox widget pattern:
 - **STEP_5_RECIPE_3_ANALYSIS.md** — Four-phase breakdown with implementation details, scope, state shape, and cross-module interactions for each phase
 - **STEP_5_RECIPE_3_VERIFICATION_GATES.md** — Phase-by-phase acceptance criteria, test commands, and debugging checklist; gates at each phase prevent regressions
 - **STEP_5_RECIPE_3_CROSS_MODULE_CONCERNS.md** — Four key interactions (identity & persistence, state flow, handlers, theme colors) with module diagrams, common pitfalls, and verification examples
+- **STEP_5_RECIPE_3_TEMPLATE_VALIDATION.md** — Validation that pattern holds for segmented, button, meter, slider; proves checkbox exemplar is replicable for any custom widget
 - **STEP_5_RECIPE_3_SUMMARY.md** — Quick reference for implementers: when to use which document, testing checklist, common mistakes, and debugging commands
 
 ### How to Implement Custom Widgets (Using Recipe 3 Documentation)

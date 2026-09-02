@@ -466,6 +466,7 @@ fn recipe_3_documentation_files_exist() {
         "STEP_5_RECIPE_3_ANALYSIS.md",
         "STEP_5_RECIPE_3_VERIFICATION_GATES.md",
         "STEP_5_RECIPE_3_CROSS_MODULE_CONCERNS.md",
+        "STEP_5_RECIPE_3_TEMPLATE_VALIDATION.md",
         "STEP_5_RECIPE_3_SUMMARY.md",
     ];
 
@@ -521,6 +522,7 @@ fn recipe_3_claude_md_references_extracted_docs() {
             "STEP_5_RECIPE_3_CROSS_MODULE_CONCERNS.md",
             "module interactions",
         ),
+        ("STEP_5_RECIPE_3_TEMPLATE_VALIDATION.md", "pattern validity"),
         ("STEP_5_RECIPE_3_SUMMARY.md", "quick reference"),
     ];
 
