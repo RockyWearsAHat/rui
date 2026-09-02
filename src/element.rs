@@ -52,7 +52,8 @@ use crate::memory::Id;
 use crate::motion::Transition;
 use crate::paint::Painter;
 use crate::style::{
-    Align, Anchor, Axis, Face, Hover, Ink, Justify, Length, Pressed, Radius, Style, Tone,
+    Align, Anchor, Axis, Face, Hover, Ink, Justify, Length, Pressed, Radius, ShadowLayers, Style,
+    Tone,
 };
 
 /// What an interaction does to the application's state.
@@ -444,8 +445,22 @@ impl<S> El<S> {
     }
 
     /// Casts a soft shadow beneath it, blurred this far past its own edge.
+    /// For elevated surfaces, use `.shadow_elevated()` instead for richer depth.
     pub fn shadow(mut self, blur: f32) -> Self {
-        self.style.shadow = Some(blur);
+        self.style.shadow = Some(ShadowLayers::simple(blur));
+        self
+    }
+
+    /// Casts a two-layer shadow for elevated surfaces (overlays, popovers, modals).
+    /// Primary shadow is soft and large; secondary shadow is sharper and closer.
+    pub fn shadow_elevated(mut self, blur: f32) -> Self {
+        self.style.shadow = Some(ShadowLayers::elevated(blur));
+        self
+    }
+
+    /// Casts a custom two-layer shadow with full control over both layers.
+    pub fn shadow_layers(mut self, layers: ShadowLayers) -> Self {
+        self.style.shadow = Some(layers);
         self
     }
 

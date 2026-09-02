@@ -260,6 +260,75 @@ pub enum Anchor {
     Center,
 }
 
+/// A single layer of shadow with blur and offset.
+///
+/// Two-layer shadows create sophisticated depth: a soft primary shadow and an optional
+/// sharper secondary shadow, following Material Design 3 elevation patterns.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ShadowLayer {
+    /// How far past the edge the shadow blurs, in logical units.
+    pub blur: f32,
+    /// How far down the shadow is offset, in logical units.
+    pub offset: f32,
+    /// Opacity of the shadow as a fraction (0.0-1.0).
+    pub opacity: f32,
+}
+
+impl ShadowLayer {
+    /// Create a shadow layer with blur, offset, and opacity.
+    pub fn new(blur: f32, offset: f32, opacity: f32) -> Self {
+        ShadowLayer {
+            blur,
+            offset,
+            opacity: opacity.clamp(0.0, 1.0),
+        }
+    }
+}
+
+/// Two layers of shadow for rich depth perception.
+///
+/// Primary shadow: soft and large, establishes depth.
+/// Secondary shadow: optional, sharper and closer, reinforces separation.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ShadowLayers {
+    /// The primary shadow: soft, blurred, establishes base depth.
+    pub primary: ShadowLayer,
+    /// Optional secondary shadow: sharper, closer to surface, reinforces separation.
+    pub secondary: Option<ShadowLayer>,
+}
+
+impl ShadowLayers {
+    /// Create a two-layer shadow with primary and optional secondary.
+    pub fn new(primary: ShadowLayer, secondary: Option<ShadowLayer>) -> Self {
+        ShadowLayers { primary, secondary }
+    }
+
+    /// Create a single-layer shadow (common case) from blur radius.
+    /// Automatically calculates appropriate offset and opacity.
+    pub fn simple(blur: f32) -> Self {
+        let offset = blur * 0.5; // Offset proportional to blur
+        let opacity = (blur / 16.0).min(1.0); // Fade opacity with blur
+        ShadowLayers {
+            primary: ShadowLayer::new(blur, offset, opacity),
+            secondary: None,
+        }
+    }
+
+    /// Create an elevated shadow with two layers for raised surfaces.
+    /// Used for overlays, popovers, modals.
+    pub fn elevated(blur: f32) -> Self {
+        let primary_offset = blur * 0.5;
+        let primary_opacity = (blur / 16.0).min(1.0);
+        let secondary_blur = (blur * 0.6).max(1.0);
+        let secondary_offset = (blur * 0.15).max(1.0);
+
+        ShadowLayers {
+            primary: ShadowLayer::new(blur, primary_offset, primary_opacity),
+            secondary: Some(ShadowLayer::new(secondary_blur, secondary_offset, 0.3)),
+        }
+    }
+}
+
 /// How the corners of a filled or outlined element are treated.
 ///
 /// Four of these name a *size* and take their shape from
@@ -451,8 +520,8 @@ pub struct Style {
     pub border: Option<(f32, Tone)>,
     /// How its corners are treated.
     pub radius: Radius,
-    /// How far a shadow beneath it is blurred, if it casts one.
-    pub shadow: Option<f32>,
+    /// Shadow layers: primary (soft) and optional secondary (sharp) for depth.
+    pub shadow: Option<ShadowLayers>,
     /// How far a halo around it reaches, and what colour it is.
     ///
     /// Held apart from [`Style::shadow`] rather than being a colour on it,

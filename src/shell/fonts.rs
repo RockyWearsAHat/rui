@@ -65,14 +65,20 @@ const MONO_CANDIDATES: &[&str] = &[
 ///
 /// Unlike macOS and Windows, there is no fixed path: the file is found by name
 /// under whichever of these directories exists.
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 const FONT_DIRECTORIES: &[&str] = &[
     "/usr/share/fonts",
     "/usr/local/share/fonts",
     "/usr/share/fonts/truetype",
 ];
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 const UI_CANDIDATES: &[&str] = &[
     "DejaVuSans.ttf",
     "LiberationSans-Regular.ttf",
@@ -80,7 +86,10 @@ const UI_CANDIDATES: &[&str] = &[
     "FreeSans.ttf",
 ];
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 const MONO_CANDIDATES: &[&str] = &[
     "DejaVuSansMono.ttf",
     "LiberationMono-Regular.ttf",
@@ -92,7 +101,10 @@ const MONO_CANDIDATES: &[&str] = &[
 ///
 /// Font directories nest a few levels — vendor, then family. A bound stops a
 /// symbolic link cycle from turning the search into a hang at start-up.
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 const MAX_SEARCH_DEPTH: usize = 4;
 
 impl LoadedFonts {
@@ -118,32 +130,49 @@ impl LoadedFonts {
 /// a console that renders log output in the wrong face is worth having, and one
 /// that refuses to start is not.
 pub fn load_system_fonts() -> Result<LoadedFonts, Error> {
-    let mut fonts = Fonts::new();
+    #[cfg(target_arch = "wasm32")]
+    {
+        use super::embedded_fonts::{embedded_mono_font, embedded_ui_font};
+        let mut fonts = Fonts::new();
+        let ui_font = fonts.add(embedded_ui_font()?);
+        let mono_font = fonts.add(embedded_mono_font()?);
+        return Ok(LoadedFonts {
+            fonts,
+            ui_font,
+            mono_font,
+        });
+    }
 
-    let ui_font = match first_usable(UI_CANDIDATES) {
-        Some(font) => fonts.add(font),
-        None => {
-            return Err(Error::NoFont {
-                searched: UI_CANDIDATES
-                    .iter()
-                    .map(|name| (*name).to_owned())
-                    .collect(),
-            });
-        }
-    };
-    let mono_font = first_usable(MONO_CANDIDATES).map_or(ui_font, |font| fonts.add(font));
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let mut fonts = Fonts::new();
 
-    Ok(LoadedFonts {
-        fonts,
-        ui_font,
-        mono_font,
-    })
+        let ui_font = match first_usable(UI_CANDIDATES) {
+            Some(font) => fonts.add(font),
+            None => {
+                return Err(Error::NoFont {
+                    searched: UI_CANDIDATES
+                        .iter()
+                        .map(|name| (*name).to_owned())
+                        .collect(),
+                });
+            }
+        };
+        let mono_font = first_usable(MONO_CANDIDATES).map_or(ui_font, |font| fonts.add(font));
+
+        Ok(LoadedFonts {
+            fonts,
+            ui_font,
+            mono_font,
+        })
+    }
 }
 
 /// The first candidate that exists and parses.
 ///
 /// A candidate that is present but unreadable is skipped rather than fatal: the
 /// point of a list is that the next entry is tried.
+#[cfg(not(target_arch = "wasm32"))]
 fn first_usable(candidates: &[&str]) -> Option<Font> {
     candidates.iter().find_map(|candidate| {
         let path = locate(candidate)?;
@@ -160,7 +189,10 @@ fn locate(candidate: &str) -> Option<std::path::PathBuf> {
 }
 
 /// Searches the font directories for a file with this name.
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 fn locate(candidate: &str) -> Option<std::path::PathBuf> {
     FONT_DIRECTORIES
         .iter()
@@ -168,7 +200,10 @@ fn locate(candidate: &str) -> Option<std::path::PathBuf> {
 }
 
 /// Looks for `name` under `directory`, no deeper than [`MAX_SEARCH_DEPTH`].
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    not(any(target_os = "macos", target_os = "windows")),
+    not(target_arch = "wasm32")
+))]
 fn find_named(directory: &std::path::Path, name: &str, depth: usize) -> Option<std::path::PathBuf> {
     if depth > MAX_SEARCH_DEPTH {
         return None;
@@ -197,6 +232,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn every_candidate_list_offers_a_fallback() {
         assert!(
             UI_CANDIDATES.len() > 1,
@@ -206,11 +242,13 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn a_missing_file_is_simply_not_located() {
         assert!(locate("/no/such/font/anywhere.ttf").is_none());
     }
 
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn nothing_usable_in_a_list_answers_nothing() {
         assert!(first_usable(&["/no/such/font/anywhere.ttf"]).is_none());
     }
@@ -241,6 +279,7 @@ mod tests {
     /// property of the machine and not of the code — but it is reported, so a
     /// silent skip cannot be mistaken for a pass.
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn this_machine_has_the_faces_the_console_needs() {
         match load_system_fonts() {
             Ok(loaded) => {
@@ -276,6 +315,7 @@ mod tests {
     /// the first place a real face exists. Skipped and reported where no font is
     /// installed, exactly as the check above is.
     #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn tracking_opens_a_run_up_by_one_step_for_every_letter() {
         let Ok(loaded) = load_system_fonts() else {
             println!("skipped: no font on this machine");
@@ -298,5 +338,79 @@ mod tests {
         let width = loaded.fonts.measure(&tracked, word);
         assert_eq!(loaded.fonts.fit(&tracked, word, width), word.len());
         assert!(loaded.fonts.fit(&tracked, word, width - 1.0) < word.len());
+    }
+
+    #[test]
+    #[cfg(target_arch = "wasm32")]
+    fn wasm_loads_embedded_fonts() {
+        let loaded = load_system_fonts().expect("wasm should load embedded fonts");
+        assert_eq!(
+            loaded.fonts.len(),
+            2,
+            "wasm should load both ui and mono fonts"
+        );
+        let ui_font = loaded
+            .fonts
+            .font(loaded.ui_font)
+            .expect("ui font should exist");
+        let mono_font = loaded
+            .fonts
+            .font(loaded.mono_font)
+            .expect("mono font should exist");
+        for &character in MARKS {
+            assert!(
+                ui_font.has_glyph(character),
+                "embedded ui font should have {character:?}"
+            );
+            assert!(
+                mono_font.has_glyph(character),
+                "embedded mono font should have {character:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn embedded_fonts_accessible_via_load_system_fonts() {
+        // Verify load_system_fonts returns fonts with actual glyph data.
+        // On WASM, this proves embedded fonts are bundled and accessible.
+        // On native platforms with fonts installed, this verifies the fallback works.
+        match load_system_fonts() {
+            Ok(loaded) => {
+                // Must have both UI and mono fonts loaded
+                assert!(loaded.fonts.len() >= 2);
+
+                let ui_font = loaded.fonts.font(loaded.ui_font).expect("ui font exists");
+                let mono_font = loaded
+                    .fonts
+                    .font(loaded.mono_font)
+                    .expect("mono font exists");
+
+                // Both fonts must have glyph data for common characters
+                for &char in &['A', 'a', '0'] {
+                    let ui_glyph = ui_font.glyph_for(char);
+                    let mono_glyph = mono_font.glyph_for(char);
+
+                    let ui_rendered = ui_font.render(ui_glyph, 16.0, 0.0);
+                    let mono_rendered = mono_font.render(mono_glyph, 16.0, 0.0);
+
+                    assert!(
+                        !ui_rendered.mask.is_empty(),
+                        "ui font must render glyph '{}'",
+                        char
+                    );
+                    assert!(
+                        !mono_rendered.mask.is_empty(),
+                        "mono font must render glyph '{}'",
+                        char
+                    );
+                }
+            }
+            Err(error) => {
+                #[cfg(target_arch = "wasm32")]
+                panic!("wasm should always load embedded fonts, but got: {}", error);
+                #[cfg(not(target_arch = "wasm32"))]
+                println!("skipped: no font on this machine ({error})");
+            }
+        }
     }
 }
