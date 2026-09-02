@@ -654,6 +654,7 @@ impl Theme {
             TextRole::State => self.state(),
             TextRole::Mono => self.mono(),
             TextRole::Micro => self.micro(),
+            TextRole::Code => self.mono(),
         }
     }
 
@@ -661,7 +662,7 @@ impl Theme {
     pub fn spacing(&self, space: Space) -> f32 {
         match space {
             Space::Small => self.metrics.gap_small,
-            Space::Default => self.metrics.gap,
+            Space::Default | Space::Normal => self.metrics.gap,
             Space::Large => self.metrics.gap_large,
         }
     }
@@ -672,6 +673,16 @@ impl Theme {
             Height::Control => self.metrics.control_height,
             Height::Row => self.metrics.row_height,
         }
+    }
+
+    /// Extract the font size from a text role.
+    pub fn text_size(&self, role: TextRole) -> f32 {
+        self.text_role(role).size
+    }
+
+    /// Resolve a control height standard to its pixel value in this theme.
+    pub fn control_height(&self, h: Height) -> f32 {
+        self.height(h)
     }
 }
 
@@ -696,6 +707,8 @@ pub enum TextRole {
     Mono,
     /// Smallest annotation in fixed-width face.
     Micro,
+    /// Fixed-width code text.
+    Code,
 }
 
 /// A spacing level, resolved to an f32 gap by a [`Theme`].
@@ -705,6 +718,8 @@ pub enum Space {
     Small,
     /// Standard gap between items in a list or row.
     Default,
+    /// Alias for Default.
+    Normal,
     /// Gap between sections.
     Large,
 }
