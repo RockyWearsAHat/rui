@@ -144,6 +144,7 @@ pub mod motion;
 pub mod overlay;
 pub mod paint;
 pub mod pixelgrid;
+pub mod recipe_verification;
 pub mod recipes;
 #[cfg(feature = "reload")]
 pub mod reload;
