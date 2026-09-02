@@ -177,6 +177,23 @@ impl<'a> Painter<'a> {
         }
     }
 
+    /// Animates a value toward a target using spring physics.
+    ///
+    /// Spring animations are physics-based: a mass pulled toward a target with
+    /// a spring force, opposed by damping. This creates bouncy (low damping) or
+    /// smooth (high damping) approach curves. Velocity can be inherited from drag
+    /// momentum to continue motion naturally into the spring.
+    ///
+    /// Returns the current position. The animation settles when close enough and
+    /// is automatically removed.
+    pub fn spring(&mut self, key: &str, spring: crate::memory::Spring) -> f32 {
+        let id = self.id.with(APPLICATION_EASING).with(key);
+        match &mut self.memory {
+            Some(memory) => memory.spring(id, spring),
+            None => spring.target,
+        }
+    }
+
     /// The pixels being marked.
     pub fn canvas(&mut self) -> &mut Canvas {
         self.canvas
