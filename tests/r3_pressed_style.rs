@@ -145,3 +145,137 @@ fn disabled_buttons_still_render_with_visual_feedback() {
     .size(200.0, 100.0);
     h.frames(1);
 }
+
+/// ENHANCEMENT PHASE: Pressed styles should be applied when element is held
+#[test]
+fn pressed_styles_apply_when_element_is_held() {
+    struct App {
+        count: usize,
+    }
+
+    fn view(_app: &App) -> rui::El<App> {
+        button("Press me")
+            .on_click(|app: &mut App| app.count += 1)
+            .pressed(Pressed {
+                fill: Some(Tone::Sunken),
+                ink: Some(Tone::OnAccent),
+                border: None,
+            })
+    }
+
+    let mut h = Harness::new(App { count: 0 }, view).size(200.0, 100.0);
+    h.frames(1);
+
+    // Get the button position and simulate a press/release cycle
+    let button_center = rui::geom::Point::new(100.0, 50.0);
+    h.press(button_center);
+    h.frames(1);
+
+    // Button should still be in initial state (click happens after release)
+    assert_eq!(h.state().count, 0);
+
+    h.release();
+    h.frames(1);
+
+    // Now click should have fired
+    assert_eq!(h.state().count, 1);
+}
+
+/// ENHANCEMENT PHASE: Pressed border should be applied when held
+#[test]
+fn pressed_border_applies_when_element_is_held() {
+    struct App {
+        clicked: bool,
+    }
+
+    fn view(_app: &App) -> rui::El<App> {
+        button("Press")
+            .on_click(|app: &mut App| app.clicked = true)
+            .border(1.0, Tone::Border)
+            .pressed(Pressed {
+                fill: None,
+                ink: None,
+                border: Some(Tone::Accent),
+            })
+    }
+
+    let mut h = Harness::new(App { clicked: false }, view).size(200.0, 100.0);
+    h.frames(1);
+
+    let button_center = rui::geom::Point::new(100.0, 50.0);
+    h.press(button_center);
+    h.frames(1);
+
+    h.release();
+    h.frames(1);
+
+    assert!(h.state().clicked);
+}
+
+/// ENHANCEMENT PHASE: Pressed ink (text color) should be applied when held
+#[test]
+fn pressed_ink_applies_when_element_is_held() {
+    struct App {
+        clicked: bool,
+    }
+
+    fn view(_app: &App) -> rui::El<App> {
+        button("Press me")
+            .on_click(|app: &mut App| app.clicked = true)
+            .pressed(Pressed {
+                fill: None,
+                ink: Some(Tone::Accent),
+                border: None,
+            })
+    }
+
+    let mut h = Harness::new(App { clicked: false }, view).size(200.0, 100.0);
+    h.frames(1);
+
+    let button_center = rui::geom::Point::new(100.0, 50.0);
+    h.press(button_center);
+    h.frames(1);
+
+    h.release();
+    h.frames(1);
+
+    assert!(h.state().clicked);
+}
+
+/// ENHANCEMENT PHASE: Hover and pressed styles should layer correctly
+#[test]
+fn hover_and_pressed_styles_layer_correctly() {
+    struct App {
+        count: usize,
+    }
+
+    fn view(_app: &App) -> rui::El<App> {
+        button("Multi-state")
+            .on_click(|app: &mut App| app.count += 1)
+            .hover_fill(Tone::Raised)
+            .pressed(Pressed {
+                fill: Some(Tone::Sunken),
+                ink: None,
+                border: None,
+            })
+    }
+
+    let mut h = Harness::new(App { count: 0 }, view).size(200.0, 100.0);
+    h.frames(1);
+
+    let button_center = rui::geom::Point::new(100.0, 50.0);
+
+    // Move pointer over button (hover should apply)
+    h.move_pointer(button_center);
+    h.frames(1);
+
+    // Press button (pressed should apply, overriding hover)
+    h.press(button_center);
+    h.frames(1);
+
+    // Release button (hover should apply again)
+    h.release();
+    h.frames(1);
+
+    assert_eq!(h.state().count, 1);
+}
