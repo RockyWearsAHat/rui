@@ -129,9 +129,15 @@ echo "   - Cross-reference complete: each constant has status (matched or not ma
 
 ### ACCEPTANCE VERDICT
 ✅ PASS: Acceptance criteria satisfied
-   - 2 defined constants extracted and categorized
+   - 2 defined constants extracted and categorized (BODY_SIZE, HEADING_TRACKING)
    - 19 high-priority duplicates identified and matched to Metrics
+   - 11 additional Size::new() and .w()/.h() literals extracted and cross-checked
    - Cross-reference complete: each constant has status (matched or not matched)
+
+**Complete Verification**: See STEP_3_ACCEPTANCE_VERIFICATION.md for comprehensive listing of:
+  - All 2 grep outputs (const f32 declarations)
+  - All 11 hardcoded Size::new() and .w()/.h() values
+  - Match/no-match status for each against Metrics::DEFAULT
 
 ## Now
 
