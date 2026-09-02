@@ -342,6 +342,7 @@ impl Surface {
             &theme,
         );
         self.memory.end_frame(&self.input);
+        self.memory.process_deferred_actions();
         self.memory.assert_animation_budget();
         self.serve_requests(window)?;
 
