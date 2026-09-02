@@ -132,6 +132,7 @@ pub mod app;
 pub mod canvas;
 pub mod color;
 pub mod element;
+pub mod elevation;
 pub mod font;
 pub mod geom;
 pub mod image;
@@ -156,6 +157,7 @@ pub use app::{App, Redraw, run};
 pub use canvas::{Bgra, Canvas, Corner, Mask};
 pub use color::Color;
 pub use element::{Children, El};
+pub use elevation::Elevation;
 pub use font::{Font, FontError};
 pub use geom::{Insets, Point, Rect, Size};
 pub use input::{
