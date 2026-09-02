@@ -201,6 +201,31 @@ Documentation files created per recipe:
 ### Overview
 WASM backend for browser environments. Allows identical UI code to run in a browser by implementing the `Backend` trait and using a shared frame-loop function instead of a platform-specific event pump.
 
+### Extracted Documentation
+
+Complete documentation for Recipe 1 WASM backend pattern:
+
+- **STEP_4_RECIPE_1_ANALYSIS.md** — Three-phase pattern breakdown with line counts (748/1220/1321), timeline, and detailed implementation checklist per phase
+- **STEP_4_RECIPE_1_VERIFICATION_GATES.md** — Phase-by-phase acceptance criteria, test commands, and verification checklist; gates at each phase prevent regressions
+- **STEP_4_RECIPE_1_CROSS_MODULE_CONCERNS.md** — 7 friction points (time injection, Backend trait, generic draw, event flow, state persistence, platform branching, accessibility) with resolution patterns and module interaction map
+- **STEP_4_RECIPE_1_COORDINATE_CONTRACT.md** — Browser coordinate transformation (client → canvas → logical), scale factor handling, implementation per phase, common pitfalls
+- **STEP_4_RECIPE_1_EVENT_TRANSLATION.md** — 6 DOM event types (mouse, touch, keyboard, wheel, composition, focus/resize) with mapping to rui Events, implementation per phase, testing strategy
+- **STEP_4_RECIPE_1_TEMPLATE_VALIDATION.md** — Validation that template claims hold for Recipe 2 (X11); proves pattern is replicable
+- **STEP_4_RECIPE_1_SUMMARY.md** — Quick reference for implementers: architecture overview, when to use which document, how to run verification tests
+
+### How to Implement WASM Backend (Using Recipe 1 Documentation)
+
+**For new implementers:**
+
+1. **Start here**: STEP_4_RECIPE_1_SUMMARY.md — Understand the architecture and which documents to read in what order
+2. **Create Phase 1 plan**: Read STEP_4_RECIPE_1_ANALYSIS.md (Phase 1 section) + STEP_4_RECIPE_1_VERIFICATION_GATES.md (Phase 1 gates)
+3. **Understand coordinate contract**: Read STEP_4_RECIPE_1_COORDINATE_CONTRACT.md before writing transform code
+4. **Map events**: Read STEP_4_RECIPE_1_EVENT_TRANSLATION.md to understand DOM → rui Event mapping
+5. **Check cross-module interactions**: Read STEP_4_RECIPE_1_CROSS_MODULE_CONCERNS.md to identify friction points and how other backends solved them
+6. **Run verification**: Use gates from STEP_4_RECIPE_1_VERIFICATION_GATES.md at end of each phase
+
+**Proof of pattern validity**: STEP_4_RECIPE_1_TEMPLATE_VALIDATION.md verifies all template claims against Recipe 2 (X11 backend, fully implemented). Same pattern holds for any backend.
+
 ### The Three-Phase Pattern
 
 **Phase 1: Foundation** — Implement the Backend trait
