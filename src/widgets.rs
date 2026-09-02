@@ -333,7 +333,7 @@ pub fn tabs<S: 'static>(
         .map(|(index, label)| {
             let chosen = index == selected;
             col((
-                // used by: tabs() (line 325)
+                // used by: tabs() line 325
                 row(text(*label).text_size(12.5)) // UNMATCHED: tabs text size, widget-specific sizing
                     .h(26.0) // UNMATCHED: tab row height, widget-specific sizing
                     .pad_x(Metrics::DEFAULT.padding),
@@ -372,7 +372,7 @@ pub fn segmented<S: 'static>(
             row(text(*label)
                 .grow()
                 .text_align(Align::Center)
-                // used by: segmented() (line 362), scrollbar() (line 558)
+                // used by: segmented() line 362, scrollbar() line 558
                 .text_size(12.0)) // UNMATCHED: segmented text size, widget-specific sizing
             .key(*label)
             .grow()
@@ -497,7 +497,7 @@ pub fn section<S>(label: impl Into<String>, note: Option<String>) -> El<S> {
             .fill(Tone::Border),
         note.map(|note| micro(note)),
     ))
-    // used by: section() (line 491)
+    // used by: section() line 491
     .h(14.0) // UNMATCHED: section header height, widget-specific sizing
     .gap(Metrics::DEFAULT.gap)
 }
