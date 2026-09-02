@@ -13,8 +13,8 @@ runs=bash
 # Verify that a specific theme roles section exists in index.dx
 # This check is RED (failing) until the implementation is complete.
 
-# Use dx source to check if the section exists
-if dx source index.dx --section=r1-theme-roles-scope > /dev/null 2>&1; then
+# Use dx text to check if the section exists
+if dx text index.dx --section r1-theme-roles-scope > /dev/null 2>&1; then
   echo "✓ PASS: Theme roles section found"
   exit 0
 else
