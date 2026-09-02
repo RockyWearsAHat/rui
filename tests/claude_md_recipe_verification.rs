@@ -116,14 +116,14 @@ fn parse_recipe_1() {
     let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
     let commits = extract_recipe_1_commits(&claude_md);
 
-    if commits.is_empty() {
-        println!("Recipe 1: no commit SHAs documented");
-    } else {
-        println!("Recipe 1: found {} commits", commits.len());
-        for commit in &commits {
-            println!("  {} commit: {}", commit.phase, commit.sha);
-        }
-    }
+    // Recipe 1 (WASM) is a template pattern, not an implementation,
+    // so no commit SHAs are documented in CLAUDE.md
+    assert!(
+        commits.is_empty(),
+        "Recipe 1 should have no commits (it's a template pattern, not an implementation)"
+    );
+
+    println!("Recipe 1: no commit SHAs documented");
 }
 
 #[test]
