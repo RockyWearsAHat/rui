@@ -646,8 +646,28 @@ impl Theme {
     pub fn spacing(&self, space: Space) -> f32 {
         match space {
             Space::Small => self.metrics.gap_small,
-            Space::Default => self.metrics.gap,
+            Space::Normal => self.metrics.gap,
             Space::Large => self.metrics.gap_large,
+        }
+    }
+
+    /// Resolve a text role to its font size in this theme.
+    pub fn text_size(&self, role: TextRole) -> f32 {
+        match role {
+            TextRole::Title => 15.0,
+            TextRole::Heading => 10.5,
+            TextRole::Body => 13.0,
+            TextRole::Caption => 11.5,
+            TextRole::Micro => 9.5,
+            TextRole::Code => 11.5,
+        }
+    }
+
+    /// Resolve a height role to its pixel value in this theme.
+    pub fn control_height(&self, h: Height) -> f32 {
+        match h {
+            Height::Control => self.metrics.control_height,
+            Height::Row => self.metrics.row_height,
         }
     }
 }
@@ -658,9 +678,26 @@ pub enum Space {
     /// Gap between closely-related items.
     Small,
     /// Standard gap between items in a list or row.
-    Default,
+    Normal,
     /// Gap between sections.
     Large,
+}
+
+/// A text role standard, resolved to a font size by a [`Theme`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextRole {
+    /// Prominent designations and window titles.
+    Title,
+    /// Section headings and group labels.
+    Heading,
+    /// Ordinary text body.
+    Body,
+    /// Secondary text, labels, and explanations.
+    Caption,
+    /// Smallest readable text: numbers, units, ticks.
+    Micro,
+    /// Machine output and monospaced code.
+    Code,
 }
 
 /// A control height standard, resolved to an f32 by a [`Theme`].
