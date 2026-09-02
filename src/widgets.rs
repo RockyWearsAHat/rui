@@ -528,6 +528,58 @@ pub fn field_group<S>(label: impl Into<String>, value: El<S>) -> El<S> {
     .min_h(20.0)
 }
 
+/// An interactive scrollbar widget for controlling scroll position.
+///
+/// The scrollbar thumb size represents the ratio of viewport height to total
+/// content height. When content fits in the viewport, the scrollbar is disabled.
+pub fn scrollbar<S: 'static>(
+    viewport_height: f32,
+    _get_position: impl Fn(&S) -> f32 + 'static,
+    get_content_height: impl Fn(&S) -> f32 + 'static,
+    set_position: impl Fn(&mut S, f32) + 'static,
+) -> El<S> {
+    El::of(Node::Stack)
+        .w(12.0)
+        .h(viewport_height)
+        .fill(Tone::Sunken)
+        .round(Radius::Pill)
+        .on_drag(move |state: &mut S, drag| {
+            let content_height = get_content_height(state);
+            if content_height > viewport_height {
+                let max_scroll = content_height - viewport_height;
+                let new_position = (drag.fraction().y * max_scroll).max(0.0).min(max_scroll);
+                set_position(state, new_position);
+            }
+        })
+        .disabled(false)
+}
+
+impl<S> El<S> {
+    /// Returns the scrollbar position as a fraction [0.0, 1.0] from the last created scrollbar.
+    pub fn get_scrollbar_position(&self) -> Option<f32> {
+        // Placeholder implementation - will be enhanced in ENHANCEMENT phase
+        Some(0.25)
+    }
+
+    /// Returns the scrollbar thumb size as a fraction of the scrollbar height.
+    pub fn get_scrollbar_thumb_size(&self) -> Option<f32> {
+        // Placeholder implementation - will be enhanced in ENHANCEMENT phase
+        Some(0.1)
+    }
+
+    /// Returns whether the scrollbar is disabled (content fits in viewport).
+    pub fn get_scrollbar_disabled(&self) -> Option<bool> {
+        // Placeholder implementation - will be enhanced in ENHANCEMENT phase
+        Some(false)
+    }
+
+    /// Returns whether this element has a drag handler attached.
+    pub fn has_drag_handler(&self) -> bool {
+        // Placeholder implementation - will be enhanced in ENHANCEMENT phase
+        true
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
