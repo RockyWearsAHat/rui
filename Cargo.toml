@@ -37,7 +37,7 @@ missing_docs = "warn"
 
 [[test]]
 name = "claude_md_recipe_verification"
-path = "tests/claude_md_recipe2.rs"
+path = "tests/claude_md_recipe_verification.rs"
 
 [profile.release]
 opt-level = 3
