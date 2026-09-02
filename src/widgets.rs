@@ -28,7 +28,7 @@ use crate::geom::{Rect, Size};
 use crate::paint::Painter;
 use crate::style::{Align, Axis, Length, Radius, Tone};
 use crate::theme::{
-    CAPTION_SIZE, CODE_SIZE, FIGURE_SIZE, HEADING_SIZE, MICRO_SIZE, Status, TITLE_SIZE,
+    CAPTION_SIZE, CODE_SIZE, FIGURE_SIZE, HEADING_SIZE, MICRO_SIZE, Metrics, Status, TITLE_SIZE,
 };
 
 /// The size ordinary text is set at.
@@ -137,13 +137,13 @@ pub fn panel<S>(children: impl Children<S>) -> El<S> {
         .border(1.0, Tone::Border)
         .round(Radius::Panel)
         .shadow(9.0)
-        .pad(12.0)
+        .pad(Metrics::DEFAULT.padding)
 }
 
 /// A hairline across whatever contains it.
 pub fn divider<S>() -> El<S> {
     El::of(Node::Stack)
-        .h(1.0)
+        .h(Metrics::DEFAULT.hairline)
         .fill(Tone::Border)
         .role(Role::Separator)
 }
@@ -164,8 +164,8 @@ pub fn divider<S>() -> El<S> {
 /// that repeats down a list.
 pub fn button<S>(label: impl Into<String>) -> El<S> {
     row(text(label).grow().text_align(Align::Center))
-        .h(28.0)
-        .pad_x(12.0)
+        .h(Metrics::DEFAULT.control_height)
+        .pad_x(Metrics::DEFAULT.padding)
         .gradient(Tone::Raised, Tone::Surface)
         .border(1.0, Tone::Border)
         .round(Radius::Control)
@@ -184,8 +184,8 @@ pub fn field<S>(value: impl Into<String>) -> El<S> {
         value: value.into(),
         placeholder: String::new(),
     })
-    .h(28.0)
-    .pad_x(8.0)
+    .h(Metrics::DEFAULT.control_height)
+    .pad_x(Metrics::DEFAULT.gap)
     .text_size(CODE_SIZE)
     .mono()
     .fill(Tone::Sunken)
@@ -204,7 +204,7 @@ pub fn field<S>(value: impl Into<String>) -> El<S> {
 /// when something is wrong cannot do it if a healthy row is also lit.
 pub fn tag<S>(status: Status, label: impl Into<String>) -> El<S> {
     row(text(label))
-        .pad_x(8.0)
+        .pad_x(Metrics::DEFAULT.gap)
         .h(18.0)
         .fill(Tone::tint(status))
         .color(Tone::ink(status))
@@ -322,7 +322,9 @@ pub fn tabs<S: 'static>(
         .map(|(index, label)| {
             let chosen = index == selected;
             col((
-                row(text(*label).text_size(12.5)).h(26.0).pad_x(12.0),
+                row(text(*label).text_size(12.5))
+                    .h(26.0)
+                    .pad_x(Metrics::DEFAULT.padding),
                 El::of(Node::Stack)
                     .h(2.0)
                     .fill(if chosen { Tone::Accent } else { Tone::Clear }),
@@ -338,7 +340,7 @@ pub fn tabs<S: 'static>(
 
     // The row is the list, which is what gives each tab its place in a set of
     // three without anybody counting: the structure already says it.
-    col((row(tabs).role(Role::TabList), divider())).h(28.0)
+    col((row(tabs).role(Role::TabList), divider())).h(Metrics::DEFAULT.control_height)
 }
 
 /// A segmented control: several words, one of them chosen.
@@ -361,7 +363,7 @@ pub fn segmented<S: 'static>(
                 .text_size(12.0))
             .key(*label)
             .grow()
-            .h(22.0)
+            .h(Metrics::DEFAULT.row_height)
             .round(Radius::Units(4.0))
             .fill(if chosen { Tone::Surface } else { Tone::Clear })
             .color(if chosen { Tone::Text } else { Tone::Muted })
@@ -373,7 +375,7 @@ pub fn segmented<S: 'static>(
         .collect();
 
     row(cells)
-        .h(28.0)
+        .h(Metrics::DEFAULT.control_height)
         .pad(3.0)
         .gap(2.0)
         .fill(Tone::Sunken)
@@ -400,7 +402,7 @@ pub fn star_rating<S: 'static>(
             .on_click(move |state: &mut S| set_rating(state, i))
         })
         .collect::<Vec<_>>())
-    .gap(4.0)
+    .gap(Metrics::DEFAULT.gap_small)
 }
 
 impl<S> El<S> {
@@ -475,11 +477,14 @@ impl<S> El<S> {
 pub fn section<S>(label: impl Into<String>, note: Option<String>) -> El<S> {
     row((
         heading(label),
-        El::of(Node::Stack).h(1.0).grow().fill(Tone::Border),
+        El::of(Node::Stack)
+            .h(Metrics::DEFAULT.hairline)
+            .grow()
+            .fill(Tone::Border),
         note.map(|note| micro(note)),
     ))
     .h(14.0)
-    .gap(8.0)
+    .gap(Metrics::DEFAULT.gap)
 }
 
 /// A row that names something and shows its value beside it.
@@ -502,7 +507,7 @@ pub fn field_row<S>(label: impl Into<String>, value: El<S>) -> El<S> {
         value
     };
     row((heading(label).w(78.0), value.grow()))
-        .gap(8.0)
+        .gap(Metrics::DEFAULT.gap)
         .min_h(20.0)
 }
 
@@ -521,10 +526,13 @@ pub fn field_group<S>(label: impl Into<String>, value: El<S>) -> El<S> {
     // first entry's own centre line, exactly as `field_row` centres against a
     // single control.
     row((
-        heading(label).w(78.0).h(28.0).align_self(Align::Start),
+        heading(label)
+            .w(78.0)
+            .h(Metrics::DEFAULT.control_height)
+            .align_self(Align::Start),
         value.grow(),
     ))
-    .gap(8.0)
+    .gap(Metrics::DEFAULT.gap)
     .min_h(20.0)
 }
 
