@@ -564,10 +564,25 @@ fn decorate<S>(el: &El<S>, frame: &mut Frame<'_>, response: &Response, lit: f32)
     }
     let corner = corner_of(style.radius, rect, theme);
 
-    if let Some(blur) = style.shadow {
-        let cast = rect.translate(0.0, theme.metrics.shadow_offset);
-        let shadow = Tone::Shadow.resolve(theme);
-        frame.canvas.shadow(cast, corner, blur, 0.0, shadow);
+    if let Some(layers) = style.shadow {
+        let shadow_color = Tone::Shadow.resolve(theme);
+        // Render primary shadow (soft, large)
+        let cast = rect.translate(0.0, layers.primary.offset);
+        let primary_alpha = (layers.primary.opacity * 255.0) as u8;
+        let primary_shadow = shadow_color.with_alpha(primary_alpha);
+        frame
+            .canvas
+            .shadow(cast, corner, layers.primary.blur, 0.0, primary_shadow);
+
+        // Render optional secondary shadow (sharper, closer)
+        if let Some(secondary) = layers.secondary {
+            let cast = rect.translate(0.0, secondary.offset);
+            let secondary_alpha = (secondary.opacity * 255.0) as u8;
+            let secondary_shadow = shadow_color.with_alpha(secondary_alpha);
+            frame
+                .canvas
+                .shadow(cast, corner, secondary.blur, 0.0, secondary_shadow);
+        }
     }
 
     // Over the shadow and under the fill: a halo is light thrown onto what is
