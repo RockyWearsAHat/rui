@@ -162,7 +162,7 @@ pub use input::{
     PointerButton, Pointing,
 };
 pub use memory::{FocusSource, Id, Memory, Response};
-pub use motion::{Easing, Spring};
+pub use motion::{Easing, SlideDirection, Spring, Transition};
 pub use paint::{Painter, Visual};
 pub use sdf::{
     Paint, Sculpt, Shape, arc, bevel, capsule, circle, linear, ngon, polygon, radial, rect, ring,

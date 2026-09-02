@@ -2,6 +2,10 @@
 //!
 //! R2 Motion Kit: Easing functions, spring dynamics, and transitions that
 //! animate properties over time without reading a wall clock.
+//!
+//! Enter/exit transitions animate elements appearing or disappearing using
+//! fade, slide, scale, or custom curves. Transitions are declared on elements
+//! and automatically managed by Memory, which tracks animation progress.
 
 /// Standard animation easing curves.
 ///
@@ -148,6 +152,124 @@ impl Spring {
     }
 }
 
+/// Enter/exit transition animation type.
+///
+/// Specifies how an element animates as it appears (enter) or disappears (exit).
+/// Transitions combine a type (fade, slide, scale) with duration and easing.
+#[derive(Debug, Clone)]
+pub enum Transition {
+    /// Fade in/out over duration with easing curve.
+    Fade {
+        /// Duration in seconds.
+        duration: f32,
+        /// Easing curve for opacity progression.
+        easing: Easing,
+    },
+    /// Slide from/to direction over duration.
+    Slide {
+        /// Duration in seconds.
+        duration: f32,
+        /// Easing curve for position progression.
+        easing: Easing,
+        /// Direction: "up", "down", "left", "right".
+        direction: SlideDirection,
+    },
+    /// Scale from/to a size over duration.
+    Scale {
+        /// Duration in seconds.
+        duration: f32,
+        /// Easing curve for scale progression.
+        easing: Easing,
+        /// Starting scale (0.0–1.0).
+        from_scale: f32,
+    },
+}
+
+/// Direction for slide transitions.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SlideDirection {
+    /// Slide from/to the left.
+    Left,
+    /// Slide from/to the right.
+    Right,
+    /// Slide from/to above.
+    Up,
+    /// Slide from/to below.
+    Down,
+}
+
+impl Transition {
+    /// Fade in over duration with ease-out timing (feels natural for appearance).
+    pub fn fade_in(duration: f32) -> Self {
+        Self::Fade {
+            duration,
+            easing: Easing::EaseOut,
+        }
+    }
+
+    /// Fade out over duration with ease-in timing (feels natural for disappearance).
+    pub fn fade_out(duration: f32) -> Self {
+        Self::Fade {
+            duration,
+            easing: Easing::EaseIn,
+        }
+    }
+
+    /// Slide in from a direction over duration.
+    pub fn slide_in(direction: SlideDirection, duration: f32) -> Self {
+        Self::Slide {
+            duration,
+            easing: Easing::EaseOut,
+            direction,
+        }
+    }
+
+    /// Slide out to a direction over duration.
+    pub fn slide_out(direction: SlideDirection, duration: f32) -> Self {
+        Self::Slide {
+            duration,
+            easing: Easing::EaseIn,
+            direction,
+        }
+    }
+
+    /// Scale in from a smaller size over duration.
+    pub fn scale_in(from_scale: f32, duration: f32) -> Self {
+        Self::Scale {
+            duration,
+            easing: Easing::EaseOut,
+            from_scale,
+        }
+    }
+
+    /// Scale out to a smaller size over duration.
+    pub fn scale_out(to_scale: f32, duration: f32) -> Self {
+        Self::Scale {
+            duration,
+            easing: Easing::EaseIn,
+            from_scale: to_scale,
+        }
+    }
+
+    /// Duration of this transition in seconds.
+    pub fn duration(&self) -> f32 {
+        match self {
+            Self::Fade { duration, .. }
+            | Self::Slide { duration, .. }
+            | Self::Scale { duration, .. } => *duration,
+        }
+    }
+
+    /// Easing curve for this transition.
+    pub fn easing(&self) -> Easing {
+        match self {
+            Self::Fade { easing, .. } | Self::Slide { easing, .. } | Self::Scale { easing, .. } => {
+                *easing
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,5 +307,55 @@ mod tests {
         let gentle = Spring::gentle();
         let snappy = Spring::snappy();
         assert!(snappy.damping() < gentle.damping());
+    }
+
+    #[test]
+    fn fade_in_has_correct_duration_and_easing() {
+        let trans = Transition::fade_in(0.3);
+        assert_eq!(trans.duration(), 0.3);
+        assert_eq!(trans.easing(), Easing::EaseOut);
+    }
+
+    #[test]
+    fn fade_out_has_correct_duration_and_easing() {
+        let trans = Transition::fade_out(0.3);
+        assert_eq!(trans.duration(), 0.3);
+        assert_eq!(trans.easing(), Easing::EaseIn);
+    }
+
+    #[test]
+    fn slide_in_has_correct_duration_and_direction() {
+        let trans = Transition::slide_in(SlideDirection::Left, 0.4);
+        assert_eq!(trans.duration(), 0.4);
+        assert_eq!(trans.easing(), Easing::EaseOut);
+        if let Transition::Slide { direction, .. } = trans {
+            assert_eq!(direction, SlideDirection::Left);
+        } else {
+            panic!("Expected Slide transition");
+        }
+    }
+
+    #[test]
+    fn scale_in_has_correct_duration_and_scale() {
+        let trans = Transition::scale_in(0.8, 0.25);
+        assert_eq!(trans.duration(), 0.25);
+        assert_eq!(trans.easing(), Easing::EaseOut);
+        if let Transition::Scale { from_scale, .. } = trans {
+            assert_eq!(from_scale, 0.8);
+        } else {
+            panic!("Expected Scale transition");
+        }
+    }
+
+    #[test]
+    fn scale_out_has_correct_duration_and_scale() {
+        let trans = Transition::scale_out(0.5, 0.25);
+        assert_eq!(trans.duration(), 0.25);
+        assert_eq!(trans.easing(), Easing::EaseIn);
+        if let Transition::Scale { from_scale, .. } = trans {
+            assert_eq!(from_scale, 0.5);
+        } else {
+            panic!("Expected Scale transition");
+        }
     }
 }
