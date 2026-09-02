@@ -390,7 +390,8 @@ pub struct Ink {
 impl Default for Ink {
     fn default() -> Self {
         Self {
-            size: crate::widgets::BODY_SIZE,
+            // 13.0 = Theme::text_size(TextRole::Body); Theme is authoritative per R1
+            size: 13.0,
             tone: Tone::Text,
             face: Face::Ui,
             tracking: 0.0,

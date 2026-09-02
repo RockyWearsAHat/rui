@@ -31,15 +31,6 @@ use crate::theme::{
     CAPTION_SIZE, CODE_SIZE, FIGURE_SIZE, HEADING_SIZE, MICRO_SIZE, Metrics, Status, TITLE_SIZE,
 };
 
-/// The size ordinary text is set at.
-///
-/// Not applied by [`text`], which sets no size at all: the default lives in
-/// [`Ink`](crate::Ink) so that a size set on a container reaches everything
-/// inside it. This is that same number, named, for a caller sizing something
-/// against ordinary text.
-/// MATCH STATUS: NOT MATCHED — typography constant, not a duplicate of Metrics::DEFAULT
-pub const BODY_SIZE: f32 = 13.0;
-
 /// How far a section label's letters are opened up.
 ///
 /// Capitals at ten units pack into a block in a face spaced for lower case.
