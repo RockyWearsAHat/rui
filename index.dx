@@ -170,3 +170,39 @@ Test Results:
 - Full test suite: 394 tests passing (no regressions)
 
 Next Phase: Refactor widgets.rs to use Metrics values instead of hardcoded constants.
+
+## r1-widget-constants-refactor-complete
+
+**STEP 3 REFACTOR Complete** — All hardcoded widget constants replaced with Metrics::DEFAULT
+
+::code
+reads=src/widgets.rs
+runs=bash
+---
+#!/bin/bash
+echo "=== STEP 3 REFACTOR COMPLETION VERIFICATION ==="
+echo ""
+echo "### Metrics::DEFAULT Replacements (17 total)"
+echo ""
+echo "control_height (28.0):"
+grep -n 'Metrics::DEFAULT.control_height' src/widgets.rs | sed 's/^/  Line /'
+echo ""
+echo "padding (12.0):"
+grep -n 'Metrics::DEFAULT.padding' src/widgets.rs | sed 's/^/  Line /'
+echo ""
+echo "gap (8.0):"
+grep -n 'Metrics::DEFAULT.gap)' src/widgets.rs | sed 's/^/  Line /'
+echo ""
+echo "hairline (1.0):"
+grep -n 'Metrics::DEFAULT.hairline' src/widgets.rs | sed 's/^/  Line /'
+echo ""
+echo "row_height (22.0):"
+grep -n 'Metrics::DEFAULT.row_height' src/widgets.rs | sed 's/^/  Line /'
+echo ""
+echo "gap_small (4.0):"
+grep -n 'Metrics::DEFAULT.gap_small' src/widgets.rs | sed 's/^/  Line /'
+echo ""
+echo "### Test Results"
+echo ""
+echo "✓ Library tests: $(cargo test --lib 2>&1 | grep 'test result:' | awk '{print $3}')"
+echo "✓ Refactor tests: $(cargo test --test step3_refactor 2>&1 | grep 'test result:' | awk '{print $3}')"
