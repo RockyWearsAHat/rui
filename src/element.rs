@@ -85,6 +85,55 @@ pub type PointerAction<S> = Box<dyn Fn(&mut S, Pointing)>;
 /// An application's own drawing, given the painter and the room it was placed in.
 pub type Drawing = Box<dyn Fn(&mut Painter<'_>, Rect)>;
 
+/// Lifecycle animation: how an element enters and exits the interface.
+#[derive(Clone, Copy, Debug)]
+pub enum EnterExit {
+    /// No animation.
+    None,
+    /// Fade in/out over duration (opacity 0 → 1 or 1 → 0).
+    Fade {
+        /// Duration in seconds.
+        duration: f32,
+    },
+    /// Slide from a direction over duration.
+    Slide {
+        /// Direction to slide from.
+        direction: SlideDirection,
+        /// Duration in seconds.
+        duration: f32,
+    },
+    /// Scale up/down from center over duration.
+    Scale {
+        /// Duration in seconds.
+        duration: f32,
+    },
+}
+
+impl EnterExit {
+    /// Duration of this animation in seconds.
+    pub fn duration(&self) -> f32 {
+        match self {
+            EnterExit::None => 0.0,
+            EnterExit::Fade { duration } => *duration,
+            EnterExit::Slide { duration, .. } => *duration,
+            EnterExit::Scale { duration } => *duration,
+        }
+    }
+}
+
+/// Direction an element slides in from.
+#[derive(Clone, Copy, Debug)]
+pub enum SlideDirection {
+    /// From the left edge.
+    Left,
+    /// From the right edge.
+    Right,
+    /// From the top edge.
+    Top,
+    /// From the bottom edge.
+    Bottom,
+}
+
 /// What an element actually is, underneath its style.
 ///
 /// Deliberately short. Every widget in the library is one of these four with a
@@ -180,6 +229,10 @@ pub struct El<S> {
     pub(crate) overlay: Option<crate::overlay::Overlay>,
     /// The placement configuration for this overlay element.
     pub(crate) overlay_placement: Option<crate::overlay::OverlayPlacement>,
+    /// Lifecycle animation for entering/exiting the interface.
+    /// Used in Phase 2 for lifecycle animations; field added in Phase 2 Commit 4.
+    #[allow(dead_code)]
+    pub(crate) enter_exit: Option<EnterExit>,
 }
 
 impl<S> El<S> {
@@ -228,6 +281,7 @@ impl<S> El<S> {
             elevation: None,
             overlay: None,
             overlay_placement: None,
+            enter_exit: None,
         }
     }
 
