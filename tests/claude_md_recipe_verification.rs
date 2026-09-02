@@ -327,6 +327,65 @@ fn verify_commit_exists(sha: &str) {
 }
 
 #[test]
+fn recipe_structure_complete() {
+    let recipes = parse_recipes_from_claude_md();
+
+    println!("Validating recipe structure completeness:");
+    println!("  Found {} recipes", recipes.len());
+
+    for recipe in &recipes {
+        println!(
+            "  Recipe {}: {} (status: {:?})",
+            recipe.number,
+            recipe.title,
+            recipe.status.as_ref().map(|s| &s[..20.min(s.len())])
+        );
+
+        assert!(
+            !recipe.title.is_empty(),
+            "Recipe {} has empty title",
+            recipe.number
+        );
+
+        // Recipe 1 and 2 should have purposes; Recipe 3 may have status instead
+        if recipe.number <= 2 {
+            assert!(
+                !recipe.purpose.is_empty(),
+                "Recipe {} should have a purpose",
+                recipe.number
+            );
+        }
+
+        // Only Recipe 2 has actual commit history in CLAUDE.md
+        if recipe.number == 2 {
+            assert!(
+                !recipe.commits.is_empty(),
+                "Recipe 2 should have commits documented"
+            );
+
+            for commit in &recipe.commits {
+                assert!(
+                    !commit.sha.is_empty(),
+                    "Recipe 2 {} commit should have SHA",
+                    commit.phase
+                );
+                assert!(
+                    commit.claimed_lines.is_some(),
+                    "Recipe 2 {} commit should have line count",
+                    commit.phase
+                );
+            }
+        }
+    }
+
+    assert_eq!(
+        recipes.len(),
+        3,
+        "CLAUDE.md should document exactly 3 recipes"
+    );
+}
+
+#[test]
 fn parse_all_recipes() {
     let recipes = parse_recipes_from_claude_md();
 
