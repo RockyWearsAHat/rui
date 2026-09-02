@@ -494,3 +494,89 @@ fn recipe_3_documentation_files_exist() {
         "All Recipe 3 documentation files should exist"
     );
 }
+
+#[test]
+fn generate_report() {
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+
+    let recipe_1_commits = extract_recipe_1_commits(&claude_md);
+    let recipe_2_commits = extract_recipe_2_commits(&claude_md);
+    let recipe_3_commits = extract_recipe_3_commits(&claude_md);
+
+    let mut report = String::from("# Recipe Verification Report\n\n");
+    report.push_str("| Recipe | Commits Found/Expected | Line Counts | Status |\n");
+    report.push_str("|--------|------------------------|-------------|--------|\n");
+
+    // Recipe 1 (WASM Backend)
+    let recipe_1_status =
+        if recipe_1_commits.is_empty() && fs::metadata("STEP_4_RECIPE_1_ANALYSIS.md").is_ok() {
+            "✓ PASS (template pattern, no commits)"
+        } else {
+            "✗ FAIL"
+        };
+    report.push_str(&format!(
+        "| Recipe 1 (WASM) | - | - | {} |\n",
+        recipe_1_status
+    ));
+
+    // Recipe 2 (X11 Backend)
+    let recipe_2_expected = 4;
+    let recipe_2_found = recipe_2_commits.len();
+    let mut recipe_2_line_status = "FAIL";
+    if recipe_2_found == recipe_2_expected {
+        // Check line counts
+        let documented_counts = [748, 1220, 1321, 1368];
+        let mut all_line_counts_pass = true;
+        for (i, commit) in recipe_2_commits.iter().enumerate() {
+            if i >= documented_counts.len() {
+                break;
+            }
+            let line_count = get_file_line_count(&commit.sha, "src/shell/platform/x11.rs");
+            let documented = documented_counts[i];
+            let tolerance = 10;
+            let diff = (line_count as i32 - documented).abs();
+            if diff > tolerance {
+                all_line_counts_pass = false;
+                break;
+            }
+        }
+        if all_line_counts_pass {
+            recipe_2_line_status = "PASS";
+        }
+    }
+    let recipe_2_status = if recipe_2_line_status == "PASS" {
+        "✓ PASS".to_string()
+    } else {
+        "✗ FAIL".to_string()
+    };
+    report.push_str(&format!(
+        "| Recipe 2 (X11) | {}/{} | {} | {} |\n",
+        recipe_2_found, recipe_2_expected, recipe_2_line_status, recipe_2_status
+    ));
+
+    // Recipe 3 (Checkbox Widget)
+    let recipe_3_status =
+        if recipe_3_commits.is_empty() && fs::metadata("STEP_5_RECIPE_3_ANALYSIS.md").is_ok() {
+            "✓ PASS (widget exemplar, no commits)"
+        } else {
+            "✗ FAIL"
+        };
+    report.push_str(&format!(
+        "| Recipe 3 (Checkbox) | - | - | {} |\n",
+        recipe_3_status
+    ));
+
+    report.push_str("\n## Summary\n\n");
+    report.push_str("- **Recipe 1**: Template pattern for WASM backend (no implementation commits documented)\n");
+    report.push_str("- **Recipe 2**: X11 backend implementation with 4 phase commits\n");
+    report.push_str(
+        "- **Recipe 3**: Checkbox widget exemplar (no implementation commits documented)\n",
+    );
+
+    // Write report
+    fs::write("RECIPE_VERIFICATION_RESULTS.md", &report)
+        .expect("Failed to write RECIPE_VERIFICATION_RESULTS.md");
+
+    println!("{}", report);
+    println!("✓ Report written to RECIPE_VERIFICATION_RESULTS.md");
+}
