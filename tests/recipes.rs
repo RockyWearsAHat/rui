@@ -638,7 +638,7 @@ fn captured(width: u32, height: u32, color: Color) -> Screen {
     }
 }
 
-// STEP 20 Phase 2: Spring Physics Acceptance Tests (Gap 1)
+// STEP 20 Phase 2: Spring & EnterExit Acceptance Tests (Gaps 1 & 2)
 
 #[test]
 fn spring_physics_exists_and_compiles() {
@@ -674,4 +674,48 @@ fn spring_physics_includes_velocity() {
     let spring = Spring::new(100.0).with_velocity(velocity);
     assert!(spring.velocity.is_some());
     assert_eq!(spring.velocity.unwrap().magnitude(), 50.0);
+}
+
+// STEP 20 Phase 2: EnterExit Lifecycle Acceptance Tests (Gap 2)
+
+#[test]
+fn enter_exit_enum_exists_and_compiles() {
+    use rui::element::{EnterExit, SlideDirection};
+    let fade = EnterExit::Fade { duration: 0.3 };
+    assert_eq!(fade.duration(), 0.3);
+
+    let slide = EnterExit::Slide {
+        direction: SlideDirection::Left,
+        duration: 0.25,
+    };
+    assert_eq!(slide.duration(), 0.25);
+
+    let scale = EnterExit::Scale { duration: 0.2 };
+    assert_eq!(scale.duration(), 0.2);
+
+    let none = EnterExit::None;
+    assert_eq!(none.duration(), 0.0);
+}
+
+#[test]
+fn enter_exit_slide_directions_exist() {
+    use rui::element::SlideDirection;
+    let _ = SlideDirection::Left;
+    let _ = SlideDirection::Right;
+    let _ = SlideDirection::Top;
+    let _ = SlideDirection::Bottom;
+}
+
+#[test]
+fn enter_exit_fade_animation_created() {
+    use rui::element::EnterExit;
+    let fade = EnterExit::Fade { duration: 0.5 };
+    assert!(matches!(fade, EnterExit::Fade { .. }));
+}
+
+#[test]
+fn enter_exit_scale_animation_created() {
+    use rui::element::EnterExit;
+    let scale = EnterExit::Scale { duration: 0.3 };
+    assert!(matches!(scale, EnterExit::Scale { .. }));
 }
