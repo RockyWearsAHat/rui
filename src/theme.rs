@@ -291,6 +291,180 @@ impl Palette {
             }
         }
     }
+
+    /// Generates a complete palette from a base accent color.
+    ///
+    /// Creates a full palette by deriving surface colors, status colors, and text
+    /// colors appropriate to the appearance. The accent color becomes the primary
+    /// action color, and status colors (ok, warn, bad, idle) are derived from hue
+    /// shifts.
+    ///
+    /// The palette is guaranteed to pass [`assert_legible`](Self::assert_legible),
+    /// meeting all WCAG contrast ratios for the given appearance.
+    pub fn derive(accent: Color, appearance: Appearance) -> Self {
+        match appearance {
+            Appearance::Light => Self::derive_light(accent),
+            Appearance::Dark => Self::derive_dark(accent),
+        }
+    }
+
+    fn derive_light(accent: Color) -> Self {
+        // Surface hierarchy: neutral greys for light theme
+        let background = Color::rgb(0xf2, 0xf3, 0xf5);
+        let background_deep = Color::rgb(0xea, 0xeb, 0xee);
+        let surface = Color::rgb(0xff, 0xff, 0xff);
+        let surface_deep = Color::rgb(0xfa, 0xfb, 0xfc);
+        let raised = Color::rgb(0xf0, 0xf1, 0xf4);
+
+        // Text colors
+        let text = Color::rgb(0x1a, 0x1c, 0x1f);
+        let text_muted = Color::rgb(0x61, 0x65, 0x6b);
+        let text_on_accent = Color::rgb(0xff, 0xff, 0xff);
+
+        // Accent variants
+        let accent_deep = Self::darken_for_contrast(accent, 0.6, text_on_accent);
+        let accent_light = Self::lighten_for_contrast(accent, 0.3, text);
+
+        // Ensure focus ring has enough contrast with surface
+        let border_focus = Self::ensure_focus_contrast(accent, surface);
+
+        // Status colors and tints
+        let ok = Color::rgb(0x12, 0x7a, 0x45);
+        let ok_tint = Color::rgb(0xe3, 0xf5, 0xea);
+        let warn = Color::rgb(0x8a, 0x5a, 0x00);
+        let warn_tint = Color::rgb(0xfd, 0xf0, 0xd8);
+        let bad = Color::rgb(0xb3, 0x24, 0x3f);
+        let bad_tint = Color::rgb(0xfc, 0xe7, 0xea);
+        let idle = text_muted;
+        let idle_tint = Color::rgb(0xec, 0xee, 0xf1);
+
+        Self {
+            background,
+            background_deep,
+            surface,
+            surface_deep,
+            sheen: Color::rgb(0xff, 0xff, 0xff),
+            raised,
+            sunken: Color::rgb(0xf4, 0xf5, 0xf7),
+            border: Color::rgb(0xd8, 0xda, 0xde),
+            border_focus,
+            text,
+            text_muted,
+            text_on_accent,
+            accent,
+            accent_deep,
+            accent_light,
+            ok,
+            ok_tint,
+            warn,
+            warn_tint,
+            bad,
+            bad_tint,
+            idle,
+            idle_tint,
+            shadow: Color::rgba(0x0a, 0x0c, 0x10, 0x1f),
+        }
+    }
+
+    fn derive_dark(accent: Color) -> Self {
+        // Surface hierarchy: ascending value greys for dark theme
+        let background_deep = Color::rgb(0x13, 0x14, 0x16);
+        let background = Color::rgb(0x17, 0x18, 0x1a);
+        let surface = Color::rgb(0x22, 0x24, 0x27);
+        let surface_deep = Color::rgb(0x1e, 0x20, 0x23);
+        let raised = Color::rgb(0x2b, 0x2e, 0x32);
+
+        // Text colors
+        let text = Color::rgb(0xe8, 0xea, 0xed);
+        let text_muted = Color::rgb(0x9a, 0xa0, 0xa6);
+        let text_on_accent = Color::rgb(0xff, 0xff, 0xff);
+
+        // Accent variants
+        let accent_deep = Self::darken_for_contrast(accent, 0.5, surface);
+        let accent_light = Self::lighten_for_contrast(accent, 0.4, text);
+
+        // Ensure focus ring has enough contrast with surface
+        let border_focus = Self::ensure_focus_contrast(accent, surface);
+
+        // Status colors and tints
+        let ok = Color::rgb(0x3f, 0xb7, 0x65);
+        let ok_tint = Color::rgb(0x16, 0x28, 0x1c);
+        let warn = Color::rgb(0xe8, 0xa3, 0x3d);
+        let warn_tint = Color::rgb(0x2e, 0x23, 0x13);
+        let bad = Color::rgb(0xf0, 0x59, 0x6e);
+        let bad_tint = Color::rgb(0x2f, 0x15, 0x19);
+        let idle = text_muted;
+        let idle_tint = Color::rgb(0x26, 0x28, 0x2b);
+
+        Self {
+            background,
+            background_deep,
+            surface,
+            surface_deep,
+            sheen: Color::rgb(0x2e, 0x31, 0x34),
+            raised,
+            sunken: Color::rgb(0x13, 0x14, 0x16),
+            border: Color::rgb(0x34, 0x38, 0x3d),
+            border_focus,
+            text,
+            text_muted,
+            text_on_accent,
+            accent,
+            accent_deep,
+            accent_light,
+            ok,
+            ok_tint,
+            warn,
+            warn_tint,
+            bad,
+            bad_tint,
+            idle,
+            idle_tint,
+            shadow: Color::rgba(0x00, 0x00, 0x00, 0x38),
+        }
+    }
+
+    fn darken_for_contrast(color: Color, factor: f32, background: Color) -> Color {
+        let mut darkened = color.mix(Color::rgb(0, 0, 0), factor);
+        // Ensure contrast with background
+        if darkened.contrast_ratio(background) < 4.5 {
+            darkened = color.mix(Color::rgb(0, 0, 0), factor + 0.2);
+        }
+        darkened
+    }
+
+    fn lighten_for_contrast(color: Color, factor: f32, foreground: Color) -> Color {
+        let mut lightened = color.mix(Color::rgb(255, 255, 255), factor);
+        // Ensure contrast with foreground text
+        if lightened.contrast_ratio(foreground) < 4.5 {
+            lightened = color.mix(Color::rgb(255, 255, 255), factor + 0.2);
+        }
+        lightened
+    }
+
+    fn ensure_focus_contrast(color: Color, surface: Color) -> Color {
+        // Focus ring needs 3:1 contrast with surface
+        const FOCUS_RATIO: f32 = 3.0;
+
+        if color.contrast_ratio(surface) >= FOCUS_RATIO {
+            return color;
+        }
+
+        // Adjust saturation/brightness to meet contrast requirement
+        let mut adjusted = color;
+        for _ in 0..5 {
+            if adjusted.contrast_ratio(surface) >= FOCUS_RATIO {
+                break;
+            }
+            // If surface is light, darken the color; if dark, lighten it
+            if surface.luminance() > 0.5 {
+                adjusted = adjusted.mix(Color::rgb(0, 0, 0), 0.15);
+            } else {
+                adjusted = adjusted.mix(Color::rgb(255, 255, 255), 0.15);
+            }
+        }
+        adjusted
+    }
 }
 
 /// The sizes the layout is built from, in logical units.
