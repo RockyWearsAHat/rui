@@ -7,11 +7,12 @@
 ## Acceptance Criteria
 - ✓ `grep -n "^pub fn \|^fn " src/widgets.rs | wc -l` = 27
 - ✓ Count matches documented widgets
+- ✓ Verification tests written and passing (tests/step_4_widget_mapping.rs)
 
 ## Executive Summary
 
 All 27 widget functions in `src/widgets.rs` have been mapped to their constant usages. The mapping reveals:
-- **26 public widget constructors** + **1 private helper** = 27 total functions
+- **25 public widget constructors** (re-exported via lib.rs) + **1 public but internal widget** (scrollbar) + **1 private helper** (word_for) = 27 total functions
 - **4 widget-specific constants** defined at file top (BODY_SIZE, HEADING_TRACKING, TAG_HEIGHT, FIELD_ROW_LABEL_WIDTH)
 - **14 theme constants** imported from `theme.rs` (Metrics, type scale sizes)
 - **6 widgets with hardcoded literals** not yet extracted to constants (meter, tabs, segmented, star_rating, section, scrollbar)
