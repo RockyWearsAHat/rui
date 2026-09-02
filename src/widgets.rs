@@ -37,18 +37,22 @@ use crate::theme::{
 /// [`Ink`](crate::Ink) so that a size set on a container reaches everything
 /// inside it. This is that same number, named, for a caller sizing something
 /// against ordinary text.
+/// MATCH STATUS: NOT MATCHED — typography constant, not a duplicate of Metrics::DEFAULT
 pub const BODY_SIZE: f32 = 13.0;
 
 /// How far a section label's letters are opened up.
 ///
 /// Capitals at ten units pack into a block in a face spaced for lower case.
 /// Opening them is what makes a small label legible rather than merely small.
+/// MATCH STATUS: NOT MATCHED — letter-spacing, not a duplicate of Metrics::DEFAULT
 const HEADING_TRACKING: f32 = 0.9;
 
-/// Height of the tag widget. Not a duplicate; tag sizing is specific to the tag control.
+/// Height of the tag widget.
+/// MATCH STATUS: NOT MATCHED — widget-specific sizing, no Metrics::DEFAULT equivalent
 const TAG_HEIGHT: f32 = 18.0;
 
-/// Width reserved for labels in field_row widget. Not a duplicate; label width is specific to field layout.
+/// Width reserved for labels in field_row widget.
+/// MATCH STATUS: NOT MATCHED — widget-specific layout, no Metrics::DEFAULT equivalent
 const FIELD_ROW_LABEL_WIDTH: f32 = 78.0;
 
 /// A box that stacks what is in it from top to bottom.
