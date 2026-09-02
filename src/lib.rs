@@ -169,7 +169,7 @@ pub use sdf::{
 pub use shell::{Error, LoadedFonts, WindowOptions};
 pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Radius, Style, Tone};
 pub use text::{FontId, Fonts, TextStyle};
-pub use theme::{Appearance, CornerStyle, Height, Palette, Space, Status, TextRole, Theme};
+pub use theme::{Appearance, CornerStyle, Height, Palette, Space, Status, Theme};
 pub use widgets::{
     button, caption, code, col, divider, dot, draw, field, field_group, field_row, figure, heading,
     meter, micro, panel, paragraph, row, section, segmented, spacer, star_rating, tabs, tag, text,
