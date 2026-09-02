@@ -369,7 +369,7 @@ pub fn segmented<S: 'static>(
         .enumerate()
         .map(|(index, label)| {
             let chosen = index == selected;
-            // used by: segmented() line 361
+            // used by: segmented() line 362
             row(text(*label)
                 .grow()
                 .text_align(Align::Center)
@@ -497,7 +497,7 @@ pub fn section<S>(label: impl Into<String>, note: Option<String>) -> El<S> {
             .fill(Tone::Border),
         note.map(|note| micro(note)),
     ))
-    // used by: section() line 489
+    // used by: section() line 491
     .h(14.0) // UNMATCHED: section header height, widget-specific sizing
     .gap(Metrics::DEFAULT.gap)
 }
