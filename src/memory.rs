@@ -219,6 +219,66 @@ impl Velocity {
     }
 }
 
+/// Spring physics animation: position and velocity toward a target.
+///
+/// Damping controls overshoot and oscillation (0.0 = bouncy, 1.0 = no bounce).
+/// Stiffness controls approach speed (0.1 = slow and springy, 2.0 = fast and snappy).
+#[derive(Clone, Copy, Debug)]
+pub struct Spring {
+    /// Target value the spring animates toward.
+    pub target: f32,
+    /// Spring stiffness: 0.1 (slow, bouncy) to 2.0 (fast, snappy).
+    pub stiffness: f32,
+    /// Damping ratio: 0.0 (bouncy) to 1.0 (no overshoot).
+    pub damping: f32,
+    /// Initial velocity, typically from drag momentum.
+    pub velocity: Option<Velocity>,
+}
+
+impl Spring {
+    /// Spring animating to `target` with default stiffness and damping.
+    pub fn new(target: f32) -> Self {
+        Self {
+            target,
+            stiffness: 1.0,
+            damping: 0.7,
+            velocity: None,
+        }
+    }
+
+    /// Customize spring stiffness (lower = slower and springier).
+    pub fn with_stiffness(mut self, stiffness: f32) -> Self {
+        self.stiffness = stiffness.clamp(0.1, 2.0);
+        self
+    }
+
+    /// Customize damping (lower = more bounce).
+    pub fn with_damping(mut self, damping: f32) -> Self {
+        self.damping = damping.clamp(0.0, 1.0);
+        self
+    }
+
+    /// Inherit velocity from drag momentum.
+    pub fn with_velocity(mut self, velocity: Velocity) -> Self {
+        self.velocity = Some(velocity);
+        self
+    }
+
+    /// Solve spring physics one timestep: x' = v, v' = k*(target - x) - d*v.
+    pub fn step(&self, current: f32, velocity: f32, dt: f32) -> (f32, f32) {
+        let spring_force = self.stiffness * (self.target - current);
+        let damped = spring_force - self.damping * velocity;
+        let new_velocity = velocity + damped * dt;
+        let new_position = current + new_velocity * dt;
+        (new_position, new_velocity)
+    }
+
+    /// Check if animation has settled close enough to target.
+    pub fn is_settled(&self, current: f32, velocity: f32) -> bool {
+        (current - self.target).abs() < 0.01 && velocity.abs() < 0.1
+    }
+}
+
 /// How close to its target a value has to get before it is called settled.
 ///
 /// Exponential easing approaches its target without ever arriving, so without a
@@ -285,6 +345,10 @@ pub struct Memory {
     /// Used in Phase 2 for spring retargeting; stored in Phase 1.
     #[allow(dead_code)]
     last_velocity: Option<Velocity>,
+    /// Spring animations: id -> (definition, current_position, current_velocity).
+    /// Used in Phase 2 for spring physics; field added in Phase 2 Commit 1.
+    #[allow(dead_code)]
+    springs: HashMap<Id, (Spring, f32, f32)>,
 }
 
 impl Memory {
