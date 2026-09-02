@@ -247,6 +247,8 @@ pub struct Memory {
     deferred: HashMap<Id, f32>,
     /// Total accumulated time since start (in seconds).
     accumulated_time: f32,
+    /// Transition state: id -> (start_time, total_duration).
+    transitions: HashMap<Id, (f32, f32)>,
 }
 
 impl Memory {
@@ -458,12 +460,35 @@ impl Memory {
         false
     }
 
+    /// Start a transition animation for the given element.
+    pub fn start_transition(&mut self, id: Id, duration: f32) {
+        self.transitions
+            .insert(id, (self.accumulated_time, duration));
+        self.animating = true;
+    }
+
+    /// Get the progress of a transition (0.0 to 1.0), or None if not transitioning.
+    pub fn transition_progress(&self, id: Id) -> Option<f32> {
+        self.transitions.get(&id).map(|(start_time, duration)| {
+            let elapsed = self.accumulated_time - start_time;
+            (elapsed / duration).min(1.0)
+        })
+    }
+
+    /// Clear a completed transition.
+    pub fn clear_transition(&mut self, id: Id) {
+        self.transitions.remove(&id);
+        if self.transitions.is_empty() {
+            self.animating = false;
+        }
+    }
+
     /// Whether anything is mid-animation and the frame should be drawn again.
     ///
     /// The loop asks this to decide whether to wait for input or to come back
     /// promptly, which is what keeps an idle interface from redrawing at all.
     pub fn is_animating(&self) -> bool {
-        self.animating
+        self.animating || !self.transitions.is_empty()
     }
 
     /// Eases the value held under `id` toward `target`, and answers where it got.

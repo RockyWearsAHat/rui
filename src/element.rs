@@ -48,6 +48,7 @@ use crate::accessibility::Role;
 use crate::geom::{Insets, Rect, Size};
 use crate::input::{Drag, Key, KeyStroke, Modifiers, Pointing};
 use crate::memory::Id;
+use crate::motion::Transition;
 use crate::paint::Painter;
 use crate::style::{Align, Anchor, Axis, Face, Hover, Ink, Justify, Length, Radius, Style, Tone};
 
@@ -167,6 +168,8 @@ pub struct El<S> {
     pub(crate) value: Option<String>,
     /// Whether it is the chosen one of its group, where that applies.
     pub(crate) selected: Option<bool>,
+    /// The transition animation to apply when this element appears or changes.
+    pub(crate) transition: Option<Transition>,
 }
 
 impl<S> El<S> {
@@ -211,6 +214,7 @@ impl<S> El<S> {
             label: None,
             value: None,
             selected: None,
+            transition: None,
         }
     }
 
@@ -854,6 +858,21 @@ impl<S> El<S> {
     pub fn selected(mut self, selected: bool) -> Self {
         self.selected = Some(selected);
         self
+    }
+
+    /// Applies a transition animation to this element.
+    ///
+    /// The transition will be tracked by Memory and applied during rendering.
+    /// Fade, slide, and scale transitions are built-in; custom transitions can
+    /// be constructed with `Transition::custom()`.
+    pub fn transition(mut self, transition: Transition) -> Self {
+        self.transition = Some(transition);
+        self
+    }
+
+    /// The transition animation on this element, if any.
+    pub fn has_transition(&self) -> Option<&Transition> {
+        self.transition.as_ref()
     }
 
     /// What this element is, for anything that cannot see it.
