@@ -56,15 +56,100 @@ Motion Kit introduces declarative animations with Spring physics, Enter/Exit lif
 - **Accessibility**: Metrics.is_motion_enabled() respects prefers-reduced-motion; animations complete instantly when disabled
 - **Animation Budget**: Maximum 2 animations per frame enforced; exceeding indicates UI design issue
 
-::code
-reads=src/memory.rs
-runs=bash
----
-grep -n "pub struct Spring\|pub enum Easing\|pub enum EnterExit" src/memory.rs
-::output
-230:pub struct Spring {
-290:pub enum Easing {
-313:pub enum EnterExit {
+```bash
+# R2 Motion Kit: EnterExit and related types
+grep -n "pub enum EnterExit" src/element.rs
+# Spring and Easing are in src/memory.rs at lines 230 and 290
+```
+
+Expected output:
+- 90:pub enum EnterExit { (from element.rs)
+- Spring (memory.rs line 230)
+- Easing (memory.rs line 290)
+
+## r3-pressed-style
+
+**R3 Pressed Style — Interactive State Styling**
+
+Pressed style provides visual feedback for interactive elements through state-dependent styling.
+
+**Features:**
+- Pressed state styling via element.rs on_pressed
+- 0.38 content alpha convention for disabled state
+- Interactive feedback on mouse/keyboard input
+- Accessible state indication for keyboard navigation
+
+## r4-pixel-grid
+
+**R4 Pixel-Grid — Rendering Crispness**
+
+Pixel-grid ensures sharp rendering at any display scale through hairline snap and glyph caching.
+
+**Features:**
+- Hairline snapping to device pixel boundaries (canvas.rs)
+- Glyph raster cache for deterministic text rendering
+- Gamma boost LUT for subpixel accuracy
+- Display scale handling (logical → device pixels)
+
+## r5-elevation
+
+**R5 Elevation Ramp — Lightness-Based Visual Depth**
+
+Elevation provides visual hierarchy through consistent lightness increments in the theme.
+
+**Features:**
+- Surface lightness levels: 0% (base), 3% (raised), 6% (floating), 9% (modal)
+- Lightness boost via theme.rs instead of shadows
+- Consistent depth perception across light/dark modes
+- Material Design 3 elevation semantics
+
+## r6-overlay
+
+**R6 Overlay Semantics — Z-Order Layering**
+
+Overlay provides predictable layering for dropdown, popover, and modal interactions.
+
+**Features:**
+- Z-order hierarchy: Dropdown (z=1) < Popover (z=2) < Modal (z=3)
+- Placement strategies (above, below, center) for overlays
+- Focus management and escape key handling
+- Dismissal semantics (click-outside for dropdowns/popovers)
+
+## r7-two-layer-shadow
+
+**R7 Two-Layer Shadow — Elevation with Depth**
+
+Two-layer shadows provide visual depth without relying on pure lightness changes.
+
+**Features:**
+- Primary shadow: soft, diffuse (elevation)
+- Secondary shadow: sharp, directional (depth)
+- Dark/light mode appropriate rendering
+- Paired with elevation ramp (R5) for visual cohesion
+
+## r9-scrollbar
+
+**R9 Scrollbar — Interactive Scroll Control**
+
+Scrollbar provides interactive scrolling with visual track and thumb indicators.
+
+**Features:**
+- Scrollbar thumb for scroll position feedback
+- Interactive dragging for direct scroll control
+- Wheel event support for incremental scrolling
+- Keyboard navigation (arrow keys, Page Up/Down, Home/End)
+
+## r10-loading-empty
+
+**R10 Loading/Empty States — Canonical UI Patterns**
+
+Loading and empty states follow furnished UI principles: icon + message + action, never blank.
+
+**Features:**
+- Empty state pattern: muted icon, message, call-to-action
+- Loading state: shows stale data when available, never blank fetch
+- 300ms threshold before showing loading indicator
+- Furnished state transitions with maintained geometry
 
 ## r1-theme-roles-scope
 
