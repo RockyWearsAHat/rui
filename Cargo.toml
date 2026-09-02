@@ -27,6 +27,10 @@ exclude = ["/.github"]
 # this library never has to know how to write `S` down; see `src/reload.rs`.
 reload = []
 
+# Wayland backend for Linux systems using the Wayland display protocol.
+# Off by default; X11 is the default backend on Unix. Enable with `--features wayland`.
+wayland = []
+
 [lints.rust]
 # Not `forbid`: opening a window is the one thing that cannot be done without
 # calling the platform. Every `unsafe` in the crate is inside `src/shell/platform/`,
