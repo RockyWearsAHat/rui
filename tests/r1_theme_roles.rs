@@ -18,17 +18,13 @@ use rui::{Appearance, FontId, Height, Space, TextRole, Theme};
 fn theme_resolves_text_roles() {
     let theme = Theme::new(Appearance::Light, FontId::default(), FontId::default());
 
-    // Verify each TextRole resolves to a consistent size
-    assert!(theme.text_size(TextRole::Title) > 0.0);
-    assert!(theme.text_size(TextRole::Heading) > 0.0);
-    assert!(theme.text_size(TextRole::Body) > 0.0);
-    assert!(theme.text_size(TextRole::Caption) > 0.0);
-    assert!(theme.text_size(TextRole::Micro) > 0.0);
-    assert!(theme.text_size(TextRole::Code) > 0.0);
-
-    // Title should be largest, Micro should be smallest
-    assert!(theme.text_size(TextRole::Title) > theme.text_size(TextRole::Body));
-    assert!(theme.text_size(TextRole::Body) > theme.text_size(TextRole::Micro));
+    // Verify each TextRole resolves to the expected size
+    assert_eq!(theme.text_size(TextRole::Title), 15.0);
+    assert_eq!(theme.text_size(TextRole::Heading), 10.5);
+    assert_eq!(theme.text_size(TextRole::Body), 13.0);
+    assert_eq!(theme.text_size(TextRole::Caption), 11.5);
+    assert_eq!(theme.text_size(TextRole::Micro), 9.5);
+    assert_eq!(theme.text_size(TextRole::Code), 11.5);
 }
 
 #[test]
