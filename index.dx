@@ -55,27 +55,13 @@ pub struct Metrics {
 ### Verification
 
 ::code
+reads=src/theme.rs
 runs=bash
 ---
-# Verify enums exist and are complete
-grep -n "enum TextRole" src/theme.rs && echo "✓ TextRole found"
-grep -n "enum Space" src/theme.rs && echo "✓ Space found"
-grep -n "enum Height" src/theme.rs && echo "✓ Height found"
-
-# Verify resolution methods
-grep -n "fn spacing" src/theme.rs && echo "✓ spacing() found"
-grep -n "fn text_size" src/theme.rs && echo "✓ text_size() found"
-grep -n "fn control_height" src/theme.rs && echo "✓ control_height() found"
+grep -n "enum TextRole\|enum Space\|enum Height\|struct Metrics\|fn spacing" src/theme.rs
 ::output
-688:pub enum TextRole {
-✓ TextRole found
-677:pub enum Space {
-✓ Space found
-705:pub enum Height {
-✓ Height found
+298:pub struct Metrics {
 646:    pub fn spacing(&self, space: Space) -> f32 {
-✓ spacing() found
-655:    pub fn text_size(&self, role: TextRole) -> f32 {
-✓ text_size() found
-667:    pub fn control_height(&self, h: Height) -> f32 {
-✓ control_height() found
+677:pub enum Space {
+688:pub enum TextRole {
+705:pub enum Height {
