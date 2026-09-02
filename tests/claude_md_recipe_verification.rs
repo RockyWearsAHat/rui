@@ -279,6 +279,65 @@ fn extract_recipe_2_commits(text: &str) -> Vec<CommitInfo> {
     commits
 }
 
+fn extract_recipe_3_commits(text: &str) -> Vec<CommitInfo> {
+    let recipe_3_start = match text.find("## Recipe 3: Checkbox Control") {
+        Some(pos) => pos,
+        None => return Vec::new(),
+    };
+
+    let recipe_3_end = text[recipe_3_start..]
+        .find("## Widget Exemplars")
+        .map(|pos| recipe_3_start + pos)
+        .unwrap_or(text.len());
+
+    let recipe_3_section = &text[recipe_3_start..recipe_3_end];
+
+    // Find the "Commit list" section if it exists
+    let commit_list_start = match recipe_3_section.find("### Commit list") {
+        Some(pos) => recipe_3_start + pos,
+        None => return Vec::new(),
+    };
+
+    // Extract up to the next ### heading or end of recipe
+    let commit_section_text = &text[commit_list_start..recipe_3_end];
+    let commit_section_end = commit_section_text
+        .find("\n### ")
+        .unwrap_or(commit_section_text.len());
+    let commit_list_text = &commit_section_text[..commit_section_end];
+
+    let mut commits = Vec::new();
+    let lines: Vec<&str> = commit_list_text.lines().collect();
+    let mut i = 0;
+
+    let phases = ["Phase 1", "Phase 2", "Phase 3", "Phase 4"];
+    let mut phase_index = 0;
+
+    while i < lines.len() && phase_index < phases.len() {
+        let line = lines[i];
+        if line.contains("- Commit:") && line.contains('`') {
+            let mut sha = String::new();
+
+            // Extract SHA from backticks
+            if let Some(start) = line.find('`') {
+                if let Some(end) = line[start + 1..].find('`') {
+                    sha = line[start + 1..start + 1 + end].to_string();
+                }
+            }
+
+            if !sha.is_empty() {
+                commits.push(CommitInfo {
+                    phase: phases[phase_index].to_string(),
+                    sha,
+                });
+                phase_index += 1;
+            }
+        }
+        i += 1;
+    }
+
+    commits
+}
+
 #[test]
 fn recipe_1_claude_md_references_extracted_docs() {
     let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
@@ -384,4 +443,19 @@ fn recipe_1_claude_md_has_implementation_guide() {
     );
 
     println!("✓ CLAUDE.md Recipe 1 has complete implementation guidance for new backends");
+}
+
+#[test]
+fn parse_recipe_3() {
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+    let commits = extract_recipe_3_commits(&claude_md);
+
+    // Recipe 3 (Checkbox) is a widget exemplar pattern, not an implementation,
+    // so no commit SHAs are documented in CLAUDE.md
+    assert!(
+        commits.is_empty(),
+        "Recipe 3 should have no commits (it's a widget exemplar pattern, not an implementation)"
+    );
+
+    println!("Recipe 3: no commit SHAs documented");
 }
