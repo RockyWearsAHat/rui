@@ -135,6 +135,41 @@ All 27 widget functions in `src/widgets.rs` have been mapped to their constant u
 | Metrics::DEFAULT.hairline | divider, section | 156, 493 |
 | Metrics::DEFAULT.row_height | segmented | 377 |
 
+## Duplicate Constants Analysis
+
+**Definition**: Constants referenced by 2 or more widget functions.
+
+### Duplicate Constants Summary
+
+| Constant | Usage Count | Widget Functions | Line Numbers |
+|----------|-------------|------------------|--------------|
+| **CODE_SIZE** | 2 | code, field | 130, 199 |
+| **HEADING_SIZE** | 2 | heading, tag | 102, 221 |
+| **Metrics::DEFAULT.hairline** | 2 | divider, section | 156, 493 |
+| **Metrics::DEFAULT.padding** | 3 | panel, button, tabs | 150, 178, 338 |
+| **Metrics::DEFAULT.gap** | 5 | field, tag, field_row, field_group, section | 198, 217, 522, 547, 499 |
+| **Metrics::DEFAULT.control_height** | 5 | button, field, tabs, segmented, field_group | 177, 197, 354, 389, 543 |
+
+**Total**: 6 duplicate constants across 15 widget references
+
+### Non-Duplicate Constants (single use)
+
+| Constant | Used By | Line |
+|----------|---------|------|
+| TITLE_SIZE | title | 91 |
+| CAPTION_SIZE | caption | 111 |
+| MICRO_SIZE | micro | 118 |
+| FIGURE_SIZE | figure | 125 |
+| Metrics::DEFAULT.gap_small | star_rating | 417 |
+| Metrics::DEFAULT.row_height | segmented | 377 |
+| TAG_HEIGHT | tag | 218 |
+| FIELD_ROW_LABEL_WIDTH | field_row, field_group | 521, 542 |
+| HEADING_TRACKING | heading | 103 |
+
+**Note**: TAG_HEIGHT, FIELD_ROW_LABEL_WIDTH, and HEADING_TRACKING are widget-specific, not duplicates.
+
+---
+
 ## Findings
 
 ### Widgets Using Theme Constants
