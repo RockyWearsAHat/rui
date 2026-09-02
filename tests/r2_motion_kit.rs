@@ -14,6 +14,14 @@ use rui::memory::Memory;
 use rui::motion::{Easing, SlideDirection, Spring, Transition};
 use std::time::Duration;
 
+fn theme() -> rui::Theme {
+    rui::Theme::new(
+        rui::Appearance::Dark,
+        rui::FontId::FIRST,
+        rui::FontId::FIRST,
+    )
+}
+
 /// Easing functions should exist for standard animation curves.
 #[test]
 fn easing_functions_are_available() {
@@ -154,18 +162,18 @@ fn memory_enables_deferred_operations() {
 
     // Before 50ms, operation should not fire
     // ~60 fps = 16.67ms per frame, so 0.0167s
-    memory.begin_frame(Duration::from_secs_f32(0.0167));
+    memory.begin_frame(Duration::from_secs_f32(0.0167), &theme());
     assert!(!memory.should_defer_fire(id), "Should not fire at 0.0167s");
 
     // After 50ms accumulated time (3 frames), operation should be ready
-    memory.begin_frame(Duration::from_secs_f32(0.0167));
+    memory.begin_frame(Duration::from_secs_f32(0.0167), &theme());
     assert!(!memory.should_defer_fire(id), "Should not fire at 0.0334s");
 
-    memory.begin_frame(Duration::from_secs_f32(0.0167));
+    memory.begin_frame(Duration::from_secs_f32(0.0167), &theme());
     assert!(memory.should_defer_fire(id), "Should fire after ~50ms");
 
     // Operation should fire exactly once
-    memory.begin_frame(Duration::from_secs_f32(0.0167));
+    memory.begin_frame(Duration::from_secs_f32(0.0167), &theme());
     assert!(!memory.should_defer_fire(id), "Should only fire once");
 }
 
