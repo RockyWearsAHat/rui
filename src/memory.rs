@@ -243,6 +243,10 @@ pub struct Memory {
     /// opens beside the text being composed rather than in the corner of the
     /// screen.
     caret_area: Option<Rect>,
+    /// Deferred operations: id -> time when it should fire.
+    deferred: HashMap<Id, f32>,
+    /// Total accumulated time since start (in seconds).
+    accumulated_time: f32,
 }
 
 impl Memory {
@@ -427,12 +431,31 @@ impl Memory {
         const SHORTEST: f32 = 1.0 / 1000.0;
 
         self.delta = elapsed.as_secs_f32().clamp(SHORTEST, LONGEST);
+        self.accumulated_time += self.delta;
         self.frame = self.frame.wrapping_add(1);
         self.animating = false;
         // Where the caret is belongs to the frame that draws it. Kept from the
         // last one, it would go on pointing at a field that has since lost the
         // keyboard or scrolled off the screen.
         self.caret_area = None;
+    }
+
+    /// Schedule an operation to fire after `delay_seconds` has elapsed.
+    pub fn defer(&mut self, id: Id, delay_seconds: f32) {
+        self.deferred
+            .insert(id, self.accumulated_time + delay_seconds);
+        self.request_frame();
+    }
+
+    /// Whether a deferred operation scheduled with `defer()` should fire now.
+    pub fn should_defer_fire(&mut self, id: Id) -> bool {
+        if let Some(fire_time) = self.deferred.get(&id) {
+            if self.accumulated_time >= *fire_time {
+                self.deferred.remove(&id);
+                return true;
+            }
+        }
+        false
     }
 
     /// Whether anything is mid-animation and the frame should be drawn again.
