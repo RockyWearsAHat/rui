@@ -133,6 +133,8 @@ fn recipe_1_documentation_files_exist() {
         "STEP_4_RECIPE_1_VERIFICATION_GATES.md",
         "STEP_4_RECIPE_1_CROSS_MODULE_CONCERNS.md",
         "STEP_4_RECIPE_1_SUMMARY.md",
+        "STEP_4_RECIPE_1_COORDINATE_CONTRACT.md",
+        "STEP_4_RECIPE_1_EVENT_TRANSLATION.md",
     ];
 
     println!("Checking Recipe 1 documentation files...");
@@ -364,4 +366,124 @@ fn recipe_1_validation_proves_template_is_replicable() {
     );
 
     println!("✓ Recipe 1 validation proves template is actionable for new implementers");
+}
+
+#[test]
+fn recipe_1_coordinate_contract_complete() {
+    let coord_path = "STEP_4_RECIPE_1_COORDINATE_CONTRACT.md";
+    let content = fs::read_to_string(coord_path).expect("Failed to read coordinate contract");
+
+    // Verify all required sections exist
+    let required_sections = [
+        "Coordinate Systems",
+        "Transformation Rules",
+        "Scale Factor Detection",
+        "Coordinate Contract Implementation Checklist",
+        "Common Pitfalls",
+        "Verification",
+    ];
+
+    let mut found_sections = 0;
+    for section in &required_sections {
+        if content.contains(section) {
+            println!("✓ Coordinate contract has section: {}", section);
+            found_sections += 1;
+        } else {
+            println!("✗ Coordinate contract missing section: {}", section);
+        }
+    }
+
+    // Verify key transformation formulas are documented
+    assert!(
+        content.contains("logical_x = device_x / scale_factor"),
+        "Missing key transformation formula: logical = device / scale"
+    );
+    assert!(
+        content.contains("device_x = logical_x * scale_factor"),
+        "Missing key transformation formula: device = logical * scale"
+    );
+
+    // Verify pitfalls and tests are documented
+    assert!(
+        content.contains("Common Pitfalls"),
+        "Missing common pitfalls section"
+    );
+    assert!(
+        content.contains("Verification"),
+        "Missing verification section"
+    );
+
+    println!(
+        "✓ Recipe 1 coordinate contract: {}/{} sections found",
+        found_sections,
+        required_sections.len()
+    );
+}
+
+#[test]
+fn recipe_1_event_translation_complete() {
+    let event_path = "STEP_4_RECIPE_1_EVENT_TRANSLATION.md";
+    let content = fs::read_to_string(event_path).expect("Failed to read event translation");
+
+    // Verify all required event types are documented
+    let required_events = [
+        "Pointer Events",
+        "Keyboard Events",
+        "Wheel Events",
+        "Composition Input",
+        "Focus Events",
+        "Resize Events",
+    ];
+
+    let mut found_events = 0;
+    for event_type in &required_events {
+        if content.contains(event_type) {
+            println!("✓ Event translation has: {}", event_type);
+            found_events += 1;
+        } else {
+            println!("✗ Event translation missing: {}", event_type);
+        }
+    }
+
+    // Verify implementation checklist exists
+    assert!(
+        content.contains("Implementation Checklist"),
+        "Missing implementation checklist"
+    );
+
+    // Verify testing strategy is documented
+    assert!(
+        content.contains("Testing Strategy"),
+        "Missing testing strategy section"
+    );
+
+    // Verify common pitfalls are documented
+    assert!(
+        content.contains("Common Pitfalls"),
+        "Missing common pitfalls in event translation"
+    );
+
+    println!(
+        "✓ Recipe 1 event translation: {}/{} event types documented",
+        found_events,
+        required_events.len()
+    );
+}
+
+#[test]
+fn recipe_1_backend_specialized_docs_referenced() {
+    let analysis_path = "STEP_4_RECIPE_1_ANALYSIS.md";
+    let analysis = fs::read_to_string(analysis_path).expect("Failed to read analysis");
+
+    // Verify analysis references the specialized backend documents
+    assert!(
+        analysis.contains("COORDINATE_CONTRACT") || analysis.contains("coordinate"),
+        "Analysis should reference coordinate contract document"
+    );
+    assert!(
+        analysis.contains("EVENT_TRANSLATION") || analysis.contains("event translation"),
+        "Analysis should reference event translation document"
+    );
+
+    println!("✓ Recipe 1 analysis references coordinate and event translation specializations");
 }
