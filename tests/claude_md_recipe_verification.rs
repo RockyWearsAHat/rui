@@ -459,3 +459,131 @@ fn parse_recipe_3() {
 
     println!("Recipe 3: no commit SHAs documented");
 }
+
+#[test]
+fn recipe_3_documentation_files_exist() {
+    let doc_files = [
+        "STEP_5_RECIPE_3_ANALYSIS.md",
+        "STEP_5_RECIPE_3_VERIFICATION_GATES.md",
+        "STEP_5_RECIPE_3_CROSS_MODULE_CONCERNS.md",
+        "STEP_5_RECIPE_3_SUMMARY.md",
+    ];
+
+    println!("Checking Recipe 3 documentation files...");
+
+    let mut found_count = 0;
+    for file in &doc_files {
+        if fs::metadata(file).is_ok() {
+            println!("✓ {} exists", file);
+            found_count += 1;
+        } else {
+            println!("✗ {} missing", file);
+        }
+    }
+
+    println!(
+        "✓ Recipe 3 documentation files: {}/{} found",
+        found_count,
+        doc_files.len()
+    );
+
+    assert_eq!(
+        found_count,
+        doc_files.len(),
+        "All Recipe 3 documentation files should exist"
+    );
+}
+
+#[test]
+fn recipe_3_claude_md_references_extracted_docs() {
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+
+    // Verify Recipe 3 section exists
+    assert!(
+        claude_md.contains("## Recipe 3: Checkbox Control"),
+        "Recipe 3 section not found in CLAUDE.md"
+    );
+
+    // Verify Recipe 3 section references extracted documentation
+    let recipe_3_start = claude_md.find("## Recipe 3: Checkbox Control").unwrap();
+    let widget_exemplars_start = claude_md
+        .find("## Widget Exemplars")
+        .unwrap_or(claude_md.len());
+    let recipe_3_section = &claude_md[recipe_3_start..widget_exemplars_start];
+
+    let extracted_docs = [
+        ("STEP_5_RECIPE_3_ANALYSIS.md", "four-phase breakdown"),
+        (
+            "STEP_5_RECIPE_3_VERIFICATION_GATES.md",
+            "acceptance criteria",
+        ),
+        (
+            "STEP_5_RECIPE_3_CROSS_MODULE_CONCERNS.md",
+            "module interactions",
+        ),
+        ("STEP_5_RECIPE_3_SUMMARY.md", "quick reference"),
+    ];
+
+    let mut found_count = 0;
+    for (doc_file, description) in &extracted_docs {
+        if recipe_3_section.contains(doc_file) {
+            println!(
+                "✓ CLAUDE.md Recipe 3 references {}: {}",
+                doc_file, description
+            );
+            found_count += 1;
+        } else {
+            println!(
+                "✗ CLAUDE.md Recipe 3 missing reference to {}: {}",
+                doc_file, description
+            );
+        }
+    }
+
+    println!(
+        "✓ CLAUDE.md Recipe 3 references {}/{} extracted documentation files",
+        found_count,
+        extracted_docs.len()
+    );
+
+    assert_eq!(
+        found_count,
+        extracted_docs.len(),
+        "CLAUDE.md Recipe 3 should reference all extracted documentation files"
+    );
+}
+
+#[test]
+fn recipe_3_claude_md_has_implementation_guide() {
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+
+    // Verify Recipe 3 section has "How to Implement" or similar guidance
+    let recipe_3_start = claude_md.find("## Recipe 3: Checkbox Control").unwrap();
+    let widget_exemplars_start = claude_md
+        .find("## Widget Exemplars")
+        .unwrap_or(claude_md.len());
+    let recipe_3_section = &claude_md[recipe_3_start..widget_exemplars_start];
+
+    assert!(
+        recipe_3_section.contains("How to Implement")
+            || recipe_3_section.contains("How to use")
+            || recipe_3_section.contains("implementation"),
+        "Recipe 3 should have guidance on how to implement custom widgets"
+    );
+
+    // Verify it mentions "new implementers"
+    assert!(
+        recipe_3_section.contains("implementer") || recipe_3_section.contains("implementers"),
+        "Recipe 3 should address future implementers"
+    );
+
+    // Verify it explains the order to read documentation
+    assert!(
+        recipe_3_section.contains("Start here")
+            || recipe_3_section.contains("order")
+            || recipe_3_section.contains("Begin"),
+        "Recipe 3 should guide implementers on which doc to read first"
+    );
+
+    println!("✓ CLAUDE.md Recipe 3 has complete implementation guidance for custom widgets");
+}
