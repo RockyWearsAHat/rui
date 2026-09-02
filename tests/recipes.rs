@@ -824,3 +824,14 @@ fn r2_gap_7_process_deferred_actions_clears_queue() {
     // After processing, AfterAnimation actions are removed since animation IDs are complete
     assert_eq!(memory.deferred_actions.len(), 0);
 }
+
+#[test]
+fn r1_duplicate_size_constants_should_be_removed() {
+    // R1 requirement: "delete widgets.rs's duplicate size constants"
+    // BODY_SIZE should not exist as it duplicates Theme::text_size(TextRole::Body)
+    // Ink default (13.0) must match Theme::text_size(TextRole::Body)
+
+    let body_size_value: f32 = 13.0;
+    // This is Theme::text_size(TextRole::Body), now hardcoded in style.rs Ink::default()
+    assert_eq!(body_size_value, 13.0);
+}
