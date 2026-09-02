@@ -90,29 +90,38 @@ fn step3_metrics_default_values_exist() {
 }
 
 #[test]
-fn step3_unmatched_literals_documented() {
-    // STEP 3 identified literals without Metrics counterparts that should be left as-is:
-    // - 18.0 in tag() — widget-specific height, not a general control height
-    // - 78.0 in field_row() — label width for layout alignment, not a general metric
+fn step3_unmatched_literals_extracted_as_constants() {
+    // STEP 3 extracted widget-specific values that don't match Metrics as named constants:
+    // - TAG_HEIGHT: 18.0 (widget-specific height in tag())
+    // - FIELD_ROW_LABEL_WIDTH: 78.0 (label width in field_row())
+    //
+    // These are NOT MATCHED to Metrics::DEFAULT because they are widget-specific,
+    // not general layout metrics reusable across the system.
 
     let src = std::fs::read_to_string("src/widgets.rs").expect("Read src/widgets.rs");
 
-    // Verify these unmatched literals remain (deliberately not refactored)
-    let tag_height_18 = src.matches(".h(18.0)").count();
-    let label_width_78 = src.matches(".w(78.0)").count();
-
-    println!("STEP 3 Unmatched literals (deliberately left):");
-    println!("  .h(18.0) in tag(): {} instance", tag_height_18);
-    println!("  .w(78.0) in field_row(): {} instances", label_width_78);
-
+    // Verify the constants are defined
     assert!(
-        tag_height_18 >= 1,
-        "tag() height 18.0 should remain (no Metrics match)"
+        src.contains("const TAG_HEIGHT: f32 = 18.0;"),
+        "TAG_HEIGHT constant should be defined"
     );
     assert!(
-        label_width_78 >= 2,
-        "field_row() label width 78.0 should remain (widget-specific)"
+        src.contains("const FIELD_ROW_LABEL_WIDTH: f32 = 78.0;"),
+        "FIELD_ROW_LABEL_WIDTH constant should be defined"
     );
 
-    println!("✓ Unmatched literals correctly preserved");
+    // Verify they're used in the code (replacing hardcoded literals)
+    assert!(
+        src.contains(".h(TAG_HEIGHT)"),
+        "tag() should use TAG_HEIGHT constant"
+    );
+    assert!(
+        src.contains(".w(FIELD_ROW_LABEL_WIDTH)"),
+        "field_row() should use FIELD_ROW_LABEL_WIDTH constant"
+    );
+
+    println!("STEP 3 Widget-specific constants extracted:");
+    println!("  TAG_HEIGHT: 18.0 (NOT MATCHED — tag-specific)");
+    println!("  FIELD_ROW_LABEL_WIDTH: 78.0 (NOT MATCHED — layout-specific)");
+    println!("✓ Constants extracted and used correctly");
 }
