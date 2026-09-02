@@ -719,3 +719,108 @@ fn enter_exit_scale_animation_created() {
     let scale = EnterExit::Scale { duration: 0.3 };
     assert!(matches!(scale, EnterExit::Scale { .. }));
 }
+
+// STEP 20 Phase 3: Easing Enum & Deferred Actions Acceptance Tests (Gaps 3 & 7)
+
+#[test]
+fn r2_gap_3_easing_enum_all_variants_exist() {
+    use rui::memory::Easing;
+    let _ = Easing::Linear;
+    let _ = Easing::EaseIn;
+    let _ = Easing::EaseOut;
+    let _ = Easing::EaseInOut;
+    let _ = Easing::EaseInCirc;
+    let _ = Easing::EaseOutCirc;
+}
+
+#[test]
+fn r2_gap_3_easing_linear_constant_speed() {
+    use rui::memory::Easing;
+    let linear = Easing::Linear;
+
+    assert_eq!(linear.apply(0.0), 0.0);
+    assert_eq!(linear.apply(0.25), 0.25);
+    assert_eq!(linear.apply(0.5), 0.5);
+    assert_eq!(linear.apply(0.75), 0.75);
+    assert_eq!(linear.apply(1.0), 1.0);
+}
+
+#[test]
+fn r2_gap_3_easing_in_vs_out_different_curves() {
+    use rui::memory::Easing;
+
+    let ease_in = Easing::EaseIn;
+    let ease_out = Easing::EaseOut;
+
+    // At 50% progress, ease-in should be slower than ease-out
+    let in_val = ease_in.apply(0.5);
+    let out_val = ease_out.apply(0.5);
+    assert!(
+        in_val < out_val,
+        "EaseIn({}) should be < EaseOut({})",
+        in_val,
+        out_val
+    );
+}
+
+#[test]
+fn r2_gap_7_deferred_action_struct_exists() {
+    use rui::memory::{DeferWhen, DeferredAction, Id};
+
+    let id = Id::new("test");
+    let action = DeferredAction {
+        when: DeferWhen::AfterAnimation,
+        id,
+    };
+    assert_eq!(action.id, id);
+    assert_eq!(action.when, DeferWhen::AfterAnimation);
+}
+
+#[test]
+fn r2_gap_7_deferred_when_enum_variants_exist() {
+    use rui::memory::DeferWhen;
+    let _ = DeferWhen::AfterAnimation;
+    let _ = DeferWhen::NextFrame;
+}
+
+#[test]
+fn r2_gap_7_memory_after_animation_registers_action() {
+    use rui::memory::{Id, Memory};
+
+    let mut memory = Memory::new();
+    let anim_id = Id::new("fade");
+
+    // Should not panic
+    memory.after_animation(anim_id);
+    assert!(!memory.deferred_actions.is_empty());
+}
+
+#[test]
+fn r2_gap_7_animation_is_complete_checks_all_types() {
+    use rui::memory::{Id, Memory};
+
+    let memory = Memory::new();
+    let test_id = Id::new("test");
+
+    // Should be complete when no animations are active
+    assert!(memory.animation_is_complete(test_id));
+}
+
+#[test]
+fn r2_gap_7_process_deferred_actions_clears_queue() {
+    use rui::memory::{Id, Memory};
+
+    let mut memory = Memory::new();
+    let id1 = Id::new("a1");
+    let id2 = Id::new("a2");
+
+    memory.after_animation(id1);
+    memory.after_animation(id2);
+    assert_eq!(memory.deferred_actions.len(), 2);
+
+    // Process should remove AfterAnimation actions since no animations are active
+    // (animation_is_complete returns true when animation was never started)
+    memory.process_deferred_actions();
+    // After processing, AfterAnimation actions are removed since animation IDs are complete
+    assert_eq!(memory.deferred_actions.len(), 0);
+}

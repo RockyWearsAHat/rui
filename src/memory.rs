@@ -413,7 +413,7 @@ pub struct Memory {
     springs: HashMap<Id, (Spring, f32, f32)>,
     /// Deferred actions waiting to execute.
     /// Used in Phase 3 for post-animation callbacks.
-    deferred_actions: Vec<DeferredAction>,
+    pub deferred_actions: Vec<DeferredAction>,
 }
 
 impl Memory {
@@ -804,7 +804,7 @@ impl Memory {
     }
 
     /// Check if an animation has completed (no longer animating under this ID).
-    pub(crate) fn animation_is_complete(&self, id: Id) -> bool {
+    pub fn animation_is_complete(&self, id: Id) -> bool {
         !self.eased.contains_key(&id)
             && !self.springs.contains_key(&id)
             && !self.cycles.contains_key(&id)
@@ -814,7 +814,7 @@ impl Memory {
     ///
     /// Called during frame end to run post-animation callbacks.
     /// Clears completed actions from the queue.
-    pub(crate) fn process_deferred_actions(&mut self) {
+    pub fn process_deferred_actions(&mut self) {
         // Collect which actions to remove to avoid borrow conflicts
         let mut to_remove = Vec::new();
         for (i, action) in self.deferred_actions.iter().enumerate() {
