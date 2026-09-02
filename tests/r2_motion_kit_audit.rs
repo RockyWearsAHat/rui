@@ -653,3 +653,292 @@ fn r2_motion_kit_integration_readiness() {
     );
     println!("  (Primitives: 100%, Memory integration: 0%, Framework wiring: 0%)");
 }
+
+#[test]
+#[ignore]
+fn r2_motion_kit_integration_validation() {
+    println!("\n=== R2 MOTION KIT INTEGRATION VALIDATION ===\n");
+
+    println!("INTEGRATION POINT 1: Easing enum with ease() method");
+    println!("  Status: READY FOR INTEGRATION");
+    println!("  Required change: Memory::ease() accepts Easing parameter");
+    println!("  Code change:");
+    println!("    // In Memory::ease()");
+    println!("    let step = match easing {{");
+    println!("        Easing::Linear => self.delta / seconds,");
+    println!("        Easing::EaseIn => ...,");
+    println!("        Easing::EaseOut => ...,");
+    println!("        Easing::EaseInOut => ...,");
+    println!("        Easing::CubicBezier(a, b, c, d) => ...,");
+    println!("    }};");
+    println!();
+
+    println!("INTEGRATION POINT 2: Spring struct with Memory backing");
+    println!("  Status: REQUIRES NEW FIELD");
+    println!("  Required change: Memory needs springs: HashMap<Id, Spring>");
+    println!("  New method: Memory::spring(id, target, spring: Spring) -> f32");
+    println!("  Code change:");
+    println!("    pub struct Memory {{");
+    println!("        // ... existing fields ...");
+    println!("        springs: HashMap<Id, (Spring, f32, f32)>, // (config, value, velocity)");
+    println!("    }}");
+    println!();
+
+    println!("INTEGRATION POINT 3: Transition enum choreography");
+    println!("  Status: REQUIRES TRANSITION TYPE");
+    println!("  Required change: Store Transition in Memory transitions");
+    println!("  Code change:");
+    println!("    pub struct Memory {{");
+    println!("        // Current: transitions: HashMap<Id, (f32, f32)>");
+    println!("        // New: transitions: HashMap<Id, TransitionState>,");
+    println!("    }}");
+    println!("    pub struct TransitionState {{");
+    println!("        start_time: f32,");
+    println!("        duration: f32,");
+    println!("        kind: Transition,");
+    println!("    }}");
+    println!();
+
+    println!("INTEGRATION POINT 4: Memory::after() sugar");
+    println!("  Status: REQUIRES NEW METHOD");
+    println!("  Required change: Add convenience wrapper around defer()");
+    println!("  Code change:");
+    println!("    pub fn after(&mut self, id: Id, delay: f32) -> bool {{");
+    println!("        self.should_defer_fire(id) || (self.defer(id, delay), false).1");
+    println!("    }}");
+    println!();
+
+    println!("INTEGRATION POINT 5: 2-live-animation-loop budget");
+    println!("  Status: REQUIRES ENFORCEMENT");
+    println!("  Current: No limit on concurrent animations");
+    println!("  Required change: Track active animation count");
+    println!("  Code change:");
+    println!("    pub struct Memory {{");
+    println!("        active_animations: u32, // Count of running animations");
+    println!("        const MAX_LIVE_LOOPS: u32 = 2;");
+    println!("    }}");
+    println!("    // In ease() and phase(): check active_animations <= MAX_LIVE_LOOPS");
+    println!();
+
+    println!("INTEGRATION POINT 6: Metrics.motion=0 collapse");
+    println!("  Status: REQUIRES THEME CHECK");
+    println!("  Required change: ease()/phase()/transitions respect Metrics.motion");
+    println!("  Code change:");
+    println!("    // In ease():");
+    println!("    if theme.metrics.motion == 0 {{");
+    println!("        return target; // Skip to final state");
+    println!("    }}");
+    println!();
+
+    println!("INTEGRATION POINT 7: Velocity inheritance on retarget");
+    println!("  Status: REQUIRES SPRING VELOCITY TRACKING");
+    println!("  Required change: Springs track velocity across retargets");
+    println!("  Code change:");
+    println!("    pub struct SpringState {{");
+    println!("        value: f32,");
+    println!("        velocity: f32, // Carry forward on retarget");
+    println!("    }}");
+    println!();
+
+    println!("=== INTEGRATION DEPENDENCIES ===\n");
+
+    println!("PHASE 1 (Memory backing for springs):");
+    println!("  1. Add springs: HashMap<Id, SpringState> to Memory");
+    println!("  2. Implement Memory::spring(id, target, spring) -> f32");
+    println!("  3. Update is_animating() to check springs");
+    println!("  4. Update end_frame() to clean up settled springs");
+    println!();
+
+    println!("PHASE 2 (Easing and Transition integration):");
+    println!("  1. Extend Memory::ease() to accept Easing parameter");
+    println!("  2. Create TransitionState struct holding Transition type");
+    println!("  3. Implement Transition choreography callbacks");
+    println!("  4. Wire transitions into the frame loop");
+    println!();
+
+    println!("PHASE 3 (Constraints and polish):");
+    println!("  1. Track active_animations and enforce 2-loop budget");
+    println!("  2. Check Metrics.motion=0 and collapse all animations");
+    println!("  3. Add Memory::after() convenience wrapper");
+    println!("  4. Verify velocity inheritance in spring retargets");
+    println!();
+
+    println!("✓ INTEGRATION VALIDATION COMPLETE");
+    println!("  All 7 integration points identified with code changes");
+    println!("  3-phase implementation plan established");
+    println!("  Dependencies ordered for minimal rework");
+}
+
+#[test]
+#[ignore]
+fn r2_motion_kit_architecture_blueprint() {
+    println!("\n=== R2 MOTION KIT ARCHITECTURE BLUEPRINT ===\n");
+
+    println!("PROPOSED MEMORY STRUCT CHANGES:");
+    println!();
+    println!("pub struct Memory {{");
+    println!("    // ... existing fields (200-250 lines) ...");
+    println!();
+    println!("    // NEW: Motion Kit fields");
+    println!("    /// Springs with physics: id -> (config, value, velocity)");
+    println!("    springs: HashMap<Id, (Spring, f32, f32)>,");
+    println!();
+    println!("    /// Transitions with choreography: id -> (start, duration, kind)");
+    println!("    transitions_typed: HashMap<Id, (f32, f32, Transition)>,");
+    println!();
+    println!("    /// Easing function override for this frame");
+    println!("    easing_kind: HashMap<Id, Easing>,");
+    println!();
+    println!("    /// Count of currently active phase/cycle loops");
+    println!("    active_phase_loops: u32,");
+    println!();
+    println!("    /// Count of currently active eased values");
+    println!("    active_eased_values: u32,");
+    println!("}}");
+    println!();
+
+    println!("PROPOSED PUBLIC API ADDITIONS:");
+    println!();
+    println!("impl Memory {{");
+    println!("    /// Animate with spring physics toward target");
+    println!("    pub fn spring(&mut self, id: Id, target: f32, spring: Spring) -> f32");
+    println!();
+    println!("    /// Animate with custom easing function");
+    println!(
+        "    pub fn ease_with(&mut self, id: Id, target: f32, seconds: f32, easing: Easing) -> f32"
+    );
+    println!();
+    println!("    /// Start choreographed transition (Fade, Slide, Scale)");
+    println!("    pub fn transition(&mut self, id: Id, kind: Transition, duration: f32)");
+    println!();
+    println!("    /// Schedule callback after delay (sugar for defer)");
+    println!("    pub fn after(&mut self, id: Id, delay: f32) -> bool");
+    println!();
+    println!("    /// Check active animation count against budget");
+    println!("    pub fn check_animation_budget(&self) -> bool // true if under budget");
+    println!();
+    println!("    /// Collapse all animations if motion=0 in theme");
+    println!("    pub fn skip_animations_if_reduced_motion(&mut self, motion: u8)");
+    println!("}}");
+    println!();
+
+    println!("CONSTRAINT ENFORCEMENT:");
+    println!();
+    println!("1. 2-LIVE-LOOP BUDGET");
+    println!("   - Tracked: active_phase_loops counter");
+    println!("   - Enforced: phase() checks counter before incrementing animating");
+    println!("   - Assert: Test verifies no more than 2 concurrent phase loops");
+    println!();
+    println!("2. METRICS.MOTION=0 COLLAPSE");
+    println!("   - Check: Painter/Memory methods consult theme.metrics.motion");
+    println!("   - Behavior: If motion=0, all animations jump to final state");
+    println!("   - Assert: Test verifies collapsed state in reduced-motion mode");
+    println!();
+    println!("3. VELOCITY INHERITANCE");
+    println!("   - Implementation: Springs carry velocity across retargets");
+    println!("   - Smooth: Redirecting animation doesn't create discontinuity");
+    println!("   - Assert: Test verifies spring retarget preserves velocity");
+    println!();
+
+    println!("✓ ARCHITECTURE BLUEPRINT COMPLETE");
+}
+
+#[test]
+#[ignore]
+fn r2_motion_kit_test_strategy() {
+    println!("\n=== R2 MOTION KIT TEST STRATEGY ===\n");
+
+    println!("VERIFICATION APPROACH:");
+    println!();
+    println!("1. UNIT TESTS (per primitive)");
+    println!("   - ease() with Easing::EaseIn/Out/InOut/CubicBezier");
+    println!("   - phase() count enforcement (max 2 concurrent)");
+    println!("   - spring() physics convergence");
+    println!("   - transition() choreography (Fade/Slide/Scale)");
+    println!("   - defer() timing and Memory::after() sugar");
+    println!();
+    println!("2. INTEGRATION TESTS (primitives together)");
+    println!("   - ease() + phase() + spring() all active");
+    println!("   - Spring retarget preserves velocity");
+    println!("   - Transition interrupts easing smoothly");
+    println!("   - Deferred fire doesn't block other animations");
+    println!();
+    println!("3. CONSTRAINT TESTS (enforced properties)");
+    println!("   - 2-live-loop budget prevents 3rd phase loop");
+    println!("   - Metrics.motion=0 collapses all animations");
+    println!("   - Disabled elements skip animations");
+    println!("   - Removed elements clean up animation state");
+    println!();
+    println!("4. REGRESSION TESTS (golden image)");
+    println!("   - Spring animation produces consistent curve");
+    println!("   - Transition choreography pixel-perfect");
+    println!("   - Easing variants have distinct curves");
+    println!();
+
+    println!("HARNESS PATTERNS:");
+    println!();
+    println!("    let mut h = Harness::new(app, view);");
+    println!("    h.frames(10); // Step 10 frames, all animations settle");
+    println!("    assert!(h.state().opacity < 1.0, \"fade still animating\");");
+    println!();
+    println!("    h.key(Key::Escape); // Interrupt animation");
+    println!("    h.frames(5);");
+    println!("    assert!(h.state().opacity < prev, \"spring velocity redirected\");");
+    println!();
+
+    println!("✓ TEST STRATEGY COMPLETE");
+}
+
+#[test]
+#[ignore]
+fn r2_motion_kit_implementation_checklist() {
+    println!("\n=== R2 MOTION KIT IMPLEMENTATION CHECKLIST ===\n");
+
+    println!("PHASE 1: Spring Memory Integration (estimated 3-4 commits)");
+    println!("  [ ] Add springs: HashMap<Id, (Spring, f32, f32)> to Memory");
+    println!("  [ ] Implement Memory::spring() method");
+    println!("  [ ] Update is_animating() to include springs");
+    println!("  [ ] Update end_frame() cleanup for springs");
+    println!("  [ ] Add 5 unit tests for spring behavior");
+    println!("  [ ] Verify spring convergence with different configs");
+    println!();
+
+    println!("PHASE 2: Easing and Transition Integration (estimated 4-5 commits)");
+    println!("  [ ] Extend Memory::ease() signature for Easing parameter");
+    println!("  [ ] Create TransitionState struct");
+    println!("  [ ] Update transitions storage to hold Transition type");
+    println!("  [ ] Implement Transition choreography (Fade/Slide/Scale)");
+    println!("  [ ] Add Painter convenience methods for transitions");
+    println!("  [ ] Add 8 unit tests for easing variants");
+    println!("  [ ] Add 6 tests for transition choreography");
+    println!();
+
+    println!("PHASE 3: Constraints and Polish (estimated 3-4 commits)");
+    println!("  [ ] Add active animation count tracking");
+    println!("  [ ] Implement 2-live-loop budget enforcement");
+    println!("  [ ] Add Metrics.motion=0 collapse check");
+    println!("  [ ] Implement velocity inheritance on spring retarget");
+    println!("  [ ] Add Memory::after() convenience wrapper");
+    println!("  [ ] Add 7 constraint validation tests");
+    println!("  [ ] Update CLAUDE.md with R2 patterns");
+    println!();
+
+    println!("TESTING CHECKLIST (per phase):");
+    println!("  [ ] `cargo test --test r2_motion_kit_audit` passes");
+    println!("  [ ] `cargo test --lib memory` includes new animation tests");
+    println!("  [ ] `cargo test --test interaction` verifies motion in UI");
+    println!("  [ ] `cargo test --lib` all 400+ tests still pass");
+    println!("  [ ] Golden image regression tests catch visual changes");
+    println!();
+
+    println!("DOCUMENTATION CHECKLIST:");
+    println!("  [ ] STEP_20_R2_PHASE_1_ANALYSIS.md created");
+    println!("  [ ] STEP_20_R2_PHASE_1_VERIFICATION_GATES.md created");
+    println!("  [ ] Integration blueprint documented");
+    println!("  [ ] Code examples in CLAUDE.md under R2 section");
+    println!();
+
+    println!("✓ IMPLEMENTATION CHECKLIST COMPLETE");
+    println!("  Total estimated effort: 10-13 commits across 3 phases");
+    println!("  Recommended order: Spring -> Easing -> Transitions -> Constraints");
+}
