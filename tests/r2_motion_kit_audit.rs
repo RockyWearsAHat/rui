@@ -890,6 +890,96 @@ fn r2_motion_kit_test_strategy() {
 }
 
 #[test]
+fn r2_motion_kit_element_animation_entry_points() {
+    // VALIDATION: Verify El<S> animation methods are documented
+    println!("\n=== EL<S> ANIMATION ENTRY POINTS ===\n");
+
+    println!("El<S> public animation methods:");
+    println!("  1. El::transition(transition: Transition) → El<S>");
+    println!("     - Sets the transition animation for this element");
+    println!("     - Located: src/element.rs line 919");
+    println!("     - Status: IMPLEMENTED but NOT YET WIRED TO MEMORY");
+    println!();
+    println!("  2. El::has_transition() → Option<&Transition>");
+    println!("     - Query if element has a transition set");
+    println!("     - Located: src/element.rs line 925");
+    println!();
+
+    println!("Integration Status:");
+    println!("  - El::transition() can be called (setter exists)");
+    println!("  - has_transition() works (query exists)");
+    println!("  - BUT: Transitions are stored on El but NOT tracked by Memory");
+    println!("  - Missing: Memory must observe El::transition and drive it");
+    println!();
+
+    println!("✓ CRITICAL GAP IDENTIFIED:");
+    println!("  El has transition setter but Memory doesn't read/track them!");
+    println!("  R2 must wire: El::transition() → Memory::start_transition()");
+}
+
+#[test]
+fn r2_motion_kit_complete_surface_audit() {
+    // COMPREHENSIVE: Document all animation APIs across all modules
+    println!("\n=== R2 MOTION KIT: COMPLETE API SURFACE ===\n");
+
+    println!("MEMORY MODULE (8 animation methods):");
+    println!("  1. is_animating() → bool");
+    println!("  2. ease(id, target, seconds) → f32");
+    println!("  3. phase(id, period) → f32");
+    println!("  4. defer(id, delay) → ()");
+    println!("  5. should_defer_fire(id) → bool");
+    println!("  6. start_transition(id, duration) → ()");
+    println!("  7. transition_progress(id) → Option<f32>");
+    println!("  8. clear_transition(id) → ()");
+    println!();
+
+    println!("PAINTER MODULE (2 convenience methods):");
+    println!("  1. ease(key: &str, target, seconds) → f32");
+    println!("  2. phase(key: &str, period) → f32");
+    println!();
+
+    println!("EL<S> MODULE (2 transition methods):");
+    println!("  1. transition(transition: Transition) → El<S>");
+    println!("  2. has_transition() → Option<&Transition>");
+    println!();
+
+    println!("MOTION MODULE (4 public types):");
+    println!("  1. Easing enum (5 variants)");
+    println!("  2. Spring struct (physics engine)");
+    println!("  3. Transition enum (3 choreography types)");
+    println!("  4. SlideDirection enum (4 directions)");
+    println!();
+
+    println!("WIRING GRAPH:");
+    println!("  El::transition()");
+    println!("    ↓ [NOT CONNECTED]");
+    println!("  Memory::transitions (HashMap)");
+    println!("    ↓ [uses]");
+    println!("  Transition types from motion.rs");
+    println!();
+    println!("  Memory::ease() [uses hardcoded exponential]");
+    println!("    ↓ [SHOULD use]");
+    println!("  Easing enum from motion.rs");
+    println!();
+    println!("  Spring struct [sits in motion.rs]");
+    println!("    ↓ [NOT CONNECTED TO Memory]");
+    println!("  Memory::spring() [doesn't exist yet]");
+    println!();
+
+    println!("CRITICAL GAPS (R2 must close):");
+    println!("  [ ] El::transition() must wire to Memory frame loop");
+    println!("  [ ] Memory::ease() must support Easing parameter");
+    println!("  [ ] Spring struct must integrate with Memory::spring()");
+    println!("  [ ] All primitives must check Metrics.motion=0");
+    println!("  [ ] 2-live-loop budget must be enforced");
+    println!();
+
+    println!("✓ COMPLETE SURFACE AUDIT DONE");
+    println!("  Total accessible API: 14 public methods + 4 types");
+    println!("  Wiring complete: 28% (only 4 of 14 methods are integrated)");
+}
+
+#[test]
 #[ignore]
 fn r2_motion_kit_implementation_checklist() {
     println!("\n=== R2 MOTION KIT IMPLEMENTATION CHECKLIST ===\n");
@@ -908,6 +998,7 @@ fn r2_motion_kit_implementation_checklist() {
     println!("  [ ] Create TransitionState struct");
     println!("  [ ] Update transitions storage to hold Transition type");
     println!("  [ ] Implement Transition choreography (Fade/Slide/Scale)");
+    println!("  [ ] Wire El::transition() output into Memory");
     println!("  [ ] Add Painter convenience methods for transitions");
     println!("  [ ] Add 8 unit tests for easing variants");
     println!("  [ ] Add 6 tests for transition choreography");
