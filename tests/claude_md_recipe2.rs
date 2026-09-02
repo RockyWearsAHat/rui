@@ -359,6 +359,53 @@ struct RecipeCommit {
     lines: usize,
 }
 
+#[test]
+fn parse_recipe_1_has_no_commits() {
+    // Recipe 1 (WASM) is documented as a template/pattern, not a concrete feature implementation.
+    // It should have no "Commit list" section with real git SHAs.
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+
+    let recipe_1_start = match claude_md.find("## Recipe 1: Adding a WASM Backend") {
+        Some(pos) => pos,
+        None => return, // Recipe 1 doesn't exist is fine — test passes vacuously
+    };
+
+    let recipe_1_end = claude_md[recipe_1_start..]
+        .find("## Recipe 2:")
+        .map(|pos| recipe_1_start + pos)
+        .unwrap_or(claude_md.len());
+
+    let recipe_1_section = &claude_md[recipe_1_start..recipe_1_end];
+
+    // Verify Recipe 1 has no "### Commit list" section (which would indicate real commits)
+    assert!(
+        !recipe_1_section.contains("### Commit list"),
+        "Recipe 1 should be a template without a 'Commit list' section"
+    );
+}
+
+#[test]
+fn parse_recipe_3_has_no_commits() {
+    // Recipe 3 (Checkbox) is documented as a control exemplar/pattern, not a concrete feature.
+    // It should have no "Commit list" section with real git SHAs.
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+
+    let recipe_3_start = match claude_md.find("## Recipe 3: Checkbox Control") {
+        Some(pos) => pos,
+        None => return, // Recipe 3 doesn't exist is fine — test passes vacuously
+    };
+
+    let recipe_3_end = recipe_3_start + (claude_md[recipe_3_start..].len());
+
+    let recipe_3_section = &claude_md[recipe_3_start..recipe_3_end];
+
+    // Verify Recipe 3 has no "### Commit list" section (which would indicate real commits)
+    assert!(
+        !recipe_3_section.contains("### Commit list"),
+        "Recipe 3 should be an exemplar pattern without a 'Commit list' section"
+    );
+}
+
 fn get_file_line_count(sha: &str, filepath: &str) -> usize {
     use std::process::Command;
 
