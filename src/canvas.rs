@@ -1037,6 +1037,21 @@ impl Canvas {
         }
     }
 
+    /// Snap a rectangle to the pixel grid at the current scale factor.
+    ///
+    /// This ensures hairlines and text remain crisp by snapping coordinates to
+    /// device pixel boundaries. At 1.0x scale, snaps to integers; at 2.0x, to
+    /// 0.5 boundaries (half-pixels).
+    pub fn snap_rect(rect: crate::geom::Rect, scale_factor: f32) -> crate::geom::Rect {
+        let snap = crate::pixelgrid::HairlineSnap::new(scale_factor);
+        crate::geom::Rect {
+            x: snap.snap_x(rect.x),
+            y: snap.snap_y(rect.y),
+            w: snap.snap_x(rect.x + rect.w) - snap.snap_x(rect.x),
+            h: snap.snap_y(rect.y + rect.h) - snap.snap_y(rect.y),
+        }
+    }
+
     /// A logical point in device pixels, unrounded.
     fn device_point(&self, point: Point) -> (f32, f32) {
         (point.x * self.scale, point.y * self.scale)
