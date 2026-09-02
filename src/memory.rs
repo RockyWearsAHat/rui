@@ -187,6 +187,38 @@ struct Cycle {
     seen: u64,
 }
 
+/// Velocity from drag input, used for momentum transfer to spring animations.
+#[derive(Clone, Copy, Debug)]
+pub struct Velocity {
+    /// Magnitude of velocity (always positive).
+    pub value: f32,
+    /// Direction: 1.0 = positive, -1.0 = negative.
+    pub direction: f32,
+}
+
+impl Velocity {
+    /// Create a new velocity from magnitude and direction.
+    pub fn new(value: f32, direction: f32) -> Self {
+        Self {
+            value: value.abs(),
+            direction: direction.signum(),
+        }
+    }
+
+    /// Signed magnitude of velocity.
+    pub fn magnitude(&self) -> f32 {
+        self.value * self.direction
+    }
+
+    /// Zero velocity.
+    pub fn zero() -> Self {
+        Self {
+            value: 0.0,
+            direction: 1.0,
+        }
+    }
+}
+
 /// How close to its target a value has to get before it is called settled.
 ///
 /// Exponential easing approaches its target without ever arriving, so without a
@@ -249,6 +281,10 @@ pub struct Memory {
     accumulated_time: f32,
     /// Transition state: id -> (start_time, total_duration).
     transitions: HashMap<Id, (f32, f32)>,
+    /// Velocity from last drag input, for momentum transfer to spring animations.
+    /// Used in Phase 2 for spring retargeting; stored in Phase 1.
+    #[allow(dead_code)]
+    last_velocity: Option<Velocity>,
 }
 
 impl Memory {
@@ -426,7 +462,7 @@ impl Memory {
     /// behind another one, or the machine stalled — must not make an animation
     /// leap, and a zero would leave every animation frozen. The worst a stall
     /// can do is take one frame longer to settle.
-    pub fn begin_frame(&mut self, elapsed: std::time::Duration) {
+    pub fn begin_frame(&mut self, elapsed: std::time::Duration, theme: &crate::Theme) {
         /// Longer than this is a stall rather than a frame, and is treated as one.
         const LONGEST: f32 = 1.0 / 15.0;
         /// Shorter than this cannot move anything and would only lose precision.
@@ -440,6 +476,14 @@ impl Memory {
         // last one, it would go on pointing at a field that has since lost the
         // keyboard or scrolled off the screen.
         self.caret_area = None;
+
+        // Honor prefers-reduced-motion by collapsing all animations immediately.
+        if !theme.metrics.is_motion_enabled() {
+            self.eased.clear();
+            self.cycles.clear();
+            self.deferred.clear();
+            self.transitions.clear();
+        }
     }
 
     /// Schedule an operation to fire after `delay_seconds` has elapsed.
@@ -625,6 +669,22 @@ impl Memory {
         self.pasted = None;
     }
 
+    /// Assert animation budget: no more than 2 concurrent animations allowed.
+    ///
+    /// The 2-live-loop limit prevents animation stacking on large lists.
+    /// Animating each row independently causes exponential resource growth.
+    pub(crate) fn assert_animation_budget(&self) {
+        let active_animations =
+            self.eased.len() + self.cycles.len() + self.deferred.len() + self.transitions.len();
+        assert!(
+            active_animations <= 2,
+            "Animation budget exceeded: {} active (max 2 allowed). \
+             This typically means a loop is creating animations per-item. \
+             Use .key() for list reordering or defer animation setup.",
+            active_animations
+        );
+    }
+
     /// Notes that Tab was pressed, to be resolved at the end of the frame.
     ///
     /// Taken once per frame rather than by whichever field happens to be
@@ -754,7 +814,12 @@ mod tests {
 
     /// Steps the memory by one frame of the given length.
     fn stepped(memory: &mut Memory, seconds: f32) {
-        memory.begin_frame(std::time::Duration::from_secs_f32(seconds));
+        let theme = crate::Theme::new(
+            crate::Appearance::Dark,
+            crate::FontId::FIRST,
+            crate::FontId::FIRST,
+        );
+        memory.begin_frame(std::time::Duration::from_secs_f32(seconds), &theme);
     }
 
     #[test]
@@ -841,7 +906,12 @@ mod tests {
         stepped(&mut memory, 1.0 / 60.0);
         memory.ease(id, 0.0, 0.1);
 
-        memory.begin_frame(std::time::Duration::from_secs(30));
+        let theme = crate::Theme::new(
+            crate::Appearance::Dark,
+            crate::FontId::FIRST,
+            crate::FontId::FIRST,
+        );
+        memory.begin_frame(std::time::Duration::from_secs(30), &theme);
         assert!(
             memory.ease(id, 1.0, 0.1) < 1.0,
             "a thirty-second stall should not finish the animation outright"

@@ -310,16 +310,6 @@ impl Surface {
         app: &mut App<S>,
         events: &mut Vec<Event>,
     ) -> Result<(), Error> {
-        let now = Instant::now();
-        self.memory
-            .begin_frame(now.saturating_duration_since(self.drawn_at));
-        self.drawn_at = now;
-
-        self.input.begin_frame();
-        for event in events.drain(..) {
-            self.input.apply(event);
-        }
-
         let (width, height, scale) = window.surface();
         if width != self.drawn.width()
             || height != self.drawn.height()
@@ -333,6 +323,16 @@ impl Surface {
         // built here, so a window and a test cannot come to disagree about what
         // the interface looks like. See [`App::theme`].
         let theme = app.theme_for(window.appearance(), self.ui_font, self.mono_font);
+
+        let now = Instant::now();
+        self.memory
+            .begin_frame(now.saturating_duration_since(self.drawn_at), &theme);
+        self.drawn_at = now;
+
+        self.input.begin_frame();
+        for event in events.drain(..) {
+            self.input.apply(event);
+        }
         app.paint_ground(&mut self.drawn, &theme);
         app.frame(
             &mut self.drawn,
@@ -342,6 +342,7 @@ impl Surface {
             &theme,
         );
         self.memory.end_frame(&self.input);
+        self.memory.assert_animation_budget();
         self.serve_requests(window)?;
 
         // The same idea as the comparison below, applied to what the interface

@@ -3,6 +3,10 @@
 use rui::*;
 use std::time::Duration;
 
+fn theme() -> Theme {
+    Theme::new(Appearance::Dark, FontId::FIRST, FontId::FIRST)
+}
+
 #[test]
 fn element_accepts_transition_builder() {
     let el: El<()> = col(()).transition(Transition::fade_in(0.3));
@@ -28,7 +32,7 @@ fn element_can_chain_transition() {
 #[test]
 fn memory_starts_transition() {
     let mut mem = Memory::new();
-    mem.begin_frame(Duration::from_millis(100));
+    mem.begin_frame(Duration::from_millis(100), &theme());
     let id = Id::new("test");
     mem.start_transition(id, 0.5);
     assert!(mem.is_animating());
@@ -37,7 +41,7 @@ fn memory_starts_transition() {
 #[test]
 fn memory_tracks_transition_progress() {
     let mut mem = Memory::new();
-    mem.begin_frame(Duration::from_secs(0));
+    mem.begin_frame(Duration::from_secs(0), &theme());
     let id = Id::new("test");
     mem.start_transition(id, 1.0);
 
@@ -45,13 +49,13 @@ fn memory_tracks_transition_progress() {
     assert_eq!(mem.transition_progress(id), Some(0.0));
 
     // After ~0.0333 seconds (1/30th, clamped to max 1/15), progress should be ~0.0333
-    mem.begin_frame(Duration::from_millis(33));
+    mem.begin_frame(Duration::from_millis(33), &theme());
     let progress = mem.transition_progress(id).unwrap();
     assert!((progress - 0.033).abs() < 0.005);
 
     // Accumulate more time steps until we reach ~1.0 seconds
     for _ in 0..30 {
-        mem.begin_frame(Duration::from_millis(33));
+        mem.begin_frame(Duration::from_millis(33), &theme());
         if mem.transition_progress(id).unwrap() >= 1.0 {
             break;
         }
@@ -62,7 +66,7 @@ fn memory_tracks_transition_progress() {
 #[test]
 fn memory_clears_transition() {
     let mut mem = Memory::new();
-    mem.begin_frame(Duration::from_secs(0));
+    mem.begin_frame(Duration::from_secs(0), &theme());
     let id = Id::new("test");
     mem.start_transition(id, 0.5);
     assert!(mem.transition_progress(id).is_some());
@@ -74,7 +78,7 @@ fn memory_clears_transition() {
 #[test]
 fn multiple_transitions_tracked_independently() {
     let mut mem = Memory::new();
-    mem.begin_frame(Duration::from_secs(0));
+    mem.begin_frame(Duration::from_secs(0), &theme());
 
     let id1 = Id::new("test1");
     let id2 = Id::new("test2");
@@ -82,7 +86,7 @@ fn multiple_transitions_tracked_independently() {
     mem.start_transition(id1, 1.0);
     mem.start_transition(id2, 0.5);
 
-    mem.begin_frame(Duration::from_millis(250));
+    mem.begin_frame(Duration::from_millis(250), &theme());
     let p1 = mem.transition_progress(id1).unwrap();
     let p2 = mem.transition_progress(id2).unwrap();
 
@@ -93,7 +97,7 @@ fn multiple_transitions_tracked_independently() {
 #[test]
 fn transition_marks_animating() {
     let mut mem = Memory::new();
-    mem.begin_frame(Duration::from_secs(0));
+    mem.begin_frame(Duration::from_secs(0), &theme());
     assert!(!mem.is_animating());
 
     let id = Id::new("test");
