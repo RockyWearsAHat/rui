@@ -496,3 +496,122 @@ fn recipe_2_has_all_four_phases() {
         "Recipe 2 should have Polish phase"
     );
 }
+
+#[test]
+fn recipe_2_claimed_line_counts_are_positive() {
+    let recipes = parse_recipes_from_claude_md();
+    let recipe_2 = recipes
+        .iter()
+        .find(|r| r.number == 2)
+        .expect("Recipe 2 not found");
+
+    println!("Verifying Recipe 2 line count claims:");
+    for commit in &recipe_2.commits {
+        let claimed = commit
+            .claimed_lines
+            .unwrap_or_else(|| panic!("{} should have line count", commit.phase));
+        println!("  {}: {} lines", commit.phase, claimed);
+
+        assert!(
+            claimed > 0,
+            "Recipe 2 {} claimed lines must be positive, got {}",
+            commit.phase,
+            claimed
+        );
+    }
+}
+
+#[test]
+fn recipe_2_claimed_line_counts_are_reasonable() {
+    let recipes = parse_recipes_from_claude_md();
+    let recipe_2 = recipes
+        .iter()
+        .find(|r| r.number == 2)
+        .expect("Recipe 2 not found");
+
+    println!("Validating Recipe 2 line count reasonableness:");
+    for commit in &recipe_2.commits {
+        let claimed = commit
+            .claimed_lines
+            .unwrap_or_else(|| panic!("{} should have line count", commit.phase));
+
+        println!("  {}: {} lines", commit.phase, claimed);
+
+        // Line counts should be between 1 and 10,000 (reasonable range for a single feature)
+        assert!(
+            claimed <= 10000,
+            "Recipe 2 {} claimed lines too high: {} (max 10000)",
+            commit.phase,
+            claimed
+        );
+
+        // Phase 1 should be foundational but not huge
+        if commit.phase.contains("Phase 1") {
+            assert!(
+                (100..=2000).contains(&claimed),
+                "Recipe 2 Phase 1 line count {} seems unreasonable (expected 100-2000)",
+                claimed
+            );
+        }
+
+        // Phase 2 and 3 should be similar or larger
+        if commit.phase.contains("Phase 2") || commit.phase.contains("Phase 3") {
+            assert!(
+                claimed >= 500,
+                "Recipe 2 {} line count {} seems too small (expected ≥500)",
+                commit.phase,
+                claimed
+            );
+        }
+    }
+}
+
+#[test]
+fn recipe_2_line_counts_show_progression() {
+    let recipes = parse_recipes_from_claude_md();
+    let recipe_2 = recipes
+        .iter()
+        .find(|r| r.number == 2)
+        .expect("Recipe 2 not found");
+
+    println!("Checking Recipe 2 line count progression:");
+
+    let mut phase_lines = std::collections::HashMap::new();
+    for commit in &recipe_2.commits {
+        if let Some(lines) = commit.claimed_lines {
+            phase_lines.insert(commit.phase.clone(), lines);
+        }
+    }
+
+    // Extract phase 1, 2, 3 line counts
+    let phase_1 = phase_lines
+        .get("Phase 1")
+        .cloned()
+        .expect("Phase 1 line count missing");
+    let phase_2 = phase_lines
+        .get("Phase 2")
+        .cloned()
+        .expect("Phase 2 line count missing");
+    let phase_3 = phase_lines
+        .get("Phase 3")
+        .cloned()
+        .expect("Phase 3 line count missing");
+
+    println!("  Phase 1: {} lines", phase_1);
+    println!("  Phase 2: {} lines", phase_2);
+    println!("  Phase 3: {} lines", phase_3);
+
+    // Verify the phases show expanding scope (each phase builds on previous)
+    assert!(
+        phase_2 >= phase_1,
+        "Phase 2 ({}) should be at least as large as Phase 1 ({})",
+        phase_2,
+        phase_1
+    );
+    assert!(
+        phase_3 >= phase_2,
+        "Phase 3 ({}) should be at least as large as Phase 2 ({})",
+        phase_3,
+        phase_2
+    );
+}
