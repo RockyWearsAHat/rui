@@ -1231,4 +1231,97 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn r1_api_is_complete() {
+        // R1: Theme roles end-to-end — TextRole/Space/Height enums resolved
+        // against Theme/Metrics; verify all three role types and their Theme
+        // resolution methods exist and return valid values.
+
+        let t = theme(Appearance::Light);
+
+        // TextRole enum and Theme::text_size() method
+        assert!(
+            t.text_size(TextRole::Title) > 0.0,
+            "Title has positive size"
+        );
+        assert!(
+            t.text_size(TextRole::Heading) > 0.0,
+            "Heading has positive size"
+        );
+        assert!(t.text_size(TextRole::Body) > 0.0, "Body has positive size");
+        assert!(
+            t.text_size(TextRole::Caption) > 0.0,
+            "Caption has positive size"
+        );
+        assert!(
+            t.text_size(TextRole::Micro) > 0.0,
+            "Micro has positive size"
+        );
+        assert!(t.text_size(TextRole::Code) > 0.0, "Code has positive size");
+
+        // Space enum and Theme::spacing() method
+        assert!(
+            t.spacing(Space::Small) > 0.0,
+            "Small space has positive gap"
+        );
+        assert!(
+            t.spacing(Space::Normal) > 0.0,
+            "Normal space has positive gap"
+        );
+        assert!(
+            t.spacing(Space::Large) > 0.0,
+            "Large space has positive gap"
+        );
+        assert!(
+            t.spacing(Space::Small) < t.spacing(Space::Normal),
+            "Small space is smaller than Normal"
+        );
+        assert!(
+            t.spacing(Space::Normal) < t.spacing(Space::Large),
+            "Normal space is smaller than Large"
+        );
+
+        // Height enum and Theme::control_height() method
+        assert!(
+            t.control_height(Height::Control) > 0.0,
+            "Control height is positive"
+        );
+        assert!(
+            t.control_height(Height::Row) > 0.0,
+            "Row height is positive"
+        );
+        assert!(
+            t.control_height(Height::Control) > t.control_height(Height::Row),
+            "Control is taller than Row"
+        );
+
+        // Verify all role sizes are reasonable and ordered
+        let micro = t.text_size(TextRole::Micro);
+        let caption = t.text_size(TextRole::Caption);
+        let body = t.text_size(TextRole::Body);
+        let title = t.text_size(TextRole::Title);
+        assert!(
+            micro < caption && caption < body && body < title,
+            "text roles ascend from Micro through Caption, Body to Title"
+        );
+
+        // Verify dark theme also resolves roles correctly
+        let dark = theme(Appearance::Dark);
+        assert_eq!(
+            t.text_size(TextRole::Body),
+            dark.text_size(TextRole::Body),
+            "text sizes are consistent across appearances"
+        );
+        assert_eq!(
+            t.spacing(Space::Normal),
+            dark.spacing(Space::Normal),
+            "spacing is consistent across appearances"
+        );
+        assert_eq!(
+            t.control_height(Height::Control),
+            dark.control_height(Height::Control),
+            "control heights are consistent across appearances"
+        );
+    }
 }
