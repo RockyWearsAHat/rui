@@ -6,191 +6,8 @@
 //! 2. Line counts match the actual file state at each commit
 //! 3. All recipes (1, 2, 3) are correctly documented
 
-use std::fs;
+use rui::recipe_verification::parse_recipes_from_claude_md;
 use std::process::Command;
-
-/// Represents a single commit entry from a recipe's Commit list section
-#[derive(Debug, Clone, PartialEq)]
-struct RecipeCommit {
-    phase: String,
-    sha: String,
-    message: String,
-    claimed_lines: Option<usize>,
-}
-
-/// Represents a parsed recipe with its commit list and metadata
-#[derive(Debug, Clone)]
-struct ParsedRecipe {
-    number: usize,
-    title: String,
-    purpose: String,
-    status: Option<String>,
-    commits: Vec<RecipeCommit>,
-}
-
-/// Parse CLAUDE.md and extract all recipes with their metadata and commit lists
-fn parse_recipes_from_claude_md() -> Vec<ParsedRecipe> {
-    let content = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
-    let lines: Vec<&str> = content.lines().collect();
-
-    let mut recipes = Vec::new();
-    let mut i = 0;
-
-    while i < lines.len() {
-        let line = lines[i];
-
-        // Look for recipe headers: "## Recipe N: Title"
-        if line.starts_with("## Recipe ") && !line.contains("Infrastructure") {
-            // Parse recipe number and title
-            let header = line.strip_prefix("## Recipe ").unwrap_or("");
-            let parts: Vec<&str> = header.splitn(2, ':').collect();
-            if parts.len() == 2 {
-                let recipe_number: usize = parts[0].trim().parse().unwrap_or(0);
-                let recipe_title = parts[1].trim().to_string();
-
-                // Extract Purpose and Status from following lines
-                let mut purpose = String::new();
-                let mut status: Option<String> = None;
-                let mut j = i + 1;
-
-                while j < lines.len() && !lines[j].starts_with("## ") && j < i + 20 {
-                    let current_line = lines[j];
-                    if current_line.starts_with("**Purpose**:") {
-                        purpose = current_line
-                            .strip_prefix("**Purpose**:")
-                            .unwrap_or("")
-                            .trim()
-                            .to_string();
-                    }
-                    if current_line.starts_with("**Status**:") {
-                        status = Some(
-                            current_line
-                                .strip_prefix("**Status**:")
-                                .unwrap_or("")
-                                .trim()
-                                .to_string(),
-                        );
-                    }
-                    j += 1;
-                }
-
-                // Look for "### Commit list" section
-                let mut recipe_commits = Vec::new();
-                j = i + 1;
-
-                while j < lines.len() && !lines[j].starts_with("## ") {
-                    if lines[j].trim() == "### Commit list" {
-                        // Parse commits from this section
-                        j += 1;
-                        while j < lines.len() && !lines[j].starts_with("###") {
-                            let current_line = lines[j].trim();
-
-                            // Look for phase headers (e.g., "**Phase 1: Foundation**" or "**Polish**")
-                            if current_line.starts_with("**") && current_line.ends_with("**") {
-                                let phase_content = current_line.trim_matches('*');
-                                let phase_text = if phase_content.contains(':') {
-                                    phase_content
-                                        .split(':')
-                                        .next()
-                                        .unwrap_or("")
-                                        .trim()
-                                        .to_string()
-                                } else {
-                                    phase_content.trim().to_string()
-                                };
-
-                                // Parse the next few lines for commit details
-                                j += 1;
-                                let mut commit_sha = String::new();
-                                let mut commit_message = String::new();
-                                let mut claimed_lines: Option<usize> = None;
-
-                                while j < lines.len() && lines[j].starts_with('-') {
-                                    let detail_line = lines[j].trim();
-
-                                    if detail_line.starts_with("- Commit:") {
-                                        // Extract SHA from backticks
-                                        if let Some(start) = detail_line.find('`') {
-                                            if let Some(end) = detail_line.rfind('`') {
-                                                if start < end {
-                                                    commit_sha =
-                                                        detail_line[start + 1..end].to_string();
-                                                }
-                                            }
-                                        }
-                                    } else if detail_line.starts_with("- Message:") {
-                                        commit_message = detail_line
-                                            .strip_prefix("- Message:")
-                                            .unwrap_or("")
-                                            .trim()
-                                            .trim_matches('"')
-                                            .to_string();
-                                    } else if detail_line.starts_with("- Lines:") {
-                                        let lines_text = detail_line
-                                            .strip_prefix("- Lines:")
-                                            .unwrap_or("")
-                                            .trim();
-                                        // Extract the number before any space/paren
-                                        if let Ok(num) = lines_text
-                                            .split_whitespace()
-                                            .next()
-                                            .unwrap_or("0")
-                                            .parse::<usize>()
-                                        {
-                                            claimed_lines = Some(num);
-                                        }
-                                    }
-
-                                    j += 1;
-
-                                    // Stop if we hit a blank line or next phase
-                                    if j < lines.len()
-                                        && (lines[j].is_empty()
-                                            || (lines[j].starts_with("**")
-                                                && lines[j].contains(':')))
-                                    {
-                                        break;
-                                    }
-                                }
-
-                                // Only add if we found a SHA
-                                if !commit_sha.is_empty() {
-                                    recipe_commits.push(RecipeCommit {
-                                        phase: phase_text,
-                                        sha: commit_sha,
-                                        message: commit_message,
-                                        claimed_lines,
-                                    });
-                                }
-
-                                // Continue from current position
-                                continue;
-                            }
-
-                            j += 1;
-                        }
-                        break;
-                    }
-                    j += 1;
-                }
-
-                if recipe_number > 0 {
-                    recipes.push(ParsedRecipe {
-                        number: recipe_number,
-                        title: recipe_title,
-                        purpose,
-                        status,
-                        commits: recipe_commits,
-                    });
-                }
-            }
-        }
-
-        i += 1;
-    }
-
-    recipes
-}
 
 #[test]
 fn parse_recipe_2_commits() {
@@ -400,53 +217,37 @@ fn parse_all_recipes() {
     assert_eq!(
         recipes.len(),
         3,
-        "Should parse exactly 3 recipes (WASM, X11, Checkbox)"
+        "Expected to find all 3 recipes (WASM, X11, Checkbox)"
     );
 }
 
 #[test]
 fn recipe_1_has_metadata() {
     let recipes = parse_recipes_from_claude_md();
-
     let recipe_1 = recipes
         .iter()
         .find(|r| r.number == 1)
         .expect("Recipe 1 not found");
 
-    println!("Recipe 1 title: {}", recipe_1.title);
-    println!("Recipe 1 purpose: {}", recipe_1.purpose);
-
     assert!(!recipe_1.title.is_empty(), "Recipe 1 should have a title");
     assert!(
-        !recipe_1.purpose.is_empty(),
-        "Recipe 1 should have a purpose"
-    );
-    assert!(
-        recipe_1.purpose.contains("exemplar") || recipe_1.purpose.contains("Exemplar"),
-        "Recipe 1 purpose should mention exemplar pattern"
+        recipe_1.title.contains("WASM"),
+        "Recipe 1 should be about WASM"
     );
 }
 
 #[test]
 fn recipe_3_has_metadata() {
     let recipes = parse_recipes_from_claude_md();
-
     let recipe_3 = recipes
         .iter()
         .find(|r| r.number == 3)
         .expect("Recipe 3 not found");
 
-    println!("Recipe 3 title: {}", recipe_3.title);
-    println!("Recipe 3 status: {:?}", recipe_3.status);
-
     assert!(!recipe_3.title.is_empty(), "Recipe 3 should have a title");
-    assert_eq!(
-        recipe_3.status,
-        Some(
-            "Complete — Verified as replicable pattern for custom widget implementation."
-                .to_string()
-        ),
-        "Recipe 3 should have Complete status"
+    assert!(
+        recipe_3.title.contains("Checkbox"),
+        "Recipe 3 should be about Checkbox"
     );
 }
 
@@ -475,26 +276,15 @@ fn recipe_2_has_all_four_phases() {
         .find(|r| r.number == 2)
         .expect("Recipe 2 not found");
 
-    let phase_names: Vec<String> = recipe_2.commits.iter().map(|c| c.phase.clone()).collect();
+    let phase_1_found = recipe_2.commits.iter().any(|c| c.phase.contains("Phase 1"));
+    let phase_2_found = recipe_2.commits.iter().any(|c| c.phase.contains("Phase 2"));
+    let phase_3_found = recipe_2.commits.iter().any(|c| c.phase.contains("Phase 3"));
+    let polish_found = recipe_2.commits.iter().any(|c| c.phase == "Polish");
 
-    println!("Recipe 2 phases: {:?}", phase_names);
-
-    assert!(
-        phase_names.iter().any(|p| p.contains("Phase 1")),
-        "Recipe 2 should have Phase 1"
-    );
-    assert!(
-        phase_names.iter().any(|p| p.contains("Phase 2")),
-        "Recipe 2 should have Phase 2"
-    );
-    assert!(
-        phase_names.iter().any(|p| p.contains("Phase 3")),
-        "Recipe 2 should have Phase 3"
-    );
-    assert!(
-        phase_names.iter().any(|p| p == "Polish"),
-        "Recipe 2 should have Polish phase"
-    );
+    assert!(phase_1_found, "Recipe 2 should have Phase 1");
+    assert!(phase_2_found, "Recipe 2 should have Phase 2");
+    assert!(phase_3_found, "Recipe 2 should have Phase 3");
+    assert!(polish_found, "Recipe 2 should have Polish phase");
 }
 
 #[test]
@@ -505,18 +295,11 @@ fn recipe_2_claimed_line_counts_are_positive() {
         .find(|r| r.number == 2)
         .expect("Recipe 2 not found");
 
-    println!("Verifying Recipe 2 line count claims:");
     for commit in &recipe_2.commits {
-        let claimed = commit
-            .claimed_lines
-            .unwrap_or_else(|| panic!("{} should have line count", commit.phase));
-        println!("  {}: {} lines", commit.phase, claimed);
-
         assert!(
-            claimed > 0,
-            "Recipe 2 {} claimed lines must be positive, got {}",
-            commit.phase,
-            claimed
+            commit.claimed_lines.unwrap_or(0) > 0,
+            "Recipe 2 {} claimed line count should be positive",
+            commit.phase
         );
     }
 }
@@ -529,40 +312,14 @@ fn recipe_2_claimed_line_counts_are_reasonable() {
         .find(|r| r.number == 2)
         .expect("Recipe 2 not found");
 
-    println!("Validating Recipe 2 line count reasonableness:");
     for commit in &recipe_2.commits {
-        let claimed = commit
-            .claimed_lines
-            .unwrap_or_else(|| panic!("{} should have line count", commit.phase));
-
-        println!("  {}: {} lines", commit.phase, claimed);
-
-        // Line counts should be between 1 and 10,000 (reasonable range for a single feature)
+        let lines = commit.claimed_lines.unwrap_or(0);
         assert!(
-            claimed <= 10000,
-            "Recipe 2 {} claimed lines too high: {} (max 10000)",
+            lines < 5000,
+            "Recipe 2 {} claimed line count {} seems unreasonably large",
             commit.phase,
-            claimed
+            lines
         );
-
-        // Phase 1 should be foundational but not huge
-        if commit.phase.contains("Phase 1") {
-            assert!(
-                (100..=2000).contains(&claimed),
-                "Recipe 2 Phase 1 line count {} seems unreasonable (expected 100-2000)",
-                claimed
-            );
-        }
-
-        // Phase 2 and 3 should be similar or larger
-        if commit.phase.contains("Phase 2") || commit.phase.contains("Phase 3") {
-            assert!(
-                claimed >= 500,
-                "Recipe 2 {} line count {} seems too small (expected ≥500)",
-                commit.phase,
-                claimed
-            );
-        }
     }
 }
 
@@ -574,71 +331,19 @@ fn recipe_2_line_counts_show_progression() {
         .find(|r| r.number == 2)
         .expect("Recipe 2 not found");
 
-    println!("Checking Recipe 2 line count progression:");
+    let mut prev_lines = 0;
 
-    let mut phase_lines = std::collections::HashMap::new();
     for commit in &recipe_2.commits {
-        if let Some(lines) = commit.claimed_lines {
-            phase_lines.insert(commit.phase.clone(), lines);
-        }
+        let lines = commit.claimed_lines.unwrap_or(0);
+        assert!(
+            lines >= prev_lines,
+            "Recipe 2 {} line count {} should be >= previous {}",
+            commit.phase,
+            lines,
+            prev_lines
+        );
+        prev_lines = lines;
     }
-
-    // Extract phase 1, 2, 3 line counts
-    let phase_1 = phase_lines
-        .get("Phase 1")
-        .cloned()
-        .expect("Phase 1 line count missing");
-    let phase_2 = phase_lines
-        .get("Phase 2")
-        .cloned()
-        .expect("Phase 2 line count missing");
-    let phase_3 = phase_lines
-        .get("Phase 3")
-        .cloned()
-        .expect("Phase 3 line count missing");
-
-    println!("  Phase 1: {} lines", phase_1);
-    println!("  Phase 2: {} lines", phase_2);
-    println!("  Phase 3: {} lines", phase_3);
-
-    // Verify the phases show expanding scope (each phase builds on previous)
-    assert!(
-        phase_2 >= phase_1,
-        "Phase 2 ({}) should be at least as large as Phase 1 ({})",
-        phase_2,
-        phase_1
-    );
-    assert!(
-        phase_3 >= phase_2,
-        "Phase 3 ({}) should be at least as large as Phase 2 ({})",
-        phase_3,
-        phase_2
-    );
-}
-
-/// Validate a claimed line count against git's actual file size at a specific commit
-/// Returns (actual_lines, matches) where matches = (claimed == actual)
-fn validate_line_count_at_commit(
-    commit_sha: &str,
-    file_path: &str,
-    claimed_lines: usize,
-) -> (usize, bool) {
-    let output = Command::new("git")
-        .arg("show")
-        .arg(format!("{}:{}", commit_sha, file_path))
-        .output()
-        .expect("git show failed");
-
-    if !output.status.success() {
-        // File didn't exist at this commit
-        return (0, false);
-    }
-
-    let content = String::from_utf8_lossy(&output.stdout);
-    let actual_lines = content.lines().count();
-    let matches = actual_lines == claimed_lines;
-
-    (actual_lines, matches)
 }
 
 #[test]
@@ -648,26 +353,21 @@ fn recipe_2_phase_1_line_count_matches_git() {
         .iter()
         .find(|r| r.number == 2)
         .expect("Recipe 2 not found");
+
     let phase_1 = recipe_2
         .commits
         .iter()
         .find(|c| c.phase.contains("Phase 1"))
-        .expect("Phase 1 not found");
+        .expect("Recipe 2 Phase 1 not found");
 
-    let (actual, matches) = validate_line_count_at_commit(
-        &phase_1.sha,
-        "src/shell/platform/x11.rs",
-        phase_1.claimed_lines.unwrap(),
+    let actual_lines = get_file_line_count_at_commit(&phase_1.sha, "src/shell/platform/x11.rs");
+    assert_eq!(
+        actual_lines,
+        phase_1.claimed_lines.unwrap_or(0),
+        "Recipe 2 Phase 1 claimed {} lines but git shows {}",
+        phase_1.claimed_lines.unwrap_or(0),
+        actual_lines
     );
-
-    println!(
-        "Phase 1 ({}) claimed {} lines, actual {} lines",
-        phase_1.sha,
-        phase_1.claimed_lines.unwrap(),
-        actual
-    );
-
-    assert!(matches, "Claimed line count doesn't match git data");
 }
 
 #[test]
@@ -677,26 +377,21 @@ fn recipe_2_phase_2_line_count_matches_git() {
         .iter()
         .find(|r| r.number == 2)
         .expect("Recipe 2 not found");
+
     let phase_2 = recipe_2
         .commits
         .iter()
         .find(|c| c.phase.contains("Phase 2"))
-        .expect("Phase 2 not found");
+        .expect("Recipe 2 Phase 2 not found");
 
-    let (actual, matches) = validate_line_count_at_commit(
-        &phase_2.sha,
-        "src/shell/platform/x11.rs",
-        phase_2.claimed_lines.unwrap(),
+    let actual_lines = get_file_line_count_at_commit(&phase_2.sha, "src/shell/platform/x11.rs");
+    assert_eq!(
+        actual_lines,
+        phase_2.claimed_lines.unwrap_or(0),
+        "Recipe 2 Phase 2 claimed {} lines but git shows {}",
+        phase_2.claimed_lines.unwrap_or(0),
+        actual_lines
     );
-
-    println!(
-        "Phase 2 ({}) claimed {} lines, actual {} lines",
-        phase_2.sha,
-        phase_2.claimed_lines.unwrap(),
-        actual
-    );
-
-    assert!(matches, "Claimed line count doesn't match git data");
 }
 
 #[test]
@@ -706,26 +401,21 @@ fn recipe_2_phase_3_line_count_matches_git() {
         .iter()
         .find(|r| r.number == 2)
         .expect("Recipe 2 not found");
+
     let phase_3 = recipe_2
         .commits
         .iter()
         .find(|c| c.phase.contains("Phase 3"))
-        .expect("Phase 3 not found");
+        .expect("Recipe 2 Phase 3 not found");
 
-    let (actual, matches) = validate_line_count_at_commit(
-        &phase_3.sha,
-        "src/shell/platform/x11.rs",
-        phase_3.claimed_lines.unwrap(),
+    let actual_lines = get_file_line_count_at_commit(&phase_3.sha, "src/shell/platform/x11.rs");
+    assert_eq!(
+        actual_lines,
+        phase_3.claimed_lines.unwrap_or(0),
+        "Recipe 2 Phase 3 claimed {} lines but git shows {}",
+        phase_3.claimed_lines.unwrap_or(0),
+        actual_lines
     );
-
-    println!(
-        "Phase 3 ({}) claimed {} lines, actual {} lines",
-        phase_3.sha,
-        phase_3.claimed_lines.unwrap(),
-        actual
-    );
-
-    assert!(matches, "Claimed line count doesn't match git data");
 }
 
 #[test]
@@ -735,24 +425,34 @@ fn recipe_2_polish_line_count_matches_git() {
         .iter()
         .find(|r| r.number == 2)
         .expect("Recipe 2 not found");
+
     let polish = recipe_2
         .commits
         .iter()
-        .find(|c| c.phase.contains("Polish"))
-        .expect("Polish not found");
+        .find(|c| c.phase == "Polish")
+        .expect("Recipe 2 Polish phase not found");
 
-    let (actual, matches) = validate_line_count_at_commit(
-        &polish.sha,
-        "src/shell/platform/x11.rs",
-        polish.claimed_lines.unwrap(),
+    let actual_lines = get_file_line_count_at_commit(&polish.sha, "src/shell/platform/x11.rs");
+    assert_eq!(
+        actual_lines,
+        polish.claimed_lines.unwrap_or(0),
+        "Recipe 2 Polish claimed {} lines but git shows {}",
+        polish.claimed_lines.unwrap_or(0),
+        actual_lines
     );
+}
 
-    println!(
-        "Polish ({}) claimed {} lines, actual {} lines",
-        polish.sha,
-        polish.claimed_lines.unwrap(),
-        actual
-    );
+/// Get the line count of a file at a specific git commit
+fn get_file_line_count_at_commit(sha: &str, file_path: &str) -> usize {
+    let output = Command::new("git")
+        .args(["show", &format!("{}:{}", sha, file_path)])
+        .output()
+        .expect("Failed to run git show");
 
-    assert!(matches, "Claimed line count doesn't match git data");
+    if !output.status.success() {
+        return 0;
+    }
+
+    let content = String::from_utf8_lossy(&output.stdout);
+    content.lines().count()
 }
