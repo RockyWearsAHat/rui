@@ -41,15 +41,9 @@ fn theme_resolves_spacing_levels() {
 fn theme_resolves_control_heights() {
     let theme = Theme::new(Appearance::Light, FontId::default(), FontId::default());
 
-    // Verify each Height level resolves to a positive value
-    assert!(theme.control_height(Height::Control) > 0.0);
-    assert!(theme.control_height(Height::Row) > 0.0);
-
-    // Both heights should be distinct values
-    let control = theme.control_height(Height::Control);
-    let row = theme.control_height(Height::Row);
-    assert_ne!(control, 0.0);
-    assert_ne!(row, 0.0);
+    // Verify exact control height values
+    assert_eq!(theme.control_height(Height::Control), 28.0);
+    assert_eq!(theme.control_height(Height::Row), 22.0);
 }
 
 #[test]
