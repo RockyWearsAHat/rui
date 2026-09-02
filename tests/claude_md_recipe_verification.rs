@@ -20,9 +20,9 @@ fn recipe_2_commits_exist() {
     let mut found_count = 0;
     for (phase, sha) in &commits {
         let output = Command::new("git")
-            .args(["rev-parse", sha])
+            .args(["show", sha.as_str(), "--quiet"])
             .output()
-            .unwrap_or_else(|_| panic!("Failed to run git rev-parse for {}", sha));
+            .unwrap_or_else(|_| panic!("Failed to run git show for {}", sha));
 
         if output.status.success() {
             println!("✓ {} commit exists: {}", phase, sha);
