@@ -67,15 +67,15 @@ grep -n "fn spacing" src/theme.rs && echo "✓ spacing() found"
 grep -n "fn text_size" src/theme.rs && echo "✓ text_size() found"
 grep -n "fn control_height" src/theme.rs && echo "✓ control_height() found"
 ::output
-299:pub enum Space {
-✓ Space found
-305:pub enum TextRole {
+688:pub enum TextRole {
 ✓ TextRole found
-322:pub enum Height {
+677:pub enum Space {
+✓ Space found
+705:pub enum Height {
 ✓ Height found
-279:    pub fn spacing(&self, space: Space) -> f32 {
+646:    pub fn spacing(&self, space: Space) -> f32 {
 ✓ spacing() found
-288:    pub fn text_size(&self, role: TextRole) -> f32 {
+655:    pub fn text_size(&self, role: TextRole) -> f32 {
 ✓ text_size() found
-300:    pub fn control_height(&self, h: Height) -> f32 {
+667:    pub fn control_height(&self, h: Height) -> f32 {
 ✓ control_height() found
