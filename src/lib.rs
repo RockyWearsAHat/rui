@@ -140,6 +140,8 @@ pub mod input;
 mod layout;
 pub mod memory;
 pub mod motion;
+/// Visual and interaction semantics for overlays (modals, popovers, dropdowns).
+pub mod overlay;
 pub mod paint;
 pub mod pixelgrid;
 #[cfg(feature = "reload")]
@@ -166,6 +168,7 @@ pub use input::{
 };
 pub use memory::{FocusSource, Id, Memory, Response};
 pub use motion::{Easing, SlideDirection, Spring, Transition};
+pub use overlay::{Overlay, OverlayAnchor, OverlayPlacement};
 pub use paint::{Painter, Visual};
 pub use pixelgrid::{GammaBoostLut, GlyphCache, HairlineSnap};
 pub use sdf::{

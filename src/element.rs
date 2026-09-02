@@ -175,6 +175,10 @@ pub struct El<S> {
     pub(crate) transition: Option<Transition>,
     /// The elevation level for visual depth (Surface, Overlay, Modal).
     pub(crate) elevation: Option<Elevation>,
+    /// The overlay type (Modal, Popover, Dropdown) for z-order and interaction semantics.
+    pub(crate) overlay: Option<crate::overlay::Overlay>,
+    /// The placement configuration for this overlay element.
+    pub(crate) overlay_placement: Option<crate::overlay::OverlayPlacement>,
 }
 
 impl<S> El<S> {
@@ -221,6 +225,8 @@ impl<S> El<S> {
             selected: None,
             transition: None,
             elevation: None,
+            overlay: None,
+            overlay_placement: None,
         }
     }
 
@@ -915,6 +921,28 @@ impl<S> El<S> {
     /// The elevation level on this element, if any.
     pub fn get_elevation(&self) -> Option<Elevation> {
         self.elevation
+    }
+
+    /// Sets the overlay type for this element (Modal, Popover, Dropdown).
+    pub fn overlay(mut self, overlay: crate::overlay::Overlay) -> Self {
+        self.overlay = Some(overlay);
+        self
+    }
+
+    /// Sets the overlay placement for this element.
+    pub fn overlay_placement(mut self, placement: crate::overlay::OverlayPlacement) -> Self {
+        self.overlay_placement = Some(placement);
+        self
+    }
+
+    /// The overlay type on this element, if any.
+    pub fn get_overlay(&self) -> Option<crate::overlay::Overlay> {
+        self.overlay
+    }
+
+    /// The overlay placement on this element, if any.
+    pub fn get_overlay_placement(&self) -> Option<crate::overlay::OverlayPlacement> {
+        self.overlay_placement
     }
 
     /// What this element is, for anything that cannot see it.
