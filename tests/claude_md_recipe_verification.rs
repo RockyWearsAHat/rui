@@ -50,6 +50,67 @@ fn recipe_2_commits_exist() {
     );
 }
 
+#[test]
+fn recipe_2_line_counts() {
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+    let commits = extract_recipe_2_commits(&claude_md);
+
+    // Documented line counts for x11.rs at each phase
+    let documented_counts = [748, 1220, 1321, 1368];
+
+    println!("Verifying Recipe 2 line counts within ±10...");
+
+    let mut pass_count = 0;
+    for (i, commit) in commits.iter().enumerate() {
+        if i >= documented_counts.len() {
+            break;
+        }
+
+        let line_count = get_file_line_count(&commit.sha, "src/shell/platform/x11.rs");
+        let documented = documented_counts[i];
+        let tolerance = 10;
+        let diff = (line_count as i32 - documented).abs();
+
+        if diff <= tolerance {
+            println!(
+                "✓ {} ({}): {} lines (documented: {}, diff: {})",
+                commit.phase, commit.sha, line_count, documented, diff
+            );
+            pass_count += 1;
+        } else {
+            panic!(
+                "✗ {} ({}): {} lines (documented: {}, diff: {} > tolerance: {})",
+                commit.phase, commit.sha, line_count, documented, diff, tolerance
+            );
+        }
+    }
+
+    println!("{}/4 line counts pass", pass_count);
+    assert_eq!(
+        pass_count, 4,
+        "Not all Recipe 2 line counts within tolerance"
+    );
+}
+
+fn get_file_line_count(sha: &str, filepath: &str) -> usize {
+    let output = Command::new("git")
+        .args(["show", &format!("{}:{}", sha, filepath)])
+        .output()
+        .unwrap_or_else(|_| panic!("Failed to run git show for {}:{}", sha, filepath));
+
+    if !output.status.success() {
+        panic!(
+            "git show failed for {}:{}: {}",
+            sha,
+            filepath,
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    let content = String::from_utf8(output.stdout).expect("git output not valid UTF-8");
+    content.lines().count()
+}
+
 fn extract_recipe_2_commits(text: &str) -> Vec<CommitInfo> {
     let recipe_2_start = match text.find("## Recipe 2: X11 Backend Implementation") {
         Some(pos) => pos,
