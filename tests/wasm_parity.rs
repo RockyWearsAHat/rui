@@ -245,7 +245,6 @@ fn wasm_window_options_shared_struct() {
     // X11/Windows/macOS apply options for window creation
 
     // Test passes if wasm.rs calls Backend::open(&WindowOptions)
-    assert!(true, "All backends accept same WindowOptions struct");
 }
 
 #[test]
@@ -298,8 +297,6 @@ fn wasm_fullscreen_api_availability() {
 
     // Trait signature is identical for all:
     // fn set_fullscreen(&self, filling: bool) -> Result<(), Error>
-
-    assert!(true, "set_fullscreen() available on all backends");
 }
 
 #[test]
