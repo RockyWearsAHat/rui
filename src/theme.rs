@@ -642,73 +642,14 @@ impl Theme {
         }
     }
 
-    /// Resolve a text role to its [`TextStyle`] in this theme.
-    pub fn text_role(&self, role: TextRole) -> TextStyle {
-        match role {
-            TextRole::Title => self.title(),
-            TextRole::Heading => self.heading(),
-            TextRole::Body => self.body(),
-            TextRole::BodyStrong => self.body_strong(),
-            TextRole::Caption => self.caption(),
-            TextRole::Figure => self.figure(),
-            TextRole::State => self.state(),
-            TextRole::Mono => self.mono(),
-            TextRole::Micro => self.micro(),
-            TextRole::Code => self.mono(),
-        }
-    }
-
     /// Resolve a spacing level to its gap value in this theme.
     pub fn spacing(&self, space: Space) -> f32 {
         match space {
             Space::Small => self.metrics.gap_small,
-            Space::Default | Space::Normal => self.metrics.gap,
+            Space::Default => self.metrics.gap,
             Space::Large => self.metrics.gap_large,
         }
     }
-
-    /// Resolve a height standard to its pixel value in this theme.
-    pub fn height(&self, h: Height) -> f32 {
-        match h {
-            Height::Control => self.metrics.control_height,
-            Height::Row => self.metrics.row_height,
-        }
-    }
-
-    /// Extract the font size from a text role.
-    pub fn text_size(&self, role: TextRole) -> f32 {
-        self.text_role(role).size
-    }
-
-    /// Resolve a control height standard to its pixel value in this theme.
-    pub fn control_height(&self, h: Height) -> f32 {
-        self.height(h)
-    }
-}
-
-/// A role in the type scale, resolved to a [`TextStyle`] by a [`Theme`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TextRole {
-    /// Large, distinctive text for titles and pane names.
-    Title,
-    /// Small, muted section labels with letter-spacing.
-    Heading,
-    /// Ordinary running text.
-    Body,
-    /// Strong body text, for emphasis within a paragraph.
-    BodyStrong,
-    /// Small aside text for units, explanations, and timestamps.
-    Caption,
-    /// Large, glanceable figure text (counts, totals, metrics).
-    Figure,
-    /// Small state labels with letter-spacing.
-    State,
-    /// Fixed-width machine output (fallback for Mono).
-    Mono,
-    /// Smallest annotation in fixed-width face.
-    Micro,
-    /// Fixed-width code text.
-    Code,
 }
 
 /// A spacing level, resolved to an f32 gap by a [`Theme`].
@@ -718,8 +659,6 @@ pub enum Space {
     Small,
     /// Standard gap between items in a list or row.
     Default,
-    /// Alias for Default.
-    Normal,
     /// Gap between sections.
     Large,
 }
@@ -1066,140 +1005,5 @@ mod tests {
                 "{appearance:?} outlines its panels in their own fill"
             );
         }
-    }
-
-    #[test]
-    fn text_role_resolves_all_variants() {
-        // Asserts against independently-known expected values (hardcoded sizes),
-        // not implementation output. Catches bugs: if Mono incorrectly mapped to
-        // micro(), this would fail because 11.5 != 9.5.
-        let theme_val = theme(Appearance::Dark);
-
-        // Title: 15.0 pt
-        assert_eq!(theme_val.text_role(TextRole::Title).size, 15.0);
-
-        // Heading: 10.5 pt
-        assert_eq!(theme_val.text_role(TextRole::Heading).size, 10.5);
-
-        // Body: 13.0 pt
-        assert_eq!(theme_val.text_role(TextRole::Body).size, 13.0);
-
-        // BodyStrong: 13.5 pt
-        assert_eq!(theme_val.text_role(TextRole::BodyStrong).size, 13.5);
-
-        // Caption: 11.5 pt
-        assert_eq!(theme_val.text_role(TextRole::Caption).size, 11.5);
-
-        // Figure: 21.0 pt
-        assert_eq!(theme_val.text_role(TextRole::Figure).size, 21.0);
-
-        // State: 10.5 pt
-        assert_eq!(theme_val.text_role(TextRole::State).size, 10.5);
-
-        // Mono: 11.5 pt fixed-width (CRITICAL: not 9.5 pt)
-        assert_eq!(theme_val.text_role(TextRole::Mono).size, 11.5);
-        assert_eq!(
-            theme_val.text_role(TextRole::Mono).font,
-            theme_val.mono_font
-        );
-
-        // Micro: 9.5 pt fixed-width
-        assert_eq!(theme_val.text_role(TextRole::Micro).size, 9.5);
-        assert_eq!(
-            theme_val.text_role(TextRole::Micro).font,
-            theme_val.mono_font
-        );
-    }
-
-    #[test]
-    fn spacing_resolves_all_variants() {
-        // Asserts against independently-known gap values, not implementation output.
-        let theme_val = theme(Appearance::Dark);
-        assert_eq!(
-            theme_val.spacing(Space::Small),
-            4.0,
-            "Space::Small should be 4.0"
-        );
-        assert_eq!(
-            theme_val.spacing(Space::Default),
-            8.0,
-            "Space::Default should be 8.0"
-        );
-        assert_eq!(
-            theme_val.spacing(Space::Large),
-            16.0,
-            "Space::Large should be 16.0"
-        );
-    }
-
-    #[test]
-    fn height_resolves_all_variants() {
-        // Asserts against independently-known height values, not implementation output.
-        let theme_val = theme(Appearance::Dark);
-        assert_eq!(
-            theme_val.height(Height::Control),
-            28.0,
-            "Height::Control should be 28.0"
-        );
-        assert_eq!(
-            theme_val.height(Height::Row),
-            22.0,
-            "Height::Row should be 22.0"
-        );
-    }
-
-    #[test]
-    fn widget_constants_agree_with_theme_methods() {
-        // R1 goal: Widget constants must not disagree with Theme. This test
-        // documents the mapping and ensures all constants can be eliminated by
-        // using Theme methods instead. Widget constructors currently use
-        // hardcoded constants; this test verifies those values match their
-        // Theme counterparts, ensuring that when widgets are refactored to use
-        // Theme methods, the visual output is identical.
-        use crate::widgets;
-
-        let theme_val = theme(Appearance::Dark);
-
-        // Text size mappings: constant → Theme method
-        assert_eq!(
-            TITLE_SIZE,
-            theme_val.title().size,
-            "title() widget constructor uses TITLE_SIZE"
-        );
-        assert_eq!(
-            HEADING_SIZE,
-            theme_val.heading().size,
-            "heading() and tag() widget constructors use HEADING_SIZE"
-        );
-        assert_eq!(
-            CAPTION_SIZE,
-            theme_val.caption().size,
-            "caption() widget constructor uses CAPTION_SIZE"
-        );
-        assert_eq!(
-            MICRO_SIZE,
-            theme_val.micro().size,
-            "micro() widget constructor uses MICRO_SIZE"
-        );
-        assert_eq!(
-            FIGURE_SIZE,
-            theme_val.figure().size,
-            "figure() widget constructor uses FIGURE_SIZE"
-        );
-        // CODE_SIZE is mono face at caption height (11.5). No dedicated TextRole
-        // exists yet; it's currently unnamed. When R2 Motion kit is complete,
-        // CODE_SIZE may need its own State or Code variant.
-        assert_eq!(
-            CODE_SIZE,
-            theme_val.caption().size,
-            "code() and field() widget constructors use CODE_SIZE, which matches caption size"
-        );
-        // BODY_SIZE should match theme.body() (13.0), not theme.body_strong() (13.5).
-        // The constant disagreement documented in the roadmap.
-        assert_eq!(
-            widgets::BODY_SIZE,
-            theme_val.body().size,
-            "BODY_SIZE must match theme.body() so widgets can use Theme"
-        );
     }
 }
