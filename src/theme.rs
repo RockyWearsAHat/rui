@@ -858,6 +858,11 @@ impl Theme {
             Height::Row => self.metrics.row_height,
         }
     }
+
+    /// Resolve a height role to its pixel value in this theme.
+    pub fn height(&self, h: Height) -> f32 {
+        self.control_height(h)
+    }
 }
 
 /// A spacing level, resolved to an f32 gap by a [`Theme`].
