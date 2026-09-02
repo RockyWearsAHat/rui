@@ -6,6 +6,14 @@
 use rui::memory::Memory;
 use rui::motion::{Easing, SlideDirection, Spring, Transition};
 
+fn theme() -> rui::Theme {
+    rui::Theme::new(
+        rui::Appearance::Dark,
+        rui::FontId::FIRST,
+        rui::FontId::FIRST,
+    )
+}
+
 #[test]
 fn r2_motion_kit_audit_current_state() {
     println!("\n=== CURRENT STATE ===\n");
@@ -129,7 +137,7 @@ fn r2_motion_kit_gap_2_easing_enum_support_missing() {
     println!("\n=== GAP 2: Easing enum support in ease() ===");
 
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let id = rui::memory::Id::new("easing_test");
 
@@ -176,7 +184,7 @@ fn r2_motion_kit_gap_4_metrics_motion_zero_collapse_missing() {
     println!("\n=== GAP 4: Metrics.motion=0 collapse (accessibility) ===");
 
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let id = rui::memory::Id::new("motion_zero_test");
 
@@ -198,7 +206,7 @@ fn r2_motion_kit_gap_5_live_animation_budget_missing() {
     println!("\n=== GAP 5: 2-live-animation-loop budget ===");
 
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     // Current: Can start unlimited animations
     for i in 0..10 {
@@ -240,7 +248,7 @@ fn r2_motion_kit_gap_7_memory_after_sugar_missing() {
     println!("\n=== GAP 7: Memory::after() convenience sugar ===");
 
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let id = rui::memory::Id::new("defer_test");
 
@@ -265,7 +273,7 @@ fn r2_motion_kit_gap_8_cleanup_policy_missing() {
     println!("\n=== GAP 8: Animation memory cleanup policy ===");
 
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     // Run many animations that complete
     for i in 0..100 {
@@ -275,7 +283,7 @@ fn r2_motion_kit_gap_8_cleanup_policy_missing() {
 
     // Advance frames past completion
     for _ in 0..50 {
-        mem.begin_frame(std::time::Duration::from_millis(16));
+        mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     }
 
     println!("✓ Created and completed 100 short animations");
@@ -288,7 +296,7 @@ fn r2_motion_kit_gap_8_cleanup_policy_missing() {
 #[test]
 fn r2_motion_kit_existing_ease_works() {
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let id = rui::memory::Id::new("test_ease");
 
@@ -300,12 +308,12 @@ fn r2_motion_kit_existing_ease_works() {
     );
 
     // Second call with same target: should stay at target
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     let val2 = mem.ease(id, 100.0, 0.3);
     assert_eq!(val2, 100.0, "Stable target should hold value");
 
     // Third call with new target: should move toward it
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     let val3 = mem.ease(id, 0.0, 0.3);
     assert!(
         val3 < 100.0 && val3 > 0.0,
@@ -319,7 +327,7 @@ fn r2_motion_kit_existing_ease_works() {
 #[test]
 fn r2_motion_kit_existing_phase_works() {
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let id = rui::memory::Id::new("test_phase");
 
@@ -330,7 +338,7 @@ fn r2_motion_kit_existing_phase_works() {
     // Advance several frames in a 1-second cycle
     let mut phases = vec![phase1];
     for _ in 0..30 {
-        mem.begin_frame(std::time::Duration::from_millis(33)); // ~33ms per frame
+        mem.begin_frame(std::time::Duration::from_millis(33), &theme()); // ~33ms per frame
         phases.push(mem.phase(id, 1.0));
     }
 
@@ -351,7 +359,7 @@ fn r2_motion_kit_existing_phase_works() {
 #[test]
 fn r2_motion_kit_existing_defer_works() {
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let id = rui::memory::Id::new("test_defer");
 
@@ -366,7 +374,7 @@ fn r2_motion_kit_existing_defer_works() {
 
     // Advance 0.3 seconds
     for _ in 0..10 {
-        mem.begin_frame(std::time::Duration::from_millis(30));
+        mem.begin_frame(std::time::Duration::from_millis(30), &theme());
     }
     assert!(
         !mem.should_defer_fire(id),
@@ -375,7 +383,7 @@ fn r2_motion_kit_existing_defer_works() {
 
     // Advance to past 0.5 seconds total
     for _ in 0..20 {
-        mem.begin_frame(std::time::Duration::from_millis(16));
+        mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     }
     assert!(
         mem.should_defer_fire(id),
@@ -388,7 +396,7 @@ fn r2_motion_kit_existing_defer_works() {
 #[test]
 fn r2_motion_kit_existing_transitions_work() {
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let id = rui::memory::Id::new("test_transition");
 
@@ -400,7 +408,7 @@ fn r2_motion_kit_existing_transitions_work() {
 
     // Sample progress over frames
     for frame in 0..20 {
-        mem.begin_frame(std::time::Duration::from_millis(16));
+        mem.begin_frame(std::time::Duration::from_millis(16), &theme());
         if let Some(progress) = mem.transition_progress(id) {
             progress_samples.push((frame, progress));
         }
@@ -431,7 +439,7 @@ fn r2_motion_kit_edge_case_animation_id_collision() {
     // EDGE CASE: What happens if the same ID is used for both ease() and phase()?
     // Expected: Should track independently in eased vs cycles HashMaps
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let id = rui::memory::Id::new("collision_test");
 
@@ -439,7 +447,7 @@ fn r2_motion_kit_edge_case_animation_id_collision() {
     let ease_val1 = mem.ease(id, 50.0, 0.5);
     let phase_val1 = mem.phase(id, 1.0);
 
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     let ease_val2 = mem.ease(id, 50.0, 0.5);
     let phase_val2 = mem.phase(id, 1.0);
 
@@ -458,21 +466,21 @@ fn r2_motion_kit_edge_case_retargeting() {
     // EDGE CASE: What happens if you retarget ease() while animating?
     // Expected: Should smoothly change toward new target, velocity carries over
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let id = rui::memory::Id::new("retarget_test");
 
     // Start easing from 0 toward 100
     let val1 = mem.ease(id, 100.0, 0.5);
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     let val2 = mem.ease(id, 100.0, 0.5);
 
     // Retarget to 0 while moving toward 100
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     let val3 = mem.ease(id, 0.0, 0.5);
 
     // Retarget back to 100 while moving toward 0
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     let val4 = mem.ease(id, 100.0, 0.5);
 
     println!("✓ Retargeting: {} → {} → {} → {}", val1, val2, val3, val4);
@@ -487,13 +495,13 @@ fn r2_motion_kit_edge_case_memory_cleanup() {
     // EDGE CASE: Do finished animations accumulate or get cleaned up?
     // Expected: After animation finishes, HashMap entry should either be cleaned or marked done
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let id = rui::memory::Id::new("cleanup_test");
 
     // Run a very short ease (0.05 seconds = 1 frame)
     let _val1 = mem.ease(id, 100.0, 0.05);
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     let _val2 = mem.ease(id, 100.0, 0.05);
 
     // Check if we're still animating after the ease completes
@@ -501,7 +509,7 @@ fn r2_motion_kit_edge_case_memory_cleanup() {
 
     // Run many frames past completion
     for _ in 0..100 {
-        mem.begin_frame(std::time::Duration::from_millis(16));
+        mem.begin_frame(std::time::Duration::from_millis(16), &theme());
         let _ = mem.ease(id, 100.0, 0.05);
     }
 
@@ -519,7 +527,7 @@ fn r2_motion_kit_edge_case_combined_animations() {
     // EDGE CASE: What happens when ease(), phase(), and defer() interact?
     // Expected: Should coordinate through accumulated_time without interference
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
 
     let ease_id = rui::memory::Id::new("combo_ease");
     let phase_id = rui::memory::Id::new("combo_phase");
@@ -537,7 +545,7 @@ fn r2_motion_kit_edge_case_combined_animations() {
 
     // Advance 10 frames
     for i in 0..10 {
-        mem.begin_frame(std::time::Duration::from_millis(16));
+        mem.begin_frame(std::time::Duration::from_millis(16), &theme());
         mem.ease(ease_id, 100.0, 0.5);
         mem.phase(phase_id, 1.0);
 
@@ -1166,7 +1174,7 @@ fn r2_motion_kit_final_verification_gates() {
 
     println!("GATE 1: Primitives are callable");
     let mut mem = Memory::new();
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     let id = rui::memory::Id::new("gate1");
 
     // All primitives must be callable without panic
@@ -1212,7 +1220,7 @@ fn r2_motion_kit_final_verification_gates() {
     println!("GATE 4: Multiple concurrent animations work");
     let id2 = rui::memory::Id::new("test2");
     let id3 = rui::memory::Id::new("test3");
-    mem.begin_frame(std::time::Duration::from_millis(16));
+    mem.begin_frame(std::time::Duration::from_millis(16), &theme());
     let _ = mem.ease(id1, 100.0, 1.0);
     let _ = mem.phase(id2, 2.0);
     mem.defer(id3, 0.5);

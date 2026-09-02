@@ -569,7 +569,7 @@ impl<S> App<S> {
 
         let theme = self.theme_for(appearance, fonts.ui_font, fonts.mono_font);
         self.paint_ground(canvas, &theme);
-        memory.begin_frame(std::time::Duration::from_millis(16));
+        memory.begin_frame(std::time::Duration::from_millis(16), &theme);
         self.frame(canvas, &fonts.fonts, &input, memory, &theme);
         memory.end_frame(&input);
     }

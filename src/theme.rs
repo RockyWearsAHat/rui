@@ -511,6 +511,8 @@ pub struct Metrics {
     /// attached to the pointer — past about a fifth of a second a hover starts
     /// to feel like lag rather than like polish.
     pub motion: f32,
+    /// Whether animations are enabled. Honors `prefers-reduced-motion`.
+    pub enable_motion: bool,
 }
 
 impl Metrics {
@@ -539,7 +541,19 @@ impl Metrics {
         shadow: 9.0,
         shadow_offset: 1.5,
         motion: 0.09,
+        enable_motion: true,
     };
+
+    /// Whether animations are enabled.
+    pub fn is_motion_enabled(&self) -> bool {
+        self.enable_motion
+    }
+
+    /// Builder: set animation enablement (honors `prefers-reduced-motion`).
+    pub fn with_motion(mut self, enabled: bool) -> Self {
+        self.enable_motion = enabled;
+        self
+    }
 }
 
 /// The size a pane's name is set at.

@@ -236,7 +236,7 @@ impl<S: 'static> Harness<S> {
         let theme = self.theme_in_force();
         self.app.paint_ground(&mut self.canvas, &theme);
 
-        self.memory.begin_frame(self.elapsed);
+        self.memory.begin_frame(self.elapsed, &theme);
         let mut probes = Vec::new();
         self.app.frame_observed(
             &mut self.canvas,
