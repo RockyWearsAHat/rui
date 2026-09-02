@@ -45,6 +45,12 @@ pub const BODY_SIZE: f32 = 13.0;
 /// Opening them is what makes a small label legible rather than merely small.
 const HEADING_TRACKING: f32 = 0.9;
 
+/// Height of the tag widget. Not a duplicate; tag sizing is specific to the tag control.
+const TAG_HEIGHT: f32 = 18.0;
+
+/// Width reserved for labels in field_row widget. Not a duplicate; label width is specific to field layout.
+const FIELD_ROW_LABEL_WIDTH: f32 = 78.0;
+
 /// A box that stacks what is in it from top to bottom.
 pub fn col<S>(children: impl Children<S>) -> El<S> {
     El::of(Node::Stack).axis(Axis::Column).add(children)
@@ -205,7 +211,7 @@ pub fn field<S>(value: impl Into<String>) -> El<S> {
 pub fn tag<S>(status: Status, label: impl Into<String>) -> El<S> {
     row(text(label))
         .pad_x(Metrics::DEFAULT.gap)
-        .h(18.0)
+        .h(TAG_HEIGHT)
         .fill(Tone::tint(status))
         .color(Tone::ink(status))
         .text_size(HEADING_SIZE)
@@ -506,7 +512,7 @@ pub fn field_row<S>(label: impl Into<String>, value: El<S>) -> El<S> {
     } else {
         value
     };
-    row((heading(label).w(78.0), value.grow()))
+    row((heading(label).w(FIELD_ROW_LABEL_WIDTH), value.grow()))
         .gap(Metrics::DEFAULT.gap)
         .min_h(20.0)
 }
@@ -527,7 +533,7 @@ pub fn field_group<S>(label: impl Into<String>, value: El<S>) -> El<S> {
     // single control.
     row((
         heading(label)
-            .w(78.0)
+            .w(FIELD_ROW_LABEL_WIDTH)
             .h(Metrics::DEFAULT.control_height)
             .align_self(Align::Start),
         value.grow(),
