@@ -31,14 +31,10 @@ fn theme_resolves_text_roles() {
 fn theme_resolves_spacing_levels() {
     let theme = Theme::new(Appearance::Light, FontId::default(), FontId::default());
 
-    // Verify each Space level resolves to a positive value
-    assert!(theme.spacing(Space::Small) > 0.0);
-    assert!(theme.spacing(Space::Normal) > 0.0);
-    assert!(theme.spacing(Space::Large) > 0.0);
-
-    // Verify hierarchy: Small < Normal < Large
-    assert!(theme.spacing(Space::Small) < theme.spacing(Space::Normal));
-    assert!(theme.spacing(Space::Normal) < theme.spacing(Space::Large));
+    // Verify exact spacing values from Metrics::DEFAULT
+    assert_eq!(theme.spacing(Space::Small), 4.0);
+    assert_eq!(theme.spacing(Space::Normal), 8.0);
+    assert_eq!(theme.spacing(Space::Large), 16.0);
 }
 
 #[test]
