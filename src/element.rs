@@ -45,6 +45,7 @@
 //! [`accessibility`](crate::accessibility) for the whole of that decision.
 
 use crate::accessibility::Role;
+use crate::elevation::Elevation;
 use crate::geom::{Insets, Rect, Size};
 use crate::input::{Drag, Key, KeyStroke, Modifiers, Pointing};
 use crate::memory::Id;
@@ -172,6 +173,8 @@ pub struct El<S> {
     pub(crate) selected: Option<bool>,
     /// The transition animation to apply when this element appears or changes.
     pub(crate) transition: Option<Transition>,
+    /// The elevation level for visual depth (Surface, Overlay, Modal).
+    pub(crate) elevation: Option<Elevation>,
 }
 
 impl<S> El<S> {
@@ -217,6 +220,7 @@ impl<S> El<S> {
             value: None,
             selected: None,
             transition: None,
+            elevation: None,
         }
     }
 
@@ -899,6 +903,18 @@ impl<S> El<S> {
     /// The transition animation on this element, if any.
     pub fn has_transition(&self) -> Option<&Transition> {
         self.transition.as_ref()
+    }
+
+    /// Sets the elevation level for this element (Surface, Overlay, Modal).
+    /// Elevation creates visual depth through lightness changes in dark mode.
+    pub fn elevation(mut self, level: Elevation) -> Self {
+        self.elevation = Some(level);
+        self
+    }
+
+    /// The elevation level on this element, if any.
+    pub fn get_elevation(&self) -> Option<Elevation> {
+        self.elevation
     }
 
     /// What this element is, for anything that cannot see it.
