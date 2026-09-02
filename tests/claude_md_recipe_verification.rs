@@ -126,6 +126,39 @@ fn parse_recipe_1() {
     }
 }
 
+#[test]
+fn recipe_1_documentation_files_exist() {
+    let doc_files = [
+        "STEP_4_RECIPE_1_ANALYSIS.md",
+        "STEP_4_RECIPE_1_VERIFICATION_GATES.md",
+        "STEP_4_RECIPE_1_CROSS_MODULE_CONCERNS.md",
+        "STEP_4_RECIPE_1_SUMMARY.md",
+    ];
+
+    println!("Checking Recipe 1 documentation files...");
+
+    let mut found_count = 0;
+    for file in &doc_files {
+        if fs::metadata(file).is_ok() {
+            println!("✓ {} exists", file);
+            found_count += 1;
+        } else {
+            println!("✗ {} NOT FOUND", file);
+        }
+    }
+
+    println!(
+        "{}/{} documentation files exist",
+        found_count,
+        doc_files.len()
+    );
+    assert_eq!(
+        found_count,
+        doc_files.len(),
+        "Recipe 1 documentation extraction incomplete"
+    );
+}
+
 fn extract_recipe_1_commits(text: &str) -> Vec<CommitInfo> {
     let recipe_1_start = match text.find("## Recipe 1: Adding a WASM Backend") {
         Some(pos) => pos,
