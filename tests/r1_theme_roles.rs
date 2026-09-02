@@ -129,33 +129,48 @@ fn spacing_hierarchy_is_consistent() {
 }
 
 /// Verify that theme resolves correctly in both light and dark appearances.
+/// All layout metrics (text sizes, spacing, heights) must be appearance-independent.
 #[test]
 fn theme_roles_work_in_both_appearances() {
     let light_theme = Theme::new(Appearance::Light, FontId::FIRST, FontId::FIRST);
     let dark_theme = Theme::new(Appearance::Dark, FontId::FIRST, FontId::FIRST);
 
-    // Text roles should resolve to same sizes regardless of appearance
-    // (appearance affects colors, not sizes)
-    assert_eq!(
-        light_theme.text_size(TextRole::Body),
-        dark_theme.text_size(TextRole::Body)
-    );
-    assert_eq!(
-        light_theme.text_size(TextRole::Title),
-        dark_theme.text_size(TextRole::Title)
-    );
+    // All TextRole variants should resolve to same sizes regardless of appearance
+    for role in [
+        TextRole::Title,
+        TextRole::Heading,
+        TextRole::Body,
+        TextRole::Caption,
+        TextRole::Micro,
+        TextRole::Code,
+    ] {
+        assert_eq!(
+            light_theme.text_size(role),
+            dark_theme.text_size(role),
+            "text_size({:?}) must be appearance-independent",
+            role
+        );
+    }
 
-    // Spacing should be the same
-    assert_eq!(
-        light_theme.spacing(Space::Normal),
-        dark_theme.spacing(Space::Normal)
-    );
+    // All Space variants should resolve to same values regardless of appearance
+    for space in [Space::Small, Space::Normal, Space::Large] {
+        assert_eq!(
+            light_theme.spacing(space),
+            dark_theme.spacing(space),
+            "spacing({:?}) must be appearance-independent",
+            space
+        );
+    }
 
-    // Control heights should be the same
-    assert_eq!(
-        light_theme.control_height(Height::Control),
-        dark_theme.control_height(Height::Control)
-    );
+    // All Height variants should resolve to same values regardless of appearance
+    for height in [Height::Control, Height::Row] {
+        assert_eq!(
+            light_theme.control_height(height),
+            dark_theme.control_height(height),
+            "control_height({:?}) must be appearance-independent",
+            height
+        );
+    }
 }
 
 /// Verify that TextRole, Space, and Height are publicly exported from rui crate.
