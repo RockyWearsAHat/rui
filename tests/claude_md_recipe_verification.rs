@@ -615,3 +615,144 @@ fn recipe_2_line_counts_show_progression() {
         phase_2
     );
 }
+
+/// Validate a claimed line count against git's actual file size at a specific commit
+/// Returns (actual_lines, matches) where matches = (claimed == actual)
+fn validate_line_count_at_commit(
+    commit_sha: &str,
+    file_path: &str,
+    claimed_lines: usize,
+) -> (usize, bool) {
+    let output = Command::new("git")
+        .arg("show")
+        .arg(format!("{}:{}", commit_sha, file_path))
+        .output()
+        .expect("git show failed");
+
+    if !output.status.success() {
+        // File didn't exist at this commit
+        return (0, false);
+    }
+
+    let content = String::from_utf8_lossy(&output.stdout);
+    let actual_lines = content.lines().count();
+    let matches = actual_lines == claimed_lines;
+
+    (actual_lines, matches)
+}
+
+#[test]
+fn recipe_2_phase_1_line_count_matches_git() {
+    let recipes = parse_recipes_from_claude_md();
+    let recipe_2 = recipes
+        .iter()
+        .find(|r| r.number == 2)
+        .expect("Recipe 2 not found");
+    let phase_1 = recipe_2
+        .commits
+        .iter()
+        .find(|c| c.phase.contains("Phase 1"))
+        .expect("Phase 1 not found");
+
+    let (actual, matches) = validate_line_count_at_commit(
+        &phase_1.sha,
+        "src/shell/platform/x11.rs",
+        phase_1.claimed_lines.unwrap(),
+    );
+
+    println!(
+        "Phase 1 ({}) claimed {} lines, actual {} lines",
+        phase_1.sha,
+        phase_1.claimed_lines.unwrap(),
+        actual
+    );
+
+    assert!(matches, "Claimed line count doesn't match git data");
+}
+
+#[test]
+fn recipe_2_phase_2_line_count_matches_git() {
+    let recipes = parse_recipes_from_claude_md();
+    let recipe_2 = recipes
+        .iter()
+        .find(|r| r.number == 2)
+        .expect("Recipe 2 not found");
+    let phase_2 = recipe_2
+        .commits
+        .iter()
+        .find(|c| c.phase.contains("Phase 2"))
+        .expect("Phase 2 not found");
+
+    let (actual, matches) = validate_line_count_at_commit(
+        &phase_2.sha,
+        "src/shell/platform/x11.rs",
+        phase_2.claimed_lines.unwrap(),
+    );
+
+    println!(
+        "Phase 2 ({}) claimed {} lines, actual {} lines",
+        phase_2.sha,
+        phase_2.claimed_lines.unwrap(),
+        actual
+    );
+
+    assert!(matches, "Claimed line count doesn't match git data");
+}
+
+#[test]
+fn recipe_2_phase_3_line_count_matches_git() {
+    let recipes = parse_recipes_from_claude_md();
+    let recipe_2 = recipes
+        .iter()
+        .find(|r| r.number == 2)
+        .expect("Recipe 2 not found");
+    let phase_3 = recipe_2
+        .commits
+        .iter()
+        .find(|c| c.phase.contains("Phase 3"))
+        .expect("Phase 3 not found");
+
+    let (actual, matches) = validate_line_count_at_commit(
+        &phase_3.sha,
+        "src/shell/platform/x11.rs",
+        phase_3.claimed_lines.unwrap(),
+    );
+
+    println!(
+        "Phase 3 ({}) claimed {} lines, actual {} lines",
+        phase_3.sha,
+        phase_3.claimed_lines.unwrap(),
+        actual
+    );
+
+    assert!(matches, "Claimed line count doesn't match git data");
+}
+
+#[test]
+fn recipe_2_polish_line_count_matches_git() {
+    let recipes = parse_recipes_from_claude_md();
+    let recipe_2 = recipes
+        .iter()
+        .find(|r| r.number == 2)
+        .expect("Recipe 2 not found");
+    let polish = recipe_2
+        .commits
+        .iter()
+        .find(|c| c.phase.contains("Polish"))
+        .expect("Polish not found");
+
+    let (actual, matches) = validate_line_count_at_commit(
+        &polish.sha,
+        "src/shell/platform/x11.rs",
+        polish.claimed_lines.unwrap(),
+    );
+
+    println!(
+        "Polish ({}) claimed {} lines, actual {} lines",
+        polish.sha,
+        polish.claimed_lines.unwrap(),
+        actual
+    );
+
+    assert!(matches, "Claimed line count doesn't match git data");
+}
