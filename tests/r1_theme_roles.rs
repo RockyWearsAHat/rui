@@ -1,131 +1,201 @@
-//! STEP 1: Phase 1 — Red phase TDD scaffolding for theme roles.
+//! R1 Theme Roles Verification Gate
 //!
-//! This test module imports non-existent enums and demonstrates how Theme
-//! roles *should* resolve text sizes, gaps, and control heights without
-//! hardcoded constants. Write this first to fail cleanly, then implement
-//! the minimum code to make it pass.
+//! This test suite verifies that R1 (Theme roles) is properly implemented.
+//! It demonstrates usage of TextRole, Space, and Height enums to build
+//! widgets without hardcoded size constants.
+//!
+//! R1 enables widgets to be restyled via Theme without duplicated constants,
+//! providing a single source of truth for:
+//! - Text sizes via TextRole (Title, Heading, Body, Caption, Micro, Code)
+//! - Spacing gaps via Space (Small, Normal, Large)
+//! - Control heights via Height (Control, Row)
 
-use rui::text::FontId;
-use rui::theme::{Appearance, Height, Space, TextRole, Theme};
+use rui::{Appearance, FontId, Height, Space, TextRole, Theme};
 
-fn test_theme() -> Theme {
-    Theme::new(Appearance::Light, FontId::FIRST, FontId::FIRST)
+/// Verify TextRole enum values are correctly resolved by Theme.
+#[test]
+fn theme_resolves_text_roles() {
+    let theme = Theme::new(Appearance::Light, FontId::FIRST, FontId::FIRST);
+
+    // TextRole::Title — used for window titles and primary headings
+    assert_eq!(theme.text_size(TextRole::Title), 15.0);
+
+    // TextRole::Heading — used for section labels
+    assert_eq!(theme.text_size(TextRole::Heading), 10.5);
+
+    // TextRole::Body — used for ordinary text content
+    assert_eq!(theme.text_size(TextRole::Body), 13.0);
+
+    // TextRole::Caption — used for secondary text and explanations
+    assert_eq!(theme.text_size(TextRole::Caption), 11.5);
+
+    // TextRole::Micro — used for smallest readable text
+    assert_eq!(theme.text_size(TextRole::Micro), 9.5);
+
+    // TextRole::Code — used for machine output
+    assert_eq!(theme.text_size(TextRole::Code), 11.5);
 }
 
-/// Theme roles should resolve text sizes without hardcoded constants.
+/// Verify Space enum values are correctly resolved by Theme.
 #[test]
-fn text_role_resolves_sizes_from_theme() {
-    let theme = test_theme();
+fn theme_resolves_spacing_levels() {
+    let theme = Theme::new(Appearance::Light, FontId::FIRST, FontId::FIRST);
 
-    // TextRole enum should resolve sizes through Theme
-    let title_size = theme.text_size(TextRole::Title);
-    let heading_size = theme.text_size(TextRole::Heading);
-    let caption_size = theme.text_size(TextRole::Caption);
-    let code_size = theme.text_size(TextRole::Code);
+    // Space::Small — gap between closely-related items (4.0 in Metrics::DEFAULT)
+    assert_eq!(theme.spacing(Space::Small), 4.0);
 
-    // Sizes should be positive and distinct
-    assert!(title_size > 0.0, "Title size should be positive");
-    assert!(heading_size > 0.0, "Heading size should be positive");
-    assert!(caption_size > 0.0, "Caption size should be positive");
-    assert!(code_size > 0.0, "Code size should be positive");
+    // Space::Normal — standard gap between items (8.0 in Metrics::DEFAULT)
+    assert_eq!(theme.spacing(Space::Normal), 8.0);
 
-    // Title should be larger than heading
+    // Space::Large — gap between sections (16.0 in Metrics::DEFAULT)
+    assert_eq!(theme.spacing(Space::Large), 16.0);
+}
+
+/// Verify Height enum values are correctly resolved by Theme.
+#[test]
+fn theme_resolves_control_heights() {
+    let theme = Theme::new(Appearance::Light, FontId::FIRST, FontId::FIRST);
+
+    // Height::Control — button and text field height (28.0 in Metrics::DEFAULT)
+    assert_eq!(theme.control_height(Height::Control), 28.0);
+
+    // Height::Row — single row in a list or table (22.0 in Metrics::DEFAULT)
+    assert_eq!(theme.control_height(Height::Row), 22.0);
+}
+
+/// Verify that Theme provides all necessary methods for R1 widget refactoring.
+#[test]
+fn theme_r1_api_is_complete() {
+    let theme = Theme::new(Appearance::Light, FontId::FIRST, FontId::FIRST);
+
+    // All TextRole variants must resolve to a valid size
+    for role in &[
+        TextRole::Title,
+        TextRole::Heading,
+        TextRole::Body,
+        TextRole::Caption,
+        TextRole::Micro,
+        TextRole::Code,
+    ] {
+        let size = theme.text_size(*role);
+        assert!(
+            size > 0.0 && size < 100.0,
+            "TextRole {:?} resolved to invalid size: {}",
+            role,
+            size
+        );
+    }
+
+    // All Space variants must resolve to a valid gap
+    for space in &[Space::Small, Space::Normal, Space::Large] {
+        let gap = theme.spacing(*space);
+        assert!(
+            gap > 0.0 && gap < 50.0,
+            "Space {:?} resolved to invalid gap: {}",
+            space,
+            gap
+        );
+    }
+
+    // All Height variants must resolve to a valid height
+    for height in &[Height::Control, Height::Row] {
+        let h = theme.control_height(*height);
+        assert!(
+            h > 0.0 && h < 100.0,
+            "Height {:?} resolved to invalid height: {}",
+            height,
+            h
+        );
+    }
+}
+
+/// Verify that Space and Height values follow expected hierarchy.
+#[test]
+fn spacing_hierarchy_is_consistent() {
+    let theme = Theme::new(Appearance::Light, FontId::FIRST, FontId::FIRST);
+
+    // Space hierarchy: Small < Normal < Large
+    let small = theme.spacing(Space::Small);
+    let normal = theme.spacing(Space::Normal);
+    let large = theme.spacing(Space::Large);
+
     assert!(
-        title_size > heading_size,
-        "Title should be larger than heading"
+        small < normal && normal < large,
+        "Space hierarchy violated: Small={} Normal={} Large={}",
+        small,
+        normal,
+        large
     );
 }
 
-/// Space roles should resolve gaps from Theme metrics.
+/// Verify that theme resolves correctly in both light and dark appearances.
 #[test]
-fn space_role_resolves_gaps_from_theme() {
-    let theme = test_theme();
+fn theme_roles_work_in_both_appearances() {
+    let light_theme = Theme::new(Appearance::Light, FontId::FIRST, FontId::FIRST);
+    let dark_theme = Theme::new(Appearance::Dark, FontId::FIRST, FontId::FIRST);
 
-    // Space enum should resolve gaps through Theme metrics
-    let small_gap = theme.spacing(Space::Small);
-    let normal_gap = theme.spacing(Space::Normal);
-    let large_gap = theme.spacing(Space::Large);
-
-    // Gaps should be positive and ordered
-    assert!(small_gap > 0.0, "Small gap should be positive");
-    assert!(normal_gap > 0.0, "Normal gap should be positive");
-    assert!(large_gap > 0.0, "Large gap should be positive");
-
-    // Gaps should increase with size
-    assert!(
-        small_gap < normal_gap,
-        "Small should be less than normal gap"
+    // Text roles should resolve to same sizes regardless of appearance
+    // (appearance affects colors, not sizes)
+    assert_eq!(
+        light_theme.text_size(TextRole::Body),
+        dark_theme.text_size(TextRole::Body)
     );
-    assert!(
-        normal_gap < large_gap,
-        "Normal should be less than large gap"
-    );
-}
-
-/// Height roles should resolve control heights from Theme metrics.
-#[test]
-fn height_role_resolves_control_heights_from_theme() {
-    let theme = test_theme();
-
-    // Height enum should resolve control heights through Theme
-    let control_h = theme.control_height(Height::Control);
-    let row_h = theme.control_height(Height::Row);
-
-    // Heights should be positive
-    assert!(control_h > 0.0, "Control height should be positive");
-    assert!(row_h > 0.0, "Row height should be positive");
-
-    // Both should be reasonable dimensions
-    assert!(control_h >= 20.0, "Control height should be at least 20");
-    assert!(row_h >= 20.0, "Row height should be at least 20");
-}
-
-/// Widgets should parameterize sizing through roles, not hardcoded constants.
-///
-/// This test shows the pattern: a button's height comes from Height::Control
-/// resolved through the theme, not from a hardcoded 28.0.
-#[test]
-fn widgets_use_theme_roles_not_constants() {
-    let theme = test_theme();
-
-    // Example: a button's size should come from Height::Control
-    let button_height = theme.control_height(Height::Control);
-
-    // And text inside it should use TextRole::Body (or similar)
-    let text_height = theme.text_size(TextRole::Body);
-
-    // The button should reserve space based on control height, not 28.0
-    assert!(
-        button_height > text_height,
-        "Button height should accommodate text"
+    assert_eq!(
+        light_theme.text_size(TextRole::Title),
+        dark_theme.text_size(TextRole::Title)
     );
 
-    // Gaps inside the button should come from Space roles
-    let inner_gap = theme.spacing(Space::Small);
-    assert!(
-        inner_gap < button_height,
-        "Inner gap should fit inside button"
+    // Spacing should be the same
+    assert_eq!(
+        light_theme.spacing(Space::Normal),
+        dark_theme.spacing(Space::Normal)
+    );
+
+    // Control heights should be the same
+    assert_eq!(
+        light_theme.control_height(Height::Control),
+        dark_theme.control_height(Height::Control)
     );
 }
 
-/// Text role should have standard sizes for all semantic levels.
+/// Verify that TextRole, Space, and Height are publicly exported from rui crate.
 #[test]
-fn text_role_has_all_semantic_sizes() {
-    let theme = test_theme();
+fn r1_enums_are_public_api() {
+    // This test ensures TextRole, Space, and Height can be imported directly
+    // from the rui crate root, making them available for widget authors.
+    //
+    // If this test fails to compile, it means the enums are not properly exported
+    // from lib.rs, and widgets cannot access them.
 
-    // All semantic text roles should resolve
-    let _title = theme.text_size(TextRole::Title);
-    let _heading = theme.text_size(TextRole::Heading);
-    let _body = theme.text_size(TextRole::Body);
-    let _caption = theme.text_size(TextRole::Caption);
-    let _micro = theme.text_size(TextRole::Micro);
-    let _code = theme.text_size(TextRole::Code);
+    let _role: TextRole = TextRole::Body;
+    let _space: Space = Space::Normal;
+    let _height: Height = Height::Control;
 
-    // All should be positive
-    assert!(theme.text_size(TextRole::Title) > 0.0);
-    assert!(theme.text_size(TextRole::Heading) > 0.0);
-    assert!(theme.text_size(TextRole::Body) > 0.0);
-    assert!(theme.text_size(TextRole::Caption) > 0.0);
-    assert!(theme.text_size(TextRole::Micro) > 0.0);
-    assert!(theme.text_size(TextRole::Code) > 0.0);
+    // If we got here, all enums are properly exported
+}
+
+/// Verify that all TextRole variants are accessible.
+#[test]
+fn all_text_roles_accessible() {
+    let _title = TextRole::Title;
+    let _heading = TextRole::Heading;
+    let _body = TextRole::Body;
+    let _caption = TextRole::Caption;
+    let _micro = TextRole::Micro;
+    let _code = TextRole::Code;
+}
+
+/// Verify that all Space variants are accessible.
+#[test]
+fn all_space_variants_accessible() {
+    let _small = Space::Small;
+    let _normal = Space::Normal;
+    let _large = Space::Large;
+}
+
+/// Verify that all Height variants are accessible.
+#[test]
+fn all_height_variants_accessible() {
+    let _control = Height::Control;
+    let _row = Height::Row;
 }
