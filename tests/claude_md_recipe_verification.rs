@@ -487,3 +487,110 @@ fn recipe_1_backend_specialized_docs_referenced() {
 
     println!("✓ Recipe 1 analysis references coordinate and event translation specializations");
 }
+
+#[test]
+fn recipe_1_claude_md_references_extracted_docs() {
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+
+    // Verify Recipe 1 section exists
+    assert!(
+        claude_md.contains("## Recipe 1: Adding a WASM Backend"),
+        "Recipe 1 section not found in CLAUDE.md"
+    );
+
+    // Verify Recipe 1 section references extracted documentation
+    let recipe_1_start = claude_md
+        .find("## Recipe 1: Adding a WASM Backend")
+        .unwrap();
+    let recipe_2_start = claude_md
+        .find("## Recipe 2: X11 Backend Implementation")
+        .unwrap();
+    let recipe_1_section = &claude_md[recipe_1_start..recipe_2_start];
+
+    let extracted_docs = [
+        (
+            "STEP_4_RECIPE_1_ANALYSIS.md",
+            "three-phase pattern breakdown",
+        ),
+        (
+            "STEP_4_RECIPE_1_VERIFICATION_GATES.md",
+            "acceptance criteria",
+        ),
+        (
+            "STEP_4_RECIPE_1_CROSS_MODULE_CONCERNS.md",
+            "friction points",
+        ),
+        (
+            "STEP_4_RECIPE_1_COORDINATE_CONTRACT.md",
+            "coordinate transformation",
+        ),
+        ("STEP_4_RECIPE_1_EVENT_TRANSLATION.md", "DOM event types"),
+        ("STEP_4_RECIPE_1_TEMPLATE_VALIDATION.md", "template claims"),
+        ("STEP_4_RECIPE_1_SUMMARY.md", "quick reference"),
+    ];
+
+    let mut found_count = 0;
+    for (doc_file, description) in &extracted_docs {
+        if recipe_1_section.contains(doc_file) {
+            println!(
+                "✓ CLAUDE.md Recipe 1 references {}: {}",
+                doc_file, description
+            );
+            found_count += 1;
+        } else {
+            println!(
+                "✗ CLAUDE.md Recipe 1 missing reference to {}: {}",
+                doc_file, description
+            );
+        }
+    }
+
+    println!(
+        "✓ CLAUDE.md Recipe 1 references {}/{} extracted documentation files",
+        found_count,
+        extracted_docs.len()
+    );
+
+    assert_eq!(
+        found_count,
+        extracted_docs.len(),
+        "CLAUDE.md Recipe 1 should reference all extracted documentation files"
+    );
+}
+
+#[test]
+fn recipe_1_claude_md_has_implementation_guide() {
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+
+    // Verify Recipe 1 section has "How to Implement" or similar guidance
+    let recipe_1_start = claude_md
+        .find("## Recipe 1: Adding a WASM Backend")
+        .unwrap();
+    let recipe_2_start = claude_md
+        .find("## Recipe 2: X11 Backend Implementation")
+        .unwrap();
+    let recipe_1_section = &claude_md[recipe_1_start..recipe_2_start];
+
+    assert!(
+        recipe_1_section.contains("How to Implement")
+            || recipe_1_section.contains("How to use")
+            || recipe_1_section.contains("implementation"),
+        "Recipe 1 should have guidance on how to implement WASM backend"
+    );
+
+    // Verify it mentions "new implementers"
+    assert!(
+        recipe_1_section.contains("implementer") || recipe_1_section.contains("implementers"),
+        "Recipe 1 should address future implementers"
+    );
+
+    // Verify it explains the order to read documentation
+    assert!(
+        recipe_1_section.contains("Start here")
+            || recipe_1_section.contains("order")
+            || recipe_1_section.contains("Begin"),
+        "Recipe 1 should guide implementers on which doc to read first"
+    );
+
+    println!("✓ CLAUDE.md Recipe 1 has complete implementation guidance for new backends");
+}
