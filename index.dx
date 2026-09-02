@@ -1,58 +1,7 @@
 
 # rui — Working Index
 
-## Now
-Current work in progress.
-
-### check-r1-theme-roles
-::code
-reads=/index.dx
-runs=bash
----
-#!/bin/bash
-# Verify that a specific theme roles section exists in index.dx
-# This check is RED (failing) until the implementation is complete.
-
-# Use dx text to check if the section exists
-if dx text index.dx --section r1-theme-roles-scope > /dev/null 2>&1; then
-  echo "✓ PASS: Theme roles section found"
-  exit 0
-else
-  echo "✗ FAIL: Section not found (expected while implementation is in progress)"
-  exit 1
-fi
-::output
-✓ PASS: Theme roles section found
-
 ## r1-theme-roles-scope
-
-This section documents the **R1 Theme Roles** scope: TextRole/Space/Height enums and their resolution methods in src/theme.rs.
-
-### State Extraction (STEP 2)
-
-**Enums present in src/theme.rs:**
-- `enum TextRole` (line 688) — Title, Heading, Body, Caption, Micro, Code
-- `enum Space` (line 677) — Small, Normal, Large
-- `enum Height` (line 705) — Control, Row
-
-**Metrics struct (line 298)** — Holds sizing constants:
-```rust
-pub struct Metrics {
-    gap_small: f32,          // small spacing
-    gap: f32,                // normal spacing
-    gap_large: f32,          // large spacing
-    control_height: f32,     // control height
-    row_height: f32,         // row height
-    ...
-}
-```
-
-**Resolution methods:**
-- `Theme::spacing(Space) -> f32` (line 646) — Resolves Space enum to f32
-- `Theme::text_size(TextRole) -> f32` (line 655) — Resolves TextRole enum to f32 (hardcoded)
-- `Theme::control_height(Height) -> f32` (line 667) — Resolves Height enum to f32
-
-### Verification
 
 ::code
 reads=src/theme.rs
@@ -65,3 +14,25 @@ grep -n "enum TextRole\|enum Space\|enum Height\|struct Metrics\|fn spacing" src
 677:pub enum Space {
 688:pub enum TextRole {
 705:pub enum Height {
+
+## Now
+
+Current work in progress.
+
+### check-r1-theme-roles
+
+::code
+reads=/index.dx
+runs=bash
+---
+#!/bin/bash
+# Verify that a specific theme roles section exists in index.dx
+if dx text index.dx --section r1-theme-roles-scope > /dev/null 2>&1; then
+  echo "✓ PASS: Theme roles section found"
+  exit 0
+else
+  echo "✗ FAIL: Section not found"
+  exit 1
+fi
+::output
+✓ PASS: Theme roles section found
