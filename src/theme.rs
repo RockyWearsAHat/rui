@@ -650,6 +650,11 @@ impl Theme {
             Space::Large => self.metrics.gap_large,
         }
     }
+
+    /// Resolve a text role to its size in this theme (scaffolding for R1).
+    pub fn text_size(&self, _role: TextRole) -> f32 {
+        0.0
+    }
 }
 
 /// A spacing level, resolved to an f32 gap by a [`Theme`].
