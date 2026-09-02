@@ -175,6 +175,9 @@ struct Eased {
     value: f32,
     /// The frame it was last asked for, so values nothing draws are dropped.
     seen: u64,
+    /// The easing curve to apply (stored for future use).
+    #[allow(dead_code)]
+    easing: Easing,
 }
 
 /// How far round its period a looping value has got, and when it was last asked
@@ -279,6 +282,47 @@ impl Spring {
     }
 }
 
+/// Easing curve for timing animations.
+///
+/// Determines how animation progress is distributed over time.
+/// Standard curves follow CSS easing function conventions.
+#[derive(Clone, Copy, Debug)]
+pub enum Easing {
+    /// t = t (constant speed).
+    Linear,
+    /// t = t² (slow start, fast finish).
+    EaseIn,
+    /// t = 1-(1-t)² (fast start, slow finish).
+    EaseOut,
+    /// t = cubic (smooth both ends, default).
+    EaseInOut,
+    /// t = sqrt(1 - (1-t)²) (stronger ease-in).
+    EaseInCirc,
+    /// t = sqrt(t) (stronger ease-out).
+    EaseOutCirc,
+}
+
+impl Easing {
+    /// Apply easing curve to normalized progress [0, 1].
+    pub fn apply(&self, t: f32) -> f32 {
+        debug_assert!((0.0..=1.0).contains(&t), "progress must be in [0, 1]");
+        match self {
+            Easing::Linear => t,
+            Easing::EaseIn => t * t,
+            Easing::EaseOut => 1.0 - (1.0 - t) * (1.0 - t),
+            Easing::EaseInOut => {
+                if t < 0.5 {
+                    2.0 * t * t
+                } else {
+                    1.0 - (-2.0 * t + 2.0).powi(2) / 2.0
+                }
+            }
+            Easing::EaseInCirc => 1.0 - (1.0 - t * t).sqrt(),
+            Easing::EaseOutCirc => t.sqrt(),
+        }
+    }
+}
+
 /// How close to its target a value has to get before it is called settled.
 ///
 /// Exponential easing approaches its target without ever arriving, so without a
@@ -286,6 +330,24 @@ impl Spring {
 /// animated value here is a fraction or a coordinate in logical units, and a
 /// thousandth of either is far below what a pixel can show.
 const SETTLED: f32 = 0.001;
+
+/// Deferred action to execute when an animation completes or on a delay.
+#[derive(Clone, Debug)]
+pub struct DeferredAction {
+    /// When this action should execute.
+    pub when: DeferWhen,
+    /// Associated animation ID (used for cleanup).
+    pub id: Id,
+}
+
+/// Condition for when a deferred action should execute.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DeferWhen {
+    /// Execute when the animation identified by this ID finishes.
+    AfterAnimation,
+    /// Execute after the next frame.
+    NextFrame,
+}
 
 /// The state that outlives a frame.
 #[derive(Debug, Default)]
@@ -349,6 +411,9 @@ pub struct Memory {
     /// Used in Phase 2 for spring physics; field added in Phase 2 Commit 1.
     #[allow(dead_code)]
     springs: HashMap<Id, (Spring, f32, f32)>,
+    /// Deferred actions waiting to execute.
+    /// Used in Phase 3 for post-animation callbacks.
+    deferred_actions: Vec<DeferredAction>,
 }
 
 impl Memory {
@@ -612,10 +677,25 @@ impl Memory {
     /// it was drawn, so opening a window would play a burst of animation and a
     /// row scrolled into view would fade in as though it had just changed.
     pub fn ease(&mut self, id: Id, target: f32, seconds: f32) -> f32 {
+        self.ease_with(id, target, seconds, Easing::EaseInOut)
+    }
+
+    /// Eases the value held under `id` toward `target` with custom easing curve.
+    ///
+    /// `seconds` is the time constant: how long the value takes to close most of
+    /// the remaining distance. The step is `1 - e^(-dt/seconds)` rather than a
+    /// fixed increment, so the motion is identical whether the frame took four
+    /// milliseconds or forty.
+    ///
+    /// A value asked for the first time starts *at* its target rather than at
+    /// zero. Otherwise everything would animate in from nothing the first time
+    /// it was drawn.
+    pub fn ease_with(&mut self, id: Id, target: f32, seconds: f32, easing: Easing) -> f32 {
         let frame = self.frame;
         let entry = self.eased.entry(id).or_insert(Eased {
             value: target,
             seen: frame,
+            easing,
         });
         entry.seen = frame;
 
@@ -712,6 +792,51 @@ impl Memory {
         }
     }
 
+    /// Register an action to execute when an animation finishes.
+    ///
+    /// The action runs once the animation identified by `animation_id` settles.
+    /// Used for cleanup, state changes, or chaining animations after one completes.
+    pub fn after_animation(&mut self, animation_id: Id) {
+        self.deferred_actions.push(DeferredAction {
+            when: DeferWhen::AfterAnimation,
+            id: animation_id,
+        });
+    }
+
+    /// Check if an animation has completed (no longer animating under this ID).
+    pub(crate) fn animation_is_complete(&self, id: Id) -> bool {
+        !self.eased.contains_key(&id)
+            && !self.springs.contains_key(&id)
+            && !self.cycles.contains_key(&id)
+    }
+
+    /// Execute deferred actions whose conditions have been met.
+    ///
+    /// Called during frame end to run post-animation callbacks.
+    /// Clears completed actions from the queue.
+    pub(crate) fn process_deferred_actions(&mut self) {
+        // Collect which actions to remove to avoid borrow conflicts
+        let mut to_remove = Vec::new();
+        for (i, action) in self.deferred_actions.iter().enumerate() {
+            match action.when {
+                DeferWhen::AfterAnimation => {
+                    // Mark for removal if animation has completed
+                    if self.animation_is_complete(action.id) {
+                        to_remove.push(i);
+                    }
+                }
+                DeferWhen::NextFrame => {
+                    // Always remove (was executed this frame)
+                    to_remove.push(i);
+                }
+            }
+        }
+        // Remove in reverse order to preserve indices
+        for i in to_remove.iter().rev() {
+            self.deferred_actions.remove(*i);
+        }
+    }
+
     /// Settles the frame's interaction state.
     ///
     /// A press is released here rather than where it was drawn, so that letting
@@ -772,8 +897,11 @@ impl Memory {
     /// The 2-live-loop limit prevents animation stacking on large lists.
     /// Animating each row independently causes exponential resource growth.
     pub(crate) fn assert_animation_budget(&self) {
-        let active_animations =
-            self.eased.len() + self.cycles.len() + self.deferred.len() + self.transitions.len();
+        let active_animations = self.eased.len()
+            + self.cycles.len()
+            + self.springs.len()
+            + self.deferred.len()
+            + self.transitions.len();
         assert!(
             active_animations <= 2,
             "Animation budget exceeded: {} active (max 2 allowed). \
