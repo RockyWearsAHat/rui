@@ -15,6 +15,66 @@ grep -n "enum TextRole\|enum Space\|enum Height\|struct Metrics\|fn spacing" src
 688:pub enum TextRole {
 705:pub enum Height {
 
+## r1-widget-constants-extraction
+
+::code
+reads=src/widgets.rs,src/theme.rs
+runs=bash
+---
+#!/bin/bash
+echo "=== STEP 3: Widget Constants Extraction ==="
+echo ""
+echo "## Defined f32 Constants in widgets.rs"
+grep -n "const.*f32 =" src/widgets.rs
+echo ""
+echo "## Metrics::DEFAULT values (theme.rs)"
+grep -A 13 "pub const DEFAULT: Self = Self {" src/theme.rs | grep ": [0-9]"
+echo ""
+echo "## Hardcoded control_height (28.0) instances"
+grep -n "\.h(28\.0)" src/widgets.rs | wc -l
+echo "   Lines: $(grep -n '\.h(28\.0)' src/widgets.rs | cut -d: -f1 | tr '\n' ',' | sed 's/,$//')"
+echo ""
+echo "## Hardcoded padding (12.0) instances"
+grep -n "\.pad" src/widgets.rs | grep "12\.0" | wc -l
+echo "   Lines: $(grep -n '\.pad.*12\.0' src/widgets.rs | cut -d: -f1 | tr '\n' ',' | sed 's/,$//')"
+echo ""
+echo "## Hardcoded gap (8.0) instances"
+grep -n "\.gap(8\.0)" src/widgets.rs | wc -l
+echo "   Lines: $(grep -n '\.gap(8\.0)' src/widgets.rs | cut -d: -f1 | tr '\n' ',' | sed 's/,$//')"
+::output
+=== STEP 3: Widget Constants Extraction ===
+
+## Defined f32 Constants in widgets.rs
+40:pub const BODY_SIZE: f32 = 13.0;
+46:const HEADING_TRACKING: f32 = 0.9;
+
+## Metrics::DEFAULT values (theme.rs)
+        gap_small: 4.0,
+        gap: 8.0,
+        gap_large: 16.0,
+        padding: 12.0,
+        corner: 8.0,
+        corner_small: 5.0,
+        control_height: 28.0,
+        row_height: 22.0,
+        hairline: 1.0,
+        scrollbar: 8.0,
+        shadow: 9.0,
+        shadow_offset: 1.5,
+        motion: 0.09,
+
+## Hardcoded control_height (28.0) instances
+5
+   Lines: 167,187,341,376,524
+
+## Hardcoded padding (12.0) instances
+4
+   Lines: 140,168,207,325
+
+## Hardcoded gap (8.0) instances
+5
+   Lines: 188,207,482,505,527
+
 ## Now
 
 Current work in progress.
