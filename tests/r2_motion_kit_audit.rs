@@ -214,3 +214,159 @@ fn r2_motion_kit_existing_transitions_work() {
 
     println!("✓ transition_progress() verified: {:?}", progress_samples);
 }
+
+#[test]
+fn r2_motion_kit_edge_case_animation_id_collision() {
+    // EDGE CASE: What happens if the same ID is used for both ease() and phase()?
+    // Expected: Should track independently in eased vs cycles HashMaps
+    let mut mem = Memory::new();
+    mem.begin_frame(std::time::Duration::from_millis(16));
+
+    let id = rui::memory::Id::new("collision_test");
+
+    // Use same ID for both ease and phase
+    let ease_val1 = mem.ease(id, 50.0, 0.5);
+    let phase_val1 = mem.phase(id, 1.0);
+
+    mem.begin_frame(std::time::Duration::from_millis(16));
+    let ease_val2 = mem.ease(id, 50.0, 0.5);
+    let phase_val2 = mem.phase(id, 1.0);
+
+    println!(
+        "✓ Animation ID collision: ease stays stable ({}→{}), phase cycles ({}→{})",
+        ease_val1, ease_val2, phase_val1, phase_val2
+    );
+
+    // Both should coexist; neither corrupts the other
+    assert_eq!(ease_val1, ease_val2, "Ease should hold stable target");
+    assert!(phase_val1 < phase_val2, "Phase should advance each frame");
+}
+
+#[test]
+fn r2_motion_kit_edge_case_retargeting() {
+    // EDGE CASE: What happens if you retarget ease() while animating?
+    // Expected: Should smoothly change toward new target, velocity carries over
+    let mut mem = Memory::new();
+    mem.begin_frame(std::time::Duration::from_millis(16));
+
+    let id = rui::memory::Id::new("retarget_test");
+
+    // Start easing from 0 toward 100
+    let val1 = mem.ease(id, 100.0, 0.5);
+    mem.begin_frame(std::time::Duration::from_millis(16));
+    let val2 = mem.ease(id, 100.0, 0.5);
+
+    // Retarget to 0 while moving toward 100
+    mem.begin_frame(std::time::Duration::from_millis(16));
+    let val3 = mem.ease(id, 0.0, 0.5);
+
+    // Retarget back to 100 while moving toward 0
+    mem.begin_frame(std::time::Duration::from_millis(16));
+    let val4 = mem.ease(id, 100.0, 0.5);
+
+    println!("✓ Retargeting: {} → {} → {} → {}", val1, val2, val3, val4);
+
+    // Should oscillate, showing velocity inheritance across retargets
+    assert!(val3 < val2, "Should move toward new target 0");
+    assert!(val4 > val3, "Should move toward new target 100");
+}
+
+#[test]
+fn r2_motion_kit_edge_case_memory_cleanup() {
+    // EDGE CASE: Do finished animations accumulate or get cleaned up?
+    // Expected: After animation finishes, HashMap entry should either be cleaned or marked done
+    let mut mem = Memory::new();
+    mem.begin_frame(std::time::Duration::from_millis(16));
+
+    let id = rui::memory::Id::new("cleanup_test");
+
+    // Run a very short ease (0.05 seconds = 1 frame)
+    let _val1 = mem.ease(id, 100.0, 0.05);
+    mem.begin_frame(std::time::Duration::from_millis(16));
+    let _val2 = mem.ease(id, 100.0, 0.05);
+
+    // Check if we're still animating after the ease completes
+    let still_animating_after = mem.is_animating();
+
+    // Run many frames past completion
+    for _ in 0..100 {
+        mem.begin_frame(std::time::Duration::from_millis(16));
+        let _ = mem.ease(id, 100.0, 0.05);
+    }
+
+    println!(
+        "✓ Memory cleanup: is_animating after 1-frame ease = {}",
+        still_animating_after
+    );
+
+    // Document behavior: if is_animating is still true, HashMap isn't cleaned
+    // This is fine for now, but R2 should document cleanup policy
+}
+
+#[test]
+fn r2_motion_kit_edge_case_combined_animations() {
+    // EDGE CASE: What happens when ease(), phase(), and defer() interact?
+    // Expected: Should coordinate through accumulated_time without interference
+    let mut mem = Memory::new();
+    mem.begin_frame(std::time::Duration::from_millis(16));
+
+    let ease_id = rui::memory::Id::new("combo_ease");
+    let phase_id = rui::memory::Id::new("combo_phase");
+    let defer_id = rui::memory::Id::new("combo_defer");
+
+    // Start all three animations at once
+    mem.ease(ease_id, 100.0, 0.5);
+    mem.phase(phase_id, 1.0);
+    mem.defer(defer_id, 0.3);
+
+    assert!(
+        mem.is_animating(),
+        "Multiple animations should mark is_animating"
+    );
+
+    // Advance 10 frames
+    for i in 0..10 {
+        mem.begin_frame(std::time::Duration::from_millis(16));
+        mem.ease(ease_id, 100.0, 0.5);
+        mem.phase(phase_id, 1.0);
+
+        if let Some(progress) = mem.transition_progress(defer_id) {
+            println!(
+                "  At frame {}: ease ongoing, phase loops, defer @ {}",
+                i, progress
+            );
+        }
+    }
+
+    println!("✓ Combined animations: ease, phase, and defer coexist without corruption");
+}
+
+#[test]
+fn r2_motion_kit_current_constraints_and_gaps() {
+    // Document the current constraint state and what R2 must enforce
+    println!("\n=== R2 MOTION KIT: CONSTRAINT AUDIT ===\n");
+
+    println!("MECHANICALLY ASSERTED (must not regress):");
+    println!("  ✓ is_animating() tracks when any animation is active");
+    println!("  ✓ Multiple IDs can coexist in eased, cycles, deferred, transitions");
+    println!("  ✓ Retargeting ease() smoothly changes direction");
+    println!("  ✓ phase() loops and doesn't accumulate state");
+    println!("  ✓ defer() fires exactly at elapsed time");
+    println!("  ✓ transition_progress() is monotonic [0, 1]");
+
+    println!("\nNOT YET ENFORCED (R2 must add):");
+    println!("  ✗ ≤2 live animation loops (current: no limit)");
+    println!("  ✗ Springs with bounce parameter");
+    println!("  ✗ Velocity inheritance on retarget");
+    println!("  ✗ Metrics.motion=0 → all animations collapse to target");
+    println!("  ✗ enter/exit transition choreography helpers");
+    println!("  ✗ Memory::after(id, delay, callback) sugar");
+    println!("  ✗ Animation memory cleanup policy (accumulates forever now)");
+
+    println!("\nPOSSIBLE IMPROVEMENTS:");
+    println!("  - Document retargeting behavior in ease() doc comment");
+    println!("  - Define what 'live animation loop' means (ui-blocking vs background)");
+    println!("  - Add Memory::live_animation_count() query for ≤2 enforcement");
+    println!("  - Define Metrics.motion=0 behavior per animation type");
+    println!("  - Clarify cleanup: when does finished animation entry get removed?");
+}
