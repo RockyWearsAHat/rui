@@ -861,6 +861,9 @@ impl Theme {
 }
 
 /// A spacing level, resolved to an f32 gap by a [`Theme`].
+///
+/// Spacing values are appearance-independent: they return the same gap for Light and Dark themes.
+/// This ensures layout consistency across all color schemes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Space {
     /// Gap between closely-related items.

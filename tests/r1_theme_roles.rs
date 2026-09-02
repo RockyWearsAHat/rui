@@ -129,7 +129,11 @@ fn spacing_hierarchy_is_consistent() {
 }
 
 /// Verify that theme resolves correctly in both light and dark appearances.
+///
 /// All layout metrics (text sizes, spacing, heights) must be appearance-independent.
+/// This ensures that switching between Light and Dark themes never changes layout,
+/// only colors. Per [`Space`] and [`Height`] documentation: values returned are
+/// consistent across all appearances.
 #[test]
 fn theme_roles_work_in_both_appearances() {
     let light_theme = Theme::new(Appearance::Light, FontId::FIRST, FontId::FIRST);
