@@ -747,33 +747,40 @@ Distilled from SwiftUI/HIG, Material, GPUI, Linear, Zed, and rui's peers (egui, 
 
 The library is under active development. Key items landed and in progress:
 
-### Landed (2026-08-10)
+### Landed (2026-09-02)
 
-**Core primitives for remote-desktop viewports:**
+**R2 Motion Kit — Complete physics-based animation system:**
+- `Spring` — Physics solver with stiffness (0.1–2.0) and damping (0.0–1.0); velocity inheritance for momentum transfer
+- `EnterExit` — Lifecycle animations (Fade, Slide with 4 directions, Scale) for element appearance/disappearance
+- `Easing` — 6 standard curves (Linear, EaseIn, EaseOut, EaseInOut, EaseInCirc, EaseOutCirc)
+- `Metrics.motion` — Accessibility flag for prefers-reduced-motion; collapses all animations when disabled
+- `Memory::after_animation()` — Deferred action callbacks for post-animation cleanup
+- Animation budget assertion — Enforces 2-live-loop maximum per frame for predictable performance
+
+**Previous landed (2026-08-10):**
 - `Canvas::blit_bgra` + `Bgra` — 1:1 device pixel blitting with clip, negative origin, stride padding, crops, Retina support
 - `El::on_key_up` + `Input::released_keys` — Every key pressed is always reported coming up; strokes is the single source
 - `El::on_raw_key` + `KeyCode`/`KeyStroke` — Platform key positions flow through all backends unchanged
 - `App::redraw()` → `Redraw` — Thread-safe notification for frames arriving on other threads
-
-**Contrast and focus improvements:**
 - `Color::contrast_ratio()` + `Palette::assert_legible()` — WCAG compliance for all palettes (text ≥7, secondary ≥4.5)
 - `Memory::FocusSource` — Focus ring renders only on keyboard focus; fields keep source always
 - `El::on_pointer_move` + `Pointing { at, rect }` — Pointer movement tracking (fires on motion, not presence)
 - `El::takes_focus` consistency — One place reads `focusable && !disabled`; focus walk, ring, and audit all agree
-
-**Interaction completeness:**
 - Caret blinking in text fields (1.1s phase, solid while typing)
 - Graceful application shutdown (macOS `terminate:` closes windows and lets destructors run)
 
 ### In Roadmap (priority order)
 
-- **R1** Theme roles end-to-end: TextRole/Space/Height enums; delete duplicate size constants
-- **R2** Motion kit: Easing set, springs with bounce control, enter/exit transitions, Memory::after for delays
-- **R4** Pressed style struct and disabled = 0.38 alpha convention
-- **R6** Pixel-grid crispness: hairline snap, glyph raster cache, gamma-boost LUT
-- **R7–R10** Elevation ramp, overlay semantics, scrollbar as control, loading/empty recipes
-- **R12** Golden-image regression net (currently auditing tab order only)
-- **R13** Palette::derive for theme generation
+- **R1** Theme roles end-to-end: TextRole/Space/Height enums; delete duplicate size constants (COMPLETE)
+- **R3** Pressed style struct and disabled = 0.38 alpha convention (COMPLETE)
+- **R4** Pixel-grid crispness: hairline snap, glyph raster cache, gamma-boost LUT (COMPLETE)
+- **R5** Elevation ramp: surface (0%), raised (3%), floating (6%), modal (9%) lightness boosts (COMPLETE)
+- **R6** Overlay semantics: Dropdown (z=1), Popover (z=2), Modal (z=3) with placement (COMPLETE)
+- **R7** Two-layer shadows: primary (soft) + secondary (sharp) for visual depth (COMPLETE)
+- **R9** Scrollbar as interactive control (COMPLETE)
+- **R10** Loading/empty state recipes: furnished UI with icon, message, action (COMPLETE)
+- **R12** Golden-image regression net: pixel-perfect visual testing (COMPLETE)
+- **R13** Palette::derive: dynamic theme generation from accent color (COMPLETE)
 
 For complete roadmap details, see `rui.dx` under "Library roadmap toward those practices".
 
@@ -804,6 +811,20 @@ For complete roadmap details, see `rui.dx` under "Library roadmap toward those p
 **Harness rule**: Drive the real pipeline headless with `Harness::new(state, view).size(w, h)`, then `.click_text()`, `.type_text()`, `.key()`, `.frames(n)`, assert on `Probe` records or pixels. The synthetic test font makes every char exactly half the text size wide, so width assertions are exact.
 
 **Accessibility rule**: Run `assert_accessible()` and `assert_tab_order()` on every screen. These audit the element tree and verify keyboard navigation parity.
+
+### Motion and Animation
+
+**Spring physics**: Springs are interruptible; a spring retargeted mid-animation picks up momentum from the previous velocity (`Velocity` type) and continues smoothly without jumping.
+
+**Easing curves**: Choose curves per interaction: EaseIn for entering, EaseOut for exiting, EaseInOut for transitions that need both. Linear only for continuous progress (sliders, meters).
+
+**Enter/exit animations**: Use `EnterExit::Fade` for opacity (works everywhere), `Slide` for spatial entrance (paired direction + exit), `Scale` for growth (content appearing/disappearing). Each type has duration in Metrics.
+
+**Motion accessibility**: Always check `Metrics::is_motion_enabled()` (respects prefers-reduced-motion). When disabled, animations complete instantly and `on_enter` / `on_exit` handlers still fire; apps must handle both instant and animated states.
+
+**Deferred actions**: Use `Memory::after_animation(delay, action)` for post-animation cleanup: dismissing modals, refocusing, state changes that must happen after visual transition completes, never during.
+
+**Animation budget**: Maximum 2 animations per frame are allowed (enforced by `assert_animation_budget()`). Exceeding this indicates a UI problem: simultaneous transitions on too many elements. Design for sequential transitions instead (one starts after another).
 
 ---
 
@@ -895,6 +916,48 @@ Windows close cleanly and destructors run. On macOS, `terminate:` closes all win
 // Application ends when loop notices no visible window
 // App::run returns and destructors run
 // No special cleanup needed
+```
+
+### R2 Motion Kit Patterns
+
+**Smooth drag-to-spring handoff** (momentum preserved):
+```rust
+.on_drag(|app: &mut App, drag| {
+    app.position = drag.fraction().x * 100.0;
+    app.last_velocity = Some(Velocity::new(drag.velocity.x, angle));
+})
+.on_spring(move |app: &mut App, spring| {
+    app.position = spring.value;
+    if spring.is_complete() { app.reset(); }
+})
+```
+
+**List item entrance animation**:
+```rust
+col(items.iter().enumerate().map(|(i, item)| {
+    button(&item.name, handler)
+        .enter_exit(EnterExit::Slide(SlideDirection::Left), Duration::millis(300))
+        .key(item.id)
+}))
+```
+
+**Modal dismiss with cleanup**:
+```rust
+if app.modal_open {
+    modal.on_exit(|app: &mut App| {
+        app.after_animation(Duration::millis(300), || app.modal_open = false);
+    })
+}
+```
+
+**Accessibility-aware progress animation**:
+```rust
+let progress = if theme.metrics.is_motion_enabled() {
+    painter.ease(app.progress, Easing::EaseOut, Duration::millis(200))
+} else {
+    app.progress  // Skip animation, show target immediately
+};
+painter.meter(progress);
 ```
 
 ---
