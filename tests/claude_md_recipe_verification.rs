@@ -203,7 +203,7 @@ fn parse_recipe_2_commits() {
         .expect("Recipe 2 not found");
 
     println!("Recipe 2: {}", recipe_2.title);
-    println!("Parsed {} commits:", recipe_2.commits.len());
+    println!("parsed {} commits:", recipe_2.commits.len());
 
     for commit in &recipe_2.commits {
         println!(
