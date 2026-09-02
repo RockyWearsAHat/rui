@@ -50,7 +50,9 @@ use crate::input::{Drag, Key, KeyStroke, Modifiers, Pointing};
 use crate::memory::Id;
 use crate::motion::Transition;
 use crate::paint::Painter;
-use crate::style::{Align, Anchor, Axis, Face, Hover, Ink, Justify, Length, Radius, Style, Tone};
+use crate::style::{
+    Align, Anchor, Axis, Face, Hover, Ink, Justify, Length, Pressed, Radius, Style, Tone,
+};
 
 /// What an interaction does to the application's state.
 pub type Action<S> = Box<dyn Fn(&mut S)>;
@@ -794,6 +796,30 @@ impl<S> El<S> {
     /// Outlines it differently while the pointer is over it.
     pub fn hover_border(mut self, tone: impl Into<Tone>) -> Self {
         self.style.hover.border = Some(tone.into());
+        self
+    }
+
+    /// Sets the style to apply while being pressed.
+    pub fn pressed(mut self, pressed: Pressed) -> Self {
+        self.style.pressed = pressed;
+        self
+    }
+
+    /// Fills it differently while being pressed.
+    pub fn pressed_fill(mut self, tone: impl Into<Tone>) -> Self {
+        self.style.pressed.fill = Some(tone.into());
+        self
+    }
+
+    /// Colours its text differently while being pressed.
+    pub fn pressed_color(mut self, tone: impl Into<Tone>) -> Self {
+        self.style.pressed.ink = Some(tone.into());
+        self
+    }
+
+    /// Outlines it differently while being pressed.
+    pub fn pressed_border(mut self, tone: impl Into<Tone>) -> Self {
+        self.style.pressed.border = Some(tone.into());
         self
     }
 

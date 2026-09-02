@@ -363,6 +363,28 @@ impl Hover {
     }
 }
 
+/// How a fill answers while being pressed.
+///
+/// Similar to [`Hover`], but applied when the pointer is actively pressed down on
+/// an element. Two colours rather than a whole second style: what changes when a
+/// pointer presses a control is its surface and ink.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Pressed {
+    /// What it is filled with while being pressed.
+    pub fill: Option<Tone>,
+    /// What its text turns to.
+    pub ink: Option<Tone>,
+    /// What its outline turns to.
+    pub border: Option<Tone>,
+}
+
+impl Pressed {
+    /// Whether pressing changes anything at all.
+    pub fn is_empty(self) -> bool {
+        self.fill.is_none() && self.ink.is_none() && self.border.is_none()
+    }
+}
+
 /// Everything about an element that is not its content or its children.
 ///
 /// Constructed by the chained setters on [`El`](crate::El) rather than by naming
@@ -452,6 +474,8 @@ pub struct Style {
     pub layer: Option<Anchor>,
     /// What changes while the pointer is over it.
     pub hover: Hover,
+    /// What changes while the element is being pressed.
+    pub pressed: Pressed,
 }
 
 /// The text properties an element sets, each one optional.
@@ -516,6 +540,7 @@ impl Default for Style {
             flow: false,
             layer: None,
             hover: Hover::default(),
+            pressed: Pressed::default(),
         }
     }
 }
