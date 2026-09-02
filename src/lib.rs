@@ -140,6 +140,7 @@ mod layout;
 pub mod memory;
 pub mod motion;
 pub mod paint;
+pub mod pixelgrid;
 #[cfg(feature = "reload")]
 pub mod reload;
 pub mod sdf;
@@ -164,6 +165,7 @@ pub use input::{
 pub use memory::{FocusSource, Id, Memory, Response};
 pub use motion::{Easing, SlideDirection, Spring, Transition};
 pub use paint::{Painter, Visual};
+pub use pixelgrid::{GammaBoostLut, GlyphCache, HairlineSnap};
 pub use sdf::{
     Paint, Sculpt, Shape, arc, bevel, capsule, circle, linear, ngon, polygon, radial, rect, ring,
     rounded_rect, solid,
