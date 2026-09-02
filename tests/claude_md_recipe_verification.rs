@@ -390,3 +390,50 @@ fn recipe_3_has_metadata() {
         "Recipe 3 should have Complete status"
     );
 }
+
+#[test]
+fn recipe_2_polish_sha_exists_in_git() {
+    let recipes = parse_recipes_from_claude_md();
+    let recipe_2 = recipes
+        .iter()
+        .find(|r| r.number == 2)
+        .expect("Recipe 2 not found");
+
+    let polish = recipe_2
+        .commits
+        .iter()
+        .find(|c| c.phase == "Polish")
+        .expect("Recipe 2 Polish phase not found");
+
+    verify_commit_exists(&polish.sha);
+}
+
+#[test]
+fn recipe_2_has_all_four_phases() {
+    let recipes = parse_recipes_from_claude_md();
+    let recipe_2 = recipes
+        .iter()
+        .find(|r| r.number == 2)
+        .expect("Recipe 2 not found");
+
+    let phase_names: Vec<String> = recipe_2.commits.iter().map(|c| c.phase.clone()).collect();
+
+    println!("Recipe 2 phases: {:?}", phase_names);
+
+    assert!(
+        phase_names.iter().any(|p| p.contains("Phase 1")),
+        "Recipe 2 should have Phase 1"
+    );
+    assert!(
+        phase_names.iter().any(|p| p.contains("Phase 2")),
+        "Recipe 2 should have Phase 2"
+    );
+    assert!(
+        phase_names.iter().any(|p| p.contains("Phase 3")),
+        "Recipe 2 should have Phase 3"
+    );
+    assert!(
+        phase_names.iter().any(|p| p == "Polish"),
+        "Recipe 2 should have Polish phase"
+    );
+}
