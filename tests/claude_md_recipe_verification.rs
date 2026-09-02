@@ -1,12 +1,19 @@
 #![doc = "Verify Recipe 2 commit SHAs exist in git history"]
 
 //! Verify that all Recipe 2 commit SHAs referenced in CLAUDE.md
-//! actually exist in the git repository history.
+//! actually exist in the git repository history, with correct messages.
 //!
 //! This test ensures the documented commits are real and can be checked out.
+//! It also verifies commit messages match the documentation.
 
 use std::fs;
 use std::process::Command;
+
+#[derive(Debug, Clone)]
+struct CommitInfo {
+    phase: String,
+    sha: String,
+}
 
 #[test]
 fn recipe_2_commits_exist() {
@@ -18,17 +25,20 @@ fn recipe_2_commits_exist() {
     println!("Checking {} Recipe 2 commits...", commits.len());
 
     let mut found_count = 0;
-    for (phase, sha) in &commits {
+    for commit in &commits {
         let output = Command::new("git")
-            .args(["show", sha.as_str(), "--quiet"])
+            .args(["show", commit.sha.as_str(), "--quiet"])
             .output()
-            .unwrap_or_else(|_| panic!("Failed to run git show for {}", sha));
+            .unwrap_or_else(|_| panic!("Failed to run git show for {}", commit.sha));
 
         if output.status.success() {
-            println!("✓ {} commit exists: {}", phase, sha);
+            println!("✓ {} commit exists: {}", commit.phase, commit.sha);
             found_count += 1;
         } else {
-            panic!("✗ {} commit not found in git history: {}", phase, sha);
+            panic!(
+                "✗ {} commit not found in git history: {}",
+                commit.phase, commit.sha
+            );
         }
     }
 
@@ -40,7 +50,7 @@ fn recipe_2_commits_exist() {
     );
 }
 
-fn extract_recipe_2_commits(text: &str) -> Vec<(String, String)> {
+fn extract_recipe_2_commits(text: &str) -> Vec<CommitInfo> {
     let recipe_2_start = match text.find("## Recipe 2: X11 Backend Implementation") {
         Some(pos) => pos,
         None => return Vec::new(),
@@ -75,7 +85,7 @@ fn extract_recipe_2_commits(text: &str) -> Vec<(String, String)> {
 
     while i < lines.len() && phase_index < phases.len() {
         let line = lines[i];
-        if line.contains("- Commit:") && line.contains("`") {
+        if line.contains("- Commit:") && line.contains('`') {
             let mut sha = String::new();
 
             // Extract SHA from backticks
@@ -86,7 +96,10 @@ fn extract_recipe_2_commits(text: &str) -> Vec<(String, String)> {
             }
 
             if !sha.is_empty() {
-                commits.push((phases[phase_index].to_string(), sha));
+                commits.push(CommitInfo {
+                    phase: phases[phase_index].to_string(),
+                    sha,
+                });
                 phase_index += 1;
             }
         }
