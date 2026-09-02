@@ -275,6 +275,7 @@ fn word_for(status: Status) -> &'static str {
 pub fn meter<S>(fraction: f32, tone: impl Into<Tone>) -> El<S> {
     let tone = tone.into();
     let fraction = fraction.clamp(0.0, 1.0);
+    // UNMATCHED: 80.0×6.0 is meter-specific sizing, not a Metrics duplicate
     draw(Size::new(80.0, 6.0), move |painter, rect| {
         let corner = crate::canvas::Corner::Round(rect.h / 2.0);
         let track = painter.color(Tone::Sunken);
@@ -292,7 +293,7 @@ pub fn meter<S>(fraction: f32, tone: impl Into<Tone>) -> El<S> {
             painter.canvas().fill(filled, corner, color);
         }
     })
-    .h(6.0)
+    .h(6.0) // UNMATCHED: meter height, widget-specific sizing
     .role(Role::Meter)
     // The scale the track states, stated again for anything that cannot see the
     // track. A percentage rather than the raw fraction, because "sixty-two
@@ -333,10 +334,10 @@ pub fn tabs<S: 'static>(
             let chosen = index == selected;
             col((
                 row(text(*label).text_size(12.5))
-                    .h(26.0)
+                    .h(26.0) // UNMATCHED: tab row height, widget-specific sizing
                     .pad_x(Metrics::DEFAULT.padding),
                 El::of(Node::Stack)
-                    .h(2.0)
+                    .h(2.0) // UNMATCHED: tab indicator thickness, widget-specific sizing
                     .fill(if chosen { Tone::Accent } else { Tone::Clear }),
             ))
             .key(*label)
@@ -386,8 +387,8 @@ pub fn segmented<S: 'static>(
 
     row(cells)
         .h(Metrics::DEFAULT.control_height)
-        .pad(3.0)
-        .gap(2.0)
+        .pad(3.0) // UNMATCHED: segmented internal padding, widget-specific sizing
+        .gap(2.0) // UNMATCHED: segmented button gap, widget-specific sizing
         .fill(Tone::Sunken)
         .border(1.0, Tone::Border)
         .round(Radius::Control)
@@ -401,6 +402,7 @@ pub fn star_rating<S: 'static>(
     row((1..=5)
         .map(move |i| {
             let filled = i <= rating;
+            // UNMATCHED: 16.0×16.0 is star icon size, widget-specific sizing
             draw(
                 Size::new(16.0, 16.0),
                 move |painter: &mut Painter<'_>, rect: Rect| {
@@ -493,7 +495,7 @@ pub fn section<S>(label: impl Into<String>, note: Option<String>) -> El<S> {
             .fill(Tone::Border),
         note.map(|note| micro(note)),
     ))
-    .h(14.0)
+    .h(14.0) // UNMATCHED: field_group label height, widget-specific sizing
     .gap(Metrics::DEFAULT.gap)
 }
 
@@ -557,7 +559,7 @@ pub fn scrollbar<S: 'static>(
     set_position: impl Fn(&mut S, f32) + 'static,
 ) -> El<S> {
     El::of(Node::Stack)
-        .w(12.0)
+        .w(12.0) // UNMATCHED: scrollbar width, widget-specific sizing
         .h(viewport_height)
         .fill(Tone::Sunken)
         .round(Radius::Pill)
