@@ -1,13 +1,14 @@
-# Recipe Verification Report
+# Verification Report
 
-| Recipe | Commits Found/Expected | Line Counts | Status |
-|--------|------------------------|-------------|--------|
-| Recipe 1 (WASM) | - | - | ✓ PASS (template pattern, no commits) |
-| Recipe 2 (X11) | 4/4 | PASS | ✓ PASS |
-| Recipe 3 (Checkbox) | - | - | ✓ PASS (widget exemplar, no commits) |
+| Name | Commits Found/Expected | Line Counts | Status |
+|------|------------------------|-------------|--------|
+| Recipe 1 | - | - | ✓ PASS (template pattern, no commits) |
+| Recipe 2 | 4/4 | PASS | ✓ PASS |
+| Recipe 3 | - | - | ✓ PASS (widget exemplar, no commits) |
 
 ## Summary
 
-- **Recipe 1**: Template pattern for WASM backend (no implementation commits documented)
-- **Recipe 2**: X11 backend implementation with 4 phase commits
-- **Recipe 3**: Checkbox widget exemplar (no implementation commits documented)
+All recipes verified successfully.
+- R1: WASM backend template
+- R2: X11 backend with 4 commits
+- R3: Checkbox widget exemplar
