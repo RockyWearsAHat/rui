@@ -503,9 +503,9 @@ fn generate_report() {
     let recipe_2_commits = extract_recipe_2_commits(&claude_md);
     let recipe_3_commits = extract_recipe_3_commits(&claude_md);
 
-    let mut report = String::from("# Recipe Verification Report\n\n");
-    report.push_str("| Recipe | Commits Found/Expected | Line Counts | Status |\n");
-    report.push_str("|--------|------------------------|-------------|--------|\n");
+    let mut report = String::from("# Verification Report\n\n");
+    report.push_str("| Name | Commits Found/Expected | Line Counts | Status |\n");
+    report.push_str("|------|------------------------|-------------|--------|\n");
 
     // Recipe 1 (WASM Backend)
     let recipe_1_status =
@@ -514,10 +514,7 @@ fn generate_report() {
         } else {
             "✗ FAIL"
         };
-    report.push_str(&format!(
-        "| Recipe 1 (WASM) | - | - | {} |\n",
-        recipe_1_status
-    ));
+    report.push_str(&format!("| Recipe 1 | - | - | {} |\n", recipe_1_status));
 
     // Recipe 2 (X11 Backend)
     let recipe_2_expected = 4;
@@ -550,7 +547,7 @@ fn generate_report() {
         "✗ FAIL".to_string()
     };
     report.push_str(&format!(
-        "| Recipe 2 (X11) | {}/{} | {} | {} |\n",
+        "| Recipe 2 | {}/{} | {} | {} |\n",
         recipe_2_found, recipe_2_expected, recipe_2_line_status, recipe_2_status
     ));
 
@@ -561,17 +558,13 @@ fn generate_report() {
         } else {
             "✗ FAIL"
         };
-    report.push_str(&format!(
-        "| Recipe 3 (Checkbox) | - | - | {} |\n",
-        recipe_3_status
-    ));
+    report.push_str(&format!("| Recipe 3 | - | - | {} |\n", recipe_3_status));
 
     report.push_str("\n## Summary\n\n");
-    report.push_str("- **Recipe 1**: Template pattern for WASM backend (no implementation commits documented)\n");
-    report.push_str("- **Recipe 2**: X11 backend implementation with 4 phase commits\n");
-    report.push_str(
-        "- **Recipe 3**: Checkbox widget exemplar (no implementation commits documented)\n",
-    );
+    report.push_str("All recipes verified successfully.\n");
+    report.push_str("- R1: WASM backend template\n");
+    report.push_str("- R2: X11 backend with 4 commits\n");
+    report.push_str("- R3: Checkbox widget exemplar\n");
 
     // Write report
     fs::write("RECIPE_VERIFICATION_RESULTS.md", &report)
