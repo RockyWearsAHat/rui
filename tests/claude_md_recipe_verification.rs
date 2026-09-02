@@ -111,6 +111,80 @@ fn get_file_line_count(sha: &str, filepath: &str) -> usize {
     content.lines().count()
 }
 
+#[test]
+fn parse_recipe_1() {
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+    let commits = extract_recipe_1_commits(&claude_md);
+
+    if commits.is_empty() {
+        println!("Recipe 1: no commit SHAs documented");
+    } else {
+        println!("Recipe 1: found {} commits", commits.len());
+        for commit in &commits {
+            println!("  {} commit: {}", commit.phase, commit.sha);
+        }
+    }
+}
+
+fn extract_recipe_1_commits(text: &str) -> Vec<CommitInfo> {
+    let recipe_1_start = match text.find("## Recipe 1: Adding a WASM Backend") {
+        Some(pos) => pos,
+        None => return Vec::new(),
+    };
+
+    let recipe_1_end = text[recipe_1_start..]
+        .find("## Recipe 2:")
+        .map(|pos| recipe_1_start + pos)
+        .unwrap_or(text.len());
+
+    let recipe_1_section = &text[recipe_1_start..recipe_1_end];
+
+    // Find the "Commit list" section if it exists
+    let commit_list_start = match recipe_1_section.find("### Commit list") {
+        Some(pos) => recipe_1_start + pos,
+        None => return Vec::new(),
+    };
+
+    // Extract up to the next ### heading or end of recipe
+    let commit_section_text = &text[commit_list_start..recipe_1_end];
+    let commit_section_end = commit_section_text
+        .find("\n### ")
+        .unwrap_or(commit_section_text.len());
+    let commit_list_text = &commit_section_text[..commit_section_end];
+
+    let mut commits = Vec::new();
+    let lines: Vec<&str> = commit_list_text.lines().collect();
+    let mut i = 0;
+
+    let phases = ["Phase 1", "Phase 2", "Phase 3"];
+    let mut phase_index = 0;
+
+    while i < lines.len() && phase_index < phases.len() {
+        let line = lines[i];
+        if line.contains("- Commit:") && line.contains('`') {
+            let mut sha = String::new();
+
+            // Extract SHA from backticks
+            if let Some(start) = line.find('`') {
+                if let Some(end) = line[start + 1..].find('`') {
+                    sha = line[start + 1..start + 1 + end].to_string();
+                }
+            }
+
+            if !sha.is_empty() {
+                commits.push(CommitInfo {
+                    phase: phases[phase_index].to_string(),
+                    sha,
+                });
+                phase_index += 1;
+            }
+        }
+        i += 1;
+    }
+
+    commits
+}
+
 fn extract_recipe_2_commits(text: &str) -> Vec<CommitInfo> {
     let recipe_2_start = match text.find("## Recipe 2: X11 Backend Implementation") {
         Some(pos) => pos,
