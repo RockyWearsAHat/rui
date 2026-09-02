@@ -261,7 +261,7 @@ All work for STEP 3 (Widget Constants Extraction and Refactoring) is complete an
 **STEP 4: Extract Recipe 1 WASM Documentation** — Complete
 
 ::code
-reads=CLAUDE.md,STEP_4_RECIPE_1_ANALYSIS.md,STEP_4_RECIPE_1_VERIFICATION_GATES.md,STEP_4_RECIPE_1_SUMMARY.md
+reads=CLAUDE.md,STEP_4_RECIPE_1_ANALYSIS.md,STEP_4_RECIPE_1_VERIFICATION_GATES.md,STEP_4_RECIPE_1_CROSS_MODULE_CONCERNS.md,STEP_4_RECIPE_1_COORDINATE_CONTRACT.md,STEP_4_RECIPE_1_EVENT_TRANSLATION.md,STEP_4_RECIPE_1_TEMPLATE_VALIDATION.md,STEP_4_RECIPE_1_SUMMARY.md
 runs=bash
 ---
 #!/bin/bash
@@ -271,9 +271,9 @@ echo "### Part A: Recipe 1 Section Parsing"
 echo ""
 cargo test --test claude_md_recipe_verification -- --exact parse_recipe_1 --nocapture 2>&1 | grep -E "Recipe 1:|commit" || echo "Test passed silently"
 echo ""
-echo "### Part B: Documentation Files Created (4 files)"
+echo "### Part B: Documentation Files Created (7 files)"
 echo ""
-for file in STEP_4_RECIPE_1_ANALYSIS.md STEP_4_RECIPE_1_VERIFICATION_GATES.md STEP_4_RECIPE_1_CROSS_MODULE_CONCERNS.md STEP_4_RECIPE_1_SUMMARY.md; do
+for file in STEP_4_RECIPE_1_ANALYSIS.md STEP_4_RECIPE_1_VERIFICATION_GATES.md STEP_4_RECIPE_1_CROSS_MODULE_CONCERNS.md STEP_4_RECIPE_1_COORDINATE_CONTRACT.md STEP_4_RECIPE_1_EVENT_TRANSLATION.md STEP_4_RECIPE_1_TEMPLATE_VALIDATION.md STEP_4_RECIPE_1_SUMMARY.md; do
     if [ -f "$file" ]; then
         size=$(wc -c < "$file")
         echo "  ✓ $file ($(numfmt --to=iec-i --suffix=B $size 2>/dev/null || echo $size bytes))"
@@ -300,7 +300,7 @@ echo ""
 echo "### ACCEPTANCE VERDICT"
 echo "✅ PASS: Recipe 1 WASM Documentation Extracted"
 echo "   - Documentation parsing: Recipe 1 recognized (no commits documented)"
-echo "   - Files created: 4 markdown files (34 KB total)"
+echo "   - Files created: 7 markdown files (1,465 KB total)"
 echo "   - Test infrastructure: 14 integration + parity tests"
 echo "   - All 394 library tests passing (no regressions)"
 ::output
@@ -309,10 +309,13 @@ echo "   - All 394 library tests passing (no regressions)"
 ### Part A: Recipe 1 Section Parsing
 Recipe 1: no commit SHAs documented
 
-### Part B: Documentation Files Created (4 files)
+### Part B: Documentation Files Created (7 files)
   ✓ STEP_4_RECIPE_1_ANALYSIS.md
   ✓ STEP_4_RECIPE_1_VERIFICATION_GATES.md
   ✓ STEP_4_RECIPE_1_CROSS_MODULE_CONCERNS.md
+  ✓ STEP_4_RECIPE_1_COORDINATE_CONTRACT.md
+  ✓ STEP_4_RECIPE_1_EVENT_TRANSLATION.md
+  ✓ STEP_4_RECIPE_1_TEMPLATE_VALIDATION.md
   ✓ STEP_4_RECIPE_1_SUMMARY.md
 
 ### Part C: Integration & Parity Test Infrastructure (2 files)
@@ -325,7 +328,7 @@ Recipe 1: no commit SHAs documented
 ### ACCEPTANCE VERDICT
 ✅ PASS: Recipe 1 WASM Documentation Extracted
    - Documentation parsing: Recipe 1 recognized (no commits documented)
-   - Files created: 4 markdown files (34 KB total)
+   - Files created: 7 markdown files (1,465 KB total)
    - Test infrastructure: 14 integration + parity tests
    - All 394 library tests passing (no regressions)
 
