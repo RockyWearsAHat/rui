@@ -439,3 +439,36 @@ impl Backend for Window {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clipboard_text_returns_unsupported_error() {
+        let window = Window::open(&WindowOptions::default()).unwrap();
+        let result = window.clipboard_text();
+        assert!(matches!(result, Err(Error::Unsupported)));
+    }
+
+    #[test]
+    fn set_clipboard_text_returns_unsupported_error() {
+        let window = Window::open(&WindowOptions::default()).unwrap();
+        let result = window.set_clipboard_text("test");
+        assert!(matches!(result, Err(Error::Unsupported)));
+    }
+
+    #[test]
+    fn set_composition_area_returns_unsupported_error() {
+        let window = Window::open(&WindowOptions::default()).unwrap();
+        let result = window.set_composition_area(None);
+        assert!(matches!(result, Err(Error::Unsupported)));
+    }
+
+    #[test]
+    fn update_accessibility_returns_unsupported_error() {
+        let window = Window::open(&WindowOptions::default()).unwrap();
+        let result = window.update_accessibility(&AccessUpdate::default());
+        assert!(matches!(result, Err(Error::Unsupported)));
+    }
+}
