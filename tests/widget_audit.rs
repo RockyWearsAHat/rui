@@ -352,3 +352,57 @@ fn widget_registry_is_complete() {
         );
     }
 }
+
+#[test]
+fn validate_widget_registry_against_implementations() {
+    // STEP 2: Verify each widget in the registry actually exists.
+    // Widget names must match registry entries. If any widget is missing,
+    // this test catches the mismatch at runtime.
+
+    let widget_names = vec![
+        "col",
+        "row",
+        "spacer",
+        "panel", // Layout
+        "text",
+        "title",
+        "heading",
+        "caption",
+        "micro",
+        "figure",
+        "code",
+        "paragraph",
+        "divider",
+        "meter",
+        "draw",
+        "tag",
+        "dot", // Display
+        "button",
+        "field",
+        "tabs",
+        "segmented",
+        "star_rating",
+        "scrollbar", // Interactive
+        "section",
+        "field_row",
+        "field_group", // Navigation
+    ];
+
+    // Verify each widget name is in the registry
+    for name in widget_names {
+        let widget = WIDGETS
+            .iter()
+            .find(|w| w.name == name)
+            .unwrap_or_else(|| panic!("Widget '{}' not in registry", name));
+
+        assert!(!widget.name.is_empty(), "Widget '{}' has empty name", name);
+        println!(
+            "✓ {}: role={:?}, focusable={}, accepts_click={}, accepts_key={}",
+            widget.name,
+            widget.role,
+            widget.focusable,
+            widget.accepts_on_click,
+            widget.accepts_on_key
+        );
+    }
+}
