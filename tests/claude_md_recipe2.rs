@@ -459,7 +459,7 @@ fn recipe_2_extracted_documentation_lists_all_7_files() {
         ),
         (
             "STEP_5_RECIPE_2_SUMMARY.md",
-            "Quick reference: architecture overview",
+            "Quick reference for implementers",
         ),
     ];
 
@@ -478,12 +478,24 @@ fn recipe_2_extracted_documentation_lists_all_7_files() {
     }
 
     // Verify bullet list format (should have "- **" bullets)
-    // All 7 files should start with STEP_2_RECIPE_2_
+    // 6 files start with STEP_2_RECIPE_2_, 1 with STEP_5_RECIPE_2_
     let step2_count = recipe_2_section.matches("- **STEP_2_RECIPE_2_").count();
+    let step5_count = recipe_2_section.matches("- **STEP_5_RECIPE_2_").count();
     assert_eq!(
-        step2_count, 7,
-        "Extracted documentation should have exactly 7 STEP_2_RECIPE_2_ bullet points, found {}",
+        step2_count, 6,
+        "Extracted documentation should have exactly 6 STEP_2_RECIPE_2_ bullet points, found {}",
         step2_count
+    );
+    assert_eq!(
+        step5_count, 1,
+        "Extracted documentation should have exactly 1 STEP_5_RECIPE_2_ bullet point, found {}",
+        step5_count
+    );
+    let total_bullets = step2_count + step5_count;
+    assert_eq!(
+        total_bullets, 7,
+        "Extracted documentation should have exactly 7 total bullet points, found {}",
+        total_bullets
     );
 
     println!(
