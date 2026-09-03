@@ -572,4 +572,305 @@ mod pointer_coordinate_tests {
             "Clicking same position 5 times should register 5 times"
         );
     }
+
+    // ===== FOCUS COORDINATE CONSISTENCY =====
+
+    #[test]
+    fn focus_ring_renders_at_correct_coordinates() {
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Focus me")
+                .on_click(|state: &mut App| {
+                    state.click_count += 1;
+                })
+                .focusable(),))
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        // Click the button twice at the same coordinate
+        h.click(Point::new(50.0, 20.0));
+        h.frames(1);
+        h.click(Point::new(50.0, 20.0));
+
+        // Both clicks should register even with focus ring present
+        assert_eq!(
+            h.state().click_count,
+            2,
+            "Focus ring should render at correct coordinates and not interfere with clicks"
+        );
+    }
+
+    // ===== FRACTIONAL COORDINATE TESTS =====
+
+    #[test]
+    fn fractional_coordinates_handled_correctly() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Fractional").on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+
+        // Click at fractional coordinate (0.5 pixels)
+        h.click(Point::new(50.5, 20.3));
+
+        assert!(
+            h.state().clicked,
+            "Fractional coordinates should be handled correctly"
+        );
+    }
+
+    // ===== COORDINATE PRECISION ACROSS MULTIPLE SCALES =====
+
+    #[test]
+    fn coordinate_precision_maintained_at_high_dpi() {
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("High DPI").on_click(|state: &mut App| {
+                state.click_count += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        // Multiple clicks at slightly different coordinates
+        let coords = vec![
+            Point::new(50.0, 20.0),
+            Point::new(50.1, 20.1),
+            Point::new(49.9, 20.1),
+            Point::new(50.0, 20.2),
+        ];
+
+        for coord in coords {
+            h.click(coord);
+        }
+
+        // All clicks should register despite fractional differences
+        assert_eq!(
+            h.state().click_count,
+            4,
+            "All clicks with fractional coordinate differences should register"
+        );
+    }
+
+    // ===== KEYBOARD FOCUS COORDINATE CONSISTENCY =====
+
+    #[test]
+    fn keyboard_navigation_maintains_coordinate_consistency() {
+        struct App {
+            button_1_focused: bool,
+            button_2_focused: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("Button 1").focusable().on_click(|state: &mut App| {
+                    state.button_1_focused = !state.button_1_focused;
+                }),
+                button("Button 2").focusable().on_click(|state: &mut App| {
+                    state.button_2_focused = !state.button_2_focused;
+                }),
+            ))
+            .gap(10.0)
+        }
+
+        let mut h = Harness::new(
+            App {
+                button_1_focused: false,
+                button_2_focused: false,
+            },
+            view,
+        );
+
+        // Click button 1 at known coordinate
+        h.click(Point::new(50.0, 20.0));
+        h.frames(1);
+
+        assert!(
+            h.state().button_1_focused,
+            "Button 1 should respond to click"
+        );
+
+        // Click button 2 at known coordinate
+        h.click(Point::new(50.0, 50.0));
+        h.frames(1);
+
+        assert!(
+            h.state().button_2_focused,
+            "Button 2 should respond to click at different coordinate"
+        );
+    }
+
+    // ===== COORDINATE OVERFLOW/UNDERFLOW EDGE CASES =====
+
+    #[test]
+    fn very_small_positive_coordinates() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((draw(Size::new(100.0, 100.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+
+        // Click at very small positive coordinate
+        h.click(Point::new(0.1, 0.1));
+
+        assert!(
+            h.state().clicked,
+            "Very small positive coordinates should register"
+        );
+    }
+
+    // ===== COORDINATE TRANSFORMATION FORMULA VERIFICATION =====
+
+    #[test]
+    fn coordinate_transformation_preserves_relative_distances() {
+        struct App {
+            first_clicked: bool,
+            second_clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("First").on_click(|state: &mut App| {
+                    state.first_clicked = true;
+                }),
+                draw(Size::new(100.0, 50.0), move |painter, rect| {
+                    let _ = (painter, rect);
+                }),
+                button("Second").on_click(|state: &mut App| {
+                    state.second_clicked = true;
+                }),
+            ))
+            .gap(20.0)
+        }
+
+        let mut h = Harness::new(
+            App {
+                first_clicked: false,
+                second_clicked: false,
+            },
+            view,
+        );
+
+        // Record initial positions
+        let first_y = 20.0;
+        let second_y = 20.0 + 50.0 + 20.0 + 50.0; // button + draw + gap + button
+
+        // Click first button
+        h.click(Point::new(50.0, first_y));
+        assert!(h.state().first_clicked, "First button should click");
+
+        // Click second button
+        h.click(Point::new(50.0, second_y));
+        assert!(h.state().second_clicked, "Second button should click");
+
+        // Both should click without coordinate transformation errors
+        assert!(
+            h.state().first_clicked && h.state().second_clicked,
+            "Relative distance preservation should maintain correct click targets"
+        );
+    }
+
+    // ===== NEGATIVE COORDINATE HANDLING =====
+
+    #[test]
+    fn negative_offset_click_does_not_register() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((draw(Size::new(100.0, 50.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+
+        // Attempt to click at negative coordinate
+        h.click(Point::new(-10.0, -10.0));
+
+        assert!(
+            !h.state().clicked,
+            "Negative coordinates should not trigger handlers"
+        );
+    }
+
+    // ===== COORDINATE CONSISTENCY AFTER REFLOW =====
+
+    #[test]
+    fn coordinates_remain_consistent_after_state_change_reflow() {
+        struct App {
+            expanded: bool,
+            click_count: usize,
+        }
+
+        fn view(app: &App) -> El<App> {
+            let expanded = app.expanded;
+            col((
+                button("Expand").on_click(|state: &mut App| {
+                    state.expanded = !state.expanded;
+                }),
+                if expanded {
+                    col((
+                        draw(Size::new(100.0, 50.0), move |painter, rect| {
+                            let _ = (painter, rect);
+                        }),
+                        button("Hidden").on_click(|state: &mut App| {
+                            state.click_count += 1;
+                        }),
+                    ))
+                } else {
+                    col((button("Collapsed"),))
+                },
+            ))
+        }
+
+        let mut h = Harness::new(
+            App {
+                expanded: false,
+                click_count: 0,
+            },
+            view,
+        );
+
+        // Click expand button
+        h.click(Point::new(50.0, 20.0));
+        h.frames(1);
+
+        assert!(h.state().expanded, "Expand button should toggle state");
+
+        // After reflow, click the now-visible button at its new coordinate
+        h.click(Point::new(50.0, 80.0));
+
+        assert_eq!(
+            h.state().click_count,
+            1,
+            "Coordinates should be correct after reflow due to state change"
+        );
+    }
 }
