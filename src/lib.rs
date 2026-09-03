@@ -293,5 +293,27 @@ mod tests {
             "project key format invalid: '{}' (expected 32+ hex chars)",
             key
         );
+
+        // Step 5: Verify reports.dx is valid and ready to receive findings
+        let reports_path = Path::new(project_root).join("reports.dx");
+        assert!(
+            reports_path.exists(),
+            "reports.dx file does not exist at {:?}",
+            reports_path
+        );
+
+        let content = std::fs::read_to_string(&reports_path).expect("failed to read reports.dx");
+        assert!(
+            content.contains("Findings from dx analysis"),
+            "reports.dx missing expected header. Content: {}",
+            content
+        );
+
+        // Step 6: Verify subscription path matches reports.dx location
+        assert!(
+            stdout.contains(&format!("{}/reports.dx", project_root)),
+            "subscription path does not match reports.dx location in output:\n{}",
+            stdout
+        );
     }
 }
