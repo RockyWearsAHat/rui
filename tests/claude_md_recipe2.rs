@@ -406,6 +406,87 @@ fn parse_recipe_3_has_no_commits() {
     );
 }
 
+#[test]
+fn recipe_2_extracted_documentation_lists_all_7_files() {
+    // Step 8 verification: Recipe 2 "Extracted Documentation" section should list exactly 7 files
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+
+    // Find Recipe 2 section
+    let recipe_2_start = match claude_md.find("## Recipe 2: X11 Backend Implementation") {
+        Some(pos) => pos,
+        None => panic!("Recipe 2 section not found in CLAUDE.md"),
+    };
+
+    // Find the next recipe section
+    let recipe_2_end = claude_md[recipe_2_start..]
+        .find("## Recipe 3:")
+        .map(|pos| recipe_2_start + pos)
+        .unwrap_or(claude_md.len());
+
+    let recipe_2_section = &claude_md[recipe_2_start..recipe_2_end];
+
+    // Find "Extracted Documentation" section
+    assert!(
+        recipe_2_section.contains("### Extracted Documentation"),
+        "Recipe 2 should have '### Extracted Documentation' section with 7 doc files"
+    );
+
+    // Verify all 7 documentation files are listed
+    let required_files = [
+        (
+            "STEP_2_RECIPE_2_ANALYSIS.md",
+            "Three-phase pattern breakdown",
+        ),
+        (
+            "STEP_2_RECIPE_2_VERIFICATION_GATES.md",
+            "Phase-by-phase acceptance criteria",
+        ),
+        (
+            "STEP_2_RECIPE_2_CROSS_MODULE_CONCERNS.md",
+            "5 key interactions (Backend trait, event flow, coordinate transformation",
+        ),
+        (
+            "STEP_2_RECIPE_2_COORDINATE_CONTRACT.md",
+            "X11 coordinate transformation",
+        ),
+        ("STEP_2_RECIPE_2_EVENT_TRANSLATION.md", "5 X11 event types"),
+        (
+            "STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md",
+            "Validation that template holds for future backends",
+        ),
+        (
+            "STEP_2_RECIPE_2_SUMMARY.md",
+            "Quick reference for implementers",
+        ),
+    ];
+
+    for (filename, description_key) in &required_files {
+        assert!(
+            recipe_2_section.contains(filename),
+            "Extracted documentation should list file: {}",
+            filename
+        );
+        assert!(
+            recipe_2_section.contains(description_key),
+            "Extracted documentation should contain description for {}: '{}'",
+            filename,
+            description_key
+        );
+    }
+
+    // Verify bullet list format (should have "- **" bullets)
+    let bullet_count = recipe_2_section.matches("- **STEP_2_RECIPE_2_").count();
+    assert_eq!(
+        bullet_count, 7,
+        "Extracted documentation should have exactly 7 bullet points, found {}",
+        bullet_count
+    );
+
+    println!(
+        "✓ Recipe 2 Extracted Documentation section verified: all 7 files present with descriptions"
+    );
+}
+
 fn get_file_line_count(sha: &str, filepath: &str) -> usize {
     use std::process::Command;
 
