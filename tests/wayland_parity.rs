@@ -2,12 +2,13 @@
 //!
 //! Phase 3: Integration — Verify that Wayland backend behaves identically to
 //! other backends (X11, macOS, Windows) in key areas: coordinate transformation,
-//! scale factor handling, and feature availability.
+//! scale factor handling, feature availability, and rendered output.
 
 #![cfg(feature = "wayland")]
 
-use rui::shell::WindowOptions;
-use rui::theme::Appearance;
+use rui_native::shell::WindowOptions;
+use rui_native::testing::Harness;
+use rui_native::{Appearance, Radius, Size, Tone, button, col, draw, row, text};
 
 #[test]
 fn wayland_parity_window_options() {
@@ -94,7 +95,8 @@ fn wayland_parity_appearance_enum() {
 #[test]
 fn wayland_parity_backend_trait() {
     // Phase 3: Verify Wayland implements all Backend trait methods
-    // with same signature and semantics as other backends
+    // with same signature and semantics as other backends (see x11.rs, macos.rs,
+    // windows.rs — the merged Wayland backend follows the same `Window` shape).
     //
     // 12 required methods:
     // 1. fn open(options: &WindowOptions) -> Result<Self, Error>
@@ -169,7 +171,7 @@ fn wayland_parity_clipboard_protocol() {
 
 #[test]
 fn wayland_parity_event_types() {
-    // All backends must translate events to the same rui::input::Event enum
+    // All backends must translate events to the same rui_native::input::Event enum
     // Event types:
     // - Event::Pointer { position, moved, pressed, released, ... }
     // - Event::Key { key, pressed, modifiers }
@@ -179,7 +181,7 @@ fn wayland_parity_event_types() {
     // - Event::Ime { ... }
 
     // The event translation pipeline is identical across all backends:
-    // Platform events → rui Event enum → Input struct → App logic
+    // Platform events → rui_native Event enum → Input struct → App logic
 
     // Wayland events flow through the same pipeline as X11/macOS/Windows
     assert!(true, "Event types consistent across all backends");
@@ -218,7 +220,7 @@ fn wayland_parity_modifier_tracking() {
 #[test]
 fn wayland_parity_error_handling() {
     // All backends must use the same Error enum
-    use rui::shell::Error;
+    use rui_native::shell::Error;
 
     // Error variants:
     // - NoFont { searched }
@@ -259,7 +261,7 @@ fn wayland_parity_ime_support() {
     // Phase 1: Stubbed (Ok(()))
     // Phase 2: Documented with zwp_text_input protocol plan
     // Phase 3: Actual implementation
-
+    //
     // IME interface:
     // - set_composition_area(Some(rect)): Tell IME where text is
     // - set_composition_area(None): No IME active (releases input focus)
@@ -282,3 +284,192 @@ fn wayland_parity_feature_gate() {
 
     assert!(cfg!(feature = "wayland"));
 }
+
+// --- Ported from origin/main's Harness-based suite ---
+//
+// origin/main's version of this file rendered a shared `PurityTestApp` scene
+// through `Harness` and asserted on a `Frame` value's `width`/`height`/
+// `appearance`/`scale_factor` fields (e.g. `harness.frame().width`,
+// `frame.appearance`, `frame.scale_factor`). The real `Harness::frame`
+// (src/testing/mod.rs) returns `&mut Self`, not such a `Frame`, and `Harness`
+// exposes no public getter for its current appearance or scale factor — only
+// `canvas().width()/.height()/.scale()` (device pixels/scale) and `shows()`.
+// The scenarios below are rewritten against that verified real API; the ones
+// that specifically needed to read back "current appearance" or "current
+// scale factor" are left as a TODO rather than guessing at a getter that may
+// not exist.
+
+#[test]
+fn wayland_renders_light_and_dark_mode() {
+    // Verify the same scene renders in both appearances without panicking,
+    // and that switching appearance doesn't drop existing content.
+    struct PurityTestApp {
+        text_content: String,
+        button_pressed: bool,
+        color_tone: Tone,
+    }
+
+    impl Default for PurityTestApp {
+        fn default() -> Self {
+            PurityTestApp {
+                text_content: "Parity Test".into(),
+                button_pressed: false,
+                color_tone: Tone::Accent,
+            }
+        }
+    }
+
+    fn parity_view(app: &PurityTestApp) -> rui_native::El<PurityTestApp> {
+        col((
+            text("Parity Test Scene"),
+            text(&app.text_content),
+            draw(Size::new(100.0, 50.0), move |painter, rect| {
+                painter.fill(rect, Radius::None, app.color_tone);
+            }),
+            button("Press Me", |app: &mut PurityTestApp| {
+                app.button_pressed = true;
+            }),
+            text(if app.button_pressed {
+                "Pressed!"
+            } else {
+                "Not pressed"
+            }),
+        ))
+    }
+
+    let mut harness = Harness::new(PurityTestApp::default(), parity_view);
+    assert!(harness.shows("Parity Test Scene"));
+    assert!(harness.shows("Parity Test"));
+    assert!(harness.shows("Press Me"));
+    assert!(harness.shows("Not pressed"));
+
+    harness.set_appearance(Appearance::Dark);
+    assert!(harness.shows("Parity Test Scene"));
+    assert!(harness.shows("Parity Test"));
+}
+
+#[test]
+fn wayland_coordinates_match_x11() {
+    // Verify canvas dimensions are in a reasonable logical-pixel-derived
+    // range, the same contract every other backend's tests rely on.
+    let mut harness = Harness::new((), |_: &()| text("Coordinate Test"));
+    harness.frame();
+
+    let width = harness.canvas().width();
+    let height = harness.canvas().height();
+
+    assert!(width > 0, "Canvas width should be positive");
+    assert!(height > 0, "Canvas height should be positive");
+}
+
+#[test]
+fn wayland_color_accuracy() {
+    // Verify colors render without panicking through the shared paint pipeline
+    let mut harness = Harness::new((), |_: &()| {
+        col((
+            draw(Size::new(50.0, 50.0), |painter, rect| {
+                painter.fill(rect, Radius::None, Tone::Accent);
+            }),
+            draw(Size::new(50.0, 50.0), |painter, rect| {
+                painter.fill(rect, Radius::None, Tone::Surface);
+            }),
+        ))
+    });
+
+    harness.frame();
+    assert!(harness.canvas().width() > 0 && harness.canvas().height() > 0);
+}
+
+#[test]
+fn wayland_text_rendering_matches_x11() {
+    // Verify text rendering is identical between Wayland and X11
+    let text_samples = vec!["Hello", "Wayland", "Parity", "Test 123"];
+
+    for sample in text_samples {
+        let mut harness = Harness::new((), |_: &()| text(sample));
+        assert!(
+            harness.shows(sample),
+            "Text '{}' not rendered correctly on Wayland",
+            sample
+        );
+    }
+}
+
+#[test]
+fn wayland_button_hit_targets_match_x11() {
+    // Verify button click targets are in the same position as X11
+    struct ButtonTestState {
+        clicked: bool,
+    }
+
+    let mut harness = Harness::new(
+        ButtonTestState { clicked: false },
+        |_state: &ButtonTestState| {
+            col((
+                text("Click Target Test"),
+                button("Test Button", |s: &mut ButtonTestState| {
+                    s.clicked = true;
+                }),
+            ))
+        },
+    );
+
+    harness.click_text("Test Button");
+    assert!(harness.state().clicked);
+}
+
+#[test]
+fn wayland_layout_matches_x11() {
+    // Verify layout (spacing, alignment) is identical between Wayland and X11
+    let mut harness = Harness::new((), |_: &()| {
+        col((
+            text("Header"),
+            row((text("Left"), text("Right"))),
+            text("Footer"),
+        ))
+    });
+
+    assert!(harness.shows("Header"));
+    assert!(harness.shows("Left"));
+    assert!(harness.shows("Right"));
+    assert!(harness.shows("Footer"));
+}
+
+#[test]
+fn wayland_and_x11_use_same_backend_trait() {
+    // Verify that Wayland and X11 implement identical Backend trait.
+    // This is more of a documentation/reminder test.
+    //
+    // Both backends implement the same 12 methods (see
+    // `wayland_parity_backend_trait` above, which lists them) — matching the
+    // `Window` shape shared with x11.rs/macos.rs/windows.rs. If either
+    // backend diverges from this contract, parity is broken.
+}
+
+#[test]
+fn wayland_scale_factor_consistency() {
+    // Verify scale factor is consistent across frames
+    let mut harness = Harness::new((), |_: &()| text("Scale Test"));
+
+    harness.frame();
+    let scale1 = harness.canvas().scale();
+
+    harness.frame();
+    let scale2 = harness.canvas().scale();
+
+    assert_eq!(
+        scale1, scale2,
+        "Scale factor changed between frames: {} vs {}",
+        scale1, scale2
+    );
+}
+
+// TODO(wayland-merge): origin/main also had `wayland_renders_light_mode_identically`
+// / `wayland_renders_dark_mode_identically` as two separate tests that read back
+// `frame.appearance` to confirm it round-tripped through `set_appearance`.
+// `Harness` (src/testing/mod.rs) has `set_appearance(&mut self, Appearance)` but
+// no public getter for the current appearance, so that specific round-trip
+// assertion can't be expressed without adding one — folded into
+// `wayland_renders_light_and_dark_mode` above without the appearance readback.
+// Revisit once such a getter exists, or once the merged Wayland `Window`
+// exposes appearance directly.
