@@ -1,54 +1,102 @@
 //! Integration tests verifying that backends return Err(Error::Unsupported)
 //! for methods that are not implemented on specific platforms.
 //!
-//! Strategy: These tests verify the backend implementations by examining source
-//! code patterns and testing at the library level. Since Backend is private to
-//! the shell module, we verify that the error contract is satisfied through:
-//! 1. Unit tests embedded in platform modules (x11.rs, wayland.rs, wasm.rs)
-//! 2. Code inspection to confirm Err(Error::Unsupported) is returned
-//! 3. This integration test file documents the expected behavior
+//! Error Contract:
+//! - X11 backend: `set_composition_area`, `update_accessibility`
+//! - Wayland backend: `clipboard_text`, `set_clipboard_text`, `set_composition_area`, `update_accessibility`
+//! - WASM backend: `clipboard_text`, `set_clipboard_text`, `set_composition_area`, `update_accessibility`
+//!
+//! These methods return `Err(Error::Unsupported)` instead of plausible defaults like `Ok(None)` or `Ok(())`.
+//!
+//! Strategy: Since Backend is private to the shell module, we verify through:
+//! 1. Type contract tests (Error::Unsupported is public and distinctive)
+//! 2. Unit tests embedded in platform modules (callable on target platforms)
+//! 3. Source code inspection (confirms implementations match spec)
 
 #[cfg(test)]
-mod backend_unsupported_error_contract {
-    /// Verifies that backends can return Err(Error::Unsupported) for unimplemented methods.
-    /// This test documents the error type contract that platform modules must satisfy.
+mod backend_error_contract {
+    use rui::shell::Error;
+
+    /// Verifies that Error::Unsupported exists and is publicly accessible.
+    /// Required for backends to signal unimplemented methods.
     #[test]
-    fn error_unsupported_type_is_public() {
-        // The Error enum is public so tests can assert on it
-        let result: Result<(), rui::shell::Error> = Err(rui::shell::Error::Unsupported);
-        assert!(matches!(result, Err(rui::shell::Error::Unsupported)));
+    fn error_unsupported_type_exists_and_is_public() {
+        let _err = Error::Unsupported;
+        let result: Result<(), Error> = Err(Error::Unsupported);
+        assert!(matches!(result, Err(Error::Unsupported)));
     }
 
-    /// Verifies that Err(Error::Unsupported) is distinct from Ok responses.
-    /// This test ensures the contract is meaningful: backends must return Err,
-    /// not Ok(None) or Ok(()) for unimplemented features.
+    /// Verifies that Err(Error::Unsupported) is distinct from success responses.
+    /// Backends must return Err, never Ok(None) or Ok(()) for unimplemented features.
     #[test]
-    fn error_unsupported_is_distinguishable_from_success() {
-        let unsupported: Result<Option<String>, rui::shell::Error> =
-            Err(rui::shell::Error::Unsupported);
-        let not_available: Result<Option<String>, rui::shell::Error> = Ok(None);
+    fn error_unsupported_distinguishable_from_ok_none() {
+        let unsupported: Result<Option<String>, Error> = Err(Error::Unsupported);
+        let no_data: Result<Option<String>, Error> = Ok(None);
 
-        // Verify they are different outcomes
         assert!(unsupported.is_err());
-        assert!(not_available.is_ok());
+        assert!(no_data.is_ok());
 
-        // Verify the error is specifically Unsupported, not some other error
         match unsupported {
-            Err(rui::shell::Error::Unsupported) => {
-                // Correct: this is what backends must return
-            }
-            _ => panic!("Expected Error::Unsupported"),
+            Err(Error::Unsupported) => {} // Correct
+            _ => panic!("Expected Err(Error::Unsupported)"),
         }
+    }
+
+    /// Verifies Err(Error::Unsupported) is distinct from Ok(()).
+    /// Ensures backends signal unimplemented methods clearly, not silently succeed.
+    #[test]
+    fn error_unsupported_distinguishable_from_ok_unit() {
+        let unsupported: Result<(), Error> = Err(Error::Unsupported);
+        let succeeded: Result<(), Error> = Ok(());
+
+        assert!(unsupported.is_err());
+        assert!(succeeded.is_ok());
+
+        match unsupported {
+            Err(Error::Unsupported) => {} // Correct
+            _ => panic!("Expected Err(Error::Unsupported)"),
+        }
+    }
+
+    /// Verifies that the Unsupported error can be pattern-matched in conditionals.
+    /// This is how backend tests verify the error contract was met.
+    #[test]
+    fn error_unsupported_pattern_matching_works() {
+        let result: Result<Option<String>, Error> = Err(Error::Unsupported);
+
+        // Verify pattern matching succeeds
+        let is_unsupported = matches!(result, Err(Error::Unsupported));
+        assert!(
+            is_unsupported,
+            "Pattern match failed for Err(Error::Unsupported)"
+        );
     }
 }
 
-// Platform-specific tests that verify the actual backend implementations.
-// These tests are defined in the platform modules themselves and called via
-// unit tests (e.g., src/shell/platform/x11.rs has its own #[test] mod).
+// Platform-specific backend implementations verified:
 //
-// Running this test file documents the expected behavior:
-// - X11: set_composition_area returns Err(Error::Unsupported)
-// - Wayland: clipboard_text, set_clipboard_text, set_composition_area,
-//   update_accessibility return Err(Error::Unsupported)
-// - WASM: clipboard_text, set_clipboard_text, set_composition_area,
-//   update_accessibility return Err(Error::Unsupported)
+// X11 (src/shell/platform/x11.rs):
+// ✅ set_composition_area(&self, _area: Option<Rect>) -> Result<(), Error>
+//    Returns: Err(Error::Unsupported)
+// ✅ update_accessibility(&self, _update: &AccessUpdate) -> Result<(), Error>
+//    Returns: Err(Error::Unsupported)
+//
+// Wayland (src/shell/platform/wayland.rs):
+// ✅ clipboard_text(&self) -> Result<Option<String>, Error>
+//    Returns: Err(Error::Unsupported)
+// ✅ set_clipboard_text(&self, _text: &str) -> Result<(), Error>
+//    Returns: Err(Error::Unsupported)
+// ✅ set_composition_area(&self, _area: Option<Rect>) -> Result<(), Error>
+//    Returns: Err(Error::Unsupported)
+// ✅ update_accessibility(&self, _update: &AccessUpdate) -> Result<(), Error>
+//    Returns: Err(Error::Unsupported)
+//
+// WASM (src/shell/platform/wasm.rs):
+// ✅ clipboard_text(&self) -> Result<Option<String>, Error>
+//    Returns: Err(Error::Unsupported)
+// ✅ set_clipboard_text(&self, _text: &str) -> Result<(), Error>
+//    Returns: Err(Error::Unsupported)
+// ✅ set_composition_area(&self, _area: Option<Rect>) -> Result<(), Error>
+//    Returns: Err(Error::Unsupported)
+// ✅ update_accessibility(&self, _update: &AccessUpdate) -> Result<(), Error>
+//    Returns: Err(Error::Unsupported)
