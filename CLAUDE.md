@@ -442,6 +442,129 @@ widgets::draw(Size::new(160.0, 18.0), move |painter, rect| {
 .on_key(|app: &mut App, key, _| app.nudge(key))
 ```
 
+### State Shape Guidance
+
+**Core Pattern:** Your application state is a flat struct where each field represents widget state directly. No `Rc<RefCell<>>`, no wrapper enums, no "model-view-controller" layering—just data fields that handlers mutate.
+
+**Why this works:** The view function is called every frame from the event loop. Because it receives `&App` (immutable state), it rebuilds the UI description deterministically. Handlers receive `&mut App` and run after the frame is drawn, so state mutations never race the view. This eliminates interior mutability entirely.
+
+#### Example: Text Input Widget State
+
+A text input widget needs two pieces of state:
+
+```rust
+struct App {
+    input_text: String,     // The current text in the field
+    input_focused: bool,    // Whether the input has keyboard focus
+}
+```
+
+The `input_text` field holds what the user typed. The `input_focused` field is managed by the framework's memory system (hover, focus, caret state lives in `src/memory`), but you include it in your struct so the view can decide appearance (e.g., draw a border if focused).
+
+The view function reads both fields:
+```rust
+fn view(app: &App) -> El<App> {
+    widgets::text_input(
+        &app.input_text,
+        app.input_focused,
+        |app: &mut App, new_text| {
+            app.input_text = new_text;
+        },
+    )
+}
+```
+
+The handler receives mutable state and updates the field directly. No closures capturing references, no interior mutability tricks.
+
+#### Example: A Choice Widget State
+
+From the segmented exemplar (line 223–226):
+
+```rust
+State:   struct App { selected: usize }
+View:    fn view(app: &App) -> El<App> { ... }
+Handler: |app: &mut App, index| { app.selected = index; }
+```
+
+The state is a single field—the index of the selected choice. The handler is just `app.selected = index`. No wrappers, no indirection.
+
+#### Pattern for Complex Widgets
+
+For a widget like a form with multiple fields:
+
+```rust
+struct App {
+    name: String,           // First input
+    email: String,          // Second input
+    terms_accepted: bool,   // Checkbox
+    submit_error: Option<String>,  // Validation error (optional because it may be empty)
+}
+```
+
+Each field is directly part of the app struct. The view function reads all of them:
+```rust
+fn view(app: &App) -> El<App> {
+    col((
+        text_input(&app.name, |app, v| app.name = v),
+        text_input(&app.email, |app, v| app.email = v),
+        checkbox(app.terms_accepted, |app| app.terms_accepted = !app.terms_accepted),
+        if let Some(error) = &app.submit_error {
+            text(error).fill(Tone::Bad)
+        } else {
+            text("").height(0.0)  // Spacer when no error
+        },
+    ))
+}
+```
+
+Handlers update fields inline. No manager struct, no separate "state manager" object.
+
+#### Anti-patterns to Avoid
+
+**Don't use `Rc<RefCell<>>` or interior mutability:**
+```rust
+// ❌ WRONG
+struct App {
+    input: Rc<RefCell<String>>,  // Overcomplicated
+}
+```
+This adds runtime overhead and obscures when mutations happen. The event loop already ensures handlers run serially, so `&mut App` is enough.
+
+**Don't separate "model" from "view state":**
+```rust
+// ❌ WRONG
+struct Model { data: String }
+struct ViewState { focused: bool }
+struct App { model: Model, view: ViewState }
+```
+This layering buys nothing; it makes the struct harder to read and forces you to remember which fields belong where. Put everything in `App`.
+
+**Don't use enums to represent widget state:**
+```rust
+// ❌ WRONG
+enum InputState {
+    Empty,
+    Editing(String),
+    Submitted(String),
+}
+struct App { input: InputState }
+```
+This forces unnecessary pattern matching in the view function. Just use fields: `text: String, submitted: bool`.
+
+#### Guideline: When to Add State
+
+Add a field to `App` when:
+- The value determines what the view renders (e.g., `selected: usize` changes which button is highlighted)
+- The value should persist across frames (e.g., `input_text: String` is preserved when the view rebuilds)
+- A handler needs to mutate it (e.g., `app.input_text = new_text` in the text input handler)
+
+Don't add a field if:
+- The value is computed from other fields (compute it inline in the view)
+- The value is temporary and not needed after the current frame (use a local variable)
+- The framework already manages it (e.g., hover state is in `src/memory`, keyed by element identity)
+
+Reference the segmented exemplar (line 217–284) for a minimal, complete example: state struct, view function, handler closure, test, and verification.
+
 ## Recipes
 
 A recipe is a worked example of implementing a major feature: files touched in order, verification gates executed at each step, cross-module coordination shown at the seams. Each recipe documents one complete journey from request to commit—a blueprint for how **state**, **element**, **layout**, **paint**, **shell**, and **memory** work together. Recipes are step-by-step implementations of major features, verified against real commits in git history; they show not just the pattern, but the proof that the pattern holds.
@@ -894,6 +1017,10 @@ col((
 ```
 
 Done. The widget is ready to use anywhere state is a Rust struct with a `rating` field.
+
+### Widget Implementation Template Guide (v0.3.0)
+
+This guide documents the canonical pattern for building form controls and complex interactive widgets—text inputs, select dropdowns, comboboxes, and similar components that accept user input and update application state. Unlike passive widgets (like `meter`) or simple choice selectors (like `segmented`), form controls often have internal state (caret position, selection range, focus, dropdown visibility) that persists across frames. This guide shows how to layer that internal state in `memory::Memory` while keeping application state clean, following the proven patterns established in Recipe 1 (WASM backend abstraction) and Recipe 2 (platform-agnostic implementation). Each form control is built from primitives using the same state-view-handler structure—the difference is in how you coordinate widget identity, preserve transient state, and wire event handlers to both internal memory and application state.
 
 ## Workflow Notes
 
