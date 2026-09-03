@@ -701,6 +701,84 @@ pub fn text_input<S: 'static>(value: &str) -> El<S> {
     .focusable()
 }
 
+/// A combobox widget: a searchable dropdown for choosing from a list of options.
+///
+/// This is Recipe 4b: implementing a combobox form control that filters options based on
+/// a search string and displays matching choices for selection.
+///
+/// The combobox demonstrates:
+/// - Filtering: matching options against a search string (case-insensitive)
+/// - Dynamic rendering: showing only filtered options
+/// - Selection: updating state when an option is clicked
+/// - State preservation: using `.key()` to maintain hover state across rebuilds
+///
+/// # Example
+///
+/// ```ignore
+/// struct App {
+///     search: String,
+///     selected: Option<usize>
+/// }
+/// fn view(app: &App) -> El<App> {
+///     let options = &["Apple", "Apricot", "Banana", "Cherry"];
+///     col((
+///         text("Pick a fruit:"),
+///         combobox(options, &app.search, app.selected, |app: &mut App, i| {
+///             app.selected = Some(i);
+///             app.search = options[i].to_string();
+///         }),
+///     ))
+/// }
+/// ```
+pub fn combobox<S: 'static>(
+    options: &[&str],
+    search: &str,
+    selected: Option<usize>,
+    on_select: impl Fn(&mut S, usize) + Copy + 'static,
+) -> El<S> {
+    // Filter options based on search string (case-insensitive)
+    let search_lower = search.to_lowercase();
+    let filtered: Vec<(usize, String)> = options
+        .iter()
+        .enumerate()
+        .filter(|(_, opt)| opt.to_lowercase().contains(&search_lower))
+        .map(|(i, opt)| (i, opt.to_string()))
+        .collect();
+
+    // Build list of filtered options as clickable rows
+    let items: Vec<El<S>> = filtered
+        .into_iter()
+        .map(|(original_index, label)| {
+            let is_selected = selected == Some(original_index);
+            row(text(label).grow().text_align(Align::Start).text_size(12.0))
+                .key(format!("combobox-option-{}", original_index))
+                .grow()
+                .h(24.0)
+                .pad_x(8.0)
+                .align(Align::Center)
+                .fill(if is_selected {
+                    Tone::Accent
+                } else {
+                    Tone::Surface
+                })
+                .color(if is_selected {
+                    Tone::OnAccent
+                } else {
+                    Tone::Text
+                })
+                .hover_fill(Tone::Raised)
+                .on_click(move |state: &mut S| on_select(state, original_index))
+        })
+        .collect();
+
+    col(items)
+        .pad(4.0)
+        .gap(2.0)
+        .fill(Tone::Sunken)
+        .border(1.0, Tone::Border)
+        .round(Radius::Control)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

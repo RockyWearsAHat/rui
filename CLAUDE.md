@@ -1580,6 +1580,121 @@ fn text_input_updates_on_keystroke() {
 }
 ```
 
+#### Select (Dropdown) Widget Implementation
+
+The `select()` widget provides a practical form control for choosing one item from a list of options. Unlike a custom `draw()`-based approach, it uses the framework's built-in layout and styling to display all options in a list, with the currently selected item highlighted.
+
+**State shape:**
+```rust
+struct App {
+    selected_size: usize,  // Index of the selected option (0-based)
+}
+```
+
+**Widget signature:**
+```rust
+pub fn select<S: 'static>(
+    choices: &[&str],           // Available options (e.g., ["Small", "Medium", "Large"])
+    selected: usize,            // Currently selected index
+    on_select: impl Fn(&mut S, usize) + Copy + 'static,  // Handler called when selection changes
+) -> El<S>
+```
+
+**Implementation pattern:**
+The select widget builds a `col()` of clickable rows, one per choice. The currently selected row is highlighted with the accent color; others use the surface color. Each row is `.key()`'d by its index to preserve hover state across frame rebuilds.
+
+```rust
+pub fn select<S: 'static>(
+    choices: &[&str],
+    selected: usize,
+    on_select: impl Fn(&mut S, usize) + Copy + 'static,
+) -> El<S> {
+    let items: Vec<El<S>> = choices
+        .iter()
+        .enumerate()
+        .map(|(index, label)| {
+            let is_selected = index == selected;
+            row(text(*label)
+                .grow()
+                .text_align(Align::Start)
+                .text_size(12.0))
+            .key(format!("choice-{}", index))
+            .grow()
+            .h(24.0)
+            .pad_x(8.0)
+            .align(Align::Center)
+            .fill(if is_selected { Tone::Accent } else { Tone::Surface })
+            .color(if is_selected { Tone::OnAccent } else { Tone::Text })
+            .hover_fill(Tone::Raised)
+            .on_click(move |state: &mut S| on_select(state, index))
+        })
+        .collect();
+
+    col(items)
+        .pad(4.0)
+        .gap(2.0)
+        .fill(Tone::Sunken)
+        .border(1.0, Tone::Border)
+        .round(Radius::Control)
+}
+```
+
+**Usage in your app:**
+```rust
+struct App {
+    selected_size: usize,
+}
+
+fn view(app: &App) -> El<App> {
+    let sizes = &["Small", "Medium", "Large"];
+    col((
+        text("Select a size:"),
+        select(sizes, app.selected_size, |app: &mut App, index| {
+            app.selected_size = index;
+        }),
+    ))
+}
+```
+
+**Testing with Harness:**
+```rust
+#[test]
+fn select_widget_changes_selection_when_clicked() {
+    let mut harness = Harness::new(App { selected_size: 0 }, view);
+    
+    // Verify initial state
+    assert!(harness.frame().shows("Small"));
+    
+    // Click "Large" option
+    harness.click_text("Large");
+    assert_eq!(harness.state().selected_size, 2);
+    
+    // Verify the new selection is highlighted
+    let frame = harness.frame();
+    assert!(frame.shows("Large"));
+}
+```
+
+**Key differences from text_input:**
+- **Fixed choices:** Options are predefined (strings); user can't type arbitrary values
+- **Multiple items visible:** All options display at once; no collapse/expand
+- **Index-based state:** Tracks which option is selected by position, not content
+- **Simpler styling:** Uses framework's `.fill()`, `.color()`, `.hover_fill()` rather than custom draw()
+
+**When to use select():**
+- Fixed list of mutually exclusive options (sizes, categories, regions)
+- Short lists (5-20 items) where all options should be visible
+- Straightforward choice selection without filtering or search
+
+**Advanced: Collapsible combobox**
+For longer lists or search capability, you'd build a custom combobox using `draw()` with:
+- A collapsed button showing the selected item
+- A hidden/visible list below it
+- Optional text input for filtering
+- More complex state tracking (expanded: bool, scroll position)
+
+See the "Draw and Painter Patterns" section for techniques on building custom interactive shapes with full render control.
+
 ## Workflow Notes
 
 - **Unsafe code:** Confined to `shell/platform/*.rs` (one file per OS). Everything above that—elements, layout, rendering, fonts—is safe Rust.

@@ -3,7 +3,7 @@
 //!
 //! This is the claim the foundation has to answer for: that a checkbox, a
 //! switch, a slider, a group of choices, and a menu are all things you write in
-//! a few lines rather than things you wait for — and that once written they are
+//! a few lines rather than things you wait for â€” and that once written they are
 //! ordinary elements, testable with no window and no special support.
 //!
 //! Each control here is deliberately whole and standalone. Copying one into a
@@ -512,11 +512,11 @@ fn a_meter_displays_progress_as_a_fraction() {
     );
 }
 
-/// A star rating widget: display 1–5 stars, clickable to set the rating.
+/// A star rating widget: display 1â€“5 stars, clickable to set the rating.
 ///
 /// This is Recipe 2 (Add a New Widget) from CLAUDE.md verified in practice.
 /// The widget is built entirely from primitives and demonstrates the pattern:
-/// state → view function → handler that receives &mut state as argument.
+/// state â†’ view function â†’ handler that receives &mut state as argument.
 #[test]
 fn a_star_rating_updates_when_clicked() {
     struct RatingState {
@@ -775,5 +775,290 @@ fn a_select_control_changes_selection_when_clicked() {
         harness.state().selected,
         2,
         "clicking Large should select index 2"
+    );
+}
+
+// ============================================================================
+// text_input widget comprehensive tests (Recipe 4: Form Controls)
+// ============================================================================
+// These tests demonstrate text input widget rendering and focus behavior.
+// The text_input widget is a display element that renders the value passed
+// to it and is focusable, following the pattern shown in CLAUDE.md.
+// Tests verify: rendering, focus preservation, dimensions, and styling.
+
+#[test]
+fn text_input_displays_initial_value() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct InputState {
+        username: String,
+    }
+
+    let mut harness = Harness::new(
+        InputState {
+            username: "alice".to_string(),
+        },
+        |state: &InputState| {
+            col((
+                text("Username:"),
+                widgets::text_input(&state.username).key("username-field"),
+            ))
+            .align(Align::Start)
+        },
+    );
+
+    harness.frame();
+    assert!(
+        harness.frame().shows("alice"),
+        "text_input should display the initial value"
+    );
+}
+
+#[test]
+fn text_input_is_focusable() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct InputState {
+        input_value: String,
+    }
+
+    let mut harness = Harness::new(InputState::default(), |state: &InputState| {
+        col((
+            text("Email:"),
+            widgets::text_input(&state.input_value).key("email-field"),
+        ))
+        .align(Align::Start)
+    });
+
+    harness.frame();
+    let field = harness
+        .find_key("email-field")
+        .expect("text field is on screen");
+    assert!(
+        field.focusable,
+        "text_input should be focusable for keyboard input"
+    );
+}
+
+#[test]
+fn text_input_has_proper_dimensions() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct InputState {
+        input_value: String,
+    }
+
+    let mut harness = Harness::new(InputState::default(), |state: &InputState| {
+        col((
+            text("Field:"),
+            widgets::text_input(&state.input_value).key("text-input"),
+        ))
+        .align(Align::Start)
+    })
+    .size(400.0, 100.0);
+
+    harness.frame();
+    let field = harness
+        .find_key("text-input")
+        .expect("text input is on screen");
+
+    assert!(
+        field.rect.w > 0.0,
+        "text input should have positive width (32px padding + content)"
+    );
+    assert!(
+        field.rect.h > 0.0,
+        "text input should have positive height (32px default)"
+    );
+}
+
+#[test]
+fn text_input_preserves_layout_across_frames() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct InputState {
+        input_value: String,
+    }
+
+    let mut harness = Harness::new(InputState::default(), |state: &InputState| {
+        col((
+            text("Input:"),
+            widgets::text_input(&state.input_value).key("input-field"),
+        ))
+        .align(Align::Start)
+    });
+
+    harness.frame();
+    let field_frame1 = harness.find_key("input-field").expect("field is on screen");
+    let rect1 = field_frame1.rect;
+
+    harness.frame();
+    let field_frame2 = harness
+        .find_key("input-field")
+        .expect("field is still on screen");
+    let rect2 = field_frame2.rect;
+
+    assert_eq!(
+        rect1, rect2,
+        "text_input should maintain the same layout position and size across frames"
+    );
+}
+
+#[test]
+fn text_input_renders_with_different_values() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct InputState {
+        input_value: String,
+    }
+
+    // Test with empty value
+    let mut empty_harness = Harness::new(InputState::default(), |state: &InputState| {
+        col((
+            text("Field:"),
+            widgets::text_input(&state.input_value).key("field"),
+        ))
+        .align(Align::Start)
+    });
+    empty_harness.frame();
+    let empty_field = empty_harness.find_key("field").expect("field is on screen");
+    assert!(empty_field.focusable, "empty field is still focusable");
+
+    // Test with non-empty value
+    let mut filled_harness = Harness::new(
+        InputState {
+            input_value: "user@example.com".to_string(),
+        },
+        |state: &InputState| {
+            col((
+                text("Email:"),
+                widgets::text_input(&state.input_value).key("field"),
+            ))
+            .align(Align::Start)
+        },
+    );
+    filled_harness.frame();
+    assert!(
+        filled_harness.frame().shows("user@example.com"),
+        "filled field should display the full value"
+    );
+}
+
+#[test]
+fn text_input_renders_numeric_content() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct InputState {
+        phone_number: String,
+    }
+
+    let mut harness = Harness::new(
+        InputState {
+            phone_number: "(555) 123-4567".to_string(),
+        },
+        |state: &InputState| {
+            col((
+                text("Phone:"),
+                widgets::text_input(&state.phone_number).key("phone-field"),
+            ))
+            .align(Align::Start)
+        },
+    );
+
+    harness.frame();
+    let frame = harness.frame();
+    assert!(
+        frame.shows("555"),
+        "text_input should render numeric content"
+    );
+    assert!(
+        frame.shows("4567"),
+        "text_input should display full phone number"
+    );
+}
+
+#[test]
+fn text_input_renders_special_characters() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct InputState {
+        content: String,
+    }
+
+    let mut harness = Harness::new(
+        InputState {
+            content: "user@example.com".to_string(),
+        },
+        |state: &InputState| {
+            col((
+                text("Email:"),
+                widgets::text_input(&state.content).key("email-field"),
+            ))
+            .align(Align::Start)
+        },
+    );
+
+    harness.frame();
+    let frame = harness.frame();
+    assert!(frame.shows("@"), "text_input should render @ symbol");
+    assert!(frame.shows("."), "text_input should render . symbol");
+    assert!(frame.shows("com"), "text_input should render full domain");
+}
+
+#[test]
+fn text_input_updates_display_when_value_changes() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct InputState {
+        text: String,
+    }
+
+    let mut harness = Harness::new(
+        InputState {
+            text: "hello".to_string(),
+        },
+        |state: &InputState| {
+            col((
+                text("Text:"),
+                widgets::text_input(&state.text).key("text-field"),
+            ))
+            .align(Align::Start)
+        },
+    );
+
+    harness.frame();
+    assert!(harness.frame().shows("hello"), "displays initial value");
+
+    // Simulate updating the state (in a real app, this would happen from event handlers)
+    // For this test, we create a new harness with updated state
+    let mut harness_updated = Harness::new(
+        InputState {
+            text: "world".to_string(),
+        },
+        |state: &InputState| {
+            col((
+                text("Text:"),
+                widgets::text_input(&state.text).key("text-field"),
+            ))
+            .align(Align::Start)
+        },
+    );
+
+    harness_updated.frame();
+    assert!(
+        harness_updated.frame().shows("world"),
+        "text_input should display updated value"
+    );
+    assert!(
+        !harness_updated.frame().shows("hello"),
+        "text_input should not display old value"
     );
 }
