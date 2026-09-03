@@ -107,7 +107,7 @@ cargo test --test backend_consistency -- phase_4
 # Run Phase 1 tests only
 cargo test --test backend_consistency phase_1
 
-# Check coordinate transformation in your backend
+# Check coordinate transformation in your backend (replace 'your_backend' with your actual backend name)
 grep -n "scale_factor\|logical\|device" src/shell/platform/your_backend.rs
 ```
 
@@ -252,7 +252,7 @@ cargo test --test backend_consistency performance_regression --nocapture
 
 ### Step 1: Implement Backend Trait
 
-Create `src/shell/platform/your_backend.rs`:
+Create `src/shell/platform/your_backend.rs` (replace 'your_backend' with your platform name, e.g., 'wayland', 'directx', 'game_engine'):
 
 ```rust
 use crate::shell::{Backend, Event, WindowOptions, Appearance};
