@@ -6717,6 +6717,7 @@ mod phase11_gesture_and_multitouch {
         struct App {
             error_x: f32,
             error_y: f32,
+            has_error: bool,
         }
 
         fn view(_app: &App) -> El<App> {
@@ -6727,6 +6728,7 @@ mod phase11_gesture_and_multitouch {
             App {
                 error_x: 0.0,
                 error_y: 0.0,
+                has_error: false,
             },
             view,
         )
@@ -6748,6 +6750,7 @@ mod phase11_gesture_and_multitouch {
         struct App {
             element_x: f32,
             element_y: f32,
+            fullscreen: bool,
         }
 
         fn view(_app: &App) -> El<App> {
@@ -6758,6 +6761,7 @@ mod phase11_gesture_and_multitouch {
             App {
                 element_x: 0.0,
                 element_y: 0.0,
+                fullscreen: false,
             },
             view,
         )
@@ -6781,13 +6785,23 @@ mod phase11_gesture_and_multitouch {
         #[allow(dead_code)]
         struct App {
             element_x: f32,
+            window_w: f32,
+            window_h: f32,
         }
 
         fn view(_app: &App) -> El<App> {
             col((button("Resize test"),))
         }
 
-        let mut h = Harness::new(App { element_x: 0.0 }, view).size(400.0, 300.0);
+        let mut h = Harness::new(
+            App {
+                element_x: 0.0,
+                window_w: 400.0,
+                window_h: 300.0,
+            },
+            view,
+        )
+        .size(400.0, 300.0);
 
         h.frames(1);
         let x_at_400w = h.state().element_x;
@@ -6807,13 +6821,21 @@ mod phase11_gesture_and_multitouch {
         #[allow(dead_code)]
         struct App {
             preserved_x: f32,
+            minimized: bool,
         }
 
         fn view(_app: &App) -> El<App> {
             col((text("Minimized state test"),))
         }
 
-        let mut h = Harness::new(App { preserved_x: 100.0 }, view).size(400.0, 300.0);
+        let mut h = Harness::new(
+            App {
+                preserved_x: 100.0,
+                minimized: false,
+            },
+            view,
+        )
+        .size(400.0, 300.0);
 
         h.frames(1);
         let x_before = h.state().preserved_x;
@@ -6832,15 +6854,30 @@ mod phase11_gesture_and_multitouch {
         #[allow(dead_code)]
         struct App {
             click_x: f32,
+            window_id: usize,
         }
 
         fn view(_app: &App) -> El<App> {
             col((text("Multi-window test"),))
         }
 
-        let mut h1 = Harness::new(App { click_x: 0.0 }, view).size(400.0, 300.0);
+        let mut h1 = Harness::new(
+            App {
+                click_x: 0.0,
+                window_id: 1,
+            },
+            view,
+        )
+        .size(400.0, 300.0);
 
-        let mut h2 = Harness::new(App { click_x: 0.0 }, view).size(400.0, 300.0);
+        let mut h2 = Harness::new(
+            App {
+                click_x: 0.0,
+                window_id: 2,
+            },
+            view,
+        )
+        .size(400.0, 300.0);
 
         h1.click(Point::new(100.0, 100.0));
         h2.click(Point::new(200.0, 200.0));
