@@ -303,7 +303,7 @@ Complete documentation for Recipe 2 X11 backend pattern:
 - **STEP_2_RECIPE_2_COORDINATE_CONTRACT.md** — Device-to-logical transformation, scale factors, pitfalls
 - **STEP_2_RECIPE_2_EVENT_TRANSLATION.md** — X11 event types mapped to rui Events (Motion, Button, Key)
 - **STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md** — Proves pattern replicability for Wayland, game engines
-- **STEP_2_RECIPE_2_SUMMARY.md** — Quick reference: architecture overview and verification test navigation
+- **STEP_5_RECIPE_2_SUMMARY.md** — Quick reference: architecture overview and verification test navigation
 
 ### Commit list
 
