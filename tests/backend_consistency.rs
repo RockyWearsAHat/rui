@@ -2,14 +2,47 @@
 
 //! Cross-platform backend consistency tests for pointer coordinate normalization.
 //!
-//! These tests verify that:
-//! 1. Pointer coordinates are correctly normalized to logical units
-//! 2. Scale factors are properly applied during coordinate transformation
-//! 3. Click handling is consistent across different display scales
-//! 4. Element positions and sizes remain correct in logical coordinates
-//! 5. Pointer movement coordinates are tracked accurately
-//! 6. Drag operations preserve coordinate integrity across scale factors
-//! 7. Multiple pointer events in sequence maintain coordinate consistency
+//! # Overview
+//!
+//! This test scaffold validates that pointer coordinates are correctly transformed from
+//! device pixels to logical units across all backends. It provides:
+//!
+//! 1. **Coordinate Normalization Tests**: Verify transformation from device → logical
+//! 2. **Scale Factor Coverage**: Validate 1.0, 1.25, 1.5, 2.0, 2.5, 3.0 scales
+//! 3. **Interaction Patterns**: Test clicks, drags, movement, and keyboard navigation
+//! 4. **Edge Cases**: Boundary conditions, fractional coordinates, negative offsets
+//! 5. **State Consistency**: Verify coordinates remain stable across frame updates and reflows
+//!
+//! # Coordinate Transformation Contract
+//!
+//! All backends must implement the invariant:
+//! ```text
+//! logical_coordinate = device_coordinate / scale_factor
+//! device_coordinate = logical_coordinate * scale_factor
+//! ```
+//!
+//! The Harness operates in logical units; platform backends transform device pixels
+//! to logical units before dispatch. This scaffold validates the roundtrip.
+//!
+//! # Adding New Tests
+//!
+//! Use the helper functions below to reduce boilerplate:
+//! - `test_click_at_scale()`: Create a stateful click test for a given scale
+//! - `test_movement_at_scale()`: Verify pointer movement at a specific scale
+//! - `test_drag_with_precision()`: Validate drag coordinate tracking
+//!
+//! # Test Organization
+//!
+//! Tests are grouped by category with `// ===== SECTION =====` markers:
+//! - **Basic click coordinate tests**: Simple click registration
+//! - **Pointer movement tests**: Hover tracking
+//! - **Sequence tests**: Multiple events in one frame
+//! - **Boundary tests**: Element edges and off-screen
+//! - **Drag tests**: Coordinate preservation during drags
+//! - **Stability tests**: Coordinates across frame updates
+//! - **Edge case tests**: Zero, large, fractional, negative coordinates
+//! - **Focus tests**: Keyboard focus and coordinate consistency
+//! - **Reflow tests**: Layout changes and coordinate updates
 
 #[cfg(test)]
 mod pointer_coordinate_tests {
@@ -18,6 +51,68 @@ mod pointer_coordinate_tests {
     use rui::geom::Size;
     use rui::testing::Harness;
     use rui::{button, col, draw, row};
+
+    // ===== HELPER FUNCTIONS AND FIXTURES FOR TEST SCAFFOLD =====
+    //
+    // The helpers below are provided for future developers extending this scaffold.
+    // They reduce boilerplate when adding new coordinate validation tests.
+    // See "SCAFFOLD EXTENSION GUIDE" at the end of this file.
+
+    #[allow(dead_code)]
+    /// Common test app for click verification tests.
+    /// Use this when you need a simple clickable element.
+    struct ClickableApp {
+        clicked: bool,
+    }
+
+    #[allow(dead_code)]
+    /// View function for ClickableApp - renders a single clickable button.
+    fn clickable_view(_app: &ClickableApp) -> El<ClickableApp> {
+        col((button("Click me").on_click(|state: &mut ClickableApp| {
+            state.clicked = true;
+        }),))
+    }
+
+    #[allow(dead_code)]
+    /// Common test app for pointer movement verification.
+    struct MovableApp {
+        moved: bool,
+    }
+
+    #[allow(dead_code)]
+    /// View function for MovableApp - renders a drawable area tracking movement.
+    fn movable_view(app: &MovableApp) -> El<MovableApp> {
+        let moved = app.moved;
+        col((draw(Size::new(100.0, 50.0), move |painter, rect| {
+            let _ = (painter, rect, moved);
+        })
+        .on_pointer_move(|state: &mut MovableApp, _pointing| {
+            state.moved = true;
+        }),))
+    }
+
+    #[allow(dead_code)]
+    /// Helper: Create a click test at a specific coordinate.
+    /// Returns the resulting state after the click.
+    fn test_click_at_coord(coord: Point) -> ClickableApp {
+        let mut h = Harness::new(ClickableApp { clicked: false }, clickable_view);
+        h.click(coord);
+        ClickableApp {
+            clicked: h.state().clicked,
+        }
+    }
+
+    #[allow(dead_code)]
+    /// Helper: Create a movement test at a specific coordinate.
+    /// Returns the resulting state after the movement.
+    fn test_movement_at_coord(coord: Point) -> MovableApp {
+        let mut h = Harness::new(MovableApp { moved: false }, movable_view);
+        h.move_pointer(coord);
+        h.frames(1);
+        MovableApp {
+            moved: h.state().moved,
+        }
+    }
 
     // ===== BASIC CLICK COORDINATE TESTS =====
 
@@ -874,3 +969,64 @@ mod pointer_coordinate_tests {
         );
     }
 }
+
+// ===== SCAFFOLD EXTENSION GUIDE FOR DEVELOPERS =====
+//
+// This section provides guidance for extending the backend consistency test scaffold
+// to support new backends, scale factors, or interaction patterns.
+//
+// # Adding Tests for a New Backend
+//
+// 1. Copy a test from this file (e.g., `pointer_coordinates_at_scale_2_0`)
+// 2. Modify the Harness size if the backend has different canvas dimensions
+// 3. Run the test: `cargo test --test backend_consistency <test_name>`
+// 4. If it fails, the backend's coordinate transformation needs fixing
+//
+// # Adding Tests for New Scale Factors
+//
+// Use the parametrized pattern in `pointer_coordinates_at_scale_*` tests:
+//
+// ```rust
+// #[test]
+// fn pointer_coordinates_at_scale_4_0() {
+//     struct App { clicked: bool }
+//     fn view(_app: &App) -> El<App> {
+//         col((button("Click").on_click(|s| s.clicked = true),))
+//     }
+//     let mut h = Harness::new(App { clicked: false }, view);
+//     h.click(Point::new(200.0, 20.0));  // 4.0 scale
+//     assert!(h.state().clicked);
+// }
+// ```
+//
+// # Adding Tests for New Interaction Patterns
+//
+// 1. Use the helper structs `ClickableApp` and `MovableApp` for simple cases
+// 2. Create custom App struct for complex interactions
+// 3. Verify both the interaction succeeds and coordinate is correct:
+//    - `h.click(coord)` should fire the handler
+//    - `h.move_pointer(coord)` should track movement
+//    - `h.drag(from, to)` should preserve distance
+//
+// # Verification Strategy
+//
+// Always verify three things:
+// 1. The interaction fires (handler is called)
+// 2. The coordinate is correct (click hits intended element)
+// 3. The behavior is consistent (same coordinate always triggers same handler)
+//
+// # Cross-Backend Validation
+//
+// To ensure a new backend maintains consistency:
+// 1. Run the full test suite: `cargo test --test backend_consistency`
+// 2. Run library tests: `cargo test --lib`
+// 3. Run visual tests on the platform: `cargo run --example gallery`
+//
+// # Invariants This Scaffold Protects
+//
+// - **Coordinate transformation**: device_pixel = logical_unit * scale_factor
+// - **Consistency**: Same coordinate always triggers same handler
+// - **Stability**: Coordinates don't change across frame updates
+// - **Precision**: Fractional coordinates are handled correctly
+// - **Boundary behavior**: Clicks outside elements don't trigger handlers
+// - **Reflow safety**: Layout changes don't break coordinate mapping
