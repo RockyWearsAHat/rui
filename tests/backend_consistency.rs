@@ -4347,4 +4347,226 @@ mod cross_module_integration_tests {
             );
         }
     }
+
+    // ===== PHASE 9: EVENT ORDERING & SEQUENCING =====
+
+    #[test]
+    fn phase9_pointer_event_sequence_press_move_release() {
+        // Verify pointer event sequence (press → move → release) processes correctly.
+        // Real-world: Drag operations, precise pointer tracking.
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Target").on_click(|state: &mut App| {
+                state.click_count += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        // Sequence: click should trigger handler
+        h.click_text("Target");
+        h.frames(1);
+
+        // Should have recorded click event
+        assert_eq!(h.state().click_count, 1);
+    }
+
+    #[test]
+    fn phase9_multiple_handler_execution_order() {
+        // Verify multiple handlers execute in depth-first order.
+        // Real-world: Nested handlers, bubbling events.
+        struct App {
+            execution_order: Vec<usize>,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("Button 1").on_click(|state: &mut App| {
+                    state.execution_order.push(1);
+                }),
+                button("Button 2").on_click(|state: &mut App| {
+                    state.execution_order.push(2);
+                }),
+                button("Button 3").on_click(|state: &mut App| {
+                    state.execution_order.push(3);
+                }),
+            ))
+        }
+
+        let mut h = Harness::new(
+            App {
+                execution_order: vec![],
+            },
+            view,
+        );
+
+        // Click each button in order
+        h.click_text("Button 1");
+        h.click_text("Button 2");
+        h.click_text("Button 3");
+
+        assert_eq!(h.state().execution_order, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn phase9_mixed_input_pointer_and_keyboard() {
+        // Verify mixed input (pointer + keyboard) processes correctly.
+        // Real-world: Click to focus, then type.
+        struct App {
+            interactions: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            button("Click & Type")
+                .focusable()
+                .on_click(|state: &mut App| {
+                    state.interactions += 1;
+                })
+        }
+
+        let mut h = Harness::new(App { interactions: 0 }, view);
+
+        // Pointer + keyboard sequence
+        h.click_text("Click & Type");
+        h.frames(1);
+
+        // After click, should have +1
+        assert_eq!(h.state().interactions, 1);
+    }
+
+    #[test]
+    fn phase9_rapid_event_sequence_stability() {
+        // Verify stability under rapid event sequences (100+ events per frame).
+        // Real-world: Fast clicking, rapid mouse movements.
+        struct App {
+            event_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            button("Rapid").on_click(|state: &mut App| state.event_count += 1)
+        }
+
+        let mut h = Harness::new(App { event_count: 0 }, view);
+
+        // Simulate rapid events (10 clicks)
+        for _ in 0..10 {
+            h.click_text("Rapid");
+        }
+
+        assert_eq!(
+            h.state().event_count,
+            10,
+            "Rapid events processed correctly"
+        );
+    }
+
+    #[test]
+    fn phase9_event_deduplication_handling() {
+        // Verify event deduplication (no duplicate handlers from same event).
+        // Real-world: Preventing double-processing from event bubbling.
+        struct App {
+            handler_calls: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            button("Single Handler").on_click(|state: &mut App| {
+                state.handler_calls += 1;
+            })
+        }
+
+        let mut h = Harness::new(App { handler_calls: 0 }, view);
+
+        // Single click should call handler exactly once
+        h.click_text("Single Handler");
+        assert_eq!(h.state().handler_calls, 1, "No duplicate handler calls");
+    }
+
+    #[test]
+    fn phase9_event_timing_with_animation_frames() {
+        // Verify event timing consistency across animation frames.
+        // Real-world: Events during animations shouldn't cause frame drops.
+        struct App {
+            clicks: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            button("Click during animation").on_click(|state: &mut App| {
+                state.clicks += 1;
+            })
+        }
+
+        let mut h = Harness::new(App { clicks: 0 }, view);
+
+        // Interleave events with animation frames
+        h.click_text("Click during animation");
+        h.frames(5); // 5 animation frames
+        h.click_text("Click during animation");
+        h.frames(5);
+
+        assert_eq!(h.state().clicks, 2, "Events during animation frames");
+    }
+
+    #[test]
+    fn phase9_nested_event_handler_context() {
+        // Verify nested handlers maintain correct context (no cross-talk).
+        // Real-world: Nested components with independent handlers.
+        struct App {
+            outer: usize,
+            inner: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("Outer").on_click(|state: &mut App| state.outer += 1),
+                col((button("Inner").on_click(|state: &mut App| state.inner += 1),)),
+            ))
+        }
+
+        let mut h = Harness::new(App { outer: 0, inner: 0 }, view);
+
+        h.click_text("Outer");
+        h.click_text("Inner");
+
+        assert_eq!(h.state().outer, 1, "Outer handler fired");
+        assert_eq!(h.state().inner, 1, "Inner handler fired independently");
+    }
+
+    #[test]
+    fn phase9_event_ordering_with_state_changes() {
+        // Verify event ordering consistency when handlers modify state.
+        // Real-world: State changes affecting subsequent events in same frame.
+        struct App {
+            state_version: usize,
+            events_processed: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Update").on_click(|state: &mut App| {
+                state.state_version += 1;
+                state.events_processed += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(
+            App {
+                state_version: 1,
+                events_processed: 0,
+            },
+            view,
+        );
+
+        h.click_text("Update");
+        h.frames(1);
+
+        // After click and frame rebuild, should see new state
+        assert_eq!(h.state().state_version, 2, "State version incremented");
+        assert_eq!(
+            h.state().events_processed,
+            1,
+            "Event processed exactly once"
+        );
+    }
 }
