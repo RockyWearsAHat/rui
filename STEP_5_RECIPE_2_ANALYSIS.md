@@ -7,7 +7,7 @@ This document extracts phase boundaries from git history for the X11 Backend Imp
 Recipe 2 demonstrates the three-phase pattern for adding a new platform backend (X11 for Linux). The pattern is replicable for any new backend (Wayland, game engine, etc.).
 
 **Total commits**: 4 (Phase 1, Phase 2, Phase 3, Polish)  
-**Total lines (final)**: 1,368 in `src/shell/platform/x11.rs`  
+**Total lines (final)**: 1,422 in `src/shell/platform/x11.rs`  
 **Time to implementation**: Phases 1–3 over active development cycle; Polish for documentation refinement
 
 ## Phase 1: Foundation
@@ -55,8 +55,8 @@ cargo clippy --target x86_64-unknown-linux-gnu -- -D warnings
 
 **Commit**: `c42c0f05b3d75976665377a16257c36c472debc1`  
 **Message**: "Bring the library up to the selfhost workspace's current state: a full vector canvas (paths, strokes, gradients, SDF text effects), geometry primitives, image decoding and scaling, signed-distance-field rendering, accessibility tree, font kerning, interaction tests, the reload feature, and the icon example"  
-**Lines**: 1,220  
-**Delta from Phase 1**: +472 lines  
+**Lines**: 1,230  
+**Delta from Phase 1**: +482 lines  
 
 ### Scope
 
@@ -74,7 +74,7 @@ Add DPI scaling, keyboard event translation, modifier key handling, and platform
 
 ### Files Modified
 
-- **Modified**: `src/shell/platform/x11.rs` (1,220 total lines; see diff for +472)
+- **Modified**: `src/shell/platform/x11.rs` (1,230 total lines; see diff for +482)
 - **Modified**: `src/input.rs` (Event → Input translation logic)
 - **Modified**: `src/shell/mod.rs` (platform-specific event dispatch)
 
@@ -95,8 +95,8 @@ cargo test --lib  # Full suite (397 tests)
 
 **Commit**: `80e3003563c26952e4d63c52d8eb8f5052cb463c`  
 **Message**: "The four primitives a remote-desktop viewport needs, and the practices document"  
-**Lines**: 1,321  
-**Delta from Phase 2**: +101 lines  
+**Lines**: 1,347  
+**Delta from Phase 2**: +117 lines  
 
 ### Scope
 
@@ -113,7 +113,7 @@ Wire the X11 backend into the shared frame loop and verify cross-module consiste
 
 ### Files Modified
 
-- **Modified**: `src/shell/platform/x11.rs` (1,321 total lines; see diff for +101)
+- **Modified**: `src/shell/platform/x11.rs` (1,347 total lines; see diff for +117)
 - **Modified**: `src/shell/mod.rs` (platform selector logic)
 - **Modified**: `src/app.rs` (Backend trait boundary)
 - **Modified**: `src/accessibility.rs` (X11-specific accessibility node objects)
@@ -135,8 +135,8 @@ cargo test --lib  # All 397 tests
 
 **Commit**: `991167a3898d643199a6e0b9dfa461be31cae264`  
 **Message**: "Recipe 2: Implement star_rating widget exemplar with test"  
-**Lines**: 1,368  
-**Delta from Phase 3**: +47 lines  
+**Lines**: 1,422  
+**Delta from Phase 3**: +75 lines  
 
 ### Scope
 
@@ -151,7 +151,7 @@ Documentation refinements and exemplar widget implementation. Ensure Recipe 2 do
 
 ### Files Modified
 
-- **Modified**: `src/shell/platform/x11.rs` (1,368 total lines; see diff for +47)
+- **Modified**: `src/shell/platform/x11.rs` (1,422 total lines; see diff for +75)
 - **Modified**: `src/widgets.rs` (add star_rating exemplar)
 - **Modified**: `tests/recipes.rs` (add star_rating tests)
 - **Added**: `STEP_2_RECIPE_2_*.md` documentation files
@@ -175,9 +175,9 @@ cargo fmt --check  # Formatting
 | Phase | Commit SHA (full) | Commit SHA (short) | Lines | Message | Δ from prev |
 |-------|-------------------|-------------------|-------|---------|-----------|
 | 1 | a67d578eea41560c26fd7a6548c0d089223f3d70 | a67d578 | 748 | Give the interface library a foundation you can build controls on | +748 |
-| 2 | c42c0f05b3d75976665377a16257c36c472debc1 | c42c0f0 | 1220 | Bring the library up to the selfhost workspace's current state | +472 |
-| 3 | 80e3003563c26952e4d63c52d8eb8f5052cb463c | 80e3003 | 1321 | The four primitives a remote-desktop viewport needs | +101 |
-| Polish | 991167a3898d643199a6e0b9dfa461be31cae264 | 991167a | 1368 | Recipe 2: Implement star_rating widget exemplar with test | +47 |
+| 2 | c42c0f05b3d75976665377a16257c36c472debc1 | c42c0f0 | 1230 | Bring the library up to the selfhost workspace's current state | +482 |
+| 3 | 80e3003563c26952e4d63c52d8eb8f5052cb463c | 80e3003 | 1347 | The four primitives a remote-desktop viewport needs | +117 |
+| Polish | 991167a3898d643199a6e0b9dfa461be31cae264 | 991167a | 1422 | Recipe 2: Implement star_rating widget exemplar with test | +75 |
 
 ---
 
@@ -188,17 +188,17 @@ cargo fmt --check  # Formatting
 - Modified: `src/shell/mod.rs` (feature gate, platform selector)
 
 ### Phase 2
-- Modified: `src/shell/platform/x11.rs` (748 → 1220 lines)
+- Modified: `src/shell/platform/x11.rs` (748 → 1230 lines)
 - Modified: `src/input.rs` (keyboard translation)
 - Modified: `src/shell/mod.rs` (event dispatch)
 
 ### Phase 3
-- Modified: `src/shell/platform/x11.rs` (1220 → 1321 lines)
+- Modified: `src/shell/platform/x11.rs` (1230 → 1347 lines)
 - Modified: `src/app.rs` (Backend trait integration)
 - Modified: `src/accessibility.rs` (X11 nodes)
 
 ### Phase 4 (Polish)
-- Modified: `src/shell/platform/x11.rs` (1321 → 1368 lines)
+- Modified: `src/shell/platform/x11.rs` (1347 → 1422 lines)
 - Added: `src/widgets.rs` additions (star_rating exemplar)
 - Added: `tests/recipes.rs` additions (star_rating tests)
 - Added: `STEP_2_RECIPE_2_*.md` documentation
