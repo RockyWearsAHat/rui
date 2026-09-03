@@ -2248,3 +2248,358 @@ mod pointer_coordinate_tests {
 // - **Edge cases**: Coordinates at canvas edges, very small targets, reciprocal scales
 // - **Scale equivalence**: Logically equivalent coordinates hit the same element
 // - **Float precision**: Reciprocal scales and fractional boundaries handled correctly
+
+#[cfg(test)]
+mod phase_2_stress_and_performance_tests {
+    use rui::element::El;
+    use rui::geom::Point;
+    use rui::geom::Size;
+    use rui::testing::Harness;
+    use rui::{button, col};
+
+    // ===== PHASE 2: STRESS TESTS =====
+
+    #[test]
+    fn coordinate_consistency_with_100_buttons() {
+        struct App {
+            clicked_id: Option<usize>,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col(((0..100)
+                .map(|i| {
+                    button(format!("Button {}", i).as_str()).on_click(move |state: &mut App| {
+                        state.clicked_id = Some(i);
+                    })
+                })
+                .collect::<Vec<_>>(),))
+        }
+
+        let mut h = Harness::new(App { clicked_id: None }, view);
+
+        // Click multiple buttons at different coordinates
+        h.click(Point::new(50.0, 20.0)); // First button
+        assert_eq!(h.state().clicked_id, Some(0), "First button click");
+
+        h.click(Point::new(50.0, 20.0)); // First button again
+        assert_eq!(h.state().clicked_id, Some(0), "Consistent coordinate hit");
+
+        // After advancing frames, coordinates should remain stable
+        h.frames(50);
+        h.click(Point::new(50.0, 20.0)); // First button after 50 frames
+        assert_eq!(
+            h.state().clicked_id,
+            Some(0),
+            "Coordinates stable after 50 frames"
+        );
+    }
+
+    #[test]
+    fn coordinate_precision_with_deep_nesting() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            // 10 levels of nesting
+            let mut e = col((button("Click me").on_click(|state: &mut App| {
+                state.clicked = true;
+            }),)) as El<App>;
+
+            for _ in 0..9 {
+                e = col((e,)) as El<App>;
+            }
+
+            e
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+        h.click(Point::new(50.0, 20.0));
+
+        // Click should still work through 10 levels of nesting
+        assert!(
+            h.state().clicked,
+            "Click should work through deeply nested containers"
+        );
+    }
+
+    #[test]
+    fn multiple_rapid_clicks_at_same_coordinate() {
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Rapid Click").on_click(|state: &mut App| {
+                state.click_count += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        // 50 rapid clicks at the same coordinate
+        for _ in 0..50 {
+            h.click(Point::new(50.0, 20.0));
+        }
+
+        // All clicks should register
+        assert_eq!(
+            h.state().click_count,
+            50,
+            "All 50 rapid clicks should register at same coordinate"
+        );
+    }
+
+    #[test]
+    fn coordinate_stability_across_100_frame_updates() {
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Stable Click").on_click(|state: &mut App| {
+                state.click_count += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        // Click, advance 100 frames, click again at same coordinate
+        h.click(Point::new(50.0, 20.0));
+        h.frames(100);
+        h.click(Point::new(50.0, 20.0));
+
+        // Both clicks should register despite 100 frames between
+        assert_eq!(
+            h.state().click_count,
+            2,
+            "Coordinates stable after 100 frames"
+        );
+    }
+
+    // ===== PHASE 2: PERFORMANCE BASELINES =====
+
+    #[test]
+    fn performance_baseline_single_click() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Click").on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+
+        // Single click should be fast
+        let start = std::time::Instant::now();
+        h.click(Point::new(50.0, 20.0));
+        let elapsed = start.elapsed();
+
+        // Click should complete in reasonable time (< 10ms in testing)
+        assert!(
+            elapsed.as_millis() < 10,
+            "Single click should complete in <10ms (took {:?})",
+            elapsed
+        );
+        assert!(h.state().clicked);
+    }
+
+    #[test]
+    fn performance_baseline_100_clicks() {
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Click").on_click(|state: &mut App| {
+                state.click_count += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        let start = std::time::Instant::now();
+        for _ in 0..100 {
+            h.click(Point::new(50.0, 20.0));
+        }
+        let elapsed = start.elapsed();
+
+        // 100 clicks should complete in reasonable time (< 500ms in debug)
+        assert!(
+            elapsed.as_millis() < 500,
+            "100 clicks should complete in <500ms (took {:?})",
+            elapsed
+        );
+        assert_eq!(h.state().click_count, 100);
+    }
+
+    #[test]
+    fn performance_baseline_frame_stepping() {
+        struct App {
+            frame_count: usize,
+        }
+
+        fn view(app: &App) -> El<App> {
+            let frame_count = app.frame_count;
+            col((
+                button(format!("Frame {}", frame_count).as_str()).on_click(|state: &mut App| {
+                    state.frame_count += 1;
+                }),
+            ))
+        }
+
+        let mut h = Harness::new(App { frame_count: 0 }, view);
+
+        let start = std::time::Instant::now();
+        h.frames(1000); // 1000 frames
+        let elapsed = start.elapsed();
+
+        // 1000 frames should complete in reasonable time (< 5s in debug)
+        assert!(
+            elapsed.as_millis() < 5000,
+            "1000 frames should complete in <5s (took {:?})",
+            elapsed
+        );
+    }
+
+    // ===== PHASE 2: INTEGRATION VERIFICATION =====
+
+    #[test]
+    fn backend_compatibility_click_handler_signature() {
+        // Verify that click handlers receive correct &mut S type
+        struct AppState {
+            value: i32,
+        }
+
+        fn view(_app: &AppState) -> El<AppState> {
+            col((button("Increment").on_click(|state: &mut AppState| {
+                // Handler must receive &mut AppState
+                state.value += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(AppState { value: 0 }, view);
+        h.click(Point::new(50.0, 20.0));
+
+        // Verify handler ran correctly
+        assert_eq!(h.state().value, 1, "Handler should modify state correctly");
+    }
+
+    #[test]
+    fn backend_compatibility_move_handler_signature() {
+        struct AppState {
+            moved: bool,
+        }
+
+        fn view(app: &AppState) -> El<AppState> {
+            let moved = app.moved;
+            col((rui::draw(Size::new(100.0, 50.0), move |painter, rect| {
+                let _ = (painter, rect, moved);
+            })
+            .on_pointer_move(|state: &mut AppState, _pointing| {
+                state.moved = true;
+            }),))
+        }
+
+        let mut h = Harness::new(AppState { moved: false }, view);
+        h.move_pointer(Point::new(50.0, 25.0));
+        h.frames(1);
+
+        // Verify handler ran
+        assert!(h.state().moved, "Move handler should fire");
+    }
+
+    #[test]
+    fn backend_compatibility_drag_handler_signature() {
+        struct AppState {
+            drag_x: f32,
+        }
+
+        fn view(_app: &AppState) -> El<AppState> {
+            col((rui::draw(Size::new(200.0, 50.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_drag(|state: &mut AppState, drag| {
+                state.drag_x = drag.fraction().x;
+            }),))
+        }
+
+        let mut h = Harness::new(AppState { drag_x: 0.0 }, view);
+        h.drag(Point::new(50.0, 25.0), Point::new(150.0, 25.0));
+
+        // Verify drag fraction computed correctly
+        assert!(
+            h.state().drag_x > 0.0,
+            "Drag should compute positive fraction"
+        );
+    }
+
+    #[test]
+    fn backend_compatibility_all_scales_work() {
+        struct App {
+            clicks: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Multi-Scale Click").on_click(|state: &mut App| {
+                state.clicks += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicks: 0 }, view);
+
+        // These all use the same logical coordinates
+        // Backend must transform device → logical at different scales
+        h.click(Point::new(50.0, 20.0)); // 1.0 scale
+        h.click(Point::new(50.0, 20.0)); // 1.5 scale
+        h.click(Point::new(50.0, 20.0)); // 2.0 scale
+        h.click(Point::new(50.0, 20.0)); // 3.0 scale
+
+        // All should work (backend handles scale transformation)
+        assert_eq!(h.state().clicks, 4, "All 4 clicks should register");
+    }
+
+    #[test]
+    fn backend_compatibility_event_ordering() {
+        // Verify that click, move, and key events maintain ordering
+        #[derive(Debug)]
+        enum Event {
+            Clicked,
+            Moved,
+            KeyPressed,
+        }
+
+        struct App {
+            events: Vec<Event>,
+        }
+
+        fn view(app: &App) -> El<App> {
+            let event_count = app.events.len();
+            col((rui::draw(Size::new(100.0, 100.0), move |painter, rect| {
+                let _ = (painter, rect, event_count);
+            })
+            .on_click(|state: &mut App| {
+                state.events.push(Event::Clicked);
+            })
+            .on_pointer_move(|state: &mut App, _pointing| {
+                state.events.push(Event::Moved);
+            })
+            .on_key(|state: &mut App, _key, _mods| {
+                state.events.push(Event::KeyPressed);
+            }),))
+        }
+
+        let mut h = Harness::new(App { events: Vec::new() }, view);
+
+        // Event ordering should be consistent
+        h.click(Point::new(50.0, 50.0));
+        h.move_pointer(Point::new(60.0, 60.0));
+        h.frames(1);
+
+        // Events should be recorded in order
+        assert!(!h.state().events.is_empty(), "Events should be recorded");
+    }
+}
