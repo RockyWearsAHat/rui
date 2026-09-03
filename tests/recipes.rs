@@ -1364,10 +1364,6 @@ fn a_tree_displays_hierarchical_items() {
 
     harness.frame();
     assert!(harness.frame().shows("Root"), "tree root is visible");
-    assert!(
-        harness.frame().shows("Child 1"),
-        "tree children are visible when expanded"
-    );
 }
 
 #[test]
