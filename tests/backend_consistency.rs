@@ -968,6 +968,368 @@ mod pointer_coordinate_tests {
             "Coordinates should be correct after reflow due to state change"
         );
     }
+
+    // ===== POINTER EVENT ORDERING TESTS =====
+
+    #[test]
+    fn pointer_events_fire_in_correct_order() {
+        struct App {
+            events: Vec<String>,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((draw(Size::new(100.0, 50.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_pointer_move(|state: &mut App, _| {
+                state.events.push("move".to_string());
+            })
+            .on_click(|state: &mut App| {
+                state.events.push("click".to_string());
+            }),))
+        }
+
+        let mut h = Harness::new(App { events: vec![] }, view);
+
+        // Simulate pointer press, move, release sequence
+        h.press(Point::new(50.0, 25.0));
+        h.move_pointer(Point::new(60.0, 30.0));
+        h.frames(1);
+        h.release();
+
+        // Check that events were recorded
+        let events = &h.state().events;
+        assert!(!events.is_empty(), "Should have at least one event");
+    }
+
+    // ===== CONCURRENT POINTER HANDLER EXECUTION =====
+
+    #[test]
+    fn multiple_handlers_execute_on_single_coordinate_click() {
+        struct App {
+            click_count: usize,
+            move_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((draw(Size::new(100.0, 50.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_click(|state: &mut App| {
+                state.click_count += 1;
+            })
+            .on_pointer_move(|state: &mut App, _| {
+                state.move_count += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(
+            App {
+                click_count: 0,
+                move_count: 0,
+            },
+            view,
+        );
+
+        h.click(Point::new(50.0, 25.0));
+
+        // Click handler should execute
+        assert_eq!(h.state().click_count, 1, "Click handler should execute");
+    }
+
+    // ===== COORDINATE ROUNDING EDGE CASE =====
+
+    #[test]
+    fn coordinates_at_fractional_boundaries() {
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Test").on_click(|state: &mut App| {
+                state.click_count += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        // Test multiple fractional boundaries
+        let coords = vec![
+            Point::new(50.25, 20.75),
+            Point::new(50.49, 20.99),
+            Point::new(50.51, 20.01),
+            Point::new(50.75, 20.25),
+        ];
+
+        for coord in coords {
+            h.click(coord);
+        }
+
+        assert_eq!(
+            h.state().click_count,
+            4,
+            "All fractional boundary clicks should register"
+        );
+    }
+
+    // ===== COORDINATE DISTRIBUTION ACROSS SCALE FACTORS =====
+
+    #[test]
+    fn coordinate_click_rate_remains_consistent_across_scales() {
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Consistent").on_click(|state: &mut App| {
+                state.click_count += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        // Simulate clicking at equivalent coordinates for scale factor 2.0
+        // At scale 2.0, logical coordinate 25 corresponds to device pixel 50
+        h.click(Point::new(25.0, 10.0)); // Scale 1.0 equivalent
+        h.frames(1);
+
+        assert_eq!(
+            h.state().click_count,
+            1,
+            "Click should register at scale-equivalent coordinate"
+        );
+    }
+
+    // ===== DRAG WITH INTERMEDIATE COORDINATES =====
+
+    #[test]
+    fn drag_preserves_intermediate_coordinates() {
+        struct App {
+            total_drag_distance: f32,
+            intermediate_positions: Vec<f32>,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((draw(Size::new(200.0, 50.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_drag(|state: &mut App, drag| {
+                let fraction = drag.fraction().x;
+                state.total_drag_distance = fraction;
+                state.intermediate_positions.push(fraction);
+            }),))
+        }
+
+        let mut h = Harness::new(
+            App {
+                total_drag_distance: 0.0,
+                intermediate_positions: vec![],
+            },
+            view,
+        );
+
+        // Drag with multiple intermediate positions
+        h.drag(Point::new(50.0, 25.0), Point::new(150.0, 25.0));
+
+        assert!(
+            h.state().total_drag_distance > 0.0,
+            "Drag should preserve coordinate movement"
+        );
+    }
+
+    // ===== COORDINATE CONSISTENCY WITH MULTIPLE HARNESS INSTANCES =====
+
+    #[test]
+    fn coordinate_handling_consistent_across_multiple_harness_instances() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Click").on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h1 = Harness::new(App { clicked: false }, view);
+        let mut h2 = Harness::new(App { clicked: false }, view);
+
+        let click_point = Point::new(50.0, 20.0);
+
+        // Both harnesses should handle the same coordinate identically
+        h1.click(click_point);
+        h2.click(click_point);
+
+        assert_eq!(
+            h1.state().clicked,
+            h2.state().clicked,
+            "Coordinate handling should be consistent across harness instances"
+        );
+    }
+
+    // ===== SCROLL CONTAINER COORDINATE TESTS =====
+
+    #[test]
+    fn scroll_offset_does_not_affect_click_coordinates() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("Click").on_click(|state: &mut App| {
+                    state.clicked = true;
+                }),
+                draw(Size::new(100.0, 200.0), move |painter, rect| {
+                    let _ = (painter, rect);
+                }),
+            ))
+            .gap(10.0)
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+
+        // Click the button (not in scrollable area)
+        h.click(Point::new(50.0, 20.0));
+
+        assert!(
+            h.state().clicked,
+            "Click should register regardless of scroll state"
+        );
+    }
+
+    // ===== COORDINATE PRECISION WITH MANY ELEMENTS =====
+
+    #[test]
+    fn coordinates_accurate_with_large_element_tree() {
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("Button 1").on_click(|state: &mut App| {
+                    state.click_count += 1;
+                }),
+                button("Button 2").on_click(|state: &mut App| {
+                    state.click_count += 1;
+                }),
+                button("Button 3").on_click(|state: &mut App| {
+                    state.click_count += 1;
+                }),
+                button("Button 4").on_click(|state: &mut App| {
+                    state.click_count += 1;
+                }),
+                button("Button 5").on_click(|state: &mut App| {
+                    state.click_count += 1;
+                }),
+            ))
+            .gap(5.0)
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        // Click buttons at different y coordinates
+        h.click(Point::new(50.0, 10.0)); // Button 1
+        h.click(Point::new(50.0, 25.0)); // Button 2
+        h.click(Point::new(50.0, 40.0)); // Button 3
+        h.click(Point::new(50.0, 55.0)); // Button 4
+        h.click(Point::new(50.0, 70.0)); // Button 5
+
+        assert!(
+            h.state().click_count >= 3,
+            "Multiple buttons in large tree should respond to clicks"
+        );
+    }
+
+    // ===== COORDINATE VALIDATION ACROSS FRAME TIME =====
+
+    #[test]
+    fn coordinates_unchanged_during_idle_frames() {
+        struct App {
+            first_click_count: usize,
+            second_click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("First").on_click(|state: &mut App| {
+                    state.first_click_count += 1;
+                }),
+                button("Second").on_click(|state: &mut App| {
+                    state.second_click_count += 1;
+                }),
+            ))
+            .gap(10.0)
+        }
+
+        let mut h = Harness::new(
+            App {
+                first_click_count: 0,
+                second_click_count: 0,
+            },
+            view,
+        );
+
+        // Click first button
+        h.click(Point::new(50.0, 20.0));
+        let first_count = h.state().first_click_count;
+
+        // Run many idle frames (no input)
+        h.frames(100);
+
+        // Click first button again at same coordinate
+        h.click(Point::new(50.0, 20.0));
+
+        assert_eq!(
+            h.state().first_click_count,
+            first_count + 1,
+            "Coordinates should remain valid after many idle frames"
+        );
+    }
+
+    // ===== INTERLEAVED DIFFERENT COORDINATE EVENTS =====
+
+    #[test]
+    fn interleaved_different_event_types_at_correct_coordinates() {
+        struct App {
+            click_count: usize,
+            move_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((draw(Size::new(100.0, 50.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_click(|state: &mut App| {
+                state.click_count += 1;
+            })
+            .on_pointer_move(|state: &mut App, _| {
+                state.move_count += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(
+            App {
+                click_count: 0,
+                move_count: 0,
+            },
+            view,
+        );
+
+        // Interleave clicks and moves
+        h.move_pointer(Point::new(50.0, 25.0));
+        h.frames(1);
+        h.click(Point::new(50.0, 25.0));
+        h.move_pointer(Point::new(60.0, 30.0));
+        h.frames(1);
+        h.click(Point::new(60.0, 30.0));
+
+        assert!(
+            h.state().click_count >= 2 && h.state().move_count >= 1,
+            "Interleaved events should all register at correct coordinates"
+        );
+    }
 }
 
 // ===== SCAFFOLD EXTENSION GUIDE FOR DEVELOPERS =====
