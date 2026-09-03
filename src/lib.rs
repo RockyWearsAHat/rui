@@ -228,3 +228,62 @@ macro_rules! code {
         $crate::code(::std::format!($($argument)*))
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+    use std::process::Command;
+
+    /// Verify dx report subscription was set up correctly.
+    ///
+    /// This test checks that:
+    /// 1. reports.dx file exists at the project root
+    /// 2. dx report list shows the project is subscribed
+    /// 3. Project key format matches collision-resistant pattern (hex string, 32+ chars)
+    #[test]
+    fn dx_report_subscription() {
+        let project_root = env!("CARGO_MANIFEST_DIR");
+        let reports_dx_path = Path::new(project_root).join("reports.dx");
+
+        // Check reports.dx exists
+        assert!(
+            reports_dx_path.exists(),
+            "reports.dx not found at {}, dx report setup may not have completed",
+            reports_dx_path.display()
+        );
+
+        // Run dx report list and capture output
+        let output = Command::new("dx")
+            .args(["report", "list", "."])
+            .current_dir(project_root)
+            .output()
+            .expect("failed to run dx report list");
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("subscribed"),
+            "dx report list output does not contain 'subscribed'.\nGot: {}",
+            stdout
+        );
+
+        // Verify project key format: contains "subscribed to `" followed by hex chars
+        assert!(
+            stdout.contains("subscribed to `"),
+            "project key not found in expected format in output: {}",
+            stdout
+        );
+
+        // Extract and validate hex key (should be 32+ chars)
+        if let Some(start) = stdout.find("subscribed to `") {
+            let key_start = start + "subscribed to `".len();
+            if let Some(end) = stdout[key_start..].find('`') {
+                let key = &stdout[key_start..key_start + end];
+                assert!(
+                    key.len() >= 32 && key.chars().all(|c| c.is_ascii_hexdigit()),
+                    "project key format invalid: '{}' (expected 32+ hex chars)",
+                    key
+                );
+            }
+        }
+    }
+}
