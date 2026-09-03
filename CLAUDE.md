@@ -580,7 +580,7 @@ draw(Size::new(160.0, 32.0), move |painter: &mut Painter<'_>, rect: Rect| {
     // Stroke border
     painter.stroke(rect, Radius::Small, 1.0, Tone::Muted);
     // Draw text inside
-    painter.text(rect.inset(4.0), "Hello", FontId::default(), Tone::Foreground);
+    painter.text(rect.inset(4.0), Ink::default(), Align::Start, "Hello");
 })
 ```
 
@@ -592,7 +592,7 @@ The `Painter` struct (in `src/paint.rs`) abstracts the rendering backend. It exp
 
 - **`painter.fill(rect, radius, tone)`** — Fill a rectangle with rounded corners using a semantic color tone. The Painter looks up the tone in the current theme (light/dark) to get the actual RGB color.
 - **`painter.stroke(rect, radius, width, tone)`** — Draw an unfilled border around a rectangle with the given width and color.
-- **`painter.text(rect, text, font_id, tone)`** — Draw text clipped to a rectangle. Text color comes from the tone parameter passed to Painter.
+- **`painter.text(rect, ink, align, text)`** — Draw one line of text inside a rectangle. `Ink` specifies size, color (tone), and font face; `Align` controls horizontal alignment (Start, Center, End, Stretch). Text is clipped if it doesn't fit.
 - **`painter.color(tone)`** — Get the RGB(A) color for a given tone in the current theme. Use this if you need raw pixels instead of high-level Painter methods.
 
 **Example: Text Input Field with Painter**
@@ -628,7 +628,8 @@ fn view(app: &App) -> El<App> {
 
             // Text content rendered with Painter
             let text_rect = rect.inset(Insets::horizontal(8.0));
-            painter.text(text_rect, &text, FontId::default(), Tone::Foreground);
+            let ink = Ink { tone: Tone::Foreground, ..Ink::default() };
+            painter.text(text_rect, ink, Align::Start, &text);
 
             // Caret (blinking cursor, visible when focused)
             if app.input_focused && caret < text.len() {
