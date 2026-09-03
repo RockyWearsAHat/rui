@@ -146,6 +146,15 @@ pub struct El<S> {
     pub(crate) ink: Ink,
     /// Whether a scrolling area sticks to the end of its content.
     pub(crate) follows: bool,
+    /// Accessible name for assistive technologies (e.g., screen readers).
+    /// Typically the label or primary text describing this element.
+    pub(crate) accessible_name: Option<String>,
+    /// Accessible role describing this element's semantic purpose (e.g., "button", "input", "navigation").
+    /// Helps assistive technologies understand the element's function.
+    pub(crate) accessible_role: Option<String>,
+    /// Accessible description for assistive technologies (e.g., screen readers).
+    /// Provides additional context beyond the accessible name.
+    pub(crate) accessible_description: Option<String>,
 }
 
 impl<S> El<S> {
@@ -172,6 +181,9 @@ impl<S> El<S> {
             id: Id::ROOT,
             ink: Ink::default(),
             follows: false,
+            accessible_name: None,
+            accessible_role: None,
+            accessible_description: None,
         }
     }
 
@@ -631,6 +643,28 @@ impl<S> El<S> {
     /// siblings are added, removed, or reordered.
     pub fn key(mut self, key: impl Into<String>) -> Self {
         self.key = Some(key.into());
+        self
+    }
+
+    /// Sets the accessible name for assistive technologies.
+    /// This is the primary label describing this element (e.g., "Submit" for a button).
+    pub fn accessible_name(mut self, name: impl Into<String>) -> Self {
+        self.accessible_name = Some(name.into());
+        self
+    }
+
+    /// Sets the accessible role describing this element's semantic purpose.
+    /// Examples: "button", "input", "navigation", "main", "complementary".
+    /// Helps assistive technologies understand the element's function.
+    pub fn accessible_role(mut self, role: impl Into<String>) -> Self {
+        self.accessible_role = Some(role.into());
+        self
+    }
+
+    /// Sets the accessible description for assistive technologies.
+    /// Provides additional context beyond the accessible name.
+    pub fn accessible_description(mut self, description: impl Into<String>) -> Self {
+        self.accessible_description = Some(description.into());
         self
     }
 
