@@ -293,6 +293,18 @@ X11 backend for Linux systems using the X11 protocol. Implements the Backend tra
 - **Coordinate contract**: device pixels → logical (logical = device / scale_factor)
 - **Event translation**: X11 event types → rui Event with modifier masks
 
+### Extracted Documentation
+
+Complete documentation for Recipe 2 X11 backend pattern:
+
+- **STEP_2_RECIPE_2_ANALYSIS.md** — Three-phase pattern breakdown with line counts, timeline, implementation checklist per phase
+- **STEP_2_RECIPE_2_VERIFICATION_GATES.md** — Phase-by-phase acceptance criteria, test commands, verification checklist; gates prevent regressions
+- **STEP_2_RECIPE_2_CROSS_MODULE_CONCERNS.md** — 5 key interactions (Backend trait, event flow, coordinate transformation, state persistence, accessibility) with module diagrams
+- **STEP_2_RECIPE_2_COORDINATE_CONTRACT.md** — X11 coordinate transformation (device → canvas → logical), scale factor handling, common pitfalls
+- **STEP_2_RECIPE_2_EVENT_TRANSLATION.md** — 5 X11 event types (MotionNotify, ButtonPress/Release, KeyPress/Release, ConfigureNotify) with mapping to rui Events
+- **STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md** — Validation that template holds for future backends (e.g., Wayland, game engines); proves pattern is replicable
+- **STEP_2_RECIPE_2_SUMMARY.md** — Quick reference for implementers: architecture overview, when to use which document, how to run verification tests
+
 ### Commit list
 
 **Phase 1: Foundation**
