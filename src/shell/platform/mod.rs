@@ -34,7 +34,19 @@ mod backend;
 #[allow(unsafe_code, reason = "Wayland protocol and platform calls")]
 mod backend;
 
-#[cfg(not(any(target_os = "macos", target_os = "windows", unix)))]
+// Matched before the fallback arm below: wasm32 is `not(unix)` and would
+// otherwise land in `unsupported.rs`, which is exactly the backend Forge's
+// web UI was silently getting.
+#[cfg(target_arch = "wasm32")]
+#[path = "wasm.rs"]
+mod backend;
+
+#[cfg(not(any(
+    target_os = "macos",
+    target_os = "windows",
+    unix,
+    target_arch = "wasm32"
+)))]
 #[path = "unsupported.rs"]
 mod backend;
 
