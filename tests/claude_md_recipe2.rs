@@ -455,7 +455,7 @@ fn recipe_2_extracted_documentation_lists_all_7_files() {
             "Validation that template holds for future backends",
         ),
         (
-            "STEP_2_RECIPE_2_SUMMARY.md",
+            "STEP_5_RECIPE_2_SUMMARY.md",
             "Quick reference for implementers",
         ),
     ];
@@ -475,11 +475,12 @@ fn recipe_2_extracted_documentation_lists_all_7_files() {
     }
 
     // Verify bullet list format (should have "- **" bullets)
-    let bullet_count = recipe_2_section.matches("- **STEP_2_RECIPE_2_").count();
+    // All 7 files should start with STEP_2_RECIPE_2_
+    let step2_count = recipe_2_section.matches("- **STEP_2_RECIPE_2_").count();
     assert_eq!(
-        bullet_count, 7,
-        "Extracted documentation should have exactly 7 bullet points, found {}",
-        bullet_count
+        step2_count, 7,
+        "Extracted documentation should have exactly 7 STEP_2_RECIPE_2_ bullet points, found {}",
+        step2_count
     );
 
     println!(
@@ -506,4 +507,73 @@ fn get_file_line_count(sha: &str, filepath: &str) -> usize {
 
     let content = String::from_utf8(output.stdout).expect("git output not valid UTF-8");
     content.lines().count()
+}
+
+#[test]
+fn step_5_recipe_2_analysis_md_exists_and_contains_all_phases() {
+    // RED test: Verify STEP_5_RECIPE_2_ANALYSIS.md exists with all phase data
+    use std::path::Path;
+    let filepath = "STEP_5_RECIPE_2_ANALYSIS.md";
+
+    assert!(
+        Path::new(filepath).exists(),
+        "STEP_5_RECIPE_2_ANALYSIS.md should exist but not found"
+    );
+
+    let content = fs::read_to_string(filepath).expect("Failed to read STEP_5_RECIPE_2_ANALYSIS.md");
+
+    // Verify all 4 commit SHAs are present
+    let required_commits = [
+        "a67d578eea41560c26fd7a6548c0d089223f3d70", // Phase 1
+        "c42c0f05b3d75976665377a16257c36c472debc1", // Phase 2
+        "80e3003563c26952e4d63c52d8eb8f5052cb463c", // Phase 3
+        "991167a3898d643199a6e0b9dfa461be31cae264", // Polish
+    ];
+
+    for commit_sha in &required_commits {
+        assert!(
+            content.contains(commit_sha),
+            "STEP_5_RECIPE_2_ANALYSIS.md should contain commit SHA: {}",
+            commit_sha
+        );
+    }
+
+    // Verify all line counts are present
+    let required_line_counts = ["748", "1220", "1321", "1368"];
+
+    for line_count in &required_line_counts {
+        assert!(
+            content.contains(line_count),
+            "STEP_5_RECIPE_2_ANALYSIS.md should contain line count: {}",
+            line_count
+        );
+    }
+
+    // Verify phases are documented
+    let phases = [
+        "### Phase 1: Foundation",
+        "### Phase 2: Enhancement",
+        "### Phase 3: Integration",
+        "### Phase 4: Polish",
+    ];
+
+    for phase in &phases {
+        assert!(
+            content.contains(phase),
+            "STEP_5_RECIPE_2_ANALYSIS.md should document: {}",
+            phase
+        );
+    }
+
+    // Verify verification gates section
+    assert!(
+        content.contains("Verification Gate"),
+        "STEP_5_RECIPE_2_ANALYSIS.md should contain Verification gate information"
+    );
+
+    // Verify file commits section exists
+    assert!(
+        content.contains("### Files Modified"),
+        "STEP_5_RECIPE_2_ANALYSIS.md should document which files changed per phase"
+    );
 }

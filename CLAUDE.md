@@ -303,7 +303,7 @@ Complete documentation for Recipe 2 X11 backend pattern:
 - **STEP_2_RECIPE_2_COORDINATE_CONTRACT.md** — X11 coordinate transformation (device → canvas → logical), scale factor handling, common pitfalls
 - **STEP_2_RECIPE_2_EVENT_TRANSLATION.md** — 5 X11 event types (MotionNotify, ButtonPress/Release, KeyPress/Release, ConfigureNotify) with mapping to rui Events
 - **STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md** — Validation that template holds for future backends (e.g., Wayland, game engines); proves pattern is replicable
-- **STEP_2_RECIPE_2_SUMMARY.md** — Quick reference for implementers: architecture overview, when to use which document, how to run verification tests
+- **STEP_5_RECIPE_2_SUMMARY.md** — Quick reference for implementers: architecture overview, when to use which document, how to run verification tests
 
 ### Commit list
 

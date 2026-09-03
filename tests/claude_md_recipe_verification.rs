@@ -524,7 +524,7 @@ fn recipe_2_claude_md_extracted_documentation_section() {
         "STEP_2_RECIPE_2_COORDINATE_CONTRACT.md",
         "STEP_2_RECIPE_2_EVENT_TRANSLATION.md",
         "STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md",
-        "STEP_2_RECIPE_2_SUMMARY.md",
+        "STEP_5_RECIPE_2_SUMMARY.md",
     ];
 
     let extracted_docs_start = recipe_2_section
