@@ -1,0 +1,7 @@
+# reports.dx
+
+Findings from dx analysis for the rui project. Updated by `dx report sync`.
+
+## Inbox
+
+No open reports yet. Run `dx report sync` to pull findings from the dx system.
