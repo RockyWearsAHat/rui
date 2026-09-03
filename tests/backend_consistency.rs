@@ -6709,15 +6709,26 @@ mod phase11_gesture_and_multitouch {
         assert!(h.state().a11y_focus_y.is_finite());
     }
 
+    // ===== WINDOW STATE STRUCT DEFINITION =====
+    // Consolidated struct for examining window-related state fields.
+    #[allow(dead_code)]
+    struct WindowState {
+        window_w: f32,
+        window_h: f32,
+        window_id: usize,
+        minimized: bool,
+        has_focus: bool,
+        has_error: bool,
+        fullscreen: bool,
+    }
+
     #[test]
     fn phase24_error_message_coordinate_positioning() {
         // Verify error messages appear at correct coordinates.
         // Contract: Error messages positioned near invalid input.
-        #[allow(dead_code)]
         struct App {
             error_x: f32,
             error_y: f32,
-            has_error: bool,
         }
 
         fn view(_app: &App) -> El<App> {
@@ -6728,7 +6739,6 @@ mod phase11_gesture_and_multitouch {
             App {
                 error_x: 0.0,
                 error_y: 0.0,
-                has_error: false,
             },
             view,
         )
@@ -6746,11 +6756,9 @@ mod phase11_gesture_and_multitouch {
     fn phase25_fullscreen_coordinate_transformation() {
         // Verify coordinates transform correctly when entering fullscreen.
         // Contract: Element coordinates remain valid in fullscreen mode.
-        #[allow(dead_code)]
         struct App {
             element_x: f32,
             element_y: f32,
-            fullscreen: bool,
         }
 
         fn view(_app: &App) -> El<App> {
@@ -6761,7 +6769,6 @@ mod phase11_gesture_and_multitouch {
             App {
                 element_x: 0.0,
                 element_y: 0.0,
-                fullscreen: false,
             },
             view,
         )
@@ -6782,26 +6789,15 @@ mod phase11_gesture_and_multitouch {
     fn phase25_window_resize_coordinate_remapping() {
         // Verify coordinates remap correctly when window is resized.
         // Contract: Elements reposition correctly at new window dimensions.
-        #[allow(dead_code)]
         struct App {
             element_x: f32,
-            window_w: f32,
-            window_h: f32,
         }
 
         fn view(_app: &App) -> El<App> {
             col((button("Resize test"),))
         }
 
-        let mut h = Harness::new(
-            App {
-                element_x: 0.0,
-                window_w: 400.0,
-                window_h: 300.0,
-            },
-            view,
-        )
-        .size(400.0, 300.0);
+        let mut h = Harness::new(App { element_x: 0.0 }, view).size(400.0, 300.0);
 
         h.frames(1);
         let x_at_400w = h.state().element_x;
@@ -6818,24 +6814,15 @@ mod phase11_gesture_and_multitouch {
     fn phase25_minimized_window_state_preservation() {
         // Verify state and coordinates are preserved when window is minimized.
         // Contract: Minimizing doesn't reset coordinate state.
-        #[allow(dead_code)]
         struct App {
             preserved_x: f32,
-            minimized: bool,
         }
 
         fn view(_app: &App) -> El<App> {
             col((text("Minimized state test"),))
         }
 
-        let mut h = Harness::new(
-            App {
-                preserved_x: 100.0,
-                minimized: false,
-            },
-            view,
-        )
-        .size(400.0, 300.0);
+        let mut h = Harness::new(App { preserved_x: 100.0 }, view).size(400.0, 300.0);
 
         h.frames(1);
         let x_before = h.state().preserved_x;
@@ -6851,33 +6838,17 @@ mod phase11_gesture_and_multitouch {
     fn phase25_multiple_window_coordinate_independence() {
         // Verify multiple windows have independent coordinate spaces.
         // Contract: Window 1 coordinates don't affect window 2 coordinates.
-        #[allow(dead_code)]
         struct App {
             click_x: f32,
-            window_id: usize,
         }
 
         fn view(_app: &App) -> El<App> {
             col((text("Multi-window test"),))
         }
 
-        let mut h1 = Harness::new(
-            App {
-                click_x: 0.0,
-                window_id: 1,
-            },
-            view,
-        )
-        .size(400.0, 300.0);
+        let mut h1 = Harness::new(App { click_x: 0.0 }, view).size(400.0, 300.0);
 
-        let mut h2 = Harness::new(
-            App {
-                click_x: 0.0,
-                window_id: 2,
-            },
-            view,
-        )
-        .size(400.0, 300.0);
+        let mut h2 = Harness::new(App { click_x: 0.0 }, view).size(400.0, 300.0);
 
         h1.click(Point::new(100.0, 100.0));
         h2.click(Point::new(200.0, 200.0));
