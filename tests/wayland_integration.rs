@@ -1,11 +1,18 @@
 //! Integration tests for the Wayland backend.
 //!
 //! Phase 3: Integration — Verify Wayland backend lifecycle, coordinate transformation,
-//! and feature gate behavior.
+//! event handling, and feature gate behavior.
+//!
+//! The arithmetic/contract tests below are backend-agnostic (they document the
+//! wire-level encoding Phase 2/3 code relies on) and always compile when the
+//! `wayland` feature is enabled. The `Harness`-based tests exercise the same
+//! rendering/event pipeline every other backend's tests run through.
 
 #![cfg(feature = "wayland")]
 
-use rui::shell::WindowOptions;
+use rui_native::shell::WindowOptions;
+use rui_native::testing::Harness;
+use rui_native::{Radius, Size, Tone, button, col, draw, text};
 
 #[test]
 fn wayland_feature_is_enabled() {
@@ -85,7 +92,7 @@ fn wayland_scale_factor_validation() {
 fn wayland_appearance_default() {
     // Phase 2: Appearance queries Wayland portal for light/dark theme
     // Default is Light if unavailable
-    use rui::theme::Appearance;
+    use rui_native::Appearance;
 
     let _appearance = Appearance::Light;
     // Phase 2 implementation would query org.freedesktop.portal.Settings
@@ -204,7 +211,7 @@ fn wayland_event_translation_pipeline() {
     // 1. Keyboard: wl_keyboard::Event::Key
     //    → Translate via xkb keymap to keysym
     //    → Create KeyEvent { keysym, modifiers }
-    //    → KeyEvent::to_key() returns Option<rui::input::Key>
+    //    → KeyEvent::to_key() returns Option<rui_native::input::Key>
     //    → Create Event::Key with pressed/released state
     //
     // 2. Pointer: wl_pointer::Event::{Motion, Button, Axis}
@@ -223,3 +230,200 @@ fn wayland_event_translation_pipeline() {
     // This test documents the pipeline (actual implementation in Phase 3)
     assert!(true, "Event translation pipeline documented");
 }
+
+// --- Ported from origin/main's Harness-based suite ---
+//
+// origin/main's version of this file ran these scenarios against a
+// `Harness::frame()` that returned a `Frame` value with public `width`,
+// `height`, and `appearance` fields (e.g. `harness.frame().width`,
+// `harness.frame().appearance`). The real `Harness::frame` (src/testing/mod.rs)
+// returns `&mut Self`, not such a `Frame` struct, and `Harness` has no public
+// getter for its current appearance. The tests below are rewritten against the
+// verified real API (`Harness::shows`, `Harness::click_text`, `Harness::state`,
+// `Harness::state_mut`, `Harness::canvas().width()/.height()`). Scenarios that
+// depended on reading back the current appearance are left as a TODO rather
+// than guessing at a field/method that may not exist once the Wayland backend
+// merge lands.
+
+#[test]
+fn wayland_backend_window_opens() {
+    // Verify the render pipeline produces a window-sized canvas.
+    let mut harness = Harness::new((), |_: &()| col((text("Wayland Backend Test"),)));
+
+    harness.frame();
+    assert!(
+        harness.canvas().width() > 0,
+        "Window width must be positive"
+    );
+    assert!(
+        harness.canvas().height() > 0,
+        "Window height must be positive"
+    );
+}
+
+#[test]
+fn wayland_backend_supports_drawing() {
+    // Verify basic drawing works through the same pipeline every backend uses.
+    let mut harness = Harness::new((), |_: &()| {
+        col((
+            text("Drawing Test"),
+            draw(Size::new(100.0, 50.0), |painter, rect| {
+                painter.fill(rect, Radius::None, Tone::Accent);
+            }),
+        ))
+    });
+
+    assert!(harness.shows("Drawing Test"));
+}
+
+#[test]
+fn wayland_backend_handles_state_changes() {
+    // Verify state changes are reflected in rendered output
+    struct State {
+        count: i32,
+    }
+
+    fn view(state: &State) -> rui_native::El<State> {
+        col((
+            text(format!("Count: {}", state.count)),
+            button("Increment", |state: &mut State| {
+                state.count += 1;
+            }),
+        ))
+    }
+
+    let mut harness = Harness::new(State { count: 0 }, view);
+    assert!(harness.shows("Count: 0"));
+
+    harness.click_text("Increment");
+    assert_eq!(harness.state().count, 1);
+    assert!(harness.shows("Count: 1"));
+}
+
+#[test]
+fn wayland_backend_supports_multiple_event_types() {
+    // Verify the Wayland-shaped pipeline can handle repeated pointer events
+    struct State {
+        click_count: i32,
+    }
+
+    let mut harness = Harness::new(State { click_count: 0 }, |state: &State| {
+        col((
+            text(format!("Clicks: {}", state.click_count)),
+            button("Click Me", |s: &mut State| s.click_count += 1),
+        ))
+    });
+
+    for i in 1..=3 {
+        harness.click_text("Click Me");
+        assert_eq!(harness.state().click_count, i);
+    }
+}
+
+#[test]
+fn wayland_backend_preserves_state_between_frames() {
+    // Verify state persists across multiple frame renders (memory consistency)
+    struct State {
+        value: String,
+    }
+
+    let mut harness = Harness::new(
+        State {
+            value: "test".into(),
+        },
+        |state: &State| text(&state.value),
+    );
+
+    assert!(harness.shows("test"));
+
+    harness.state_mut().value = "modified".into();
+    assert!(harness.shows("modified"));
+}
+
+#[test]
+fn wayland_backend_text_rendering() {
+    // Verify text rendering works correctly through the shared pipeline
+    let text_content = "Hello, Wayland!";
+    let mut harness = Harness::new((), |_: &()| col((text(text_content),)));
+
+    assert!(harness.shows(text_content));
+}
+
+#[test]
+fn wayland_backend_no_panic_on_empty_view() {
+    // Verify backend doesn't panic on minimal/empty views
+    let mut harness = Harness::new((), |_: &()| col((text(""),)));
+    harness.frame();
+    // Should not panic
+}
+
+#[test]
+fn wayland_backend_matches_x11_coordinate_contract() {
+    // Verify Wayland-shaped rendering hits the same elements as every other
+    // backend after a click, i.e. the coordinate contract is preserved.
+    struct TestState {
+        button_clicked: bool,
+    }
+
+    fn view(state: &TestState) -> rui_native::El<TestState> {
+        col((
+            text(if state.button_clicked {
+                "Clicked"
+            } else {
+                "Not Clicked"
+            }),
+            button("Click", |s: &mut TestState| s.button_clicked = true),
+        ))
+    }
+
+    let mut harness = Harness::new(
+        TestState {
+            button_clicked: false,
+        },
+        view,
+    );
+    assert!(harness.shows("Not Clicked"));
+
+    harness.click_text("Click");
+    assert!(harness.shows("Clicked"));
+}
+
+#[test]
+fn wayland_backend_event_ordering() {
+    // Verify events are processed in order
+    struct State {
+        events: Vec<String>,
+    }
+
+    let mut harness = Harness::new(State { events: vec![] }, |state: &State| {
+        col((
+            text(state.events.join(", ")),
+            button("Event 1", |s: &mut State| s.events.push("1".into())),
+            button("Event 2", |s: &mut State| s.events.push("2".into())),
+        ))
+    });
+
+    harness.click_text("Event 1");
+    assert_eq!(harness.state().events, vec!["1"]);
+
+    harness.click_text("Event 2");
+    assert_eq!(harness.state().events, vec!["1", "2"]);
+
+    harness.click_text("Event 1");
+    assert_eq!(harness.state().events, vec!["1", "2", "1"]);
+}
+
+// TODO(wayland-merge): origin/main also had `wayland_backend_appearance_is_consistent`,
+// asserting that `Harness`'s current appearance doesn't change between two
+// `.frame()` calls unless `set_appearance` is called. `Harness` (src/testing/mod.rs)
+// has `set_appearance(&mut self, Appearance)` but no public getter for the
+// current appearance, so this scenario can't be expressed without adding one.
+// Left out rather than guessing at a getter name — add back once such a getter
+// exists (or once the merged Wayland `Window` exposes appearance directly).
+
+// TODO(wayland-merge): origin/main's `wayland_backend_coordinate_system` and
+// `wayland_backend_colors_are_rendered`/`wayland_backend_animation_state_persistence`
+// relied on a `Frame` value with `width`/`height` fields returned from
+// `harness.frame()`. Once the real Wayland `Window` (12-method `Backend` impl,
+// see tests/wayland_parity.rs) lands, revisit whether these are worth
+// reintroducing via `harness.canvas().width()/.height()`.
