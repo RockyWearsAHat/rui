@@ -297,13 +297,13 @@ X11 backend for Linux systems using the X11 protocol. Implements the Backend tra
 
 Complete documentation for Recipe 2 X11 backend pattern:
 
-- **STEP_2_RECIPE_2_ANALYSIS.md** — Three-phase pattern breakdown with line counts, timeline, implementation checklist per phase
-- **STEP_2_RECIPE_2_VERIFICATION_GATES.md** — Phase-by-phase acceptance criteria, test commands, verification checklist; gates prevent regressions
-- **STEP_2_RECIPE_2_CROSS_MODULE_CONCERNS.md** — 5 key interactions (Backend trait, event flow, coordinate transformation, state persistence, accessibility) with module diagrams
-- **STEP_2_RECIPE_2_COORDINATE_CONTRACT.md** — X11 coordinate transformation (device → canvas → logical), scale factor handling, common pitfalls
-- **STEP_2_RECIPE_2_EVENT_TRANSLATION.md** — 5 X11 event types (MotionNotify, ButtonPress/Release, KeyPress/Release, ConfigureNotify) with mapping to rui Events
-- **STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md** — Validation that template holds for future backends (e.g., Wayland, game engines); proves pattern is replicable
-- **STEP_5_RECIPE_2_SUMMARY.md** — Quick reference for implementers: architecture overview, when to use which document, how to run verification tests
+- **STEP_2_RECIPE_2_ANALYSIS.md** — Three-phase pattern breakdown with timeline and implementation checklist
+- **STEP_2_RECIPE_2_VERIFICATION_GATES.md** — Acceptance criteria, test commands, verification checklist per phase
+- **STEP_2_RECIPE_2_CROSS_MODULE_CONCERNS.md** — Module interactions (Backend, events, coordinates, state, accessibility)
+- **STEP_2_RECIPE_2_COORDINATE_CONTRACT.md** — Device-to-logical transformation, scale factors, and common pitfalls
+- **STEP_2_RECIPE_2_EVENT_TRANSLATION.md** — X11 event types mapped to rui Events (Motion, Button, Key, Configure)
+- **STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md** — Proves pattern replicability for Wayland and game engine backends
+- **STEP_5_RECIPE_2_SUMMARY.md** — Quick reference: architecture overview and verification test navigation
 
 ### Commit list
 
