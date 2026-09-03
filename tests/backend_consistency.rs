@@ -6711,7 +6711,6 @@ mod phase11_gesture_and_multitouch {
 
     // ===== WINDOW STATE STRUCT DEFINITION =====
     // Consolidated struct for examining window-related state fields.
-    #[allow(dead_code)]
     struct WindowState {
         window_w: f32,
         window_h: f32,
@@ -7604,5 +7603,28 @@ mod phase11_gesture_and_multitouch {
         h.drag(Point::new(50.0, 50.0), Point::new(150.0, 50.0));
 
         // Verification successful - no exceptions raised
+    }
+
+    #[test]
+    fn test_window_state_struct() {
+        // Validate WindowState struct instantiation and field accessibility.
+        let state = WindowState {
+            window_w: 800.0,
+            window_h: 600.0,
+            window_id: 42,
+            minimized: false,
+            has_focus: true,
+            has_error: false,
+            fullscreen: false,
+        };
+
+        // Verify all 7 fields are accessible and have expected values.
+        assert_eq!(state.window_w, 800.0);
+        assert_eq!(state.window_h, 600.0);
+        assert_eq!(state.window_id, 42);
+        assert!(!state.minimized);
+        assert!(state.has_focus);
+        assert!(!state.has_error);
+        assert!(!state.fullscreen);
     }
 }
