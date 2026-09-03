@@ -458,8 +458,8 @@ fn recipe_2_extracted_documentation_lists_all_7_files() {
             "Proves pattern replicability",
         ),
         (
-            "STEP_5_RECIPE_2_SUMMARY.md",
-            "Quick reference for implementers",
+            "STEP_2_RECIPE_2_SUMMARY.md",
+            "Quick reference: architecture",
         ),
     ];
 
