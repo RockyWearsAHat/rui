@@ -496,6 +496,71 @@ fn recipe_3_documentation_files_exist() {
 }
 
 #[test]
+fn recipe_2_claude_md_extracted_documentation_section() {
+    let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
+
+    // Verify Recipe 2 section exists
+    let recipe_2_start = claude_md
+        .find("## Recipe 2: X11 Backend Implementation")
+        .expect("Recipe 2 section not found");
+
+    let recipe_3_start = claude_md
+        .find("## Recipe 3: Checkbox Control")
+        .expect("Recipe 3 section not found");
+
+    let recipe_2_section = &claude_md[recipe_2_start..recipe_3_start];
+
+    // Check that "Extracted Documentation" section exists
+    assert!(
+        recipe_2_section.contains("### Extracted Documentation"),
+        "Recipe 2 should have 'Extracted Documentation' subsection"
+    );
+
+    // Verify the 7 documentation files are listed
+    let doc_files = [
+        "STEP_2_RECIPE_2_ANALYSIS.md",
+        "STEP_2_RECIPE_2_VERIFICATION_GATES.md",
+        "STEP_2_RECIPE_2_CROSS_MODULE_CONCERNS.md",
+        "STEP_2_RECIPE_2_COORDINATE_CONTRACT.md",
+        "STEP_2_RECIPE_2_EVENT_TRANSLATION.md",
+        "STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md",
+        "STEP_2_RECIPE_2_SUMMARY.md",
+    ];
+
+    let extracted_docs_start = recipe_2_section
+        .find("### Extracted Documentation")
+        .expect("Extracted Documentation section not found");
+    let next_subsection = recipe_2_section[extracted_docs_start..]
+        .find("\n### ")
+        .map(|pos| extracted_docs_start + pos)
+        .unwrap_or(recipe_2_section.len());
+
+    let extracted_section = &recipe_2_section[extracted_docs_start..next_subsection];
+
+    let mut found_count = 0;
+    for doc_file in &doc_files {
+        if extracted_section.contains(doc_file) {
+            println!("✓ Recipe 2 references: {}", doc_file);
+            found_count += 1;
+        } else {
+            println!("✗ Recipe 2 missing: {}", doc_file);
+        }
+    }
+
+    println!(
+        "Recipe 2 documentation files: {}/{} found",
+        found_count,
+        doc_files.len()
+    );
+
+    assert_eq!(
+        found_count,
+        doc_files.len(),
+        "Recipe 2 should reference all 7 extracted documentation files"
+    );
+}
+
+#[test]
 fn generate_report() {
     let claude_md = fs::read_to_string("CLAUDE.md").expect("Failed to read CLAUDE.md");
 
