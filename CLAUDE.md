@@ -63,6 +63,7 @@ All examples can be run with `cargo run -p rui --example <name>`. Each example d
 | `segmented` | Exemplar: a minimal, self-contained choice selector (33 lines). Copy and modify to build new interactive controls. |
 | `meter` | Exemplar: a passive progress bar showing how to build read-only widgets. |
 | `calculator` | Numeric input handling and button grid layouts; demonstrates stateful computation. |
+| `form_example` | Comprehensive form demonstrating text_input, select, and checkbox_group widgets with multi-field state management. |
 | `theme_switcher` | Light/dark mode support showing how appearance preferences flow through the entire UI. |
 | `todo_app` | List rendering with state management; demonstrates item creation, completion toggling, and list updates. |
 | `parity` | Builds a native reference frame for pixel-perfect WASM backend comparison. |
