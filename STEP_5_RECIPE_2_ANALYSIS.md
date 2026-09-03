@@ -55,8 +55,8 @@ cargo clippy --target x86_64-unknown-linux-gnu -- -D warnings
 
 **Commit**: `c42c0f05b3d75976665377a16257c36c472debc1`  
 **Message**: "Bring the library up to the selfhost workspace's current state: a full vector canvas (paths, strokes, gradients, SDF text effects), geometry primitives, image decoding and scaling, signed-distance-field rendering, accessibility tree, font kerning, interaction tests, the reload feature, and the icon example"  
-**Lines**: 1,220  
-**Delta from Phase 1**: +472 lines  
+**Lines**: 1,230  
+**Delta from Phase 1**: +482 lines  
 
 ### Scope
 
@@ -95,8 +95,8 @@ cargo test --lib  # Full suite (397 tests)
 
 **Commit**: `80e3003563c26952e4d63c52d8eb8f5052cb463c`  
 **Message**: "The four primitives a remote-desktop viewport needs, and the practices document"  
-**Lines**: 1,321  
-**Delta from Phase 2**: +101 lines  
+**Lines**: 1,347  
+**Delta from Phase 2**: +117 lines  
 
 ### Scope
 
