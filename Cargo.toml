@@ -11,10 +11,33 @@ keywords = ["gui", "ui", "declarative", "renderer", "no-std-deps"]
 categories = ["gui", "rendering"]
 exclude = ["/.github"]
 
-# Nothing. Not a policy so much as a consequence: the TrueType parser, the glyph
+# Nothing on every native platform: the TrueType parser, the glyph
 # rasteriser, the text layout, the PNG writer, and the platform windows are all
-# in this crate, so there is nothing left to depend on.
+# in this crate, so there is nothing left to depend on. wasm32 is the one
+# exception, and only because there is no other way to reach a `<canvas>` — see
+# `src/shell/platform/wasm.rs`.
 [dependencies]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = [
+    "Window",
+    "Document",
+    "Element",
+    "EventTarget",
+    "HtmlCanvasElement",
+    "CanvasRenderingContext2d",
+    "ImageData",
+    "CssStyleDeclaration",
+    "MouseEvent",
+    "KeyboardEvent",
+    "WheelEvent",
+    "MediaQueryList",
+    "console",
+] }
+# A drop-in `std::time::Instant`/`Duration` that works on wasm32-unknown-unknown,
+# where the real one panics: there is no clock syscall for it to call.
+web-time = "1"
 
 [features]
 # Developer reload: a window that notices it has been rebuilt, saves what it is

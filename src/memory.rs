@@ -892,22 +892,27 @@ impl Memory {
         self.pasted = None;
     }
 
-    /// Assert animation budget: no more than 2 concurrent animations allowed.
+    /// Assert animation budget: no more than 2 concurrent *live loops*.
     ///
-    /// The 2-live-loop limit prevents animation stacking on large lists.
-    /// Animating each row independently causes exponential resource growth.
+    /// A live loop is [`Memory::phase`] — the one kind of animation that, by
+    /// its own doc, "never settles": once started it asks for another frame
+    /// forever, which is what makes more than a couple of them at once a real
+    /// cost (see [`Memory::is_animating`]). [`Memory::ease`] and
+    /// [`Memory::spring`] do not belong in this count even though they are
+    /// tracked in the same [`Memory`]: they settle and stop asking for frames,
+    /// which is why nearly every interactive element keeps one for its hover
+    /// fade — a toolbar of ordinary buttons is not "a loop creating animations
+    /// per item" in the sense this budget exists to catch, and counting it as
+    /// tripped this assertion on the first frame any interface bigger than two
+    /// buttons ever drew.
     pub(crate) fn assert_animation_budget(&self) {
-        let active_animations = self.eased.len()
-            + self.cycles.len()
-            + self.springs.len()
-            + self.deferred.len()
-            + self.transitions.len();
+        let live_loops = self.cycles.len();
         assert!(
-            active_animations <= 2,
-            "Animation budget exceeded: {} active (max 2 allowed). \
-             This typically means a loop is creating animations per-item. \
+            live_loops <= 2,
+            "Animation budget exceeded: {} live loop(s) (max 2 allowed). \
+             This typically means a loop is creating a Memory::phase per item. \
              Use .key() for list reordering or defer animation setup.",
-            active_animations
+            live_loops
         );
     }
 
