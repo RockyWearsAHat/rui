@@ -737,7 +737,7 @@ impl Backend for Window {
     /// would end the frame loop, and a screen reader that is not there must not
     /// stop the program running.
     fn update_accessibility(&self, _update: &AccessUpdate) -> Result<(), Error> {
-        Ok(())
+        Err(Error::Unsupported)
     }
 }
 

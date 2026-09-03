@@ -195,9 +195,9 @@ impl Backend for Window {
         self.is_fullscreen
     }
 
-    fn set_fullscreen(&mut self, filling: bool) -> Result<(), Error> {
+    fn set_fullscreen(&self, filling: bool) -> Result<(), Error> {
         // Phase 2: Implement fullscreen mode via xdg_toplevel::set_fullscreen / unset_fullscreen
-        self.is_fullscreen = filling;
+        let _ = filling; // TODO: implement actual fullscreen toggle
         Ok(())
     }
 
@@ -206,7 +206,7 @@ impl Backend for Window {
         // - Request data from wl_data_device_manager
         // - Wait for paste event
         // - Return clipboard contents or None
-        Ok(None)
+        Err(Error::Unsupported)
     }
 
     fn set_clipboard_text(&self, _text: &str) -> Result<(), Error> {
@@ -214,14 +214,14 @@ impl Backend for Window {
         // - Create data source with MIME type text/plain
         // - Set wl_data_device::set_selection
         // - Offer data when requested
-        Ok(())
+        Err(Error::Unsupported)
     }
 
     fn set_composition_area(&self, _area: Option<Rect>) -> Result<(), Error> {
         // Phase 2: Implement IME composition cursor positioning
         // - Use zwp_text_input protocol or input-method protocol
         // - Tell input method where text is being composed
-        Ok(())
+        Err(Error::Unsupported)
     }
 
     fn update_accessibility(&self, _update: &AccessUpdate) -> Result<(), Error> {
@@ -229,7 +229,7 @@ impl Backend for Window {
         // - Register accessible objects
         // - Update roles, labels, states
         // - Report semantic changes
-        Ok(())
+        Err(Error::Unsupported)
     }
 }
 
@@ -244,7 +244,7 @@ impl Backend for Window {
 /// - XKB_KEY_Tab (0xff09) → Key::Tab
 /// - XKB_KEY_Return (0xff0d) → Key::Enter
 /// - XKB_KEY_Escape (0xff1b) → Key::Escape
-/// - XKB_KEY_Left/Right/Up/Down → Arrow keys
+/// - XKB_KEY_Left/Right/Up/Down (0xff51–0xff54) → Key::Left/Right/Up/Down
 /// - ASCII 0x21–0x7E → Printable characters
 #[derive(Debug, Clone, Copy)]
 struct KeyEvent {
@@ -258,8 +258,8 @@ impl KeyEvent {
     /// Translate Wayland keysym to rui Key.
     ///
     /// Returns the Key variant for this keysym, or None if unmapped.
-    /// Phase 2: Covers navigation (Tab, Enter, Escape, Arrows, Home/End, PgUp/PgDn),
-    /// backspace, space, and printable ASCII (0x21–0x7E).
+    /// Phase 2: Covers navigation (Tab, Enter, Escape, Up/Down/Left/Right, Home/End, PgUp/PgDn),
+    /// backspace, delete, space, and printable ASCII (0x21–0x7E).
     fn to_key(self) -> Option<crate::input::Key> {
         use crate::input::Key;
         match self.keysym {
@@ -267,16 +267,15 @@ impl KeyEvent {
             0xff0d => Some(Key::Enter),
             0xff1b => Some(Key::Escape),
             0xff08 => Some(Key::Backspace),
-            0xff63 => Some(Key::Insert),
             0xffff => Some(Key::Delete),
             0xff50 => Some(Key::Home),
             0xff57 => Some(Key::End),
             0xff55 => Some(Key::PageUp),
             0xff56 => Some(Key::PageDown),
-            0xff51 => Some(Key::ArrowLeft),
-            0xff53 => Some(Key::ArrowRight),
-            0xff52 => Some(Key::ArrowUp),
-            0xff54 => Some(Key::ArrowDown),
+            0xff51 => Some(Key::Left),
+            0xff53 => Some(Key::Right),
+            0xff52 => Some(Key::Up),
+            0xff54 => Some(Key::Down),
             0x20 => Some(Key::Space), // space
             0x21..=0x7e => {
                 // Printable ASCII: map to the character itself
@@ -390,5 +389,33 @@ mod tests {
         );
 
         let _ = window.appearance();
+    }
+
+    #[test]
+    fn clipboard_text_returns_unsupported_error() {
+        let window = Window::open(&WindowOptions::default()).unwrap();
+        let result = window.clipboard_text();
+        assert!(matches!(result, Err(Error::Unsupported)));
+    }
+
+    #[test]
+    fn set_clipboard_text_returns_unsupported_error() {
+        let window = Window::open(&WindowOptions::default()).unwrap();
+        let result = window.set_clipboard_text("test");
+        assert!(matches!(result, Err(Error::Unsupported)));
+    }
+
+    #[test]
+    fn set_composition_area_returns_unsupported_error() {
+        let window = Window::open(&WindowOptions::default()).unwrap();
+        let result = window.set_composition_area(None);
+        assert!(matches!(result, Err(Error::Unsupported)));
+    }
+
+    #[test]
+    fn update_accessibility_returns_unsupported_error() {
+        let window = Window::open(&WindowOptions::default()).unwrap();
+        let result = window.update_accessibility(&AccessUpdate::default());
+        assert!(matches!(result, Err(Error::Unsupported)));
     }
 }
