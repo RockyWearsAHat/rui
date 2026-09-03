@@ -1686,12 +1686,179 @@ fn select_widget_changes_selection_when_clicked() {
 - Short lists (5-20 items) where all options should be visible
 - Straightforward choice selection without filtering or search
 
-**Advanced: Collapsible combobox**
-For longer lists or search capability, you'd build a custom combobox using `draw()` with:
-- A collapsed button showing the selected item
-- A hidden/visible list below it
-- Optional text input for filtering
-- More complex state tracking (expanded: bool, scroll position)
+#### Combobox (Searchable Dropdown) Widget Implementation
+
+The `combobox()` widget combines a text input field with a filtered dropdown list. Unlike `select()`, which shows all options at once, a combobox filters options as the user types, making it ideal for long lists.
+
+**State shape:**
+```rust
+struct App {
+    search_text: String,        // Current search/filter text
+    selected_item: Option<String>, // Currently selected item (or None if cleared)
+    dropdown_expanded: bool,     // Whether the dropdown list is visible
+}
+```
+
+**Widget signature:**
+```rust
+pub fn combobox<S: 'static>(
+    items: &[&str],                 // Full list of available options
+    search_query: &str,             // Current search text (filter field value)
+    selected: Option<&str>,         // Currently selected item (None if empty)
+    on_search: impl Fn(&mut S, String) + Copy + 'static,  // Handler for search text changes
+    on_select: impl Fn(&mut S, String) + Copy + 'static,  // Handler when an item is selected
+    on_expand: impl Fn(&mut S, bool) + Copy + 'static,    // Handler for dropdown expand/collapse
+) -> El<S>
+```
+
+**Implementation sketch:**
+
+The combobox builds from:
+1. **Search input field** (top): A `draw()` box with text input, `.on_key()` handler to update search text
+2. **Filtered dropdown list** (below, conditionally visible): A `col()` of clickable rows, filtered by search query
+3. **Expand/collapse logic**: `.on_focus()` to show dropdown, `.on_blur()` to hide it
+
+```rust
+pub fn combobox<S: 'static>(
+    items: &[&str],
+    search_query: &str,
+    selected: Option<&str>,
+    on_search: impl Fn(&mut S, String) + Copy + 'static,
+    on_select: impl Fn(&mut S, String) + Copy + 'static,
+    on_expand: impl Fn(&mut S, bool) + Copy + 'static,
+) -> El<S> {
+    let filtered: Vec<&str> = items
+        .iter()
+        .filter(|item| item.to_lowercase().contains(&search_query.to_lowercase()))
+        .copied()
+        .collect();
+
+    col((
+        // Search input field
+        draw(Size::new(200.0, 32.0), move |painter: &mut Painter<'_>, rect: Rect| {
+            painter.fill(rect, Radius::Round(4.0), Tone::Surface);
+            painter.stroke(rect, Radius::Round(4.0), 1.0, Tone::Border);
+            painter.text(rect.inset(Insets::all(8.0)), Ink::default(), Align::Start, search_query);
+        })
+        .on_key(move |state: &mut S, key, text| {
+            let mut new_query = search_query.to_string();
+            match key {
+                Key::Backspace if !new_query.is_empty() => {
+                    new_query.pop();
+                }
+                _ if let Some(ch) = text => {
+                    new_query.push(ch);
+                }
+                _ => {}
+            }
+            on_search(state, new_query);
+        })
+        .on_focus(move |state: &mut S| on_expand(state, true))
+        .on_blur(move |state: &mut S| on_expand(state, false))
+        .key("combobox-input"),
+
+        // Filtered dropdown (conditionally visible)
+        if !filtered.is_empty() {
+            col(filtered.iter().map(|item| {
+                let is_selected = selected == Some(*item);
+                row(text(*item)
+                    .grow()
+                    .text_align(Align::Start)
+                    .text_size(12.0))
+                .key(format!("combobox-item-{}", item))
+                .grow()
+                .h(24.0)
+                .pad_x(8.0)
+                .align(Align::Center)
+                .fill(if is_selected { Tone::Accent } else { Tone::Surface })
+                .color(if is_selected { Tone::OnAccent } else { Tone::Text })
+                .hover_fill(Tone::Raised)
+                .on_click(move |state: &mut S| {
+                    on_select(state, item.to_string());
+                    on_expand(state, false);
+                })
+            }).collect::<Vec<_>>())
+            .pad(4.0)
+            .gap(2.0)
+            .fill(Tone::Sunken)
+            .border(1.0, Tone::Border)
+            .round(Radius::Control)
+        } else {
+            text("No matches").height(0.0)  // Spacer when filtered list is empty
+        }
+    ))
+    .gap(2.0)
+}
+```
+
+**Usage in your app:**
+```rust
+struct App {
+    search_text: String,
+    selected_item: Option<String>,
+    dropdown_expanded: bool,
+}
+
+fn view(app: &App) -> El<App> {
+    let all_options = &["Apple", "Apricot", "Banana", "Blueberry", "Cherry"];
+    col((
+        text("Search fruit:"),
+        combobox(
+            all_options,
+            &app.search_text,
+            app.selected_item.as_deref(),
+            |app: &mut App, query| app.search_text = query,
+            |app: &mut App, item| app.selected_item = Some(item),
+            |app: &mut App, expanded| app.dropdown_expanded = expanded,
+        ),
+        if let Some(selected) = &app.selected_item {
+            text(format!("You selected: {}", selected))
+        } else {
+            text("No selection")
+        },
+    ))
+}
+```
+
+**Testing with Harness:**
+```rust
+#[test]
+fn combobox_filters_items_by_search_text() {
+    let mut harness = Harness::new(App {
+        search_text: String::new(),
+        selected_item: None,
+        dropdown_expanded: false,
+    }, view);
+
+    // Type "bl" to filter
+    harness.key_press(Key::Char('b'));
+    harness.key_press(Key::Char('l'));
+    assert_eq!(harness.state().search_text, "bl");
+    
+    // Verify filtered items appear (Blueberry, Blackberry)
+    // Click an item
+    harness.click_text("Blueberry");
+    assert_eq!(harness.state().selected_item, Some("Blueberry".into()));
+}
+```
+
+**Key differences from select():**
+- **Search capability:** User types to filter; filtered list updates each frame
+- **Expandable dropdown:** Hidden by default; shown on focus
+- **Memory state:** `dropdown_expanded` controls visibility; `.on_focus()` / `.on_blur()` wire it
+- **More app state:** Requires tracking search text AND selected item (select() only tracked index)
+
+**When to use combobox:**
+- Long lists (10+ items) where scrolling is impractical
+- User needs search/filter capability
+- Optional selection (user can clear by backspacing search text)
+
+**Advanced: Collapsible combobox with scroll**
+For even longer lists or nested categories, layer a scrollable container (`.scroll()`) in the dropdown and add group headers:
+- Add `scroll_position: f32` to app state
+- Nest groups in `row(label, col(items))`
+- Use `.scroll()` to make the dropdown scrollable
+- Call `.on_drag()` on the scrollbar to update `scroll_position`
 
 See the "Draw and Painter Patterns" section for techniques on building custom interactive shapes with full render control.
 
