@@ -1183,11 +1183,16 @@ Done. The widget is ready to use anywhere state is a Rust struct with a `rating`
 
 ### Widget Implementation Template Guide (v0.3.0)
 
-<!-- bulleted-list-7: Create v0.3.0 widget implementation template guide -->
-
 This guide documents the canonical pattern for building form controls and complex interactive widgets—text inputs, select dropdowns, comboboxes, and similar components that accept user input and update application state. Unlike passive widgets (like `meter`) or simple choice selectors (like `segmented`), form controls often have internal state (caret position, selection range, focus, dropdown visibility) that persists across frames. This guide shows how to layer that internal state in `memory::Memory` while keeping application state clean, following the proven patterns established in Recipe 1 (WASM backend abstraction) and Recipe 2 (platform-agnostic implementation). Each form control is built from primitives using the same state-view-handler structure—the difference is in how you coordinate widget identity, preserve transient state, and wire event handlers to both internal memory and application state.
 
 #### State Shape for Form Controls
+
+**Pattern at a Glance:**
+```
+State:   struct App { full_name: String, email: String, terms_accepted: bool }
+View:    fn view(app: &App) -> El<App> { ... form widgets here ... }
+Handler: |app: &mut App, field, value| { ... update app.field ... }
+```
 
 Form control state is split into two places:
 
