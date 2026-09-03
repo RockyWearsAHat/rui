@@ -19,6 +19,9 @@ crate-type = ["cdylib", "rlib"]
 # in this crate, so there is nothing left to depend on.
 [dependencies]
 
+[features]
+wayland = []
+
 # Except in a browser, where the platform is not callable from Rust at all: its
 # windows and its canvases are JavaScript objects, and `wasm-bindgen` *is* the
 # call into them. Scoped to `wasm32` rather than added outright, so a build for
