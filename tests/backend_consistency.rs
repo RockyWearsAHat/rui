@@ -290,4 +290,286 @@ mod pointer_coordinate_tests {
             "Second click at same coordinate should register after frame updates"
         );
     }
+
+    // ===== EDGE CASE COORDINATE TESTS =====
+
+    #[test]
+    fn zero_coordinate_click() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((draw(Size::new(100.0, 100.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+        // Click at origin (0,0)
+        h.click(Point::new(0.0, 0.0));
+
+        // Click at origin should register on the drawable area
+        assert!(
+            h.state().clicked,
+            "Click at origin (0,0) should trigger handler"
+        );
+    }
+
+    #[test]
+    fn large_coordinate_click() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((draw(Size::new(500.0, 500.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view).size(800.0, 800.0);
+        // Click at large coordinate (400, 400)
+        h.click(Point::new(400.0, 400.0));
+
+        // Click at large coordinate should register
+        assert!(
+            h.state().clicked,
+            "Click at large coordinate should trigger handler"
+        );
+    }
+
+    // ===== ADDITIONAL SCALE FACTOR TESTS =====
+
+    #[test]
+    fn pointer_coordinates_at_scale_1_25() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Click me").on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+        h.click(Point::new(62.5, 20.0));
+
+        assert!(h.state().clicked, "Click handler should fire at scale 1.25");
+    }
+
+    #[test]
+    fn pointer_coordinates_at_scale_3_0() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Click me").on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+        h.click(Point::new(150.0, 20.0));
+
+        assert!(h.state().clicked, "Click handler should fire at scale 3.0");
+    }
+
+    // ===== NESTED ELEMENT COORDINATE TESTS =====
+
+    #[test]
+    fn nested_element_click_coordinates() {
+        struct App {
+            inner_clicked: bool,
+            outer_clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((row((
+                button("Outer").on_click(|state: &mut App| {
+                    state.outer_clicked = true;
+                }),
+                button("Inner").on_click(|state: &mut App| {
+                    state.inner_clicked = true;
+                }),
+            ))
+            .gap(5.0),))
+        }
+
+        let mut h = Harness::new(
+            App {
+                inner_clicked: false,
+                outer_clicked: false,
+            },
+            view,
+        );
+
+        // Click on inner element
+        h.click(Point::new(100.0, 20.0));
+        assert!(
+            h.state().inner_clicked,
+            "Inner element click should register at correct coordinate"
+        );
+    }
+
+    // ===== RAPID CLICK SEQUENCE TESTS =====
+
+    #[test]
+    fn rapid_sequential_clicks_at_different_coordinates() {
+        struct App {
+            click_coords: Vec<(usize, usize)>,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("Button 1").on_click(|state: &mut App| {
+                    state.click_coords.push((1, 0));
+                }),
+                button("Button 2").on_click(|state: &mut App| {
+                    state.click_coords.push((2, 0));
+                }),
+            ))
+            .gap(5.0)
+        }
+
+        let mut h = Harness::new(
+            App {
+                click_coords: vec![],
+            },
+            view,
+        );
+
+        // Rapid sequential clicks at different coordinates
+        h.click(Point::new(50.0, 20.0));
+        h.click(Point::new(50.0, 50.0));
+        h.click(Point::new(50.0, 20.0));
+
+        // All three clicks should register
+        assert_eq!(
+            h.state().click_coords.len(),
+            3,
+            "Three rapid clicks should all register at correct coordinates"
+        );
+    }
+
+    // ===== POINTER MOVEMENT WITH MULTIPLE ELEMENTS =====
+
+    #[test]
+    fn pointer_movement_across_multiple_elements() {
+        struct App {
+            first_over: bool,
+            second_over: bool,
+        }
+
+        fn view(app: &App) -> El<App> {
+            let (first_over, second_over) = (app.first_over, app.second_over);
+            col((
+                draw(Size::new(100.0, 50.0), move |painter, rect| {
+                    let _ = (painter, rect, first_over);
+                })
+                .on_pointer_move(|state: &mut App, _pointing| {
+                    state.first_over = true;
+                }),
+                draw(Size::new(100.0, 50.0), move |painter, rect| {
+                    let _ = (painter, rect, second_over);
+                })
+                .on_pointer_move(|state: &mut App, _pointing| {
+                    state.second_over = true;
+                }),
+            ))
+            .gap(10.0)
+        }
+
+        let mut h = Harness::new(
+            App {
+                first_over: false,
+                second_over: false,
+            },
+            view,
+        );
+
+        // Move over first element
+        h.move_pointer(Point::new(50.0, 25.0));
+        h.frames(1);
+        assert!(
+            h.state().first_over,
+            "Pointer movement should register on first element"
+        );
+
+        // Move over second element
+        h.move_pointer(Point::new(50.0, 90.0));
+        h.frames(1);
+        assert!(
+            h.state().second_over,
+            "Pointer movement should register on second element"
+        );
+    }
+
+    // ===== OFF-BOUNDARY CLICK TESTS =====
+
+    #[test]
+    fn click_outside_element_does_not_trigger() {
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((draw(Size::new(100.0, 50.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view).size(300.0, 300.0);
+
+        // Click well outside the drawable area (beyond 100,50)
+        h.click(Point::new(250.0, 250.0));
+
+        // Click outside should not trigger handler
+        assert!(
+            !h.state().clicked,
+            "Click outside element boundaries should not trigger handler"
+        );
+    }
+
+    // ===== CLICK POSITION CONSISTENCY =====
+
+    #[test]
+    fn same_click_position_always_triggers_same_handler() {
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Consistent").on_click(|state: &mut App| {
+                state.click_count += 1;
+            }),))
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        let click_point = Point::new(60.0, 20.0);
+
+        // Click same position 5 times
+        for _ in 0..5 {
+            h.click(click_point);
+        }
+
+        // All 5 clicks at same position should register
+        assert_eq!(
+            h.state().click_count,
+            5,
+            "Clicking same position 5 times should register 5 times"
+        );
+    }
 }
