@@ -875,6 +875,97 @@ fn a_combobox_filters_options_and_selects_when_clicked() {
 }
 
 // ============================================================================
+// list widget tests (Recipe 7: Data Display Widget)
+// ============================================================================
+// The list widget renders a collection of items with consistent spacing and
+// supports clicking to select items. It's the foundation for data display.
+
+#[test]
+fn a_list_displays_all_items() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct ListState {
+        selected: Option<usize>,
+    }
+
+    let items = &["Alice", "Bob", "Charlie", "Diana"];
+
+    let mut harness = Harness::new(ListState::default(), |state: &ListState| {
+        col((
+            text("Team members:"),
+            widgets::list(items, state.selected, |state: &mut ListState, index| {
+                state.selected = Some(index);
+            }),
+        ))
+        .align(Align::Start)
+    });
+
+    // Verify all items are visible
+    harness.frame();
+    assert!(
+        harness.frame().shows("Alice"),
+        "first item should be visible"
+    );
+    assert!(
+        harness.frame().shows("Bob"),
+        "second item should be visible"
+    );
+    assert!(
+        harness.frame().shows("Charlie"),
+        "third item should be visible"
+    );
+    assert!(
+        harness.frame().shows("Diana"),
+        "last item should be visible"
+    );
+}
+
+#[test]
+fn a_list_selects_items_on_click() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct ListState {
+        selected: Option<usize>,
+    }
+
+    let items = &["Red", "Green", "Blue"];
+
+    let mut harness = Harness::new(ListState::default(), |state: &ListState| {
+        col((
+            text("Pick a color:"),
+            widgets::list(items, state.selected, |state: &mut ListState, index| {
+                state.selected = Some(index);
+            })
+            .key("color-list"),
+        ))
+        .align(Align::Start)
+    });
+
+    // Verify initial state
+    assert_eq!(harness.state().selected, None, "no selection initially");
+
+    // Click on "Green"
+    harness.click_text("Green");
+
+    // Verify selection changed
+    assert_eq!(
+        harness.state().selected,
+        Some(1),
+        "clicking Green should select index 1"
+    );
+
+    // Click on "Blue"
+    harness.click_text("Blue");
+    assert_eq!(
+        harness.state().selected,
+        Some(2),
+        "clicking Blue should select index 2"
+    );
+}
+
+// ============================================================================
 // text_input widget comprehensive tests (Recipe 4: Form Controls)
 // ============================================================================
 // These tests demonstrate text input widget rendering and focus behavior.
