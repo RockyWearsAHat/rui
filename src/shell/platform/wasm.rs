@@ -417,26 +417,25 @@ impl Backend for Window {
     // — genuinely unreachable from this synchronous trait — and accessibility/
     // IME-composition wiring is real future work, not something that can be
     // done honestly in the time this backend had. But `Err(Error::Unsupported)`
-    // here does not read as "this feature is missing" the way it does from a
-    // method a caller opted into; it reads as "the frame failed," because
-    // `draw` propagates it with `?` and aborts the *entire* frame — paint
-    // included — before `present` ever runs. An update that is silently
-    // dropped is a real gap; a canvas that never draws a pixel because of it is
-    // a worse one. No-op `Ok` until each has a real implementation.
+    // Browser Clipboard API is async-only and permission-gated, not callable
+    // from this synchronous trait. IME composition and accessibility wiring
+    // are real future work. Return Err(Error::Unsupported) honestly rather than
+    // silently dropping updates, following the principle that "a gap someone
+    // can read is a gap someone can close; a silent one is a bug report."
     fn clipboard_text(&self) -> Result<Option<String>, Error> {
-        Ok(None)
+        Err(Error::Unsupported)
     }
 
     fn set_clipboard_text(&self, _text: &str) -> Result<(), Error> {
-        Ok(())
+        Err(Error::Unsupported)
     }
 
     fn set_composition_area(&self, _area: Option<Rect>) -> Result<(), Error> {
-        Ok(())
+        Err(Error::Unsupported)
     }
 
     fn update_accessibility(&self, _update: &AccessUpdate) -> Result<(), Error> {
-        Ok(())
+        Err(Error::Unsupported)
     }
 }
 
