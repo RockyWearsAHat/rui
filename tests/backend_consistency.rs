@@ -6896,7 +6896,6 @@ mod phase11_gesture_and_multitouch {
         // Contract: Coordinates stable when window focus changes.
         #[allow(dead_code)]
         struct App {
-            has_focus: bool,
             button_x: f32,
         }
 
@@ -6904,14 +6903,7 @@ mod phase11_gesture_and_multitouch {
             col((button("Focus test").focusable(),))
         }
 
-        let mut h = Harness::new(
-            App {
-                has_focus: true,
-                button_x: 0.0,
-            },
-            view,
-        )
-        .size(400.0, 300.0);
+        let mut h = Harness::new(App { button_x: 0.0 }, view).size(400.0, 300.0);
 
         h.frames(1);
         let x_with_focus = h.state().button_x;
