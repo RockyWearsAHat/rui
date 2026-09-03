@@ -34,7 +34,7 @@ Hairlines (1-pixel strokes) snap to pixel boundaries:
 - Output: 10.5 logical pixels
 - Result: Crisp 1-pixel line, no anti-aliasing blur
 
-### Glyph Cache (src/text/glyph_cache.rs)
+### Glyph Cache (src/pixelgrid.rs)
 
 ```rust
 pub struct GlyphCache {
@@ -62,7 +62,7 @@ impl GlyphCache {
 }
 ```
 
-### Gamma Boost LUT (src/canvas/gamma_boost.rs)
+### Gamma Boost LUT (src/pixelgrid.rs)
 
 ```rust
 pub struct GammaBoostLut {
@@ -162,9 +162,8 @@ With pixel-grid crispness established, follow-on features build on clean renderi
 
 ## Files Modified
 
-- `src/canvas.rs` — Add snap_to_pixel_grid() method
-- `src/text/glyph_cache.rs` — New GlyphCache struct with eviction
-- `src/canvas/gamma_boost.rs` — New GammaBoostLut LUT-based boost
+- `src/pixelgrid.rs` — HairlineSnap, GlyphCache, and GammaBoostLut implementations
+- `src/canvas.rs` — Integrate snap_to_pixel_grid() for hairline rendering
 - `src/paint.rs` — Apply hairline snap and gamma boost
 - `tests/r4_pixel_grid_crispness.rs` — 9 comprehensive test cases
 
