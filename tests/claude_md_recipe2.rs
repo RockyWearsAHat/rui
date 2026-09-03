@@ -434,31 +434,31 @@ fn recipe_2_extracted_documentation_lists_all_7_files() {
     // Verify all 7 documentation files are listed
     let required_files = [
         (
-            "STEP_2_RECIPE_2_ANALYSIS.md",
+            "STEP_5_RECIPE_2_ANALYSIS.md",
             "Three-phase pattern breakdown",
         ),
         (
-            "STEP_2_RECIPE_2_VERIFICATION_GATES.md",
+            "STEP_5_RECIPE_2_VERIFICATION_GATES.md",
             "Acceptance criteria, test commands",
         ),
         (
-            "STEP_2_RECIPE_2_CROSS_MODULE_CONCERNS.md",
+            "STEP_5_RECIPE_2_CROSS_MODULE_CONCERNS.md",
             "Module interactions (Backend, events",
         ),
         (
-            "STEP_2_RECIPE_2_COORDINATE_CONTRACT.md",
+            "STEP_5_RECIPE_2_COORDINATE_CONTRACT.md",
             "Device-to-logical transformation",
         ),
         (
-            "STEP_2_RECIPE_2_EVENT_TRANSLATION.md",
+            "STEP_5_RECIPE_2_EVENT_TRANSLATION.md",
             "X11 event types mapped to rui",
         ),
         (
-            "STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md",
+            "STEP_5_RECIPE_2_TEMPLATE_VALIDATION.md",
             "Proves pattern replicability",
         ),
         (
-            "STEP_2_RECIPE_2_SUMMARY.md",
+            "STEP_5_RECIPE_2_SUMMARY.md",
             "Quick reference: architecture",
         ),
     ];
@@ -478,11 +478,11 @@ fn recipe_2_extracted_documentation_lists_all_7_files() {
     }
 
     // Verify bullet list format (should have "- **" bullets)
-    // All 7 files should start with STEP_2_RECIPE_2_
-    let step2_count = recipe_2_section.matches("- **STEP_2_RECIPE_2_").count();
+    // All 7 files should start with STEP_5_RECIPE_2_
+    let step2_count = recipe_2_section.matches("- **STEP_5_RECIPE_2_").count();
     assert_eq!(
         step2_count, 7,
-        "Extracted documentation should have exactly 7 STEP_2_RECIPE_2_ bullet points, found {}",
+        "Extracted documentation should have exactly 7 STEP_5_RECIPE_2_ bullet points, found {}",
         step2_count
     );
 
