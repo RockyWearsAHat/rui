@@ -62,11 +62,14 @@ All examples can be run with `cargo run -p rui --example <name>`. Each example d
 | `gallery` | Renders every UI element to PNG files (no window). Used to verify visual appearance without launching an app. |
 | `segmented` | Exemplar: a minimal, self-contained choice selector (33 lines). Copy and modify to build new interactive controls. |
 | `meter` | Exemplar: a passive progress bar showing how to build read-only widgets. |
+| `calculator` | Numeric input handling and button grid layouts; demonstrates stateful computation. |
+| `theme_switcher` | Light/dark mode support showing how appearance preferences flow through the entire UI. |
+| `todo_app` | List rendering with state management; demonstrates item creation, completion toggling, and list updates. |
 | `parity` | Builds a native reference frame for pixel-perfect WASM backend comparison. |
 | `icon` | Generates macOS `.iconset` and `.icns` app icons by drawing them at all required sizes. |
 | `segmented_modified` | Verification that the documented "Copy and Modify" path from CLAUDE.md actually works. |
 
-**Learning Path:** Start with `counter`, then `segmented` (to understand handlers), then `meter` (to understand passive widgets). Explore other examples as needed.
+**Learning Path:** Start with `counter`, then `segmented` (to understand handlers), then `meter` (to understand passive widgets). Continue with `calculator` (numeric input and multi-step computation), `theme_switcher` (appearance and semantic colors), and `todo_app` (list rendering and state management). Use `controls` to see all available widgets. The `gallery` example renders all elements to PNG for visual verification.
 
 ## Test Suite
 
@@ -455,6 +458,13 @@ widgets::draw(Size::new(160.0, 18.0), move |painter, rect| {
 A text input widget needs two pieces of state:
 
 ```rust
+State:   struct App { input_text: String, input_focused: bool }
+View:    fn view(app: &App) -> El<App> { ... }
+Handler: |app: &mut App, new_text| { app.input_text = new_text; }
+```
+
+Concretely:
+```rust
 struct App {
     input_text: String,     // The current text in the field
     input_focused: bool,    // Whether the input has keyboard focus
@@ -494,6 +504,13 @@ The state is a single field—the index of the selected choice. The handler is j
 
 For a widget like a form with multiple fields:
 
+```rust
+State:   struct App { name: String, email: String, terms_accepted: bool, submit_error: Option<String> }
+View:    fn view(app: &App) -> El<App> { ... }
+Handler: |app: &mut App, field, value| { ... }
+```
+
+Concretely:
 ```rust
 struct App {
     name: String,           // First input
@@ -1165,6 +1182,8 @@ col((
 Done. The widget is ready to use anywhere state is a Rust struct with a `rating` field.
 
 ### Widget Implementation Template Guide (v0.3.0)
+
+<!-- bulleted-list-7: Create v0.3.0 widget implementation template guide -->
 
 This guide documents the canonical pattern for building form controls and complex interactive widgets—text inputs, select dropdowns, comboboxes, and similar components that accept user input and update application state. Unlike passive widgets (like `meter`) or simple choice selectors (like `segmented`), form controls often have internal state (caret position, selection range, focus, dropdown visibility) that persists across frames. This guide shows how to layer that internal state in `memory::Memory` while keeping application state clean, following the proven patterns established in Recipe 1 (WASM backend abstraction) and Recipe 2 (platform-agnostic implementation). Each form control is built from primitives using the same state-view-handler structure—the difference is in how you coordinate widget identity, preserve transient state, and wire event handlers to both internal memory and application state.
 
