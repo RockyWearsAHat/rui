@@ -511,7 +511,6 @@ fn get_file_line_count(sha: &str, filepath: &str) -> usize {
     let content = String::from_utf8(output.stdout).expect("git output not valid UTF-8");
     content.lines().count()
 }
-
 #[test]
 fn step_5_recipe_2_analysis_md_exists_and_contains_all_phases() {
     // RED test: Verify STEP_5_RECIPE_2_ANALYSIS.md exists with all phase data
