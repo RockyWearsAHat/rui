@@ -779,6 +779,49 @@ pub fn combobox<S: 'static>(
         .round(Radius::Control)
 }
 
+/// A list widget: renders a collection of items with one optionally selected.
+///
+/// Each item is clickable to select it. The list is scrollable if it exceeds
+/// the available space.
+pub fn list<S: 'static>(
+    items: &[&str],
+    selected: Option<usize>,
+    on_select: impl Fn(&mut S, usize) + Copy + 'static,
+) -> El<S> {
+    let item_elements: Vec<El<S>> = items
+        .iter()
+        .enumerate()
+        .map(|(index, label)| {
+            let is_selected = selected == Some(index);
+            row(text(*label).grow().text_align(Align::Start).text_size(13.5))
+                .key(format!("list-item-{}", index))
+                .grow()
+                .h(32.0)
+                .pad_x(12.0)
+                .align(Align::Center)
+                .fill(if is_selected {
+                    Tone::Accent
+                } else {
+                    Tone::Surface
+                })
+                .color(if is_selected {
+                    Tone::OnAccent
+                } else {
+                    Tone::Text
+                })
+                .hover_fill(Tone::Raised)
+                .on_click(move |state: &mut S| on_select(state, index))
+        })
+        .collect();
+
+    col(item_elements)
+        .pad(4.0)
+        .gap(2.0)
+        .fill(Tone::Sunken)
+        .border(1.0, Tone::Border)
+        .round(Radius::Control)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
