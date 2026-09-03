@@ -543,7 +543,7 @@ impl<S> App<S> {
     /// On every native platform this blocks until the window closes, which is
     /// what "run" ordinarily means. wasm32 cannot honour that: blocking the
     /// browser's one thread blocks the page along with it, so there this
-    /// schedules the first frame through [`shell::run_wasm`] and returns
+    /// schedules the first frame through the browser's event loop and returns
     /// immediately, with the rest of the interface's life carried by
     /// `requestAnimationFrame` from then on. A caller awaiting this from an
     /// `async fn`, as Forge's `start_app` does, still sees the call finish
