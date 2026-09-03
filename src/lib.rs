@@ -143,9 +143,9 @@ pub use syntax::Language;
 pub use text::{FontId, Fonts, TextStyle};
 pub use theme::{Appearance, Palette, Status, Theme};
 pub use widgets::{
-    button, caption, checkbox_group, code, code_block, col, divider, dot, draw, field, field_row,
-    figure, heading, meter, micro, panel, paragraph, row, section, segmented, select, spacer,
-    split, tabs, tag, text, text_input, title,
+    button, caption, checkbox_group, code, code_block, col, combobox, divider, dot, draw, field,
+    field_row, figure, heading, meter, micro, panel, paragraph, row, section, segmented, select,
+    spacer, split, tabs, tag, text, text_input, title,
 };
 
 /// A run of text, formatted.
