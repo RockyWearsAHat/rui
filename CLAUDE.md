@@ -1220,24 +1220,20 @@ The `.key()` preserves memory state across frame rebuilds. Without it, the memor
 Custom form controls use `draw()` to render their appearance. The `Painter` API provides methods to fill shapes, stroke outlines, and apply colors. Here's a pattern for a text input with custom styling:
 
 ```rust
-pub fn text_input_custom<S: 'static>(
+pub fn text_input_example<S: 'static>(
     value: &str,
     on_change: impl Fn(&mut S, String) + Copy + 'static,
 ) -> El<S> {
-    let width = Length::Fixed(200.0);
-    let height = Length::Fixed(32.0);
-    
     draw(Size::new(200.0, 32.0), move |painter: &mut Painter<'_>, rect: Rect| {
         // Draw background
-        painter.fill(rect, Radius::Round(4.0), painter.color(Tone::Surface));
+        painter.fill(rect, Radius::Round(4.0), Tone::Surface);
         
-        // Draw border (thicker if focused, using memory state)
-        let border_color = painter.color(Tone::Accent);
-        painter.stroke(rect, Radius::Round(4.0), border_color, 1.0);
+        // Draw border
+        painter.stroke(rect, Radius::Round(4.0), 1.0, Tone::Accent);
         
-        // Draw text
+        // Draw text with default ink (which inherits tone from theme)
         let text_rect = rect.inset(Insets::all(8.0));
-        painter.text_left(&text_rect, value, painter.color(Tone::OnSurface));
+        painter.text(text_rect, Ink::default(), Align::Start, value);
     })
     .on_key(move |state: &mut S, key, text| {
         if let Some(ch) = text {
@@ -1249,10 +1245,10 @@ pub fn text_input_custom<S: 'static>(
 ```
 
 **Painter methods:**
-- `painter.fill(rect, radius, color)`: Fill a shape
-- `painter.stroke(rect, radius, color, width)`: Draw an outline
-- `painter.text_left(rect, text, color)`: Draw text (left-aligned)
-- `painter.color(tone)`: Look up a semantic color by role (adapts to light/dark mode automatically)
+- `painter.fill(rect, radius, tone)`: Fill a shape with a semantic color tone
+- `painter.stroke(rect, radius, thickness, tone)`: Draw an outline with thickness and semantic color
+- `painter.text(rect, ink, align, text)`: Draw text with specified ink style and alignment
+- `painter.color(tone)`: Look up the actual RGB color for a semantic tone (for low-level canvas access)
 
 #### Handler Structures for Text Input
 
@@ -1263,31 +1259,25 @@ pub fn text_input<S: 'static>(
     value: &str,
     on_change: impl Fn(&mut S, String) + Copy + 'static,
 ) -> El<S> {
-    col((
-        draw(Size::new(200.0, 32.0), move |painter: &mut Painter<'_>, rect: Rect| {
-            painter.fill(rect, Radius::Round(4.0), painter.color(Tone::Surface));
-            painter.text_left(rect.inset(Insets::all(8.0)), value, painter.color(Tone::OnSurface));
-        })
-        .on_key(move |state: &mut S, key, text| {
-            match key {
-                Key::Backspace => {
-                    // Remove last character
-                    let mut new_value = value.to_string();
-                    new_value.pop();
-                    on_change(state, new_value);
-                }
-                _ if let Some(ch) = text => {
-                    // Add character
-                    on_change(state, format!("{}{}", value, ch));
-                }
-                _ => {}
+    draw(Size::new(200.0, 32.0), move |painter: &mut Painter<'_>, rect: Rect| {
+        painter.fill(rect, Radius::Round(4.0), Tone::Surface);
+        painter.stroke(rect, Radius::Round(4.0), 1.0, Tone::Border);
+        painter.text(rect.inset(Insets::all(8.0)), Ink::default(), Align::Start, value);
+    })
+    .on_key(move |state: &mut S, key, text| {
+        match key {
+            Key::Backspace => {
+                let mut new_value = value.to_string();
+                new_value.pop();
+                on_change(state, new_value);
             }
-        })
-        .on_focus(move |state: &mut S| {
-            // Handle focus gain if needed
-        })
-        .key("text-input"),
-    ))
+            _ if let Some(ch) = text => {
+                on_change(state, format!("{}{}", value, ch));
+            }
+            _ => {}
+        }
+    })
+    .key("text-input")
 }
 ```
 
@@ -1342,40 +1332,7 @@ The `memory::Memory` struct (in `src/memory.rs`) automatically preserves:
 
 You don't manually manage memory; it's keyed by element identity (the `.key()` you provide). When the view rebuilds, elements with the same key recover their memory state.
 
-**To use caret/selection state in a custom widget:**
-
-```rust
-pub fn text_input_with_caret<S: 'static>(
-    value: &str,
-    on_change: impl Fn(&mut S, String) + Copy + 'static,
-) -> El<S> {
-    let width = 200.0;
-    let height = 32.0;
-    
-    draw(Size::new(width, height), move |painter: &mut Painter<'_>, rect: Rect| {
-        // Background
-        painter.fill(rect, Radius::Round(4.0), painter.color(Tone::Surface));
-        
-        // Text (left-aligned with padding)
-        let text_rect = rect.inset(Insets::all(8.0));
-        painter.text_left(&text_rect, value, painter.color(Tone::OnSurface));
-        
-        // Note: Caret position and selection are stored in memory::Memory
-        // The framework automatically draws them based on memory state
-        // You access this state via the harness in tests (harness.frame().memory())
-        // In production, the rendering pipeline applies focus/caret visual styling automatically
-    })
-    .on_key(move |state: &mut S, key, text| {
-        if let Some(ch) = text {
-            on_change(state, format!("{}{}", value, ch));
-        }
-    })
-    .on_focus(move |_: &mut S| { /* focus handler */ })
-    .key("text-input")  // This key enables memory preservation
-}
-```
-
-The framework's `Visual` state tracking (used internally by `Painter`) automatically reads from memory to determine if an element is focused, hovered, or disabled, and applies the appropriate styling. For text input specifically, caret position is maintained in memory keyed to the element's identity, and can be queried or inspected in tests via `harness.frame().memory()`.
+The framework's `Visual` state tracking (accessed via `painter.visual()`) automatically reads from memory to determine if an element is focused, hovered, or disabled. For text input widgets, caret position is maintained in memory keyed to the element's identity and can be queried in tests via `harness.frame().memory()`.
 
 #### Text Input Implementation Skeleton
 
@@ -1387,11 +1344,11 @@ pub fn text_input<S: 'static>(
     on_change: impl Fn(&mut S, String) + Copy + 'static,
 ) -> El<S> {
     draw(Size::new(200.0, 32.0), move |painter: &mut Painter<'_>, rect: Rect| {
-        painter.fill(rect, Radius::Round(4.0), painter.color(Tone::Surface));
-        painter.stroke(rect, Radius::Round(4.0), painter.color(Tone::Border), 1.0);
+        painter.fill(rect, Radius::Round(4.0), Tone::Surface);
+        painter.stroke(rect, Radius::Round(4.0), 1.0, Tone::Border);
         
         let text_area = rect.inset(Insets::all(8.0));
-        painter.text_left(&text_area, value, painter.color(Tone::OnSurface));
+        painter.text(text_area, Ink::default(), Align::Start, value);
     })
     .on_key(move |state: &mut S, key, text| {
         let mut new_value = value.to_string();

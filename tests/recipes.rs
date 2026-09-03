@@ -671,3 +671,36 @@ fn a_checkbox_group_manages_multiple_selections() {
         "push notification still enabled"
     );
 }
+
+#[test]
+fn a_text_input_field_renders_with_value() {
+    use rui_native::widgets;
+
+    struct FormState {
+        username: String,
+    }
+
+    let mut harness = Harness::new(
+        FormState {
+            username: "alice".to_string(),
+        },
+        |state: &FormState| {
+            col((
+                text("Username:"),
+                widgets::text_input(&state.username).key("username-field"),
+            ))
+        },
+    );
+
+    // Verify the widget renders with initial value
+    assert!(
+        harness.frame().shows("alice"),
+        "initial username value is visible"
+    );
+
+    // The field is focusable
+    let field = harness
+        .find_key("username-field")
+        .expect("text input field is on screen");
+    assert!(field.focusable, "text input field is focusable");
+}
