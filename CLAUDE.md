@@ -217,6 +217,45 @@ assert!(harness.frame().shows("1"));
 
 The synthetic font ensures widths are arithmetic (half an em per character). Animations are stepped by hand, not waited for. See `tests/recipes.rs` for live examples building `checkbox`, `switch`, `slider`, `radio`, `tooltip`.
 
+### Accessibility Framework (a11y)
+
+The `El<S>` API includes three optional fields for exposing semantic information to assistive technologies (screen readers, voice control, etc.):
+
+- **`accessible_name`**: The primary label describing the element (e.g., "Submit" for a button, "Email address" for a text input).
+- **`accessible_role`**: The semantic role of the element (e.g., "button", "input", "navigation", "main", "heading", "image"). Helps assistive technologies understand the element's purpose.
+- **`accessible_description`**: Additional context beyond the accessible name (e.g., "Form submission is irreversible" for a delete button).
+
+**Usage in practice:**
+
+```rust
+col((
+    text("Username:")
+        .accessible_role("label"),
+    draw(Size::new(200.0, 32.0), |painter, rect| {
+        // Custom text input
+    })
+    .accessible_name("Username")
+    .accessible_role("input")
+    .accessible_description("Enter your account username (3-20 characters)"),
+    button("Submit")
+        .accessible_name("Submit form")
+        .accessible_role("button")
+        .accessible_description("Submit the form to create your account"),
+))
+```
+
+All three fields are optional (default to `None`). Elements without an accessible name fall back to their visible text content. Widgets that need semantic meaning should set all three fields to provide complete context to assistive technologies.
+
+**Platform backend implementation (future work):**
+
+Platform backends (macOS/Windows/X11/WASM) will implement handlers to expose these fields to system accessibility APIs:
+- **macOS (VoiceOver):** Export to NSAccessibility attributes (`accessibilityLabel`, `accessibilityRole`, `accessibilityHelp`).
+- **Windows (Narrator):** Export to UIA (UI Automation) properties (`Name`, `ControlType`, `HelpText`).
+- **Linux (Orca):** Export to ATK (Accessibility Toolkit) attributes via DBus.
+- **WASM (browser screen readers):** Set ARIA attributes (`aria-label`, `role`, `aria-description`) on DOM elements.
+
+The framework is transport-agnostic; the three fields carry semantic meaning, and each backend translates them to its native accessibility model.
+
 ### Segmented Control Exemplar
 
 The `segmented` widget is a minimal, self-contained exemplar showing how to build an interactive choice selector. It is small enough to copy and modify immediately—the example is 59 lines total, with just 19 substantive lines of code (the pattern itself is trivial: state struct, view function, handler closure).
