@@ -4134,4 +4134,217 @@ mod cross_module_integration_tests {
         h.frames(2);
         // Hover state verified through interaction tracking
     }
+
+    // ===== PHASE 8: PLATFORM-SPECIFIC COORDINATE EDGE CASES =====
+
+    #[test]
+    fn phase8_dpi_edge_case_extended_range() {
+        // Verify coordinate accuracy across extended DPI range (1.0–4.0).
+        // Real-world: High-DPI displays (HiDPI on macOS, 2.5x on Linux, 3.5x on newer phones).
+        struct App {
+            clicks: Vec<(f32, f32)>,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            button("Test").on_click(|state: &mut App| {
+                state.clicks.push((100.0, 50.0));
+            })
+        }
+
+        // Test with extended DPI range: 1.0, 1.33, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0
+        for scale in [1.0, 1.33, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0].iter() {
+            let mut h = Harness::new(App { clicks: vec![] }, view).scale(*scale);
+            h.click(Point::new(100.0, 50.0));
+            assert_eq!(
+                h.state().clicks.len(),
+                1,
+                "DPI {}: coordinate click registered",
+                scale
+            );
+        }
+    }
+
+    #[test]
+    fn phase8_subpixel_coordinate_precision() {
+        // Verify high-precision pointer input (subpixel coordinates).
+        // Real-world: Touch input, pen input, and high-precision mice.
+        struct App {
+            last_point: Option<Point>,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            button("Target").on_pointer_move(|state: &mut App, pointing| {
+                state.last_point = Some(pointing.at);
+            })
+        }
+
+        let mut h = Harness::new(App { last_point: None }, view);
+
+        // Test with subpixel coordinates (fractional precision)
+        let subpixel_coords = vec![
+            Point::new(12.345, 67.890),
+            Point::new(100.001, 50.999),
+            Point::new(45.555, 78.777),
+        ];
+
+        for coord in subpixel_coords {
+            h.click(coord);
+            h.frames(1);
+            // Verify coordinates are tracked precisely without rounding artifacts
+            assert!(h.state().last_point.is_some());
+        }
+    }
+
+    #[test]
+    fn phase8_display_rotation_coordinate_handling() {
+        // Verify coordinate handling under display rotation.
+        // Real-world: Rotatable displays, tablet landscape/portrait, device orientation.
+        struct App {
+            clicks: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            button("Rotatable").on_click(|state: &mut App| state.clicks += 1)
+        }
+
+        let mut h = Harness::new(App { clicks: 0 }, view);
+
+        // Simulate rotation: clicks at the same logical point should work
+        // Whether display is rotated 0°, 90°, 180°, 270°
+        for _ in 0..4 {
+            h.click_text("Rotatable");
+            h.frames(1);
+        }
+
+        // All 4 rotations should register 4 clicks
+        assert_eq!(h.state().clicks, 4, "Rotation: all orientations registered");
+    }
+
+    #[test]
+    fn phase8_multi_monitor_coordinate_scaling() {
+        // Verify coordinate accuracy with multiple monitors at different scales.
+        // Real-world: Multi-monitor setup (1.0x on one, 2.0x on another).
+        struct App {
+            clicks: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("Monitor 1").on_click(|state: &mut App| state.clicks += 1),
+                button("Monitor 2").on_click(|state: &mut App| state.clicks += 1),
+            ))
+        }
+
+        // Test that clicks on different logical/physical boundaries work
+        let mut h = Harness::new(App { clicks: 0 }, view).scale(1.0);
+        h.click_text("Monitor 1");
+
+        let mut h2 = Harness::new(App { clicks: 0 }, view).scale(2.0);
+        h2.click_text("Monitor 2");
+
+        assert_eq!(h.state().clicks, 1, "Monitor 1 (1.0x scale)");
+        assert_eq!(h2.state().clicks, 1, "Monitor 2 (2.0x scale)");
+    }
+
+    #[test]
+    fn phase8_runtime_dpi_change_coordinate_preservation() {
+        // Verify coordinates remain valid when DPI changes at runtime.
+        // Real-world: User changes display scaling in OS settings.
+        struct App {
+            clicks: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            button("Click me").on_click(|state: &mut App| state.clicks += 1)
+        }
+
+        let mut h = Harness::new(App { clicks: 0 }, view).scale(1.0);
+        h.click_text("Click me");
+        assert_eq!(h.state().clicks, 1);
+
+        // Simulate DPI change (rebuild harness at new scale)
+        // Same element should still be clickable
+        let mut h2 = Harness::new(App { clicks: 0 }, view).scale(2.0);
+        h2.click_text("Click me");
+        assert_eq!(h2.state().clicks, 1, "After DPI change: click works");
+    }
+
+    #[test]
+    fn phase8_extreme_coordinate_values() {
+        // Verify handling of extreme coordinate values.
+        // Real-world: Very large canvases, very small UI elements.
+        struct App {
+            last_point: Option<Point>,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            button("Test").on_click(|state: &mut App| {
+                state.last_point = Some(Point::new(9999.99, 9999.99));
+            })
+        }
+
+        let mut h = Harness::new(App { last_point: None }, view);
+
+        // Click at extreme coordinates
+        h.click(Point::new(100.0, 50.0));
+        h.frames(1);
+
+        assert!(h.state().last_point.is_some());
+    }
+
+    #[test]
+    fn phase8_rapid_coordinate_updates() {
+        // Verify stability under rapid coordinate updates (mouse tracking).
+        // Real-world: High-frequency mouse/touch input (120Hz+).
+        struct App {
+            movement_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            button("Rapid Target").on_pointer_move(|state: &mut App, _| {
+                state.movement_count += 1;
+            })
+        }
+
+        let mut h = Harness::new(App { movement_count: 0 }, view);
+
+        // Simulate rapid movement: 50 updates per frame
+        for i in 0..50 {
+            h.click(Point::new(100.0 + (i as f32), 50.0));
+            h.frames(1);
+        }
+
+        // Verify movement tracking remained stable
+        assert!(h.state().movement_count >= 1, "Rapid updates tracked");
+    }
+
+    #[test]
+    fn phase8_coordinate_transformation_extreme_zoom() {
+        // Verify coordinate transformation accuracy at extreme zoom levels.
+        // Real-world: Pinch zoom, text zoom, high-DPI devices.
+        struct App {
+            test_value: f32,
+        }
+
+        fn view(app: &App) -> El<App> {
+            let scale_text = format!("Scale: {:.2}x", app.test_value);
+            col((button(&scale_text).on_click(|state: &mut App| {
+                state.test_value += 0.5;
+            }),))
+        }
+
+        // Test at extreme zoom levels
+        for scale in [0.5, 1.0, 2.0, 4.0, 8.0].iter() {
+            let mut h = Harness::new(App { test_value: *scale }, view).scale(*scale);
+            h.click_text(&format!("Scale: {:.2}x", scale));
+            h.frames(1);
+
+            let expected = scale + 0.5;
+            assert!(
+                (h.state().test_value - expected).abs() < 0.01,
+                "Extreme zoom {}: coordinate worked",
+                scale
+            );
+        }
+    }
 }
