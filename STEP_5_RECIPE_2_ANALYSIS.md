@@ -7,7 +7,7 @@ This document extracts phase boundaries from git history for the X11 Backend Imp
 Recipe 2 demonstrates the three-phase pattern for adding a new platform backend (X11 for Linux). The pattern is replicable for any new backend (Wayland, game engine, etc.).
 
 **Total commits**: 4 (Phase 1, Phase 2, Phase 3, Polish)  
-**Total lines (final)**: 1,422 in `src/shell/platform/x11.rs`  
+**Total lines (final)**: 1,368 in `src/shell/platform/x11.rs`  
 **Time to implementation**: Phases 1–3 over active development cycle; Polish for documentation refinement
 
 ## Phase 1: Foundation
@@ -55,8 +55,8 @@ cargo clippy --target x86_64-unknown-linux-gnu -- -D warnings
 
 **Commit**: `c42c0f05b3d75976665377a16257c36c472debc1`  
 **Message**: "Bring the library up to the selfhost workspace's current state: a full vector canvas (paths, strokes, gradients, SDF text effects), geometry primitives, image decoding and scaling, signed-distance-field rendering, accessibility tree, font kerning, interaction tests, the reload feature, and the icon example"  
-**Lines**: 1,230  
-**Delta from Phase 1**: +482 lines  
+**Lines**: 1,220  
+**Delta from Phase 1**: +472 lines  
 
 ### Scope
 

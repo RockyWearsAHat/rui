@@ -6787,13 +6787,7 @@ mod phase11_gesture_and_multitouch {
             col((button("Resize test"),))
         }
 
-        let mut h = Harness::new(
-            App {
-                element_x: 0.0,
-            },
-            view,
-        )
-        .size(400.0, 300.0);
+        let mut h = Harness::new(App { element_x: 0.0 }, view).size(400.0, 300.0);
 
         h.frames(1);
         let x_at_400w = h.state().element_x;
@@ -6819,13 +6813,7 @@ mod phase11_gesture_and_multitouch {
             col((text("Minimized state test"),))
         }
 
-        let mut h = Harness::new(
-            App {
-                preserved_x: 100.0,
-            },
-            view,
-        )
-        .size(400.0, 300.0);
+        let mut h = Harness::new(App { preserved_x: 100.0 }, view).size(400.0, 300.0);
 
         h.frames(1);
         let x_before = h.state().preserved_x;
@@ -6850,21 +6838,9 @@ mod phase11_gesture_and_multitouch {
             col((text("Multi-window test"),))
         }
 
-        let mut h1 = Harness::new(
-            App {
-                click_x: 0.0,
-            },
-            view,
-        )
-        .size(400.0, 300.0);
+        let mut h1 = Harness::new(App { click_x: 0.0 }, view).size(400.0, 300.0);
 
-        let mut h2 = Harness::new(
-            App {
-                click_x: 0.0,
-            },
-            view,
-        )
-        .size(400.0, 300.0);
+        let mut h2 = Harness::new(App { click_x: 0.0 }, view).size(400.0, 300.0);
 
         h1.click(Point::new(100.0, 100.0));
         h2.click(Point::new(200.0, 200.0));

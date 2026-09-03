@@ -518,12 +518,12 @@ fn recipe_2_claude_md_extracted_documentation_section() {
 
     // Verify the 7 documentation files are listed
     let doc_files = [
-        "STEP_2_RECIPE_2_ANALYSIS.md",
-        "STEP_2_RECIPE_2_VERIFICATION_GATES.md",
-        "STEP_2_RECIPE_2_CROSS_MODULE_CONCERNS.md",
-        "STEP_2_RECIPE_2_COORDINATE_CONTRACT.md",
-        "STEP_2_RECIPE_2_EVENT_TRANSLATION.md",
-        "STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md",
+        "STEP_5_RECIPE_2_ANALYSIS.md",
+        "STEP_5_RECIPE_2_VERIFICATION_GATES.md",
+        "STEP_5_RECIPE_2_CROSS_MODULE_CONCERNS.md",
+        "STEP_5_RECIPE_2_COORDINATE_CONTRACT.md",
+        "STEP_5_RECIPE_2_EVENT_TRANSLATION.md",
+        "STEP_5_RECIPE_2_TEMPLATE_VALIDATION.md",
         "STEP_5_RECIPE_2_SUMMARY.md",
     ];
 
