@@ -297,9 +297,13 @@ X11 backend for Linux systems using the X11 protocol. Implements the Backend tra
 
 Complete documentation for Recipe 2 X11 backend pattern:
 
-- **STEP_5_RECIPE_2_ANALYSIS.md** — Three-phase pattern breakdown with timeline and implementation checklist
-- **STEP_13_RECIPE_2_VERIFICATION.md** — Acceptance criteria, test commands, verification checklist per phase
-- **STEP_5_RECIPE_2_SUMMARY.md** — Quick reference: architecture overview and verification test navigation
+- **STEP_2_RECIPE_2_ANALYSIS.md** — Three-phase pattern breakdown with timeline and implementation
+- **STEP_2_RECIPE_2_VERIFICATION_GATES.md** — Acceptance criteria, test commands, verification checklist
+- **STEP_2_RECIPE_2_CROSS_MODULE_CONCERNS.md** — Module interactions (Backend, events, coordinates, state)
+- **STEP_2_RECIPE_2_COORDINATE_CONTRACT.md** — Device-to-logical transformation, scale factors, pitfalls
+- **STEP_2_RECIPE_2_EVENT_TRANSLATION.md** — X11 event types mapped to rui Events (Motion, Button, Key)
+- **STEP_2_RECIPE_2_TEMPLATE_VALIDATION.md** — Proves pattern replicability for Wayland, game engines
+- **STEP_2_RECIPE_2_SUMMARY.md** — Quick reference: architecture overview and verification test navigation
 
 ### Commit list
 
