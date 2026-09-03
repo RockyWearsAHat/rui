@@ -1181,6 +1181,187 @@ col((
 
 Done. The widget is ready to use anywhere state is a Rust struct with a `rating` field.
 
+### Recipe 3: Checkbox Widget — A Custom Interactive Control
+
+**Commits:** 1 (single commit integrating state definition, widget implementation, and tests).
+
+A checkbox is a binary toggle control combining a drawn square and a clickable label. It demonstrates the full widget-building pattern: state flows into a view function, which produces an element tree with handlers that mutate state. The checkbox shows how `draw()` paints custom shapes via `Painter`, how `row()` aligns a shape with text, how `.on_click()` wires event handlers, and how the `Harness` test framework verifies interactive behavior without a window.
+
+**Files Touched:**
+- `tests/recipes.rs` (lines 19–27): State struct (`Settings` with `notify: bool` field)
+- `tests/recipes.rs` (lines 34–54): Widget function (`checkbox()`) building the element tree
+- `tests/recipes.rs` (lines 146–190): Two verification tests
+
+**Pattern at a Glance:**
+
+```
+State:    struct Settings { notify: bool }
+View:     fn checkbox(label: &str, checked: bool, toggle: Fn(&mut S)) → El<S>
+Handler:  |settings: &mut Settings| { settings.notify = !settings.notify }
+```
+
+State holds a boolean flag. The view function receives the flag and a handler closure that mutates it. The handler is a function reference, not a captured closure—this eliminates interior mutability and makes the API simple.
+
+**Phase 1: State Definition and Widget Implementation (Single Commit)**
+
+The checkbox implementation spans just 21 lines of code (lines 34–54 in `tests/recipes.rs`):
+
+```rust
+fn checkbox<S: 'static>(label: &str, checked: bool, toggle: impl Fn(&mut S) + 'static) -> El<S> {
+    row((
+        draw(
+            Size::new(15.0, 15.0),
+            move |painter: &mut Painter<'_>, rect: Rect| {
+                painter.fill(
+                    rect,
+                    Radius::Units(4.0),
+                    if checked { Tone::Accent } else { Tone::Sunken },
+                );
+                painter.stroke(rect, Radius::Units(4.0), 1.0, Tone::Border);
+            },
+        )
+        .size(15.0, 15.0),
+        text(label),
+    ))
+    .gap(8.0)
+    .h(22.0)
+    .align(Align::Center)
+    .on_click(move |state: &mut S| toggle(state))
+}
+```
+
+**What the implementation does:**
+
+1. **State input:** Takes `checked: bool` from application state.
+2. **Visual composition:** Uses `row()` to lay out a drawn box and text side-by-side.
+3. **Custom drawing:** Calls `draw()` with a closure that receives a `Painter`. The painter fills the square with `Tone::Accent` (filled) or `Tone::Sunken` (empty) and strokes the border with `Tone::Border`.
+4. **Layout:** Sets size to 15×15, aligns vertically to center, and adds 8 points of gap between box and label.
+5. **Event wiring:** Attaches `.on_click()` with a handler that calls `toggle(state)`, toggling the boolean.
+
+**Why this structure:**
+
+- **No widget state:** The checkbox owns no internal state. It reads `checked` from the caller and derives appearance from it. This means the same state-view-handler pattern applies to all widgets, whether the state lives in the widget or the app.
+- **Generic over handler:** The `toggle` parameter is generic: `impl Fn(&mut S)`. This lets the handler be a closure, a function pointer, or any callable. The caller decides what mutation happens.
+- **Tone-based colors:** Colors use semantic roles (`Tone::Accent`, `Tone::Sunken`, `Tone::Border`), so the same widget looks right in light and dark modes without conditional logic.
+- **Draw with Painter:** The `draw()` primitive gives full access to rasterization. No built-in checkbox widget; you build what you want.
+
+**Verification Gates:**
+
+Two tests verify the widget:
+
+**Test 1: `a_checkbox_answers_a_click_on_its_label_as_well_as_on_its_box()` (lines 146–164)**
+
+```rust
+#[test]
+fn a_checkbox_answers_a_click_on_its_label_as_well_as_on_its_box() {
+    let mut harness = Harness::new(Settings::default(), |settings: &Settings| {
+        col(checkbox(
+            "Notify on failure",
+            settings.notify,
+            |settings: &mut Settings| settings.notify = !settings.notify,
+        ))
+        .align(Align::Start)
+    });
+
+    harness.click_text("Notify on failure");
+    assert!(harness.state().notify, "clicking the word is clicking the control");
+
+    harness.click_text("Notify on failure");
+    assert!(!harness.state().notify, "and it is a toggle, not a latch");
+}
+```
+
+**Verifies:**
+- Clicking the label text toggles the state (the `row()` layout makes the entire row clickable).
+- Clicking again toggles it back (the handler is invoked each time, mutating the boolean via `!`).
+
+**Test 2: `a_checkbox_draws_differently_once_it_is_ticked()` (lines 167–190)**
+
+```rust
+#[test]
+fn a_checkbox_draws_differently_once_it_is_ticked() {
+    let mut off = Harness::new(Settings::default(), |settings: &Settings| {
+        col(checkbox("Notify", settings.notify, |_: &mut Settings| {})).align(Align::Start)
+    })
+    .size(200.0, 60.0);
+    let mut on = Harness::new(
+        Settings {
+            notify: true,
+            ..Settings::default()
+        },
+        |settings: &Settings| {
+            col(checkbox("Notify", settings.notify, |_: &mut Settings| {})).align(Align::Start)
+        },
+    )
+    .size(200.0, 60.0);
+
+    off.frame();
+    on.frame();
+    assert_ne!(
+        off.canvas().pixels(),
+        on.canvas().pixels(),
+        "a state nobody can see is not a state"
+    );
+}
+```
+
+**Verifies:**
+- Visual state is bound to the boolean flag: when `checked` is false, the box is `Tone::Sunken`; when true, it's `Tone::Accent`.
+- The pixel buffer differs between checked and unchecked states (proving the drawing logic responds to state).
+- The Harness test framework captures pixels deterministically (using a synthetic font where each character is half an em wide), allowing exact comparison.
+
+#### How to Use the Checkbox
+
+The checkbox is generic over any state type `S`. To use it in your app:
+
+```rust
+struct App {
+    dark_mode: bool,
+}
+
+fn view(app: &App) -> El<App> {
+    col(checkbox(
+        "Enable dark mode",
+        app.dark_mode,
+        |app: &mut App| app.dark_mode = !app.dark_mode,
+    ))
+}
+```
+
+The handler closure receives `&mut App`, so you can mutate any field. The state is immutable during frame rendering (the view function receives `&App`), and mutable only during event handling—this is the immediate-mode UI pattern.
+
+#### Cross-Module Coordination
+
+**Text layout and appearance:**
+The checkbox uses the generic `text(label)` element. Text color and size are inherited from the parent's style context; the checkbox does not set them. The label appears in the default text color (which respects light/dark mode via `Appearance`), aligned to the checkbox box via the `row()`'s `.align(Align::Center)`.
+
+**Drawing via Painter:**
+The `draw()` primitive receives a `Painter`, which is a stateful drawing API. Colors are resolved via `painter.color(tone)` (or directly as Tone enums in `fill()` and `stroke()`). The painter respects the current theme—same code, different pixels in light and dark modes.
+
+**Event flow:**
+The `.on_click()` handler is wired at the element level. When the frame is drawn and a click event arrives, the event loop matches it to the element's hit rect and invokes the handler. The handler closure receives `&mut S` (mutable state) and can mutate it. On the next frame, the view function is called again with the mutated state, producing a new element tree and frame.
+
+**No memory state needed:**
+Unlike more complex widgets (e.g., a text input that tracks caret position), the checkbox has no transient state. It does not need `memory::Memory` keying. This makes it the simplest interactive widget pattern.
+
+#### Spot-Check Against the Widget Pattern
+
+The checkbox proves the generic pattern used by all widgets in rui:
+
+1. ✓ **State-driven:** The checkbox appearance is entirely determined by the `checked: bool` parameter. No internal state; no retained widget tree.
+2. ✓ **Handlers as functions:** The handler is generic `impl Fn(&mut S)`, not a closure capturing environment. This is why no `Rc<RefCell<>>` is needed.
+3. ✓ **Built from primitives:** The checkbox uses `draw()` for shapes, `row()` for layout, `text()` for the label, `.on_click()` for events. No special widget support.
+4. ✓ **Testable with Harness:** The test drives the real frame into a pixel buffer with a synthetic font, verifies state changes and pixel differences, and confirms the handler was invoked. All without a window.
+
+#### Building More Widgets from This Pattern
+
+The checkbox is a template for any binary toggle:
+- **Switch** (lines 57–81 in `tests/recipes.rs`): Same pattern, different drawing. The handler is `flip()`, the state is `on: bool`, and the draw logic shows a track with a moving knob.
+- **Slider** (lines 84–105 in `tests/recipes.rs`): Takes a float value 0.0–1.0, handles drag events with `.on_drag()` and keyboard events with `.on_key()`, draws a filled portion of a track.
+- **Radio group** (lines 108–139 in `tests/recipes.rs`): A `col()` of checkboxes, each one clickable to set the selected index. Still one handler generic over the app state.
+
+All follow the same pattern: state parameter → element tree → event handlers → state mutation.
+
 ### Widget Implementation Template Guide (v0.3.0)
 
 This guide documents the canonical pattern for building form controls and complex interactive widgets—text inputs, select dropdowns, comboboxes, and similar components that accept user input and update application state. Unlike passive widgets (like `meter`) or simple choice selectors (like `segmented`), form controls often have internal state (caret position, selection range, focus, dropdown visibility) that persists across frames. This guide shows how to layer that internal state in `memory::Memory` while keeping application state clean, following the proven patterns established in Recipe 1 (WASM backend abstraction) and Recipe 2 (platform-agnostic implementation). Each form control is built from primitives using the same state-view-handler structure—the difference is in how you coordinate widget identity, preserve transient state, and wire event handlers to both internal memory and application state.
