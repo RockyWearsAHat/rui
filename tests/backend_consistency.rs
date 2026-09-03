@@ -6717,7 +6717,6 @@ mod phase11_gesture_and_multitouch {
         struct App {
             error_x: f32,
             error_y: f32,
-            has_error: bool,
         }
 
         fn view(_app: &App) -> El<App> {
@@ -6728,7 +6727,6 @@ mod phase11_gesture_and_multitouch {
             App {
                 error_x: 0.0,
                 error_y: 0.0,
-                has_error: false,
             },
             view,
         )
@@ -6748,7 +6746,6 @@ mod phase11_gesture_and_multitouch {
         // Contract: Element coordinates remain valid in fullscreen mode.
         #[allow(dead_code)]
         struct App {
-            fullscreen: bool,
             element_x: f32,
             element_y: f32,
         }
@@ -6759,7 +6756,6 @@ mod phase11_gesture_and_multitouch {
 
         let mut h = Harness::new(
             App {
-                fullscreen: false,
                 element_x: 0.0,
                 element_y: 0.0,
             },
@@ -6784,8 +6780,6 @@ mod phase11_gesture_and_multitouch {
         // Contract: Elements reposition correctly at new window dimensions.
         #[allow(dead_code)]
         struct App {
-            window_w: f32,
-            window_h: f32,
             element_x: f32,
         }
 
@@ -6795,8 +6789,6 @@ mod phase11_gesture_and_multitouch {
 
         let mut h = Harness::new(
             App {
-                window_w: 400.0,
-                window_h: 300.0,
                 element_x: 0.0,
             },
             view,
@@ -6820,7 +6812,6 @@ mod phase11_gesture_and_multitouch {
         // Contract: Minimizing doesn't reset coordinate state.
         #[allow(dead_code)]
         struct App {
-            minimized: bool,
             preserved_x: f32,
         }
 
@@ -6830,7 +6821,6 @@ mod phase11_gesture_and_multitouch {
 
         let mut h = Harness::new(
             App {
-                minimized: false,
                 preserved_x: 100.0,
             },
             view,
@@ -6853,7 +6843,6 @@ mod phase11_gesture_and_multitouch {
         // Contract: Window 1 coordinates don't affect window 2 coordinates.
         #[allow(dead_code)]
         struct App {
-            window_id: usize,
             click_x: f32,
         }
 
@@ -6863,7 +6852,6 @@ mod phase11_gesture_and_multitouch {
 
         let mut h1 = Harness::new(
             App {
-                window_id: 1,
                 click_x: 0.0,
             },
             view,
@@ -6872,7 +6860,6 @@ mod phase11_gesture_and_multitouch {
 
         let mut h2 = Harness::new(
             App {
-                window_id: 2,
                 click_x: 0.0,
             },
             view,
