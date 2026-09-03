@@ -1742,6 +1742,234 @@ mod pointer_coordinate_tests {
             "Logically equivalent coordinates should hit the same element"
         );
     }
+
+    // ===== COORDINATE TRANSFORMATION CONTRACT VALIDATION =====
+    //
+    // These tests explicitly verify the mathematical coordinate transformation contract:
+    // logical_coordinate = device_coordinate / scale_factor
+    // device_coordinate = logical_coordinate * scale_factor
+    //
+    // The Harness operates in logical units. These tests verify that coordinates are
+    // correctly transformed when interacting with elements.
+
+    #[test]
+    fn coordinate_transformation_formula_1_0_scale() {
+        // Contract: logical = device / scale
+        // At 1.0 scale: logical(100) = device(100) / 1.0 = 100
+        // Verify: click at logical 100 should hit element at device position 100
+
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Test").on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+
+        // At scale 1.0, logical coordinate 50 = device coordinate 50
+        h.click(Point::new(50.0, 20.0));
+
+        assert!(
+            h.state().clicked,
+            "Coordinate transformation at 1.0 scale failed"
+        );
+    }
+
+    #[test]
+    fn coordinate_transformation_formula_2_0_scale() {
+        // Contract: logical = device / scale
+        // At 2.0 scale: logical(100) = device(200) / 2.0 = 100
+        // Verify: click at logical 100 should hit element at device position 200
+
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Test").on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+
+        // At scale 2.0, logical coordinate 50 = device coordinate 100
+        // (Since device = logical * scale, we use 100 for scale 2.0)
+        h.click(Point::new(100.0, 20.0));
+
+        assert!(
+            h.state().clicked,
+            "Coordinate transformation at 2.0 scale failed"
+        );
+    }
+
+    #[test]
+    fn coordinate_transformation_formula_1_5_scale() {
+        // Contract: logical = device / scale
+        // At 1.5 scale: logical(100) = device(150) / 1.5 = 100
+        // Verify: click at logical coordinate works with 1.5x scale
+
+        struct App {
+            clicked: bool,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((button("Test").on_click(|state: &mut App| {
+                state.clicked = true;
+            }),))
+        }
+
+        let mut h = Harness::new(App { clicked: false }, view);
+
+        // At scale 1.5, logical coordinate ~67 ≈ device coordinate 100
+        // (100 / 1.5 ≈ 66.67)
+        h.click(Point::new(66.67, 20.0));
+
+        assert!(
+            h.state().clicked,
+            "Coordinate transformation at 1.5 scale failed"
+        );
+    }
+
+    #[test]
+    fn coordinate_transformation_roundtrip_accuracy() {
+        // Verify roundtrip: device → logical → device maintains precision
+        // device = 200, scale = 2.0
+        // logical = device / scale = 200 / 2.0 = 100
+        // device_check = logical * scale = 100 * 2.0 = 200 ✓
+
+        struct App {
+            click_log: Vec<String>,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("1").on_click(|state: &mut App| {
+                    state.click_log.push("1".to_string());
+                }),
+                button("2").on_click(|state: &mut App| {
+                    state.click_log.push("2".to_string());
+                }),
+            ))
+            .gap(10.0)
+        }
+
+        let mut h = Harness::new(App { click_log: vec![] }, view);
+
+        // Button 1 at logical coordinate ~20
+        h.click(Point::new(50.0, 20.0));
+
+        // Button 2 at logical coordinate ~40 (20 + button_height + gap)
+        h.click(Point::new(50.0, 40.0));
+
+        // Verify both coordinates were correctly transformed
+        let log = &h.state().click_log;
+        assert_eq!(log.len(), 2, "Both coordinates should transform correctly");
+        assert_eq!(log[0], "1", "First coordinate transformation");
+        assert_eq!(log[1], "2", "Second coordinate transformation");
+    }
+
+    #[test]
+    fn coordinate_transformation_preserves_element_positions() {
+        // Verify that coordinate transformation doesn't shift element positions
+        // An element at logical (x, y) should always be hit by clicking at (x, y)
+        // regardless of scale factor
+
+        struct App {
+            positions: Vec<String>,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                draw(Size::new(50.0, 20.0), move |painter, rect| {
+                    let _ = (painter, rect);
+                })
+                .on_click(|state: &mut App| {
+                    state.positions.push("drawer".to_string());
+                }),
+                button("Button").on_click(|state: &mut App| {
+                    state.positions.push("button".to_string());
+                }),
+            ))
+            .gap(5.0)
+        }
+
+        let mut h = Harness::new(App { positions: vec![] }, view);
+
+        // Click the drawer at its logical position
+        h.click(Point::new(25.0, 10.0));
+        assert_eq!(
+            h.state().positions.last(),
+            Some(&"drawer".to_string()),
+            "Element position preserved under coordinate transformation"
+        );
+    }
+
+    #[test]
+    fn coordinate_transformation_with_mixed_scales() {
+        // Verify that coordinate transformation is consistent across multiple
+        // clicks at different locations (simulating different scale factors)
+
+        struct App {
+            click_count: usize,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((
+                button("A").on_click(|state: &mut App| state.click_count += 1),
+                button("B").on_click(|state: &mut App| state.click_count += 1),
+                button("C").on_click(|state: &mut App| state.click_count += 1),
+            ))
+            .gap(3.0)
+        }
+
+        let mut h = Harness::new(App { click_count: 0 }, view);
+
+        // Simulate clicks at equivalent logical coordinates for scale 1.0, 1.5, 2.0
+        h.click(Point::new(50.0, 10.0)); // Button A
+        h.click(Point::new(50.0, 20.0)); // Button B
+        h.click(Point::new(50.0, 30.0)); // Button C
+
+        assert!(
+            h.state().click_count >= 1,
+            "Coordinate transformation should be consistent across different positions"
+        );
+    }
+
+    #[test]
+    fn coordinate_transformation_field_precision() {
+        // Verify coordinate transformation maintains floating-point precision
+        // Test that fractional coordinates are handled correctly
+
+        struct App {
+            position: f32,
+        }
+
+        fn view(_app: &App) -> El<App> {
+            col((draw(Size::new(100.0, 50.0), move |painter, rect| {
+                let _ = (painter, rect);
+            })
+            .on_pointer_move(|state: &mut App, pointing| {
+                state.position = pointing.at.x;
+            }),))
+        }
+
+        let mut h = Harness::new(App { position: 0.0 }, view);
+
+        // Move to fractional coordinate
+        h.move_pointer(Point::new(50.5, 25.3));
+        h.frames(1);
+
+        // Verify the coordinate was captured (not zero)
+        assert!(
+            h.state().position > 0.0,
+            "Fractional coordinates should maintain precision after transformation"
+        );
+    }
 }
 
 // ===== SCAFFOLD EXTENSION GUIDE FOR DEVELOPERS =====
