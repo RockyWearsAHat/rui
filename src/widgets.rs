@@ -1,7 +1,7 @@
 //! The elements an interface is written from.
 //!
 //! Every one of them is an ordinary [`El`] with a style already set on it, and
-//! every one can be adjusted further by the same setters that built it — so a
+//! every one can be adjusted further by the same setters that built it â€” so a
 //! button that needs to be wider is `button("Go").w(120.0)` rather than a
 //! variant somebody has to add here first.
 //!
@@ -152,8 +152,8 @@ pub fn paragraph<S>(text: impl Into<String>) -> El<S> {
 
 /// A surface lying on the window: outlined, rounded, and lifted by a shadow.
 ///
-/// The three marks are made in the order light would make them — a shadow
-/// beneath, a fill shaded very slightly down its height, an outline round it —
+/// The three marks are made in the order light would make them â€” a shadow
+/// beneath, a fill shaded very slightly down its height, an outline round it â€”
 /// and none of them is meant to be noticed. What they say together is *this is
 /// a thing lying on the window* rather than *this is drawn on the window*.
 pub fn panel<S>(children: impl Children<S>) -> El<S> {
@@ -189,8 +189,8 @@ pub fn button<S>(label: impl Into<String>) -> El<S> {
 /// An editable line of text.
 ///
 /// Set in the fixed-width face, because what is typed into a field is nearly
-/// always something a machine will read back verbatim — a name, a path, an
-/// argument — and it is the face that makes `l` and `1`, or `rn` and `m`, tell
+/// always something a machine will read back verbatim â€” a name, a path, an
+/// argument â€” and it is the face that makes `l` and `1`, or `rn` and `m`, tell
 /// each other apart in a string somebody has to check.
 pub fn field<S>(value: impl Into<String>) -> El<S> {
     El::of(Node::Field {
@@ -212,7 +212,7 @@ pub fn field<S>(value: impl Into<String>) -> El<S> {
 /// The fill carries the colour and the word inside it says which state it is,
 /// so nobody has to learn a code. An earlier revision also outlined it and ran a
 /// bar of the hue down its leading edge, which made a column of tags read as
-/// warning lights before it read as words — and an interface whose job is to say
+/// warning lights before it read as words â€” and an interface whose job is to say
 /// when something is wrong cannot do it if a healthy row is also lit.
 pub fn tag<S>(status: Status, label: impl Into<String>) -> El<S> {
     row(text(label))
@@ -303,7 +303,7 @@ pub fn draw<S>(intrinsic: Size, paint: impl Fn(&mut Painter<'_>, Rect) + 'static
 /// and read as three unrelated headings rather than as one control.
 ///
 /// What marks the chosen one is a bar under it, on a rule that runs the full
-/// width — because what the rule separates is the row from the page, not the
+/// width â€” because what the rule separates is the row from the page, not the
 /// tabs from each other.
 pub fn tabs<S: 'static>(
     labels: &[&str],
@@ -333,7 +333,7 @@ pub fn tabs<S: 'static>(
 
 /// A segmented control: several words, one of them chosen.
 ///
-/// For a choice between a handful of named alternatives that all fit on a line —
+/// For a choice between a handful of named alternatives that all fit on a line â€”
 /// where a menu would hide two of the three answers behind a click.
 pub fn segmented<S: 'static>(
     labels: &[&str],
@@ -417,7 +417,7 @@ impl<S> El<S> {
     ///
     /// The fill is the whole of its emphasis. It used to also cast a halo in the
     /// accent, on the argument that the main action should be findable without
-    /// reading a label — but a solid block of the only saturated colour on
+    /// reading a label â€” but a solid block of the only saturated colour on
     /// screen already is, and the halo just made the button look like it was
     /// radiating.
     pub fn primary(self) -> Self {
@@ -430,7 +430,7 @@ impl<S> El<S> {
     ///
     /// Tinted rather than filled solid: filled with its own hue it is the
     /// brightest thing on screen and drags the eye to the one control nobody
-    /// should reach for by accident — which outshines the primary action, and is
+    /// should reach for by accident â€” which outshines the primary action, and is
     /// exactly backwards.
     pub fn danger(self) -> Self {
         self.gradient(Tone::BadTint, Tone::BadTint)
@@ -478,7 +478,7 @@ impl<S> El<S> {
 /// A label floating above a block leaves the eye to work out how far down the
 /// block extends, and in a window of stacked blocks that guess is wrong as often
 /// as it is right. A rule states it: everything under this line belongs to this
-/// word. It also does the grouping a box would do, without the cost a box has —
+/// word. It also does the grouping a box would do, without the cost a box has â€”
 /// which is that ten nested boxes read as a diagram of an interface rather than
 /// as one.
 pub fn section<S>(label: impl Into<String>, note: Option<String>) -> El<S> {
@@ -494,7 +494,7 @@ pub fn section<S>(label: impl Into<String>, note: Option<String>) -> El<S> {
 /// A row that names something and shows its value beside it.
 ///
 /// The label column is a fixed width so that values line up down a page without
-/// anyone measuring the longest label, but never more than a third of the row —
+/// anyone measuring the longest label, but never more than a third of the row â€”
 /// on a narrow pane a fixed column is width taken from the value, and the value
 /// is the part worth reading.
 pub fn field_row<S>(label: impl Into<String>, value: El<S>) -> El<S> {
@@ -546,7 +546,7 @@ pub fn split<S: 'static>(
     ))
 }
 
-/// A star rating widget: display 1–5 stars, clickable to set the rating.
+/// A star rating widget: display 1â€“5 stars, clickable to set the rating.
 ///
 /// This widget demonstrates Recipe 2 (Add a New Widget) from CLAUDE.md:
 /// an interactive widget built entirely from primitives (draw, on_click).
@@ -576,7 +576,7 @@ pub fn split<S: 'static>(
 ///
 /// This widget is tested in `tests/recipes.rs::a_star_rating_updates_when_clicked`
 /// to verify that clicking each star updates the rating correctly. The test
-/// demonstrates the Recipe 2 pattern: state → view → handlers → test.
+/// demonstrates the Recipe 2 pattern: state â†’ view â†’ handlers â†’ test.
 pub fn star_rating<S: 'static>(
     rating: usize,
     set_rating: impl Fn(&mut S, usize) + Copy + 'static,
@@ -822,6 +822,129 @@ pub fn list<S: 'static>(
         .round(Radius::Control)
 }
 
+/// A table widget displaying headers and rows of data.
+pub fn table<S: 'static>(
+    headers: &[&str],
+    rows: &[Vec<&str>],
+    selected_row: Option<usize>,
+    on_select: impl Fn(&mut S, usize) + Copy + 'static,
+) -> El<S> {
+    let header_row = row(headers
+        .iter()
+        .map(|header| {
+            text(*header)
+                .text_size(12.0)
+                .grow()
+                .text_align(Align::Start)
+        })
+        .collect::<Vec<_>>())
+    .grow()
+    .h(28.0)
+    .pad_x(12.0)
+    .align(Align::Center)
+    .fill(Tone::Muted)
+    .gap(8.0);
+
+    let data_rows: Vec<El<S>> = rows
+        .iter()
+        .enumerate()
+        .map(|(row_idx, row_data)| {
+            let is_selected = selected_row == Some(row_idx);
+            row(row_data
+                .iter()
+                .map(|cell| text(*cell).text_size(12.0).grow().text_align(Align::Start))
+                .collect::<Vec<_>>())
+            .key(format!("table-row-{}", row_idx))
+            .grow()
+            .h(28.0)
+            .pad_x(12.0)
+            .align(Align::Center)
+            .fill(if is_selected {
+                Tone::Accent
+            } else {
+                Tone::Surface
+            })
+            .color(if is_selected {
+                Tone::OnAccent
+            } else {
+                Tone::Text
+            })
+            .hover_fill(Tone::Raised)
+            .gap(8.0)
+            .on_click(move |state: &mut S| on_select(state, row_idx))
+        })
+        .collect();
+
+    let mut all_rows = vec![header_row];
+    all_rows.extend(data_rows);
+
+    col(all_rows)
+        .pad(4.0)
+        .gap(0.0)
+        .fill(Tone::Sunken)
+        .border(1.0, Tone::Border)
+        .round(Radius::Control)
+}
+
+#[derive(Clone)]
+/// A node in a hierarchical tree structure.
+pub struct TreeNode<T: Clone> {
+    /// The label for this node.
+    pub label: T,
+    /// Child nodes under this node.
+    pub children: Vec<TreeNode<T>>,
+}
+
+/// A tree widget for displaying hierarchical data.
+pub fn tree<S: 'static, T: Clone + AsRef<str> + 'static>(
+    root: &TreeNode<T>,
+    expanded: &[bool],
+    on_toggle: impl Fn(&mut S, Vec<usize>) + Copy + 'static,
+) -> El<S> {
+    fn render_tree_node<S: 'static, T: Clone + AsRef<str> + 'static>(
+        node: &TreeNode<T>,
+        path: Vec<usize>,
+        expanded: &[bool],
+        on_toggle: impl Fn(&mut S, Vec<usize>) + Copy + 'static,
+    ) -> El<S> {
+        let is_expanded = if path.is_empty() {
+            !expanded.is_empty() && expanded[0]
+        } else {
+            false
+        };
+
+        let path_clone = path.clone();
+        let label_row = row((text(node.label.as_ref()).text_size(13.5),))
+            .key(format!("tree-node-{:?}", path))
+            .h(28.0)
+            .pad_x(8.0 * (path.len() as f32 + 1.0))
+            .align(Align::Center)
+            .fill(Tone::Surface)
+            .on_click(move |state: &mut S| on_toggle(state, path_clone.clone()));
+
+        if node.children.is_empty() || !is_expanded {
+            label_row
+        } else {
+            let child_rows: Vec<El<S>> = node
+                .children
+                .iter()
+                .enumerate()
+                .map(|(i, child)| {
+                    let mut child_path = path.clone();
+                    child_path.push(i);
+                    render_tree_node(child, child_path, expanded, on_toggle)
+                })
+                .collect();
+
+            let mut all_items = vec![label_row];
+            all_items.push(col(child_rows).gap(0.0));
+            col(all_items).gap(0.0)
+        }
+    }
+
+    render_tree_node(root, vec![], expanded, on_toggle)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -838,7 +961,7 @@ mod tests {
         }
 
         // Set on something that is not a field it does nothing, rather than
-        // failing to compile or panicking — the setter is available everywhere.
+        // failing to compile or panicking â€” the setter is available everywhere.
         let text: El<Nothing> = text("plain").placeholder("ignored");
         assert!(matches!(text.node, Node::Text(_)));
     }
