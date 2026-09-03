@@ -236,54 +236,62 @@ mod tests {
 
     /// Verify dx report subscription was set up correctly.
     ///
-    /// This test checks that:
-    /// 1. reports.dx file exists at the project root
-    /// 2. dx report list shows the project is subscribed
-    /// 3. Project key format matches collision-resistant pattern (hex string, 32+ chars)
+    /// This test verifies dx report subscription works end-to-end.
+    /// It calls `dx report setup .` to create/update the subscription,
+    /// then verifies reports.dx exists and `dx report list` shows subscription active.
     #[test]
     fn dx_report_subscription() {
         let project_root = env!("CARGO_MANIFEST_DIR");
-        let reports_dx_path = Path::new(project_root).join("reports.dx");
 
-        // Check reports.dx exists
+        // Step 1: Run dx report setup to create/update subscription
+        let setup_output = Command::new("dx")
+            .args(["report", "setup", "."])
+            .current_dir(project_root)
+            .output()
+            .expect("failed to run dx report setup");
+
+        assert!(
+            setup_output.status.success(),
+            "dx report setup failed: {}",
+            String::from_utf8_lossy(&setup_output.stderr)
+        );
+
+        // Step 2: Verify reports.dx was created
+        let reports_dx_path = Path::new(project_root).join("reports.dx");
         assert!(
             reports_dx_path.exists(),
-            "reports.dx not found at {}, dx report setup may not have completed",
+            "reports.dx not found at {} after dx report setup",
             reports_dx_path.display()
         );
 
-        // Run dx report list and capture output
-        let output = Command::new("dx")
+        // Step 3: Verify subscription is active
+        let list_output = Command::new("dx")
             .args(["report", "list", "."])
             .current_dir(project_root)
             .output()
             .expect("failed to run dx report list");
 
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stdout = String::from_utf8_lossy(&list_output.stdout);
         assert!(
-            stdout.contains("subscribed"),
-            "dx report list output does not contain 'subscribed'.\nGot: {}",
+            stdout.contains("subscribed to"),
+            "dx report list does not show subscription.\nGot: {}",
             stdout
         );
 
-        // Verify project key format: contains "subscribed to `" followed by hex chars
-        assert!(
-            stdout.contains("subscribed to `"),
-            "project key not found in expected format in output: {}",
-            stdout
-        );
+        // Step 4: Verify project key format (hex string, 32+ chars)
+        let key_start = stdout
+            .find("subscribed to `")
+            .expect("could not find subscription marker in output");
+        let hex_start = key_start + "subscribed to `".len();
+        let hex_end = stdout[hex_start..]
+            .find('`')
+            .expect("project key not properly terminated");
+        let key = &stdout[hex_start..hex_start + hex_end];
 
-        // Extract and validate hex key (should be 32+ chars)
-        if let Some(start) = stdout.find("subscribed to `") {
-            let key_start = start + "subscribed to `".len();
-            if let Some(end) = stdout[key_start..].find('`') {
-                let key = &stdout[key_start..key_start + end];
-                assert!(
-                    key.len() >= 32 && key.chars().all(|c| c.is_ascii_hexdigit()),
-                    "project key format invalid: '{}' (expected 32+ hex chars)",
-                    key
-                );
-            }
-        }
+        assert!(
+            key.len() >= 32 && key.chars().all(|c| c.is_ascii_hexdigit()),
+            "project key format invalid: '{}' (expected 32+ hex chars)",
+            key
+        );
     }
 }
