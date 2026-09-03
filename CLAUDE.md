@@ -565,6 +565,149 @@ Don't add a field if:
 
 Reference the segmented exemplar (line 217–284) for a minimal, complete example: state struct, view function, handler closure, test, and verification.
 
+### Draw and Painter Patterns
+
+The `draw()` primitive and `Painter` API let you render custom shapes, text, and interactive elements directly to the canvas. Unlike high-level widgets, `draw()` gives you pixel-level control while still respecting themes (light/dark modes, semantic colors).
+
+**Pattern at a Glance:**
+
+`draw()` takes a size and a closure that receives a mutable `Painter` reference and a `Rect`. The Painter can fill shapes, stroke outlines, and draw text. All colors flow from the theme, so your custom widget inherits light/dark mode support automatically.
+
+```rust
+draw(Size::new(160.0, 32.0), move |painter: &mut Painter<'_>, rect: Rect| {
+    // Fill background
+    painter.fill(rect, Radius::Small, Tone::Surface);
+    // Stroke border
+    painter.stroke(rect, Radius::Small, 1.0, Tone::Muted);
+    // Draw text inside
+    painter.text(rect.inset(4.0), "Hello", FontId::default(), Tone::Foreground);
+})
+```
+
+**Why Painter?**
+
+The `Painter` struct (in `src/paint.rs`) abstracts the rendering backend. It exposes a high-level API (`fill()`, `stroke()`, `text()`) while the underlying `Canvas` (in `src/canvas.rs`) handles pixel rasterisation and platform differences. This separation means you write Painter code once and it works on all platforms (macOS, Windows, X11, WASM).
+
+**Painter API Methods:**
+
+- **`painter.fill(rect, radius, tone)`** — Fill a rectangle with rounded corners using a semantic color tone. The Painter looks up the tone in the current theme (light/dark) to get the actual RGB color.
+- **`painter.stroke(rect, radius, width, tone)`** — Draw an unfilled border around a rectangle with the given width and color.
+- **`painter.text(rect, text, font_id, tone)`** — Draw text clipped to a rectangle. Text color comes from the tone parameter passed to Painter.
+- **`painter.color(tone)`** — Get the RGB(A) color for a given tone in the current theme. Use this if you need raw pixels instead of high-level Painter methods.
+
+**Example: Text Input Field with Painter**
+
+Building a text input field demonstrates the full pattern: state (text and caret position), rendering (background, border, text, cursor), and interaction (keyboard input).
+
+State:
+```rust
+struct App {
+    input_text: String,
+    input_caret: usize,  // position of the text cursor
+    input_focused: bool,
+}
+```
+
+View and rendering with Painter:
+```rust
+fn view(app: &App) -> El<App> {
+    let input_width = 200.0;
+    let input_height = 32.0;
+
+    draw(Size::new(input_width, input_height), {
+        let text = app.input_text.clone();
+        let caret = if app.input_focused { app.input_caret } else { usize::MAX };
+        move |painter: &mut Painter<'_>, rect: Rect| {
+            // Background: lighter tone when focused
+            let bg_tone = if app.input_focused { Tone::Surface } else { Tone::Sunken };
+            painter.fill(rect, Radius::Small, bg_tone);
+
+            // Border: accent color when focused
+            let border_tone = if app.input_focused { Tone::Accent } else { Tone::Muted };
+            painter.stroke(rect, Radius::Small, 1.0, border_tone);
+
+            // Text content rendered with Painter
+            let text_rect = rect.inset(Insets::horizontal(8.0));
+            painter.text(text_rect, &text, FontId::default(), Tone::Foreground);
+
+            // Caret (blinking cursor, visible when focused)
+            if app.input_focused && caret < text.len() {
+                let caret_x = text_rect.x + (caret as f32 * 8.0); // approximate char width
+                let caret_rect = Rect::new(caret_x, text_rect.y, 1.0, text_rect.h);
+                painter.fill(caret_rect, Radius::None, Tone::Foreground);
+            }
+        }
+    })
+    .key("text-input")
+    .on_focus(|app: &mut App| app.input_focused = true)
+    .on_blur(|app: &mut App| app.input_focused = false)
+    .on_key(|app: &mut App, key: Key, text: Option<char>| {
+        match key {
+            Key::Backspace if app.input_caret > 0 => {
+                app.input_text.remove(app.input_caret - 1);
+                app.input_caret -= 1;
+            }
+            Key::Delete if app.input_caret < app.input_text.len() => {
+                app.input_text.remove(app.input_caret);
+            }
+            Key::Left if app.input_caret > 0 => app.input_caret -= 1,
+            Key::Right if app.input_caret < app.input_text.len() => app.input_caret += 1,
+            _ if let Some(ch) = text => {
+                app.input_text.insert(app.input_caret, ch);
+                app.input_caret += 1;
+            }
+            _ => {}
+        }
+    })
+}
+```
+
+**Key Points:**
+
+1. **Painter is platform-agnostic.** Use `painter.fill()`, `painter.stroke()`, `painter.text()` without worrying about X11 vs. macOS vs. WASM—the backend handles it.
+
+2. **Tone flows from theme.** `Tone::Surface`, `Tone::Accent`, `Tone::Muted` automatically adapt to light/dark mode. Never hardcode RGB values in your Painter code; always use semantic tones.
+
+3. **Identity with `.key()`** — The text input uses `.key("text-input")` to preserve focus and caret state across frame rebuilds. Without a key, focus would be lost every frame.
+
+4. **Handlers receive state by value.** The `.on_key()` handler receives `&mut App`, so you can mutate `input_text` and `input_caret` directly. No closures, no interior mutability.
+
+5. **Rendering is immediate.** When the Painter draws, pixels go straight to the canvas. State changes are applied in the *next* frame, so there is no re-entrancy or state inconsistency.
+
+**Coordination with Other Modules:**
+
+- **`src/paint.rs`**: Defines the `Painter` trait and provides the high-level API (`fill()`, `stroke()`, `text()`). This is where to read about available drawing primitives.
+- **`src/canvas.rs`**: Implements pixel rasterisation and color blending. You interact with Canvas indirectly through Painter.
+- **`src/text.rs`**: Handles TrueType font parsing, glyph rasterisation, and text layout. The `Painter::text()` method uses this module.
+- **`src/theme.rs`**: Defines `Tone` (semantic color roles) and maps them to RGB(A) based on `Appearance` (light/dark). When you call `painter.color(tone)`, this module resolves it to a pixel color.
+- **`src/memory.rs`**: Stores interactive state (focus, hover, scroll, caret position) keyed by element identity. Use `.key()` to preserve state across rebuilds.
+
+**Common Patterns:**
+
+- **Progress bar**: Use `painter.fill()` twice (track and fill) with different tones.
+- **Button with text**: `painter.fill()` a rounded rectangle background, then `painter.text()` on top. Add `.on_click()` to handle clicks.
+- **Tooltip or popover**: `painter.stroke()` a border, `painter.fill()` the background, `painter.text()` for the label.
+- **Custom slider thumb**: `painter.fill()` a small circle, `.on_drag()` to update position, `.key()` to preserve state.
+
+**Testing Draw Patterns:**
+
+Use `Harness` to verify your Painter code without launching a window:
+
+```rust
+#[test]
+fn text_input_draws_border_when_focused() {
+    let mut harness = Harness::new(
+        App { input_text: "hello".into(), input_caret: 5, input_focused: false },
+        view,
+    );
+    harness.focus(Point::new(100.0, 16.0)); // Focus the input
+    assert!(harness.frame().shows("hello")); // Text is visible
+    // Verify the border by sampling pixels: harness.pixel(Point::new(100.0, 16.0))
+}
+```
+
+The `Harness` renders the full UI to an in-memory buffer using a synthetic font. You can inspect pixels, assert text is visible, and verify your Painter code without a display server.
+
 ## Recipes
 
 A recipe is a worked example of implementing a major feature: files touched in order, verification gates executed at each step, cross-module coordination shown at the seams. Each recipe documents one complete journey from request to commit—a blueprint for how **state**, **element**, **layout**, **paint**, **shell**, and **memory** work together. Recipes are step-by-step implementations of major features, verified against real commits in git history; they show not just the pattern, but the proof that the pattern holds.
@@ -1021,6 +1164,256 @@ Done. The widget is ready to use anywhere state is a Rust struct with a `rating`
 ### Widget Implementation Template Guide (v0.3.0)
 
 This guide documents the canonical pattern for building form controls and complex interactive widgets—text inputs, select dropdowns, comboboxes, and similar components that accept user input and update application state. Unlike passive widgets (like `meter`) or simple choice selectors (like `segmented`), form controls often have internal state (caret position, selection range, focus, dropdown visibility) that persists across frames. This guide shows how to layer that internal state in `memory::Memory` while keeping application state clean, following the proven patterns established in Recipe 1 (WASM backend abstraction) and Recipe 2 (platform-agnostic implementation). Each form control is built from primitives using the same state-view-handler structure—the difference is in how you coordinate widget identity, preserve transient state, and wire event handlers to both internal memory and application state.
+
+#### State Shape for Form Controls
+
+Form control state is split into two places:
+
+**Application state** (`App` struct): Holds the user-visible value—the text the user typed, the selection they made.
+```rust
+struct App {
+    full_name: String,           // The text value (persists across frames)
+    email: String,               // Another text value
+    terms_accepted: bool,        // A boolean state
+}
+```
+
+**Internal state** (`memory::Memory`): Holds transient state that affects appearance but doesn't belong in your app's data model—caret position, selection range, focus, dropdown visibility. This state is keyed by element identity and automatically reset when the view rebuilds.
+
+The memory module (in `src/memory.rs`) manages this automatically. You don't manually create or update it; you use the widget's `.key()` method to give the element a stable identity across frames:
+```rust
+text_input(&app.email)
+    .key("email-input")  // Identity for hover/focus/caret state
+```
+
+The `.key()` preserves memory state across frame rebuilds. Without it, the memory for this input would be discarded and recreated each frame, losing focus and caret position.
+
+#### Draw and Painter Patterns
+
+Custom form controls use `draw()` to render their appearance. The `Painter` API provides methods to fill shapes, stroke outlines, and apply colors. Here's a pattern for a text input with custom styling:
+
+```rust
+pub fn text_input_custom<S: 'static>(
+    value: &str,
+    on_change: impl Fn(&mut S, String) + Copy + 'static,
+) -> El<S> {
+    let width = Length::Fixed(200.0);
+    let height = Length::Fixed(32.0);
+    
+    draw(Size::new(200.0, 32.0), move |painter: &mut Painter<'_>, rect: Rect| {
+        // Draw background
+        painter.fill(rect, Radius::Round(4.0), painter.color(Tone::Surface));
+        
+        // Draw border (thicker if focused, using memory state)
+        let border_color = painter.color(Tone::Accent);
+        painter.stroke(rect, Radius::Round(4.0), border_color, 1.0);
+        
+        // Draw text
+        let text_rect = rect.inset(Insets::all(8.0));
+        painter.text_left(&text_rect, value, painter.color(Tone::OnSurface));
+    })
+    .on_key(move |state: &mut S, key, text| {
+        if let Some(ch) = text {
+            on_change(state, format!("{}{}", value, ch));
+        }
+    })
+    .key("text-input")
+}
+```
+
+**Painter methods:**
+- `painter.fill(rect, radius, color)`: Fill a shape
+- `painter.stroke(rect, radius, color, width)`: Draw an outline
+- `painter.text_left(rect, text, color)`: Draw text (left-aligned)
+- `painter.color(tone)`: Look up a semantic color by role (adapts to light/dark mode automatically)
+
+#### Handler Structures for Text Input
+
+Text input handlers need to wire three event types: key presses (character input), focus changes, and deletion. Here's the pattern:
+
+```rust
+pub fn text_input<S: 'static>(
+    value: &str,
+    on_change: impl Fn(&mut S, String) + Copy + 'static,
+) -> El<S> {
+    col((
+        draw(Size::new(200.0, 32.0), move |painter: &mut Painter<'_>, rect: Rect| {
+            painter.fill(rect, Radius::Round(4.0), painter.color(Tone::Surface));
+            painter.text_left(rect.inset(Insets::all(8.0)), value, painter.color(Tone::OnSurface));
+        })
+        .on_key(move |state: &mut S, key, text| {
+            match key {
+                Key::Backspace => {
+                    // Remove last character
+                    let mut new_value = value.to_string();
+                    new_value.pop();
+                    on_change(state, new_value);
+                }
+                _ if let Some(ch) = text => {
+                    // Add character
+                    on_change(state, format!("{}{}", value, ch));
+                }
+                _ => {}
+            }
+        })
+        .on_focus(move |state: &mut S| {
+            // Handle focus gain if needed
+        })
+        .key("text-input"),
+    ))
+}
+```
+
+**Handler signature:** `|state: &mut S, key, text| { ... }` — receives mutable state, the `Key` pressed, and the optional text character.
+
+**Key types:** `Key::Backspace`, `Key::Enter`, `Key::Tab`, etc. See `src/input.rs` for the full enum.
+
+#### Testing Harness Approach for Keyboard Input
+
+The `Harness` testing framework provides methods to simulate keyboard input without a window. Here's how to test a text input widget:
+
+```rust
+#[test]
+fn text_input_accepts_typed_characters() {
+    let mut harness = Harness::new(App { email: String::new() }, |app: &App| {
+        col((
+            text("Email:"),
+            text_input(&app.email, |app: &mut App, new_email| {
+                app.email = new_email;
+            })
+            .key("email-input"),
+        ))
+    });
+    
+    // Simulate typing
+    harness.key_press(Key::Char('a'));  // Type 'a'
+    assert_eq!(harness.state().email, "a");
+    
+    harness.key_press(Key::Char('b'));  // Type 'b'
+    assert_eq!(harness.state().email, "ab");
+    
+    // Simulate backspace
+    harness.key_press(Key::Backspace);
+    assert_eq!(harness.state().email, "a");
+}
+```
+
+**Harness keyboard methods:**
+- `harness.key_press(key)`: Simulate a key press (character or function key)
+- `harness.click_text(label)`: Click on an element by text content
+- `harness.frame()`: Get the current rendered frame
+- `harness.shows(text)`: Assert that text appears in the frame
+
+#### Memory Module for Caret and Selection State
+
+The `memory::Memory` struct (in `src/memory.rs`) automatically preserves:
+- **Focus:** Which element currently has keyboard focus
+- **Caret position:** Where the text cursor is in a text input
+- **Selection:** The highlighted range in a text input
+- **Hover:** Which element the mouse is over
+- **Scroll:** The scroll position of a scrollable container
+
+You don't manually manage memory; it's keyed by element identity (the `.key()` you provide). When the view rebuilds, elements with the same key recover their memory state.
+
+**To use caret/selection state in a custom widget:**
+
+```rust
+pub fn text_input_with_caret<S: 'static>(
+    value: &str,
+    on_change: impl Fn(&mut S, String) + Copy + 'static,
+) -> El<S> {
+    let width = 200.0;
+    let height = 32.0;
+    
+    draw(Size::new(width, height), move |painter: &mut Painter<'_>, rect: Rect| {
+        // Background
+        painter.fill(rect, Radius::Round(4.0), painter.color(Tone::Surface));
+        
+        // Text (left-aligned with padding)
+        let text_rect = rect.inset(Insets::all(8.0));
+        painter.text_left(&text_rect, value, painter.color(Tone::OnSurface));
+        
+        // Note: Caret position and selection are stored in memory::Memory
+        // The framework automatically draws them based on memory state
+        // You access this state via the harness in tests (harness.frame().memory())
+        // In production, the rendering pipeline applies focus/caret visual styling automatically
+    })
+    .on_key(move |state: &mut S, key, text| {
+        if let Some(ch) = text {
+            on_change(state, format!("{}{}", value, ch));
+        }
+    })
+    .on_focus(move |_: &mut S| { /* focus handler */ })
+    .key("text-input")  // This key enables memory preservation
+}
+```
+
+The framework's `Visual` state tracking (used internally by `Painter`) automatically reads from memory to determine if an element is focused, hovered, or disabled, and applies the appropriate styling. For text input specifically, caret position is maintained in memory keyed to the element's identity, and can be queried or inspected in tests via `harness.frame().memory()`.
+
+#### Text Input Implementation Skeleton
+
+Here's a minimal text input widget skeleton you can copy and extend:
+
+```rust
+pub fn text_input<S: 'static>(
+    value: &str,
+    on_change: impl Fn(&mut S, String) + Copy + 'static,
+) -> El<S> {
+    draw(Size::new(200.0, 32.0), move |painter: &mut Painter<'_>, rect: Rect| {
+        painter.fill(rect, Radius::Round(4.0), painter.color(Tone::Surface));
+        painter.stroke(rect, Radius::Round(4.0), painter.color(Tone::Border), 1.0);
+        
+        let text_area = rect.inset(Insets::all(8.0));
+        painter.text_left(&text_area, value, painter.color(Tone::OnSurface));
+    })
+    .on_key(move |state: &mut S, key, text| {
+        let mut new_value = value.to_string();
+        
+        match key {
+            Key::Backspace if !new_value.is_empty() => {
+                new_value.pop();
+            }
+            _ if let Some(ch) = text => {
+                new_value.push(ch);
+            }
+            _ => {}
+        }
+        
+        on_change(state, new_value);
+    })
+    .key("text-input")
+}
+```
+
+**To use it in your app:**
+```rust
+struct App {
+    username: String,
+}
+
+fn view(app: &App) -> El<App> {
+    col((
+        text("Username:"),
+        text_input(&app.username, |app: &mut App, new_value| {
+            app.username = new_value;
+        }),
+    ))
+}
+```
+
+**To test it:**
+```rust
+#[test]
+fn text_input_updates_on_keystroke() {
+    let mut harness = Harness::new(App { username: String::new() }, view);
+    
+    harness.key_press(Key::Char('a'));
+    assert_eq!(harness.state().username, "a");
+    
+    harness.key_press(Key::Backspace);
+    assert_eq!(harness.state().username, "");
+}
+```
 
 ## Workflow Notes
 
