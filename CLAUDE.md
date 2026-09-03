@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**rui** is a declarative interface library for Rust with **zero dependencies**. It unifies structure (layout), style (appearance), and behavior (interaction) into a single Rust expression, rendered by its own TrueType parser, glyph rasteriser, and platform-specific window backends (macOS, Windows, X11).
+**rui** is a declarative interface library for Rust with **zero dependencies**. It unifies structure (layout), style (appearance), and behavior (interaction) into a single Rust expression, rendered by its own TrueType parser, glyph rasteriser, and platform-specific window backends (macOS, Windows, X11). Wayland support is planned for v0.2.0.
 
 **Core design principles:**
 - **View is a pure function of state.** The `view` function rebuilds the entire UI description from application data each frame—no retained widget tree.
@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Rust 1.85+** (Edition 2021), verified by `tests/setup.rs`. Use `rustup update` if needed.
 - **No external dependencies**—the full renderer, font handling, and window management are in this crate.
-- **Platforms:** macOS (Cocoa), Windows (WinAPI), X11/Wayland (via X11 server).
+- **Platforms:** macOS (Cocoa), Windows (WinAPI), X11 (Linux). Wayland support planned for v0.2.0.
 - **Pre-commit hook:** Runs `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` (`.git/hooks/pre-commit`). Prevents commits with formatting issues or lint warnings. Executable after first git setup.
 
 ## Common Commands
@@ -447,6 +447,8 @@ widgets::draw(Size::new(160.0, 18.0), move |painter, rect| {
 **Core Pattern:** Your application state is a flat struct where each field represents widget state directly. No `Rc<RefCell<>>`, no wrapper enums, no "model-view-controller" layering—just data fields that handlers mutate.
 
 **Why this works:** The view function is called every frame from the event loop. Because it receives `&App` (immutable state), it rebuilds the UI description deterministically. Handlers receive `&mut App` and run after the frame is drawn, so state mutations never race the view. This eliminates interior mutability entirely.
+
+**See the segmented exemplar** (in `examples/segmented.rs` and `src/widgets.rs` line 333–365) for a minimal, worked example of this pattern: state struct → view function → handler closure. Copy and modify it to build your own widgets.
 
 #### Example: Text Input Widget State
 
