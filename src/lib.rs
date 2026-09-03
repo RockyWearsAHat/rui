@@ -145,7 +145,7 @@ pub use theme::{Appearance, Palette, Status, Theme};
 pub use widgets::{
     button, caption, checkbox_group, code, code_block, col, divider, dot, draw, field, field_row,
     figure, heading, meter, micro, panel, paragraph, row, section, segmented, spacer, split, tabs,
-    tag, text, title,
+    tag, text, text_input, title,
 };
 
 /// A run of text, formatted.

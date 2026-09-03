@@ -610,6 +610,39 @@ pub fn checkbox_group<S: 'static>(
     .gap(12.0)
 }
 
+/// A text input field for form controls.
+///
+/// This is Recipe 4: implementing a simple text input widget using the framework's
+/// native Field node. Unlike `field()` which uses monospace styling (CODE_SIZE),
+/// `text_input()` uses the proportional body size suitable for form layouts.
+///
+/// The widget is focusable and styled with semantic colors that adapt to light/dark mode.
+///
+/// # Example
+///
+/// ```ignore
+/// struct App { username: String }
+/// fn view(app: &App) -> El<App> {
+///     col((
+///         text("Username:"),
+///         text_input(&app.username).key("username"),
+///     ))
+/// }
+/// ```
+pub fn text_input<S>(value: impl Into<String>) -> El<S> {
+    El::of(Node::Field {
+        value: value.into(),
+        placeholder: String::new(),
+    })
+    .h(32.0)
+    .pad_x(8.0)
+    .text_size(BODY_SIZE)
+    .fill(Tone::Surface)
+    .border(1.0, Tone::Border)
+    .round(Radius::Control)
+    .focusable()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
