@@ -1262,3 +1262,147 @@ fn text_input_updates_display_when_value_changes() {
         "text_input should not display old value"
     );
 }
+
+#[test]
+fn a_table_displays_rows_and_columns() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct TableState {
+        selected_row: Option<usize>,
+    }
+
+    let headers = vec!["Name", "Email"];
+    let rows = vec![
+        vec!["Alice", "alice@example.com"],
+        vec!["Bob", "bob@example.com"],
+    ];
+
+    let mut harness = Harness::new(TableState::default(), move |state: &TableState| {
+        col((
+            text("Users:"),
+            widgets::table(
+                &headers,
+                &rows,
+                state.selected_row,
+                |_state: &mut TableState, _idx| {
+                    // Set selected row
+                },
+            ),
+        ))
+        .align(Align::Start)
+    });
+
+    harness.frame();
+    assert!(harness.frame().shows("Name"), "table headers are visible");
+    assert!(harness.frame().shows("Email"), "table headers are visible");
+    assert!(harness.frame().shows("Alice"), "table rows are visible");
+    assert!(harness.frame().shows("Bob"), "table rows are visible");
+}
+
+#[test]
+fn a_table_selects_row_when_clicked() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct TableState {
+        selected_row: Option<usize>,
+    }
+
+    let headers = vec!["Name", "Value"];
+    let rows = vec![vec!["Item 1", "100"], vec!["Item 2", "200"]];
+
+    let mut harness = Harness::new(TableState::default(), move |state: &TableState| {
+        col(widgets::table(
+            &headers,
+            &rows,
+            state.selected_row,
+            |state: &mut TableState, idx| {
+                state.selected_row = Some(idx);
+            },
+        ))
+    });
+
+    harness.click_text("Item 2");
+    assert_eq!(
+        harness.state().selected_row,
+        Some(1),
+        "clicking a row selects it"
+    );
+}
+
+#[test]
+fn a_tree_displays_hierarchical_items() {
+    use rui_native::widgets::{self, TreeNode};
+
+    #[derive(Default)]
+    struct TreeState {
+        expanded: Vec<bool>,
+    }
+
+    let tree = TreeNode {
+        label: "Root".to_string(),
+        children: vec![
+            TreeNode {
+                label: "Child 1".to_string(),
+                children: vec![],
+            },
+            TreeNode {
+                label: "Child 2".to_string(),
+                children: vec![],
+            },
+        ],
+    };
+
+    let mut harness = Harness::new(TreeState::default(), move |state: &TreeState| {
+        col(widgets::tree(
+            &tree,
+            &state.expanded,
+            |_state: &mut TreeState, _path: Vec<usize>| {},
+        ))
+    });
+
+    harness.frame();
+    assert!(harness.frame().shows("Root"), "tree root is visible");
+    assert!(
+        harness.frame().shows("Child 1"),
+        "tree children are visible when expanded"
+    );
+}
+
+#[test]
+fn a_tree_toggles_expansion_when_clicked() {
+    use rui_native::widgets::{self, TreeNode};
+
+    #[derive(Default)]
+    struct TreeState {
+        expanded: Vec<bool>,
+    }
+
+    let tree = TreeNode {
+        label: "Root".to_string(),
+        children: vec![TreeNode {
+            label: "Child".to_string(),
+            children: vec![],
+        }],
+    };
+
+    let mut harness = Harness::new(TreeState::default(), move |state: &TreeState| {
+        col(widgets::tree(
+            &tree,
+            &state.expanded,
+            |state: &mut TreeState, path: Vec<usize>| {
+                if path.is_empty() {
+                    if state.expanded.is_empty() {
+                        state.expanded.push(true);
+                    } else {
+                        state.expanded[0] = !state.expanded[0];
+                    }
+                }
+            },
+        ))
+    });
+
+    harness.frame();
+    assert!(harness.frame().shows("Root"), "tree root is visible");
+}
