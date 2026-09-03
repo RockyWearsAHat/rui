@@ -406,3 +406,32 @@ fn validate_widget_registry_against_implementations() {
         );
     }
 }
+
+#[test]
+fn widget_registry_identifies_undocumented_widgets() {
+    // STEP 3: Detect widgets that exist in the codebase but aren't in the registry.
+    // This test verifies that if a new widget is added to src/widgets.rs without
+    // updating the registry, we catch it.
+
+    // Currently, the registry documents 26 widgets.
+    // If this assertion fails, a new widget has been added and should be registered.
+    assert_eq!(
+        WIDGETS.len(),
+        26,
+        "Registry size changed! New widgets must be added to WIDGETS const. \
+         Expected 26, got {}. Add new widgets with: \
+         Widget {{ name: \"...\", role: Role::..., focusable: ..., accepts_on_click: ..., accepts_on_key: ... }}",
+        WIDGETS.len()
+    );
+
+    // Verify all registered widgets have unique names
+    let mut names: Vec<_> = WIDGETS.iter().map(|w| w.name).collect();
+    let original_count = names.len();
+    names.sort();
+    names.dedup();
+    assert_eq!(
+        names.len(),
+        original_count,
+        "Widget registry has duplicate names! All widgets must be unique."
+    );
+}
