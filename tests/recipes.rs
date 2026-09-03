@@ -704,3 +704,76 @@ fn a_text_input_field_renders_with_value() {
         .expect("text input field is on screen");
     assert!(field.focusable, "text input field is focusable");
 }
+
+#[test]
+fn a_select_control_displays_choices() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct SelectState {
+        selected: usize,
+    }
+
+    let choices = &["Option A", "Option B", "Option C"];
+
+    let mut harness = Harness::new(SelectState::default(), |state: &SelectState| {
+        col((
+            text("Choose:"),
+            widgets::select(choices, state.selected, |state: &mut SelectState, index| {
+                state.selected = index;
+            }),
+        ))
+        .align(Align::Start)
+    });
+
+    // Verify the widget renders all choices
+    harness.frame();
+    assert!(
+        harness.frame().shows("Option A"),
+        "first choice should be visible"
+    );
+    assert!(
+        harness.frame().shows("Option B"),
+        "second choice should be visible"
+    );
+    assert!(
+        harness.frame().shows("Option C"),
+        "third choice should be visible"
+    );
+}
+
+#[test]
+fn a_select_control_changes_selection_when_clicked() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct SelectState {
+        selected: usize,
+    }
+
+    let choices = &["Small", "Medium", "Large"];
+
+    let mut harness = Harness::new(SelectState::default(), |state: &SelectState| {
+        col((
+            text("Select size:"),
+            widgets::select(choices, state.selected, |state: &mut SelectState, index| {
+                state.selected = index;
+            })
+            .key("size-selector"),
+        ))
+        .align(Align::Start)
+    });
+
+    // Verify initial state
+    assert_eq!(harness.state().selected, 0, "initial selection is index 0");
+
+    // Click on "Large"
+    harness.click_text("Large");
+
+    // Verify selection changed
+    assert_eq!(
+        harness.state().selected,
+        2,
+        "clicking Large should select index 2"
+    );
+}

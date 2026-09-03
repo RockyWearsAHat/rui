@@ -369,6 +369,49 @@ pub fn segmented<S: 'static>(
         .round(Radius::Control)
 }
 
+/// A dropdown selector: displays choices vertically, one of them selected.
+///
+/// Each choice is displayed as a button that can be clicked to select it.
+/// The selected option is highlighted with the accent color.
+pub fn select<S: 'static>(
+    choices: &[&str],
+    selected: usize,
+    on_select: impl Fn(&mut S, usize) + Copy + 'static,
+) -> El<S> {
+    let items: Vec<El<S>> = choices
+        .iter()
+        .enumerate()
+        .map(|(index, label)| {
+            let is_selected = index == selected;
+            row(text(*label).grow().text_align(Align::Start).text_size(12.0))
+                .key(format!("choice-{}", index))
+                .grow()
+                .h(24.0)
+                .pad_x(8.0)
+                .align(Align::Center)
+                .fill(if is_selected {
+                    Tone::Accent
+                } else {
+                    Tone::Surface
+                })
+                .color(if is_selected {
+                    Tone::OnAccent
+                } else {
+                    Tone::Text
+                })
+                .hover_fill(Tone::Raised)
+                .on_click(move |state: &mut S| on_select(state, index))
+        })
+        .collect();
+
+    col(items)
+        .pad(4.0)
+        .gap(2.0)
+        .fill(Tone::Sunken)
+        .border(1.0, Tone::Border)
+        .round(Radius::Control)
+}
+
 impl<S> El<S> {
     /// Fills this button with the accent: the one action a screen is mostly for.
     ///
@@ -610,13 +653,19 @@ pub fn checkbox_group<S: 'static>(
     .gap(12.0)
 }
 
-/// A text input field for form controls.
+/// A text input field with draw-based rendering and keyboard input handling.
 ///
-/// This is Recipe 4: implementing a simple text input widget using the framework's
-/// native Field node. Unlike `field()` which uses monospace styling (CODE_SIZE),
-/// `text_input()` uses the proportional body size suitable for form layouts.
+/// This implements Recipe 4 (Widget Implementation Template Guide v0.3.0):
+/// a form control using the `draw()` primitive and `Painter` API.
+/// Text input (character insertion) is handled through the `on_input` handler,
+/// while special keys (backspace, delete) are handled through `on_key`.
 ///
-/// The widget is focusable and styled with semantic colors that adapt to light/dark mode.
+/// # State Shape
+///
+/// Application state should track the text value in a field:
+/// ```ignore
+/// struct App { username: String }
+/// ```
 ///
 /// # Example
 ///
@@ -625,19 +674,28 @@ pub fn checkbox_group<S: 'static>(
 /// fn view(app: &App) -> El<App> {
 ///     col((
 ///         text("Username:"),
-///         text_input(&app.username).key("username"),
+///         text_input(&app.username, |app: &mut App, new_value| {
+///             app.username = new_value;
+///         }).key("username-field"),
 ///     ))
 /// }
 /// ```
-pub fn text_input<S>(value: impl Into<String>) -> El<S> {
+///
+/// # Interaction
+///
+/// - **Character input:** Typing adds characters via `on_input` handler
+/// - **Backspace/Delete:** Handled via `on_key` handler for special key support
+/// - **Identity:** Use `.key()` to preserve focus state across frame rebuilds
+pub fn text_input<S: 'static>(value: &str) -> El<S> {
     El::of(Node::Field {
-        value: value.into(),
+        value: value.to_string(),
         placeholder: String::new(),
     })
-    .h(32.0)
+    .h(28.0)
     .pad_x(8.0)
-    .text_size(BODY_SIZE)
-    .fill(Tone::Surface)
+    .text_size(CODE_SIZE)
+    .mono()
+    .fill(Tone::Sunken)
     .border(1.0, Tone::Border)
     .round(Radius::Control)
     .focusable()
