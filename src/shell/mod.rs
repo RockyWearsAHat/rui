@@ -85,7 +85,14 @@ use crate::input::{Event, Input};
 use crate::memory::Memory;
 use crate::text::{FontId, Fonts};
 use crate::theme::Appearance;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+// `std::time::Instant::now()` panics on wasm32-unknown-unknown: there is no
+// clock syscall for it to call. `web_time::Instant` is the drop-in
+// replacement, backed by `performance.now()` instead.
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
+#[cfg(target_arch = "wasm32")]
+use web_time::Instant;
 
 pub use fonts::{LoadedFonts, load_system_fonts};
 
@@ -94,6 +101,7 @@ pub use fonts::{LoadedFonts, load_system_fonts};
 /// A hundred and twenty a second rather than sixty: the wait is an upper bound
 /// on latency and not a frame rate, so asking to come back more often costs
 /// nothing when nothing is moving, and halves the worst case when something is.
+#[cfg(not(target_arch = "wasm32"))]
 const FRAME: Duration = Duration::from_millis(8);
 
 /// How a window should be opened.
@@ -401,6 +409,7 @@ impl Surface {
 /// nothing, too shy and news sits unshown. Split out so it can be asserted
 /// without a display, which nothing else in this module can be.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg(not(target_arch = "wasm32"))]
 struct Turn {
     /// Another thread asked for a frame.
     requested: bool,
@@ -412,6 +421,7 @@ struct Turn {
     idle_elapsed: bool,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Turn {
     /// Whether this turn should draw a frame.
     ///
@@ -427,6 +437,7 @@ impl Turn {
 /// What has to happen for the window and the application to agree about
 /// filling the screen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg(not(target_arch = "wasm32"))]
 enum FullscreenMove {
     /// Ask the window to fill the screen, or to stop.
     AskWindow(bool),
@@ -441,6 +452,7 @@ enum FullscreenMove {
 /// window manager that simply declines never answers at all, and without a
 /// deadline the interface would stay drawn as though it were filling a screen
 /// it never got.
+#[cfg(not(target_arch = "wasm32"))]
 const FULLSCREEN_PATIENCE: Duration = Duration::from_secs(3);
 
 /// Keeps the application's idea of filling the screen and the window's own in
@@ -460,6 +472,7 @@ const FULLSCREEN_PATIENCE: Duration = Duration::from_secs(3);
 /// change the window makes on its own — while nothing is in flight — is
 /// reported back.
 #[derive(Debug)]
+#[cfg(not(target_arch = "wasm32"))]
 struct FullscreenSync {
     /// What the window last said, once nothing was in flight.
     mirrored: bool,
@@ -467,6 +480,7 @@ struct FullscreenSync {
     awaiting: Option<(bool, Instant)>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl FullscreenSync {
     /// A window that is not filling the screen and has been asked for nothing.
     fn new(filling: bool) -> Self {
@@ -507,6 +521,7 @@ impl FullscreenSync {
 }
 
 /// Opens a window and runs `app` in it until it is closed.
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn run<S>(
     options: WindowOptions,
     loaded: LoadedFonts,
@@ -598,6 +613,95 @@ pub(crate) fn run<S>(
             break;
         }
     }
+    Ok(())
+}
+
+/// The wasm32 twin of [`run`].
+///
+/// [`run`] is a `while` loop that blocks on `Backend::pump` between frames,
+/// which is exactly what a single-threaded browser tab cannot do — blocking
+/// the one thread a page has blocks the page. This drives the same
+/// [`Surface::draw`] instead from a chain of `requestAnimationFrame`
+/// callbacks, so control returns to the browser after every frame the way it
+/// has to.
+///
+/// It returns as soon as the window is open and the first frame is scheduled,
+/// not when the application stops running — there is no "until it is closed"
+/// on a target where closing the window and ending the program are the same
+/// event. A frame that draws after `app.is_running()` turns false simply
+/// stops scheduling the next one.
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn run_wasm<S: 'static>(
+    options: WindowOptions,
+    loaded: LoadedFonts,
+    mut app: App<S>,
+) -> Result<(), Error> {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    use wasm_bindgen::prelude::*;
+
+    let LoadedFonts {
+        mut fonts,
+        ui_font,
+        mono_font,
+    } = loaded;
+    let window = platform::Window::open(&options)?;
+    let dom_events = window.shared_events();
+
+    let (width, height, scale) = window.surface();
+    let mut surface = Surface {
+        drawn: Canvas::new(width, height, scale),
+        presented: Canvas::new(0, 0, scale),
+        input: Input::new(),
+        memory: Memory::new(),
+        drawn_at: Instant::now(),
+        ui_font,
+        mono_font,
+        failed: None,
+        composition_area: None,
+    };
+    let mut events: Vec<Event> = Vec::new();
+
+    // A `requestAnimationFrame` callback that reschedules itself has to hold
+    // a handle to its own closure, which cannot exist until the closure does
+    // — hence the shared, initially-empty cell every such loop in
+    // `wasm-bindgen` code goes through.
+    let tick: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
+    let tick_for_closure = Rc::clone(&tick);
+
+    let browser = web_sys::window().ok_or_else(|| Error::Platform("no browser window".into()))?;
+    let browser_for_closure = browser.clone();
+
+    let closure = Closure::wrap(Box::new(move || {
+        events.clear();
+        events.append(&mut dom_events.borrow_mut());
+        // `Surface::draw` folds `events` into `Input` itself, after its own
+        // `begin_frame` — the same order every native backend's turn of `run`
+        // uses, so applying them here first would both double-apply them and
+        // apply them before the frame state they belong to has started.
+        if let Err(error) = surface.draw(&window, &mut fonts, &mut app, &mut events) {
+            surface.failed = Some(error);
+        }
+        if let Some(error) = &surface.failed {
+            // There is no caller left to hand this to — `start_app` already
+            // returned once the first frame was scheduled — so the browser
+            // console is the only place left for it to be seen at all.
+            web_sys::console::error_1(&format!("rui: frame failed: {error}").into());
+            return;
+        }
+        if !app.is_running() || surface.input.close_requested() {
+            return;
+        }
+        if let Some(handle) = tick_for_closure.borrow().as_ref() {
+            let _ = browser_for_closure.request_animation_frame(handle.as_ref().unchecked_ref());
+        }
+    }) as Box<dyn FnMut()>);
+
+    browser
+        .request_animation_frame(closure.as_ref().unchecked_ref())
+        .map_err(|_| Error::Platform("could not schedule the first frame".into()))?;
+    *tick.borrow_mut() = Some(closure);
+
     Ok(())
 }
 

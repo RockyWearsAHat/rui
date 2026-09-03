@@ -58,7 +58,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
 
-#[cfg(feature = "reload")]
+#[cfg(all(feature = "reload", not(target_arch = "wasm32")))]
 use crate::reload::run as run_windowed;
 /// What running an application in a window amounts to.
 ///
@@ -67,7 +67,12 @@ use crate::reload::run as run_windowed;
 /// is up, and the program starts its successor once the window has closed. The
 /// two have the same signature on purpose, so there is one call site rather
 /// than a branch in [`App::run_with_fonts`].
-#[cfg(not(feature = "reload"))]
+///
+/// Not used at all on wasm32, which has its own entry point,
+/// [`App::run_with_fonts`]'s wasm32 branch — `requestAnimationFrame` cannot be
+/// wrapped by a loop that reruns a process, so developer reload is a
+/// native-only feature.
+#[cfg(all(not(feature = "reload"), not(target_arch = "wasm32")))]
 use crate::shell::run as run_windowed;
 
 /// An application: some state, and a function from that state to a description.
@@ -517,14 +522,45 @@ impl<S> App<S> {
     ///
     /// Fonts are found on this machine rather than shipped, so an interface
     /// looks like the desktop it is running on.
+    #[cfg(target_arch = "wasm32")]
+    pub fn run(self) -> Result<(), Error>
+    where
+        S: 'static,
+    {
+        let fonts = shell::load_system_fonts()?;
+        self.run_with_fonts(fonts)
+    }
+
+    /// The same, on every native platform.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn run(self) -> Result<(), Error> {
         let fonts = shell::load_system_fonts()?;
         self.run_with_fonts(fonts)
     }
 
     /// The same, with the faces supplied rather than searched for.
+    ///
+    /// On every native platform this blocks until the window closes, which is
+    /// what "run" ordinarily means. wasm32 cannot honour that: blocking the
+    /// browser's one thread blocks the page along with it, so there this
+    /// schedules the first frame through [`shell::run_wasm`] and returns
+    /// immediately, with the rest of the interface's life carried by
+    /// `requestAnimationFrame` from then on. A caller awaiting this from an
+    /// `async fn`, as Forge's `start_app` does, still sees the call finish
+    /// promptly either way — it just means two different things by "finish".
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn run_with_fonts(self, fonts: LoadedFonts) -> Result<(), Error> {
         run_windowed(self.options.clone(), fonts, self)
+    }
+
+    /// The wasm32 twin of the above. See [`shell::run_wasm`] for why this
+    /// cannot be the same function as the native one.
+    #[cfg(target_arch = "wasm32")]
+    pub fn run_with_fonts(self, fonts: LoadedFonts) -> Result<(), Error>
+    where
+        S: 'static,
+    {
+        shell::run_wasm(self.options.clone(), fonts, self)
     }
 
     /// Draws one frame with no window at all, and answers the pixels.
