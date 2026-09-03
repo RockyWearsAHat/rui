@@ -441,3 +441,163 @@ fn test_registry_completeness() {
         );
     }
 }
+
+// ============================================================================
+// STEP 3: Component gap detection
+// ============================================================================
+
+/// Represents a UI component for gap analysis.
+/// A component that appears in reference frameworks but not in rui.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ComponentGap {
+    /// Name of the missing component.
+    pub name: String,
+    /// Category the component belongs to.
+    pub category: String,
+}
+
+impl ComponentGap {
+    /// Creates a new ComponentGap.
+    pub fn new(name: &str, category: &str) -> Self {
+        ComponentGap {
+            name: name.to_string(),
+            category: category.to_string(),
+        }
+    }
+}
+
+/// Represents a gap (missing component) in rui's component set.
+#[derive(Debug, Clone)]
+pub struct Gap {
+    /// Name of the missing component.
+    pub name: String,
+    /// Category the component belongs to.
+    pub category: String,
+    /// Reason the component is considered a gap.
+    pub reason: String,
+}
+
+/// Find components in the reference set that are missing from rui.
+///
+/// Matches reference components against rui's component set by name (case-insensitive).
+/// Returns a list of gaps representing missing implementations.
+pub fn find_gaps(rui: &[ComponentGap], reference: &[ComponentGap]) -> Vec<Gap> {
+    let mut gaps = Vec::new();
+
+    for ref_component in reference {
+        let found = rui
+            .iter()
+            .any(|c| c.name.to_lowercase() == ref_component.name.to_lowercase());
+
+        if !found {
+            gaps.push(Gap {
+                name: ref_component.name.clone(),
+                category: ref_component.category.clone(),
+                reason: format!(
+                    "Missing {} component (category: {})",
+                    ref_component.name, ref_component.category
+                ),
+            });
+        }
+    }
+
+    gaps
+}
+
+#[test]
+fn component_gap_detection_identifies_missing_components() {
+    // Current rui components (from src/widgets.rs)
+    let rui_components = vec![
+        ComponentGap::new("col", "layout"),
+        ComponentGap::new("row", "layout"),
+        ComponentGap::new("spacer", "layout"),
+        ComponentGap::new("text", "typography"),
+        ComponentGap::new("title", "typography"),
+        ComponentGap::new("heading", "typography"),
+        ComponentGap::new("caption", "typography"),
+        ComponentGap::new("micro", "typography"),
+        ComponentGap::new("figure", "typography"),
+        ComponentGap::new("code", "typography"),
+        ComponentGap::new("paragraph", "typography"),
+        ComponentGap::new("panel", "layout"),
+        ComponentGap::new("divider", "layout"),
+        ComponentGap::new("button", "input"),
+        ComponentGap::new("field", "input"),
+        ComponentGap::new("tag", "badge"),
+        ComponentGap::new("dot", "badge"),
+        ComponentGap::new("meter", "display"),
+        ComponentGap::new("draw", "custom"),
+        ComponentGap::new("tabs", "navigation"),
+        ComponentGap::new("segmented", "input"),
+        ComponentGap::new("star_rating", "input"),
+        ComponentGap::new("section", "layout"),
+        ComponentGap::new("field_row", "layout"),
+        ComponentGap::new("field_group", "layout"),
+        ComponentGap::new("scrollbar", "input"),
+    ];
+
+    // Reference UI kit components (based on shadcn/ui, Radix, Material Design)
+    let reference_components = vec![
+        ComponentGap::new("button", "input"),
+        ComponentGap::new("checkbox", "input"),
+        ComponentGap::new("radio", "input"),
+        ComponentGap::new("switch", "input"),
+        ComponentGap::new("toggle", "input"),
+        ComponentGap::new("text_input", "input"),
+        ComponentGap::new("select", "input"),
+        ComponentGap::new("dropdown", "navigation"),
+        ComponentGap::new("combobox", "input"),
+        ComponentGap::new("multiselect", "input"),
+        ComponentGap::new("slider", "input"),
+        ComponentGap::new("date_picker", "input"),
+        ComponentGap::new("time_picker", "input"),
+        ComponentGap::new("textarea", "input"),
+        ComponentGap::new("badge", "badge"),
+        ComponentGap::new("tag", "badge"),
+        ComponentGap::new("chip", "badge"),
+        ComponentGap::new("avatar", "display"),
+        ComponentGap::new("image", "display"),
+        ComponentGap::new("icon", "display"),
+        ComponentGap::new("spinner", "display"),
+        ComponentGap::new("progress", "display"),
+        ComponentGap::new("meter", "display"),
+        ComponentGap::new("tabs", "navigation"),
+        ComponentGap::new("breadcrumb", "navigation"),
+        ComponentGap::new("pagination", "navigation"),
+        ComponentGap::new("menu", "navigation"),
+        ComponentGap::new("card", "layout"),
+        ComponentGap::new("dialog", "overlay"),
+        ComponentGap::new("modal", "overlay"),
+        ComponentGap::new("popover", "overlay"),
+        ComponentGap::new("tooltip", "overlay"),
+        ComponentGap::new("alert", "overlay"),
+        ComponentGap::new("drawer", "overlay"),
+        ComponentGap::new("heading", "typography"),
+        ComponentGap::new("paragraph", "typography"),
+        ComponentGap::new("code", "typography"),
+        ComponentGap::new("blockquote", "typography"),
+        ComponentGap::new("list", "layout"),
+        ComponentGap::new("table", "display"),
+        ComponentGap::new("loader", "display"),
+        ComponentGap::new("indicator", "display"),
+    ];
+
+    let gaps = find_gaps(&rui_components, &reference_components);
+
+    // Acceptance: at least 10 missing components
+    assert!(
+        gaps.len() >= 10,
+        "Expected at least 10 missing components, found {}. Missing: {:?}",
+        gaps.len(),
+        gaps.iter()
+            .map(|g| format!("{} ({})", g.name, g.category))
+            .collect::<Vec<_>>()
+    );
+
+    // Verify gaps are well-formed
+    for gap in &gaps {
+        assert!(!gap.name.is_empty(), "Gap name should not be empty");
+        assert!(!gap.category.is_empty(), "Gap category should not be empty");
+        assert!(!gap.reason.is_empty(), "Gap reason should not be empty");
+    }
+}
