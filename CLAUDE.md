@@ -65,11 +65,12 @@ All examples can be run with `cargo run -p rui --example <name>`. Each example d
 | `calculator` | Numeric input handling and button grid layouts; demonstrates stateful computation. |
 | `theme_switcher` | Light/dark mode support showing how appearance preferences flow through the entire UI. |
 | `todo_app` | List rendering with state management; demonstrates item creation, completion toggling, and list updates. |
+| `form_example` | Comprehensive form with text input, select dropdown, and checkbox widgets; demonstrates form control integration and state flow. |
 | `parity` | Builds a native reference frame for pixel-perfect WASM backend comparison. |
 | `icon` | Generates macOS `.iconset` and `.icns` app icons by drawing them at all required sizes. |
 | `segmented_modified` | Verification that the documented "Copy and Modify" path from CLAUDE.md actually works. |
 
-**Learning Path:** Start with `counter`, then `segmented` (to understand handlers), then `meter` (to understand passive widgets). Continue with `calculator` (numeric input and multi-step computation), `theme_switcher` (appearance and semantic colors), and `todo_app` (list rendering and state management). Use `controls` to see all available widgets. The `gallery` example renders all elements to PNG for visual verification.
+**Learning Path:** Start with `counter`, then `segmented` (to understand handlers), then `meter` (to understand passive widgets). Continue with `calculator` (numeric input and multi-step computation), `theme_switcher` (appearance and semantic colors), `todo_app` (list rendering and state management), and `form_example` (form controls: text input, select, checkbox). Use `controls` to see all available widgets. The `gallery` example renders all elements to PNG for visual verification.
 
 ## Test Suite
 
