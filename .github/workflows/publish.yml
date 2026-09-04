@@ -1,0 +1,57 @@
+name: publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 0.1.0)'
+        required: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  publish:
+    name: publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Verify version matches release
+        if: github.event_name == 'release'
+        run: |
+          RELEASE_TAG=${{ github.event.release.tag_name }}
+          CARGO_VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)
+          if [ "${RELEASE_TAG#v}" != "$CARGO_VERSION" ]; then
+            echo "Version mismatch: release tag $RELEASE_TAG but Cargo.toml version $CARGO_VERSION"
+            exit 1
+          fi
+
+      - name: Build and test before publishing
+        run: |
+          cargo build --all-targets
+          cargo test --all-targets
+          cargo test --doc
+
+      - name: Publish to crates.io
+        run: cargo publish --token ${{ secrets.CARGO_TOKEN }}
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+
+      - name: Create success comment on release
+        if: github.event_name == 'release' && success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Published to crates.io\n\nhttps://crates.io/crates/rui\nhttps://docs.rs/rui/'
+            })

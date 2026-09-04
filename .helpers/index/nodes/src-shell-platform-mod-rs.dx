@@ -1,0 +1,18 @@
+---
+id: src/shell/platform/mod.rs
+title: mod.rs
+kind: file-index
+lang: rust
+rank: 0.004736
+generated_at: 2026-08-08T01:45:22.143Z
+---
+
+# src/shell/platform/mod.rs  ·  rust  ·  26 LOC
+
+## Symbols
+
+- `backend` (module) — L10
+- `backend` (module) — L15
+- `backend` (module) — L20
+- `backend` (module) — L24
+

@@ -1,0 +1,125 @@
+---
+id: src/geom.rs
+title: geom.rs
+kind: file-index
+lang: rust
+rank: 0.07172
+links: [[src/canvas.rs]] [[src/layout.rs]] [[src/paint.rs]] [[tests/rendering.rs]] [[tests/recipes.rs]] [[tests/interaction.rs]] [[examples/controls.rs]] [[tests/layout.rs]] [[src/text.rs]] [[src/testing/mod.rs]] [[src/shell/platform/macos.rs]] [[src/shell/platform/x11.rs]]
+generated_at: 2026-08-08T01:45:22.140Z
+---
+
+# src/geom.rs  ·  rust  ·  403 LOC
+
+## Symbols
+
+- `Point` (class) — L14
+- `new` (method) — L23
+- `offset` (method) — L31
+- `Size` (class) — L38
+- `new` (method) — L47
+- `Insets` (class) — L57
+- `uniform` (method) — L70
+- `symmetric` (method) — L75
+- `new` (method) — L80
+- `horizontal` (method) — L88
+- `vertical` (method) — L93
+- `Rect` (class) — L106
+- `new` (method) — L122
+- `from_origin` (method) — L127
+- `from_corners` (method) — L132
+- `min_x` (method) — L145
+- `min_y` (method) — L150
+- `max_x` (method) — L155
+- `max_y` (method) — L160
+- `origin` (method) — L165
+- `size` (method) — L170
+- `center` (method) — L175
+- `is_empty` (method) — L180
+- `contains` (method) — L189
+- `inset` (method) — L194
+- `expand` (method) — L204
+- `translate` (method) — L214
+- `intersect` (method) — L219
+- `union` (method) — L228
+- `split_top` (method) — L256
+- `split_bottom` (method) — L265
+- `split_left` (method) — L274
+- `split_right` (method) — L283
+- `centered` (method) — L292
+- `tests` (module) — L303
+- `negative_extents_become_empty_rather_than_inside_out` (method) — L307
+- `containment_is_half_open_so_neighbours_do_not_both_claim_a_point` (method) — L314
+- `disjoint_rectangles_intersect_to_empty` (method) — L323
+- `intersection_keeps_the_overlap` (method) — L330
+- `union_ignores_an_empty_operand` (method) — L337
+- `splitting_more_than_there_is_takes_everything_and_leaves_nothing` (method) — L344
+- `splits_partition_the_rectangle` (method) — L352
+- `every_split_answers_its_pieces_in_reading_order` (method) — L364
+- `the_name_says_which_piece_is_the_fixed_one` (method) — L381
+- `inset_then_expand_returns_the_original` (method) — L390
+- `centering_leaves_equal_margins` (method) — L397
+
+## Graph
+
+```mermaid
+graph LR
+  c["geom.rs"]
+  x0["canvas.rs"]
+  x0 --> c
+  x1["layout.rs"]
+  x1 --> c
+  x2["paint.rs"]
+  x2 --> c
+  x3["rendering.rs"]
+  x3 --> c
+  x4["recipes.rs"]
+  x4 --> c
+  x5["interaction.rs"]
+  x5 --> c
+  x6["controls.rs"]
+  x6 --> c
+  x7["layout.rs"]
+  x7 --> c
+  x8["text.rs"]
+  c --> x8
+  x9["mod.rs"]
+  x9 --> c
+  x10["macos.rs"]
+  x10 --> c
+  x11["x11.rs"]
+  x11 --> c
+  x12["input.rs"]
+  c --> x12
+  x13["memory.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/text.rs]] via `is_empty`, `offset`
+- [[src/input.rs]] via `is_empty`
+- [[src/style.rs]] via `is_empty`
+- [[src/font/outline.rs]] via `Point`
+
+### Referenced by
+
+- [[src/canvas.rs]] via `max_x`, `expand`, `min_y`, `min_x`, `intersect`
+- [[src/layout.rs]] via `max_y`, `inset`, `is_empty`, `max_x`, `origin`
+- [[src/paint.rs]] via `max_y`, `is_empty`, `max_x`, `contains`, `inset`
+- [[tests/rendering.rs]] via `size`, `center`
+- [[tests/recipes.rs]] via `max_x`, `center`, `size`
+- [[tests/interaction.rs]] via `center`
+- [[examples/controls.rs]] via `inset`, `center`, `size`, `max_x`
+- [[tests/layout.rs]] via `size`
+- [[src/testing/mod.rs]] via `max_x`, `is_empty`, `center`, `max_y`
+- [[src/shell/platform/macos.rs]] via `contains`, `translate`, `is_empty`
+- [[src/shell/platform/x11.rs]] via `contains`, `is_empty`, `translate`
+- [[src/memory.rs]] via `contains`, `is_empty`
+- [[examples/counter.rs]] via `center`
+- [[src/app.rs]] via `is_empty`
+- [[src/element.rs]] via `is_empty`
+- [[src/font/mod.rs]] via `contains`
+- [[src/image.rs]] via `is_empty`
+- [[src/shell/platform/windows.rs]] via `translate`
+- [[src/widgets.rs]] via `center`
+

@@ -36,6 +36,8 @@ pub(crate) struct Ctx<'a> {
     pub(crate) theme: &'a Theme,
     /// The whole window, which a layer is held inside so that a menu opened
     /// near an edge cannot open off the screen.
+    ///
+    /// Expressed in window-logical units (DPI-adjusted, platform-independent).
     pub(crate) bounds: Rect,
 }
 
@@ -50,6 +52,13 @@ const UNBOUNDED: f32 = 1.0e6;
 /// Assigns every element its identity as well as its rectangle, because the two
 /// are decided by the same walk — an element's identity is its path through the
 /// tree, and its rectangle is what its parent gave it.
+///
+/// # Coordinate System Contract
+///
+/// All rectangles assigned to elements are expressed in **window-logical units**,
+/// which are DPI-adjusted and platform-independent. These are the same units used
+/// by coordinate events from [`crate::input::Event`] and the [`crate::Backend`] trait.
+/// They account for the display's scale factor and are never device pixels or CSS pixels.
 pub(crate) fn solve<S>(root: &mut El<S>, bounds: Rect, ctx: &Ctx<'_>, memory: &mut Memory) {
     debug_assert_eq!(
         ctx.bounds, bounds,

@@ -1,0 +1,106 @@
+---
+id: src/shell/platform/x11.rs
+title: x11.rs
+kind: file-index
+lang: rust
+rank: 0.019535
+links: [[src/shell/platform/macos.rs]] [[src/shell/platform/windows.rs]] [[src/shell/mod.rs]] [[src/canvas.rs]] [[src/font/sfnt.rs]] [[src/geom.rs]] [[src/paint.rs]] [[src/text.rs]] [[tests/rendering.rs]] [[src/element.rs]] [[src/font/outline.rs]] [[src/input.rs]]
+generated_at: 2026-08-08T01:45:22.141Z
+---
+
+# src/shell/platform/x11.rs  ·  rust  ·  748 LOC
+
+## Symbols
+
+- `Display` (class) — L26
+- `XWindow` (class) — L27
+- `Atom` (class) — L28
+- `Visual` (class) — L29
+- `GraphicsContext` (class) — L30
+- `PollDescriptor` (class) — L119
+- `XEvent` (class) — L134
+- `XKeyEvent` (class) — L141
+- `XButtonEvent` (class) — L161
+- `XMotionEvent` (class) — L181
+- `XClientMessageEvent` (class) — L201
+- `WindowAttributes` (class) — L213
+- `XImage` (class) — L240
+- `Aspect` (class) — L265
+- `SizeHints` (class) — L271
+- `Window` (class) — L330
+- `open` (method) — L343
+- `pump` (method) — L423
+- `surface` (method) — L453
+- `appearance` (method) — L457
+- `present` (method) — L471
+- `is_open` (method) — L518
+- `refresh_geometry` (method) — L525
+- `translate` (method) — L538
+- `translate_key` (method) — L601
+- `position` (method) — L639
+- `drop` (method) — L645
+- `density_scale` (function) — L661
+- `modifiers_of` (function) — L674
+- `key_for_symbol` (function) — L686
+- `from_c` (function) — L714
+- `tests` (module) — L722
+- `named_keys_come_from_their_keysyms` (method) — L726
+- `control_is_reported_as_the_accelerator` (method) — L736
+- `every_modifier_is_recognised_separately` (method) — L743
+
+## Graph
+
+```mermaid
+graph LR
+  c["x11.rs"]
+  x0["macos.rs"]
+  x0 --> c
+  x1["windows.rs"]
+  x1 --> c
+  x2["mod.rs"]
+  x2 --> c
+  x3["canvas.rs"]
+  c --> x3
+  x4["sfnt.rs"]
+  x4 --> c
+  x5["geom.rs"]
+  c --> x5
+  x6["paint.rs"]
+  x6 --> c
+  x7["text.rs"]
+  c --> x7
+  x8["rendering.rs"]
+  x8 --> c
+  x9["element.rs"]
+  c --> x9
+  x10["outline.rs"]
+  x10 --> c
+  x11["input.rs"]
+  c --> x11
+  x12["memory.rs"]
+  x12 --> c
+  x13["unsupported.rs"]
+  c --> x13
+```
+
+### References
+
+- [[src/canvas.rs]] via `height`, `is_empty`, `pixels`, `width`
+- [[src/geom.rs]] via `contains`, `is_empty`, `translate`
+- [[src/text.rs]] via `len`, `is_empty`
+- [[src/element.rs]] via `round`
+- [[src/input.rs]] via `is_empty`
+- [[src/shell/platform/unsupported.rs]] via `Window`
+- [[src/style.rs]] via `is_empty`
+
+### Referenced by
+
+- [[src/shell/platform/macos.rs]] via `translate_key`, `translate`, `refresh_geometry`, `Window`, `modifiers_of`
+- [[src/shell/platform/windows.rs]] via `refresh_geometry`, `translate`, `Window`, `position`
+- [[src/shell/mod.rs]] via `surface`, `present`, `is_open`, `pump`, `appearance`
+- [[src/font/sfnt.rs]] via `position`
+- [[src/paint.rs]] via `surface`, `translate`
+- [[tests/rendering.rs]] via `appearance`
+- [[src/font/outline.rs]] via `position`
+- [[src/memory.rs]] via `position`
+
