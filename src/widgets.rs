@@ -683,10 +683,10 @@ pub fn checkbox_group<S: 'static>(
 ///
 /// # Interaction
 ///
-/// - **Character input:** Typing adds characters via `on_input` handler
+/// - **Character input:** Typing adds characters via `on_change` handler
 /// - **Backspace/Delete:** Handled via `on_key` handler for special key support
 /// - **Identity:** Use `.key()` to preserve focus state across frame rebuilds
-pub fn text_input<S: 'static>(value: &str) -> El<S> {
+pub fn text_input<S: 'static>(value: &str, on_change: impl Fn(&mut S, String) + 'static) -> El<S> {
     El::of(Node::Field {
         value: value.to_string(),
         placeholder: String::new(),
@@ -699,6 +699,7 @@ pub fn text_input<S: 'static>(value: &str) -> El<S> {
     .border(1.0, Tone::Border)
     .round(Radius::Control)
     .focusable()
+    .on_input(on_change)
 }
 
 /// A combobox widget: a searchable dropdown for choosing from a list of options.

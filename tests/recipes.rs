@@ -687,7 +687,7 @@ fn a_text_input_field_renders_with_value() {
         |state: &FormState| {
             col((
                 text("Username:"),
-                widgets::text_input(&state.username).key("username-field"),
+                widgets::text_input(&state.username, |_, _| {}).key("username-field"),
             ))
         },
     );
@@ -989,7 +989,7 @@ fn text_input_displays_initial_value() {
         |state: &InputState| {
             col((
                 text("Username:"),
-                widgets::text_input(&state.username).key("username-field"),
+                widgets::text_input(&state.username, |_, _| {}).key("username-field"),
             ))
             .align(Align::Start)
         },
@@ -1014,7 +1014,7 @@ fn text_input_is_focusable() {
     let mut harness = Harness::new(InputState::default(), |state: &InputState| {
         col((
             text("Email:"),
-            widgets::text_input(&state.input_value).key("email-field"),
+            widgets::text_input(&state.input_value, |_, _| {}).key("email-field"),
         ))
         .align(Align::Start)
     });
@@ -1041,7 +1041,7 @@ fn text_input_has_proper_dimensions() {
     let mut harness = Harness::new(InputState::default(), |state: &InputState| {
         col((
             text("Field:"),
-            widgets::text_input(&state.input_value).key("text-input"),
+            widgets::text_input(&state.input_value, |_, _| {}).key("text-input"),
         ))
         .align(Align::Start)
     })
@@ -1074,7 +1074,7 @@ fn text_input_preserves_layout_across_frames() {
     let mut harness = Harness::new(InputState::default(), |state: &InputState| {
         col((
             text("Input:"),
-            widgets::text_input(&state.input_value).key("input-field"),
+            widgets::text_input(&state.input_value, |_, _| {}).key("input-field"),
         ))
         .align(Align::Start)
     });
@@ -1108,7 +1108,7 @@ fn text_input_renders_with_different_values() {
     let mut empty_harness = Harness::new(InputState::default(), |state: &InputState| {
         col((
             text("Field:"),
-            widgets::text_input(&state.input_value).key("field"),
+            widgets::text_input(&state.input_value, |_, _| {}).key("field"),
         ))
         .align(Align::Start)
     });
@@ -1124,7 +1124,7 @@ fn text_input_renders_with_different_values() {
         |state: &InputState| {
             col((
                 text("Email:"),
-                widgets::text_input(&state.input_value).key("field"),
+                widgets::text_input(&state.input_value, |_, _| {}).key("field"),
             ))
             .align(Align::Start)
         },
@@ -1152,7 +1152,7 @@ fn text_input_renders_numeric_content() {
         |state: &InputState| {
             col((
                 text("Phone:"),
-                widgets::text_input(&state.phone_number)
+                widgets::text_input(&state.phone_number, |_, _| {})
                     .key("phone-field")
                     .w(200.0),
             ))
@@ -1190,7 +1190,7 @@ fn text_input_renders_special_characters() {
         |state: &InputState| {
             col((
                 text("Email:"),
-                widgets::text_input(&state.content)
+                widgets::text_input(&state.content, |_, _| {})
                     .key("email-field")
                     .w(200.0),
             ))
@@ -1228,7 +1228,7 @@ fn text_input_updates_display_when_value_changes() {
         |state: &InputState| {
             col((
                 text("Text:"),
-                widgets::text_input(&state.text).key("text-field"),
+                widgets::text_input(&state.text, |_, _| {}).key("text-field"),
             ))
             .align(Align::Start)
         },
@@ -1246,7 +1246,7 @@ fn text_input_updates_display_when_value_changes() {
         |state: &InputState| {
             col((
                 text("Text:"),
-                widgets::text_input(&state.text).key("text-field"),
+                widgets::text_input(&state.text, |_, _| {}).key("text-field"),
             ))
             .align(Align::Start)
         },
@@ -1260,6 +1260,48 @@ fn text_input_updates_display_when_value_changes() {
     assert!(
         !harness_updated.frame().shows("hello"),
         "text_input should not display old value"
+    );
+}
+
+#[test]
+fn text_input_accepts_character_input_via_handler() {
+    use rui_native::widgets;
+
+    #[derive(Default)]
+    struct InputState {
+        username: String,
+    }
+
+    let mut harness = Harness::new(InputState::default(), |state: &InputState| {
+        col((
+            text("Username:"),
+            widgets::text_input(&state.username, |state: &mut InputState, new_value| {
+                state.username = new_value;
+            })
+            .key("username-field"),
+        ))
+        .align(Align::Start)
+    });
+
+    harness.frame();
+
+    // Focus the text input field by clicking on it
+    let field = harness
+        .find_key("username-field")
+        .expect("text input field should be on screen");
+    harness.click(field.rect.center());
+
+    // Simulate typing "alice"
+    harness.type_text("alice");
+
+    assert_eq!(
+        harness.state().username,
+        "alice",
+        "text_input should update state when characters are typed"
+    );
+    assert!(
+        harness.frame().shows("alice"),
+        "typed text should appear in the rendered output"
     );
 }
 
