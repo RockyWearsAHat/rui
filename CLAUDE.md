@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**rui** is a declarative interface library for Rust with **zero dependencies**. It unifies structure (layout), style (appearance), and behavior (interaction) into a single Rust expression, rendered by its own TrueType parser, glyph rasteriser, and platform-specific window backends (macOS, Windows, X11). Wayland support is planned for v0.2.0.
+**rui** is a declarative interface library for Rust with **zero dependencies**. It unifies structure (layout), style (appearance), and behavior (interaction) into a single Rust expression, rendered by its own TrueType parser, glyph rasteriser, and platform-specific window backends (macOS, Windows, X11, Wayland).
 
 **Core design principles:**
 - **View is a pure function of state.** The `view` function rebuilds the entire UI description from application data each frame—no retained widget tree.
@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Rust 1.85+** (Edition 2021), verified by `tests/setup.rs`. Use `rustup update` if needed.
 - **No external dependencies**—the full renderer, font handling, and window management are in this crate.
-- **Platforms:** macOS (Cocoa), Windows (WinAPI), X11 (Linux). Wayland support planned for v0.2.0.
+- **Platforms:** macOS (Cocoa), Windows (WinAPI), X11 (Linux), Wayland (Linux).
 - **Pre-commit hook:** Runs `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` (`.git/hooks/pre-commit`). Prevents commits with formatting issues or lint warnings. Executable after first git setup.
 
 ## Common Commands
@@ -182,7 +182,7 @@ The parity test verifies both light and dark modes and confirms that the renderi
 | `input` | Input events and per-frame view of them; translates raw `Event` stream to immediate-mode queries. |
 | `theme` | Colors, spacing, and type sizes for the entire UI; `Appearance` (light/dark) and `Tone` (semantic roles). |
 | `syntax` | Syntax highlighting tokenizer for code display; supports Rust, Python, JavaScript, Bash, Diff. |
-| `shell` | Platform window management: macOS/Windows/X11/WASM backends implement `Backend` trait. Event loop lives here. |
+| `shell` | Platform window management: macOS (Cocoa), Windows (WinAPI), X11 (Xlib), Wayland (Wayland protocol), and WASM (canvas) backends implement `Backend` trait. Event loop lives here. |
 | `memory` | Stateful interaction data (hover, focus, scroll position, caret, animations); keyed by element identity. |
 | `app` | Application entry point; `run()` couples state, view function, and the event loop. |
 | `testing` | `Harness`: drives the real frame into a buffer with a synthetic font for deterministic testing; `Harness::click_text`, `drag`, `shows`, `pixel`, `save_png`. |
