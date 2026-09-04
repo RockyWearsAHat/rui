@@ -5,7 +5,7 @@
 //! light/dark modes.
 
 use rui::testing::Harness;
-use rui::{col, draw, text, Align, El, Ink, Painter, Point, Radius, Rect, Size, Tone};
+use rui::{Align, El, Ink, Painter, Point, Radius, Rect, Size, Tone, col, draw, text};
 
 #[test]
 fn draw_painter_pattern_renders_with_background_border_and_text() {
