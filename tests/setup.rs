@@ -178,8 +178,46 @@ fn window_backend_selector_gates_wasm_correctly() {
         .collect::<Vec<_>>()
         .len();
     assert_eq!(
-        backend_assignments, 5,
-        "exactly 5 backend cfgs should each define 'mod backend;' (wasm, macos, windows, x11, unsupported)"
+        backend_assignments, 6,
+        "exactly 6 backend cfgs should each define 'mod backend;' (wasm, macos, windows, wayland, x11, unsupported)"
+    );
+}
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn wayland_backend_is_compile_selectable_via_feature_flag() {
+    use std::fs;
+
+    let platform_mod =
+        fs::read_to_string("src/shell/platform/mod.rs").expect("failed to read platform/mod.rs");
+
+    // Verify wayland backend exists and is conditionally compiled
+    assert!(
+        platform_mod.contains("path = \"wayland.rs\""),
+        "wayland.rs must be selected when feature is enabled"
+    );
+
+    // Verify the wayland feature guard is present
+    assert!(
+        platform_mod.contains("feature = \"wayland\""),
+        "wayland backend must be gated with feature = \"wayland\""
+    );
+
+    // Verify x11 backend is the fallback (negation of wayland feature)
+    assert!(
+        platform_mod.contains("not(feature = \"wayland\")"),
+        "x11 backend must be selected when wayland feature is not enabled"
+    );
+
+    // Verify the feature is documented in Cargo.toml
+    let cargo_toml = fs::read_to_string("Cargo.toml").expect("failed to read Cargo.toml");
+    assert!(
+        cargo_toml.contains("[features]"),
+        "Cargo.toml must have a [features] section"
+    );
+    assert!(
+        cargo_toml.contains("wayland"),
+        "wayland feature must be declared in Cargo.toml"
     );
 }
 
