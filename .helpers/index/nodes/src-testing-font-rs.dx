@@ -1,0 +1,66 @@
+---
+id: src/testing/font.rs
+title: font.rs
+kind: file-index
+lang: rust
+rank: 0.004736
+links: [[src/text.rs]] [[src/font/mod.rs]] [[src/app.rs]] [[src/paint.rs]] [[src/canvas.rs]]
+generated_at: 2026-08-08T01:45:22.143Z
+---
+
+# src/testing/font.rs  ·  rust  ·  406 LOC
+
+## Symbols
+
+- `test_font` (function) — L86
+- `test_font_bytes` (function) — L94
+- `coverage` (function) — L113
+- `outlines` (function) — L124
+- `box_height` (function) — L144
+- `box_glyph` (function) — L149
+- `character_map` (function) — L174
+- `contiguous_runs` (function) — L205
+- `head` (function) — L217
+- `horizontal_header` (function) — L239
+- `horizontal_metrics` (function) — L263
+- `maximum_profile` (function) — L274
+- `assemble` (function) — L282
+- `aligned` (function) — L311
+- `push_short_offset` (function) — L321
+- `push_u16` (function) — L326
+- `push_i16` (function) — L330
+- `push_u32` (function) — L334
+- `tests` (module) — L339
+- `the_face_assembled_here_is_a_font_this_crate_can_read` (method) — L344
+- `every_character_is_half_the_text_size_wide` (method) — L354
+- `a_line_is_exactly_the_text_size_tall` (method) — L363
+- `a_letter_marks_pixels_and_a_space_marks_none` (method) — L371
+- `different_characters_are_different_pictures` (method) — L382
+- `glyphs_are_numbered_from_one_with_notdef_at_zero` (method) — L392
+- `every_table_starts_on_a_four_byte_boundary` (method) — L400
+
+## Graph
+
+```mermaid
+graph LR
+  c["font.rs"]
+  x0["text.rs"]
+  c --> x0
+  x1["mod.rs"]
+  c --> x1
+  x2["app.rs"]
+  c --> x2
+  x3["paint.rs"]
+  c --> x3
+  x4["canvas.rs"]
+  c --> x4
+```
+
+### References
+
+- [[src/text.rs]] via `metrics`, `len`
+- [[src/font/mod.rs]] via `metrics`, `glyph_for`, `render`
+- [[src/app.rs]] via `render`
+- [[src/paint.rs]] via `render`
+- [[src/canvas.rs]] via `resize`
+

@@ -1,0 +1,51 @@
+---
+id: examples/icon.rs
+title: icon.rs
+kind: file-index
+lang: rust
+rank: 0.004736
+links: [[src/paint.rs]] [[src/element.rs]] [[src/lib.rs]] [[src/canvas.rs]] [[src/font/raster.rs]] [[src/testing/mod.rs]] [[src/color.rs]] [[src/font/sfnt.rs]]
+generated_at: 2026-08-08T01:45:22.143Z
+---
+
+# examples/icon.rs  ·  rust  ·  101 LOC
+
+## Symbols
+
+- `main` (function) — L40
+- `draw_icon` (function) — L71
+
+## Graph
+
+```mermaid
+graph LR
+  c["icon.rs"]
+  x0["paint.rs"]
+  c --> x0
+  x1["element.rs"]
+  c --> x1
+  x2["lib.rs"]
+  c --> x2
+  x3["canvas.rs"]
+  c --> x3
+  x4["raster.rs"]
+  c --> x4
+  x5["mod.rs"]
+  c --> x5
+  x6["color.rs"]
+  c --> x6
+  x7["sfnt.rs"]
+  c --> x7
+```
+
+### References
+
+- [[src/paint.rs]] via `canvas`, `color`, `fill`
+- [[src/element.rs]] via `color`, `fill`
+- [[src/lib.rs]] via `canvas`, `color`
+- [[src/canvas.rs]] via `clear`, `fill_vertical`, `fill`
+- [[src/font/raster.rs]] via `fill`
+- [[src/testing/mod.rs]] via `canvas`
+- [[src/color.rs]] via `fade`
+- [[src/font/sfnt.rs]] via `skip`
+

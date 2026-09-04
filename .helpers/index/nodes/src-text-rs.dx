@@ -1,0 +1,125 @@
+---
+id: src/text.rs
+title: text.rs
+kind: file-index
+lang: rust
+rank: 0.063436
+links: [[src/paint.rs]] [[src/layout.rs]] [[src/canvas.rs]] [[src/font/mod.rs]] [[src/testing/font.rs]] [[src/image.rs]] [[src/font/outline.rs]] [[src/shell/fonts.rs]] [[src/widgets.rs]] [[src/style.rs]] [[src/shell/mod.rs]] [[src/font/sfnt.rs]]
+generated_at: 2026-08-08T01:45:22.140Z
+---
+
+# src/text.rs  ·  rust  ·  524 LOC
+
+## Symbols
+
+- `FontId` (class) — L55
+- `TextStyle` (class) — L67
+- `new` (method) — L80
+- `colored` (method) — L85
+- `sized` (method) — L90
+- `tracked` (method) — L108
+- `GlyphKey` (class) — L115
+- `Face` (class) — L124
+- `Fonts` (class) — L130
+- `new` (method) — L137
+- `add` (method) — L142
+- `len` (method) — L148
+- `is_empty` (method) — L153
+- `set_scale` (method) — L162
+- `font` (method) — L172
+- `metrics` (method) — L177
+- `measure` (method) — L188
+- `fit` (method) — L201
+- `wrap` (method) — L221
+- `draw` (method) — L232
+- `draw_truncated` (method) — L259
+- `device_size` (method) — L282
+- `advance_of` (method) — L290
+- `rendered_glyph` (method) — L309
+- `resolve` (method) — L346
+- `wrap_paragraph` (method) — L363
+- `default` (method) — L408
+- `quantise` (function) — L414
+- `glyph_of` (function) — L419
+- `next_boundary` (function) — L424
+- `split_lines` (function) — L429
+- `tests` (module) — L444
+- `sizes_round_to_the_quantum` (method) — L448
+- `a_style_can_be_recoloured_and_resized_without_losing_its_face` (method) — L455
+- `a_style_is_set_solid_until_it_is_tracked` (method) — L462
+- `tracking_reaches_every_path_by_going_through_the_one_advance` (method) — L470
+- `hard_line_breaks_are_found_without_their_terminators` (method) — L483
+- `carriage_returns_are_not_part_of_the_line` (method) — L488
+- `a_trailing_newline_leaves_an_empty_last_line` (method) — L496
+- `text_with_no_fonts_loaded_measures_to_nothing_rather_than_panicking` (method) — L501
+- `drawing_with_no_fonts_loaded_marks_nothing` (method) — L510
+- `the_first_character_of_an_empty_string_still_advances_the_wrap` (method) — L520
+
+## Graph
+
+```mermaid
+graph LR
+  c["text.rs"]
+  x0["paint.rs"]
+  x0 --> c
+  x1["layout.rs"]
+  x1 --> c
+  x2["canvas.rs"]
+  x2 --> c
+  x3["mod.rs"]
+  x3 --> c
+  x4["font.rs"]
+  x4 --> c
+  x5["image.rs"]
+  x5 --> c
+  x6["outline.rs"]
+  x6 --> c
+  x7["fonts.rs"]
+  x7 --> c
+  x8["widgets.rs"]
+  c --> x8
+  x9["style.rs"]
+  x9 --> c
+  x10["mod.rs"]
+  x10 --> c
+  x11["sfnt.rs"]
+  x11 --> c
+  x12["geom.rs"]
+  x12 --> c
+  x13["controls.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/widgets.rs]] via `draw`, `add`, `wrap`
+- [[src/input.rs]] via `is_empty`
+
+### Referenced by
+
+- [[src/paint.rs]] via `resolve`, `len`, `is_empty`, `colored`, `measure`
+- [[src/layout.rs]] via `measure`, `wrap`, `is_empty`, `metrics`, `resolve`
+- [[src/canvas.rs]] via `is_empty`, `fill_mask`, `clear`
+- [[src/font/mod.rs]] via `len`, `metrics`, `render`, `has_glyph`, `glyph_for`
+- [[src/testing/font.rs]] via `metrics`, `len`
+- [[src/image.rs]] via `len`, `is_empty`
+- [[src/font/outline.rs]] via `len`, `then`
+- [[src/shell/fonts.rs]] via `measure`, `add`, `font`, `tracked`
+- [[src/style.rs]] via `resolve`, `tracked`, `offset`, `is_empty`
+- [[src/shell/mod.rs]] via `set_scale`, `draw`
+- [[src/font/sfnt.rs]] via `len`
+- [[src/geom.rs]] via `is_empty`, `offset`
+- [[examples/controls.rs]] via `add`, `draw`
+- [[tests/layout.rs]] via `wrap`, `add`
+- [[tests/recipes.rs]] via `draw`, `add`
+- [[src/element.rs]] via `is_empty`, `round`
+- [[src/testing/mod.rs]] via `is_empty`, `set_scale`, `add`
+- [[src/app.rs]] via `set_scale`, `is_empty`, `render`
+- [[tests/interaction.rs]] via `add`, `draw`
+- [[src/memory.rs]] via `len`, `is_empty`
+- [[src/shell/platform/macos.rs]] via `len`, `is_empty`
+- [[src/shell/platform/x11.rs]] via `len`, `is_empty`
+- [[src/theme.rs]] via `tracked`
+- [[tests/rendering.rs]] via `draw`, `add`
+- [[examples/gallery.rs]] via `draw`
+
