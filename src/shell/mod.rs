@@ -52,7 +52,7 @@ pub mod embedded_fonts;
 pub mod event_mapping;
 pub mod fonts;
 pub mod pixel_conversion;
-mod platform;
+pub mod platform;
 
 use crate::app::App;
 use crate::canvas::Canvas;

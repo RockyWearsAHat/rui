@@ -58,3 +58,26 @@ mod backend;
 mod backend;
 
 pub(crate) use backend::Window;
+
+// Public re-exports for testing platform-specific backends
+#[cfg(all(
+    unix,
+    not(target_os = "macos"),
+    not(target_arch = "wasm32"),
+    feature = "wayland"
+))]
+pub mod wayland {
+    //! Wayland backend for testing.
+    pub use super::backend::Window;
+}
+
+#[cfg(all(
+    unix,
+    not(target_os = "macos"),
+    not(target_arch = "wasm32"),
+    not(feature = "wayland")
+))]
+pub mod wayland {
+    //! Wayland backend stub (when wayland feature is disabled, x11 is used).
+    pub struct Window; // Stub to keep module interface consistent
+}
