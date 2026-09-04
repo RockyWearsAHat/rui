@@ -146,9 +146,11 @@ enum WaylandEvent {
     PointerButton {
         button: PointerButton,
         pressed: bool,
+        x: f32,
+        y: f32,
     },
     /// Scroll event.
-    Scroll { delta_y: f32 },
+    Scroll { delta_x: f32, delta_y: f32 },
     /// Keyboard event.
     Key { key: Key, pressed: bool },
 }
@@ -212,21 +214,41 @@ impl Backend for Window {
                 WaylandEvent::PointerMotion { x, y } => {
                     events.push(Event::PointerMoved(Point::new(x, y)));
                 }
-                WaylandEvent::PointerButton { button, pressed } => {
+                WaylandEvent::PointerButton {
+                    button,
+                    pressed,
+                    x,
+                    y,
+                } => {
                     if pressed {
-                        events.push(Event::PointerDown(button));
+                        events.push(Event::PointerDown {
+                            position: Point::new(x, y),
+                            button,
+                        });
                     } else {
-                        events.push(Event::PointerUp(button));
+                        events.push(Event::PointerUp {
+                            position: Point::new(x, y),
+                            button,
+                        });
                     }
                 }
-                WaylandEvent::Scroll { delta_y } => {
-                    events.push(Event::Scroll(Point::new(0.0, delta_y)));
+                WaylandEvent::Scroll { delta_x, delta_y } => {
+                    events.push(Event::Scrolled {
+                        x: delta_x,
+                        y: delta_y,
+                    });
                 }
                 WaylandEvent::Key { key, pressed } => {
                     if pressed {
-                        events.push(Event::KeyDown(key, None));
+                        events.push(Event::KeyDown {
+                            key,
+                            modifiers: Modifiers::default(),
+                        });
                     } else {
-                        events.push(Event::KeyUp(key));
+                        events.push(Event::KeyUp {
+                            key,
+                            modifiers: Modifiers::default(),
+                        });
                     }
                 }
             }
@@ -404,6 +426,8 @@ mod tests {
             .push(WaylandEvent::PointerButton {
                 button: PointerButton::Primary,
                 pressed: true,
+                x: 100.0,
+                y: 200.0,
             });
 
         let mut events = Vec::new();
@@ -455,10 +479,10 @@ mod tests {
         })
         .unwrap();
 
-        window
-            .event_queue
-            .borrow_mut()
-            .push(WaylandEvent::Scroll { delta_y: -120.0 });
+        window.event_queue.borrow_mut().push(WaylandEvent::Scroll {
+            delta_x: 0.0,
+            delta_y: -120.0,
+        });
 
         let mut events = Vec::new();
         window
