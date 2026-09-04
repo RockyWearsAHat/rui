@@ -14,12 +14,46 @@
 //! - Presents frames using DMA-BUF or shm (shared memory) buffers
 
 use crate::theme::Appearance;
-use crate::{Canvas, Event, Point};
+use crate::{Canvas, Event, Key, Modifiers, Point, PointerButton};
 use std::cell::RefCell;
 use std::env;
 use std::time::Duration;
 
 use crate::shell::{Backend, Error, WindowOptions};
+
+/// Translate Wayland button constants to rui PointerButton.
+/// Wayland button codes from linux/input-event-codes.h.
+fn translate_button(button: u32) -> PointerButton {
+    match button {
+        0x110 => PointerButton::Primary,   // BTN_LEFT
+        0x111 => PointerButton::Secondary, // BTN_RIGHT
+        0x112 => PointerButton::Middle,    // BTN_MIDDLE
+        _ => PointerButton::Primary,       // Default
+    }
+}
+
+/// Translate XKB keysym values to rui Key enum.
+/// XKB keysyms are used by the Wayland wl_keyboard protocol.
+fn translate_keysym(keysym: u32) -> Option<Key> {
+    match keysym {
+        // Function keys
+        0xff1b => Some(Key::Escape),
+        0xff0d => Some(Key::Enter),
+        0xff09 => Some(Key::Tab),
+        0xff08 => Some(Key::Backspace),
+        0xffff => Some(Key::Delete),
+        0xff51 => Some(Key::Left),
+        0xff52 => Some(Key::Up),
+        0xff53 => Some(Key::Right),
+        0xff54 => Some(Key::Down),
+        0xff50 => Some(Key::Home),
+        0xff57 => Some(Key::End),
+        0xff55 => Some(Key::PageUp),
+        0xff56 => Some(Key::PageDown),
+        // Punctuation is handled separately; modifiers return None
+        _ => None,
+    }
+}
 
 /// Detect system appearance (light/dark mode) via environment variables or system settings.
 /// Uses a fallback chain: tries environment variables first, then defaults to Light.
@@ -103,6 +137,22 @@ impl ShmBuffer {
     }
 }
 
+/// Event for Wayland event queue simulation.
+#[derive(Clone, Debug)]
+enum WaylandEvent {
+    /// Pointer motion event with coordinates.
+    PointerMotion { x: f32, y: f32 },
+    /// Pointer button event.
+    PointerButton {
+        button: PointerButton,
+        pressed: bool,
+    },
+    /// Scroll event.
+    Scroll { delta_y: f32 },
+    /// Keyboard event.
+    Key { key: Key, pressed: bool },
+}
+
 /// Minimal Wayland surface state for basic window management and event handling.
 /// A full implementation would include surface buffers, input device tracking,
 /// and wl_shell/xdg_shell protocol state machines.
@@ -119,6 +169,8 @@ pub struct Window {
     /// Shared memory buffer for frame presentation (wl_shm protocol).
     /// Interior mutability allows updating the buffer during `present()` which takes `&self`.
     shm_buffer: RefCell<Option<ShmBuffer>>,
+    /// Event queue for testing (mock events).
+    event_queue: RefCell<Vec<WaylandEvent>>,
 }
 
 impl Backend for Window {
@@ -140,6 +192,7 @@ impl Backend for Window {
             scale_factor: 1.0,
             appearance,
             shm_buffer: RefCell::new(None),
+            event_queue: RefCell::new(Vec::new()),
         })
     }
 
@@ -149,14 +202,35 @@ impl Backend for Window {
         events: &mut Vec<Event>,
         _redraw: &mut dyn FnMut(&Self),
     ) -> Result<(), Error> {
-        // Placeholder: In a full implementation, this would:
-        // 1. Use wl_event_queue to poll for events from the compositor
-        // 2. Translate wl_pointer events (motion, button) to rui Event::Pointer
-        // 3. Translate wl_keyboard events (keymap, key) to rui Event::Key
-        // 4. Handle wl_surface callbacks (frame, leave) for rendering hints
-        // 5. Respect the timeout parameter for backpressure
-        //
-        // For now, return without adding events (keeps the loop responsive).
+        // Process events from the Wayland event queue.
+        // In a full implementation, this would call wl_display_dispatch_pending()
+        // to poll the compositor for new events. For now, we drain mock events
+        // from the queue to support testing.
+        let mut queue = self.event_queue.borrow_mut();
+        for wayland_event in queue.drain(..) {
+            match wayland_event {
+                WaylandEvent::PointerMotion { x, y } => {
+                    events.push(Event::PointerMoved(Point::new(x, y)));
+                }
+                WaylandEvent::PointerButton { button, pressed } => {
+                    if pressed {
+                        events.push(Event::PointerDown(button));
+                    } else {
+                        events.push(Event::PointerUp(button));
+                    }
+                }
+                WaylandEvent::Scroll { delta_y } => {
+                    events.push(Event::Scroll(Point::new(0.0, delta_y)));
+                }
+                WaylandEvent::Key { key, pressed } => {
+                    if pressed {
+                        events.push(Event::KeyDown(key, None));
+                    } else {
+                        events.push(Event::KeyUp(key));
+                    }
+                }
+            }
+        }
         Ok(())
     }
 
@@ -225,26 +299,204 @@ mod tests {
 
     #[test]
     fn appearance_detection_returns_valid_appearance() {
-        // detect_appearance() should always return a valid Appearance value.
-        // This test runs regardless of desktop environment or environment variables.
         let appearance = detect_appearance();
         match appearance {
-            Appearance::Light | Appearance::Dark => {
-                // Valid appearance detected
-            }
+            Appearance::Light | Appearance::Dark => {}
         }
-        // If we get here without panic, the test passes
     }
 
     #[test]
     fn appearance_detection_is_deterministic() {
-        // Multiple calls to detect_appearance() should return the same value
-        // (environment doesn't change during a single test run)
         let appearance1 = detect_appearance();
         let appearance2 = detect_appearance();
-        assert_eq!(
-            appearance1, appearance2,
-            "Appearance detection should be deterministic"
-        );
+        assert_eq!(appearance1, appearance2);
+    }
+
+    #[test]
+    fn button_translation_maps_wayland_left_button() {
+        let button = translate_button(0x110); // BTN_LEFT
+        assert_eq!(button, PointerButton::Primary);
+    }
+
+    #[test]
+    fn button_translation_maps_wayland_right_button() {
+        let button = translate_button(0x111); // BTN_RIGHT
+        assert_eq!(button, PointerButton::Secondary);
+    }
+
+    #[test]
+    fn button_translation_maps_wayland_middle_button() {
+        let button = translate_button(0x112); // BTN_MIDDLE
+        assert_eq!(button, PointerButton::Middle);
+    }
+
+    #[test]
+    fn button_translation_defaults_unknown_buttons() {
+        let button = translate_button(0xFFFF); // Unknown button
+        assert_eq!(button, PointerButton::Primary);
+    }
+
+    #[test]
+    fn keysym_translation_maps_escape() {
+        let key = translate_keysym(0xff1b);
+        assert_eq!(key, Some(Key::Escape));
+    }
+
+    #[test]
+    fn keysym_translation_maps_enter() {
+        let key = translate_keysym(0xff0d);
+        assert_eq!(key, Some(Key::Enter));
+    }
+
+    #[test]
+    fn keysym_translation_maps_backspace() {
+        let key = translate_keysym(0xff08);
+        assert_eq!(key, Some(Key::Backspace));
+    }
+
+    #[test]
+    fn keysym_translation_maps_arrow_keys() {
+        assert_eq!(translate_keysym(0xff51), Some(Key::Left));
+        assert_eq!(translate_keysym(0xff53), Some(Key::Right));
+        assert_eq!(translate_keysym(0xff52), Some(Key::Up));
+        assert_eq!(translate_keysym(0xff54), Some(Key::Down));
+    }
+
+    #[test]
+    fn pump_processes_pointer_motion_events() {
+        let mut window = Window::open(&WindowOptions {
+            width: 800.0,
+            height: 600.0,
+        })
+        .unwrap();
+
+        window
+            .event_queue
+            .borrow_mut()
+            .push(WaylandEvent::PointerMotion { x: 100.0, y: 200.0 });
+
+        let mut events = Vec::new();
+        window
+            .pump(Duration::from_secs(0), &mut events, &mut |_| {})
+            .unwrap();
+
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            Event::PointerMoved(point) => {
+                assert_eq!(point.x, 100.0);
+                assert_eq!(point.y, 200.0);
+            }
+            _ => panic!("Expected PointerMoved event"),
+        }
+    }
+
+    #[test]
+    fn pump_processes_pointer_button_events() {
+        let mut window = Window::open(&WindowOptions {
+            width: 800.0,
+            height: 600.0,
+        })
+        .unwrap();
+
+        window
+            .event_queue
+            .borrow_mut()
+            .push(WaylandEvent::PointerButton {
+                button: PointerButton::Primary,
+                pressed: true,
+            });
+
+        let mut events = Vec::new();
+        window
+            .pump(Duration::from_secs(0), &mut events, &mut |_| {})
+            .unwrap();
+
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            Event::PointerDown(button) => {
+                assert_eq!(*button, PointerButton::Primary);
+            }
+            _ => panic!("Expected PointerDown event"),
+        }
+    }
+
+    #[test]
+    fn pump_processes_keyboard_events() {
+        let mut window = Window::open(&WindowOptions {
+            width: 800.0,
+            height: 600.0,
+        })
+        .unwrap();
+
+        window.event_queue.borrow_mut().push(WaylandEvent::Key {
+            key: Key::Escape,
+            pressed: true,
+        });
+
+        let mut events = Vec::new();
+        window
+            .pump(Duration::from_secs(0), &mut events, &mut |_| {})
+            .unwrap();
+
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            Event::KeyDown(key, _) => {
+                assert_eq!(*key, Key::Escape);
+            }
+            _ => panic!("Expected KeyDown event"),
+        }
+    }
+
+    #[test]
+    fn pump_processes_scroll_events() {
+        let mut window = Window::open(&WindowOptions {
+            width: 800.0,
+            height: 600.0,
+        })
+        .unwrap();
+
+        window
+            .event_queue
+            .borrow_mut()
+            .push(WaylandEvent::Scroll { delta_y: -120.0 });
+
+        let mut events = Vec::new();
+        window
+            .pump(Duration::from_secs(0), &mut events, &mut |_| {})
+            .unwrap();
+
+        assert_eq!(events.len(), 1);
+        match &events[0] {
+            Event::Scroll(point) => {
+                assert_eq!(point.y, -120.0);
+            }
+            _ => panic!("Expected Scroll event"),
+        }
+    }
+
+    #[test]
+    fn pump_clears_event_queue_after_processing() {
+        let mut window = Window::open(&WindowOptions {
+            width: 800.0,
+            height: 600.0,
+        })
+        .unwrap();
+
+        window
+            .event_queue
+            .borrow_mut()
+            .push(WaylandEvent::PointerMotion { x: 100.0, y: 200.0 });
+
+        let mut events = Vec::new();
+        window
+            .pump(Duration::from_secs(0), &mut events, &mut |_| {})
+            .unwrap();
+
+        // Process again; queue should be empty
+        events.clear();
+        window
+            .pump(Duration::from_secs(0), &mut events, &mut |_| {})
+            .unwrap();
+        assert_eq!(events.len(), 0);
     }
 }
