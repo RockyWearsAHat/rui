@@ -1,59 +1,55 @@
 [package]
-name = "rui"
+name = "rui-native"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 repository = "https://github.com/RockyWearsAHat/rui"
 readme = "README.md"
-description = "A declarative interface library for Rust: structure, style, and behaviour in one language, drawn by its own renderer, with no dependencies."
+description = "A declarative interface library for Rust with native platform backends (macOS, Windows, X11, WASM): structure, style, and behaviour in one language, drawn by its own renderer, with no dependencies."
 keywords = ["gui", "ui", "declarative", "renderer", "no-std-deps"]
 categories = ["gui", "rendering"]
 exclude = ["/.github"]
 
-# Nothing on every native platform: the TrueType parser, the glyph
-# rasteriser, the text layout, the PNG writer, and the platform windows are all
-# in this crate, so there is nothing left to depend on. wasm32 is the one
-# exception, and only because there is no other way to reach a `<canvas>` — see
-# `src/shell/platform/wasm.rs`.
+[lib]
+name = "rui"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 
+[features]
+wayland = []
 
+# Except in a browser, where the platform is not callable from Rust at all: its
+# windows and its canvases are JavaScript objects, and `wasm-bindgen` *is* the
+# call into them. Scoped to `wasm32` rather than added outright, so a build for
+# any of the three native platforms still resolves to no dependencies.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = [
-    "Window",
+    "CanvasRenderingContext2d",
+    "console",
     "Document",
+    "DomRect",
     "Element",
+    "Event",
     "EventTarget",
     "HtmlCanvasElement",
-    "CanvasRenderingContext2d",
     "ImageData",
-    "CssStyleDeclaration",
-    "MouseEvent",
+    "InputEvent",
     "KeyboardEvent",
-    "WheelEvent",
     "MediaQueryList",
-    "console",
+    "MouseEvent",
+    "Performance",
+    "Window",
+    "WheelEvent",
 ] }
-# A drop-in `std::time::Instant`/`Duration` that works on wasm32-unknown-unknown,
-# where the real one panics: there is no clock syscall for it to call.
-web-time = "1"
 
-[features]
-# Developer reload: a window that notices it has been rebuilt, saves what it is
-# showing, and starts the new build in its place. Off, and off is the only
-# setting a released program should ever be built with — it watches a file on
-# every frame and it can restart the process, neither of which belongs in
-# something somebody else runs.
-#
-# It adds no dependency. The application supplies its own save and restore, so
-# this library never has to know how to write `S` down; see `src/reload.rs`.
-reload = []
-
-# Wayland backend for Linux systems using the Wayland display protocol.
-# Off by default; X11 is the default backend on Unix. Enable with `--features wayland`.
-wayland = []
+# The rendering suite builds the `<canvas>` the backend looks for, and reads the
+# pixels back out of it afterwards, inside a browser `wasm-bindgen-test` drives.
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+web-sys = { version = "0.3", features = ["HtmlElement", "Node"] }
 
 [lints.rust]
 # Not `forbid`: opening a window is the one thing that cannot be done without
@@ -63,9 +59,8 @@ wayland = []
 unsafe_code = "deny"
 missing_docs = "warn"
 
-[[test]]
-name = "claude_md_recipe_verification"
-path = "tests/claude_md_recipe_verification.rs"
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
 
 [profile.release]
 opt-level = 3
