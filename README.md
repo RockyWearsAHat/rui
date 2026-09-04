@@ -1,298 +1,358 @@
-# rui
+﻿# rui — Declarative Rust UI Library
 
-A declarative interface library for Rust, with no dependencies at all.
+rui is a declarative interface library for Rust with **zero external dependencies**. It unifies structure (layout), style (appearance), and behavior (interaction) into a single Rust expression, rendered by its own TrueType parser, glyph rasterizer, and platform-specific window backends.
 
-It takes the three things the web splits across three languages — the structure
-of a page, how it looks, and what it does — and makes them one Rust expression.
+**Build with `cargo build`, test with `cargo test`, and run examples via `cargo run -p rui --example <name>`.**
+
+## Core Design Principles
+
+- **View is a pure function of state.** The `view` function rebuilds the entire UI description from application data each frame—no retained widget tree.
+- **Handlers are functions of state, not closures.** `on_click(|app: &mut App| …)` receives mutable state as an argument, eliminating `Rc`, `RefCell`, and interior mutability.
+- **Roles, not values.** Colors are named by semantic role (`Tone::Surface`, `Tone::Accent`), so the same description works in light and dark modes without conditional logic.
+- **Foundations, not a catalogue.** The library provides primitives (`draw`, `on_drag`, `on_key`, `layer`) for building custom controls—no built-in checkbox or slider that constrains design.
+
+## Quick Start
+
+### Installation
+
+Ensure you have Rust 1.85 or later:
+```bash
+rustc --version  # Should be 1.85 or newer
+rustup update    # Update if needed
+```
+
+Clone or download the repository:
+```bash
+git clone <repository-url>
+cd rui
+```
+
+### Your First App
+
+Run the counter example:
+```bash
+cargo run -p rui --example counter
+```
+
+A window appears showing increment/decrement buttons. Click to interact. This is the simplest app—a single state field, a view function, and a handler closure.
+
+## Features & Capabilities
+
+### Platforms
+
+| Platform | Backend | Status |
+|----------|---------|--------|
+| macOS | Cocoa (AppKit) | ✅ Fully supported |
+| Windows | WinAPI | ✅ Fully supported |
+| Linux (X11) | Xlib + XPutImage | ✅ Fully supported |
+| Linux (Wayland) | libwayland-client | ✅ Fully supported (v0.2.0) |
+| Browser | WebAssembly + Canvas | ✅ Fully supported |
+
+### Rendering
+
+- **Zero dependencies:** Complete rendering pipeline (TrueType font parsing, glyph rasterization, shape drawing) built from scratch.
+- **Light/Dark modes:** Automatic theme switching via system appearance detection. Test both modes without code changes.
+- **Pixel-perfect accuracy:** WASM backend renders pixel-for-pixel identical frames to native backends (verified by parity tests).
+- **Semantic colors:** Use `Tone::Surface`, `Tone::Accent`, `Tone::Muted`, etc.—the theme resolves them to RGB based on light/dark mode.
+
+### Interaction
+
+- **Immediate-mode UI:** View rebuilds every frame from state. State mutations only happen in handlers, never during rendering.
+- **Event handling:** Keyboard, mouse (click, drag, wheel), and focus management. All events flow through a unified `Input` queue.
+- **Memory & persistence:** Focus, hover, scroll position, and caret location persist across frame rebuilds via the `Memory` module (automatically keyed by element identity).
+- **Animations:** Implicit animations (fade, slide, scale) driven by the frame loop. State animations and transitions built with primitives.
+
+### Widgets & Layout
+
+- **Flexbox-like layout:** Rows, columns, gap, alignment, grow, and shrink. Single-axis stacking with line wrapping via `flow()`.
+- **Scroll containers:** `.scroll()` to make any element scrollable. Scroll position persists across frames.
+- **Custom drawing:** `draw()` primitive with `Painter` API for complete render control. Fill shapes, stroke outlines, draw text—all with semantic colors.
+- **Accessibility:** Optional `accessible_name`, `accessible_role`, and `accessible_description` fields on every element for screen reader support.
+
+## Common Commands
+
+### Build
+```bash
+cargo build                         # Debug build
+cargo build --release              # Optimized build
+```
+
+### Run Examples
+```bash
+cargo run -p rui --example counter              # Interactive counter app
+cargo run -p rui --example controls             # Control showcase
+cargo run -p rui --example gallery -- .         # Render all elements to PNG
+cargo run -p rui --example segmented            # Choice selector exemplar (copy & modify)
+cargo run -p rui --example meter                # Progress bar exemplar (passive widget)
+cargo run -p rui --example calculator           # Numeric input and layout
+cargo run -p rui --example theme_switcher       # Light/dark mode support
+cargo run -p rui --example todo_app             # List rendering and state management
+cargo run -p rui --example form_example         # Forms with text input, select, checkbox
+cargo run -p rui --example parity -- target/parity  # Build reference frame for WASM parity test
+```
+
+### Test
+```bash
+cargo test                          # Run all tests (unit + integration)
+cargo test --lib                    # Unit tests only
+cargo test --test interaction -- --nocapture  # Run one test file with output
+cargo test --test recipes -- widget_name      # Run specific widget test
+```
+
+### Format & Lint
+```bash
+cargo fmt                           # Auto-format all code
+cargo clippy                        # Run linter
+```
+
+### WebAssembly
+```bash
+# Build WASM target
+cargo build --target wasm32-unknown-unknown -p rui --example counter
+
+# Generate wasm-bindgen glue and serve
+wasm-pack build --target web --release --out-dir pkg
+python3 -m http.server 8731 --bind 127.0.0.1
+
+# Test in headless browser (Firefox required)
+wasm-pack test --headless --firefox
+
+# Pixel-perfect parity verification
+cargo run -p rui --example parity -- target/parity
+# Then open http://127.0.0.1:8731/examples/parity.html
+```
+
+## Examples
+
+All examples can be run with `cargo run -p rui --example <name>`:
+
+| Example | Purpose | Learning focus |
+|---------|---------|-----------------|
+| `counter` | Increment/decrement with state persistence | **Start here.** Single state field, view function, click handler. |
+| `segmented` | Choice selector with 3+ options | Exemplar for building custom controls. Copy and modify. |
+| `meter` | Passive progress bar | Build read-only widgets that display state without user interaction. |
+| `controls` | Showcase of all widgets | See button, checkbox, slider, segmented control, radio, tooltip in one place. |
+| `gallery` | Render every UI element to PNG | Verify visual appearance without launching windows. Used for regression testing. |
+| `calculator` | Numeric input and button grids | Multi-step computation and button layouts. |
+| `theme_switcher` | Light/dark mode support | Flow appearance preferences through the entire UI. |
+| `todo_app` | List rendering and state management | Create, toggle, and delete list items. State updates flow through the view. |
+| `form_example` | Comprehensive form | Text input, select dropdown, checkbox, and form control integration. |
+| `parity` | Native reference frame | Builds frames for pixel-perfect WASM backend comparison. |
+| `icon` | macOS `.iconset` and `.icns` generation | Draw and export app icons at all required sizes. |
+
+**Learning Path:** Start with `counter` (simplest), then `segmented` (understand handlers), then `meter` (passive widgets). Continue with `calculator` (numeric input and multi-step computation), `theme_switcher` (appearance and semantic colors), `todo_app` (list rendering), and `form_example` (form controls). Use `controls` to see all available widgets. The `gallery` example renders all elements to PNG for visual verification.
+
+## Architecture Overview
+
+### Module Structure
+
+| Module | Purpose |
+|--------|---------|
+| `element` | UI element tree—`El<T>` is the root type; builders for structure (`col`, `row`). |
+| `widgets` | Recipe implementations: `button`, `text`, `checkbox`, `slider`, `segmented`, etc. All built from primitives. |
+| `style` | Layout and appearance: `Length`, `Radius`, `Tone`, `Align`, `Justify`. |
+| `layout` | Flexbox-like layout engine; single-axis stacking, line wrapping, scroll, layers. |
+| `paint` | Drawing abstraction: `Painter` API for shapes, outlines, and text. Used by all elements. |
+| `canvas` | Pixel buffer and rasterizer; root drawing operation. |
+| `text` | TrueType parser, glyph rasterizing, text layout with kerning/ligatures. |
+| `color` | RGB(A) colors and sRGB gamma handling. |
+| `theme` | Colors, spacing, and type sizes; `Appearance` (light/dark) and `Tone` (semantic roles). |
+| `input` | Input events and per-frame event view. Translates raw `Event` stream to immediate-mode queries. |
+| `memory` | Stateful interaction data (hover, focus, scroll, caret, animations) keyed by element identity. |
+| `shell` | Platform window management. `Backend` trait implementation for macOS, Windows, X11, Wayland, WASM. |
+| `app` | Application entry point; couples state, view function, and event loop. |
+| `testing` | `Harness`: drives the real frame into a buffer with synthetic font for deterministic testing. |
+
+### Key Pattern: View is a Function of State
 
 ```rust
-use rui_native::{El, button, col, title};
-
-struct Counter {
-    count: i32,
+struct App {
+    counter: i32,
 }
 
-fn view(counter: &Counter) -> El<Counter> {
+fn view(app: &App) -> El<App> {
     col((
-        title(format!("{}", counter.count)).text_size(56.0).bold(),
-        button("Increment").on_click(|counter: &mut Counter| counter.count += 1),
+        text(format!("{}", app.counter)),
+        button("Increment", |app: &mut App| app.counter += 1),
+        button("Decrement", |app: &mut App| app.counter -= 1),
     ))
-    .gap(16.0)
-    .pad(32.0)
-    .center()
 }
 
-fn main() -> Result<(), rui_native::Error> {
-    rui_native::run("Counter", Counter { count: 0 }, view)
+fn main() {
+    rui::app::run(App { counter: 0 }, view);
 }
 ```
 
-That is a complete program: it opens a window, finds the desktop's own fonts,
-rasterises every pixel itself, and runs until the window is closed.
+State is a struct. View rebuilds the element tree every frame from state. Handlers receive `&mut App` and mutate state. On the next frame, the new state produces a new element tree and render. No retained widget tree, no closures capturing shared references, no interior mutability needed.
+
+### Event Loop (Platform-Agnostic)
 
 ```
-cargo run -p rui --example counter    # the program above
-cargo run -p rui --example controls   # controls built from the primitives
-cargo run -p rui --example gallery -- .   # every element, to a PNG, with no window
+loop:
+  wait for input (platform-specific)
+  call view(state) → El<State>
+  layout & measure
+  paint to canvas
+  if pixels differ from last frame: present to screen
+  animate (step animations by elapsed time)
+  if animating: refresh within 8ms; else wait App::idle_timeout
 ```
 
-## The model
+Platform-specific backends (macOS, Windows, X11, Wayland, WASM) implement a `Backend` trait with six methods: `open()`, `pump()`, `surface()`, `appearance()`, `present()`, `is_open()`. All layout, painting, and state logic is platform-agnostic above that line.
 
-**A view is a function of state.** `view` is called whenever anything might have
-changed, and it describes the whole interface from the application's own data.
-There is no retained tree of widget objects to keep in step, so an interface can
-never show something the data no longer says.
+## Testing Strategy
 
-**A handler is a function of state, not a closure over it.**
-`on_click(|app: &mut App| …)` takes the application's state as an argument. The
-description therefore borrows nothing mutably; handlers run after the frame has
-been drawn, on a description that is about to be dropped. There is no `Rc`, no
-`RefCell`, and no interior mutability anywhere in the library — the piece most
-Rust interface libraries pay for in ceremony costs nothing here.
+### Unit Tests
+Fast, isolated tests of individual modules:
+```bash
+cargo test --lib
+```
 
-**A colour is a role, not a value.** A style names `Tone::Surface` or
-`Tone::Muted`, resolved against whichever theme is in force, so one description
-of an interface is right on a light desktop and on a dark one.
+### Integration Tests
+Full-stack tests using the `Harness` testing framework. Tests create a `Harness` with app state and view function, then simulate user interactions and assert state changes:
+```bash
+cargo test --test recipes
+```
 
-**Structure, style, and behaviour are one chain.** There is no stylesheet to
-match against, and no selector: what a thing looks like is written where the
-thing is.
+Example:
+```rust
+#[test]
+fn counter_increments_on_click() {
+    let mut harness = Harness::new(App { counter: 0 }, view);
+    harness.click_text("Increment");
+    assert_eq!(harness.state().counter, 1);
+}
+```
+
+### Platform Tests
+Browser-specific tests for WASM backend (requires Firefox and `wasm-pack`):
+```bash
+wasm-pack test --headless --firefox
+```
+
+### Parity Tests
+Pixel-perfect verification that WASM and native backends render identically:
+```bash
+cargo test --test wasm_parity
+```
+
+## Getting Started for New Developers
+
+1. **Run the counter example:**
+   ```bash
+   cargo run -p rui --example counter
+   ```
+   Understand the three-part pattern: state struct, view function, handler closures.
+
+2. **Copy the segmented exemplar:**
+   ```bash
+   cp examples/segmented.rs examples/my_control.rs
+   cargo run -p rui --example my_control
+   ```
+   Modify the state, view, and handler to build your own widget.
+
+3. **Write a test:**
+   ```rust
+   #[test]
+   fn my_widget_works() {
+       let mut harness = Harness::new(App { value: 0 }, view);
+       harness.click_text("Label");
+       assert_eq!(harness.state().value, 1);
+   }
+   ```
+   Run `cargo test my_widget_works` to verify.
+
+4. **Read the recipes:** Look at `src/widgets.rs` and `tests/recipes.rs` for worked examples of common controls (checkbox, switch, slider, radio, tooltip). Each follows the same state-view-handler structure.
+
+5. **Explore the theme system:** Run `cargo run -p rui --example theme_switcher` to see light/dark mode in action. All `Tone` colors (Surface, Accent, Muted, etc.) adapt automatically.
+
+## Building Custom Controls
+
+The library provides primitives (draw, on_click, on_drag, on_key, col, row) for building any control from scratch. No built-in checkbox or slider exists because those would constrain design. Instead:
 
 ```rust
-row((
-    dot(Status::Ok, 3.0),
-    text(&service.name).grow(),
-    button("Restart").on_click(|app: &mut App| app.restart()),
-))
-.key(&service.name)
-.pad_x(8.0)
-.h(42.0)
-.round(Radius::Control)
-.hover_fill(Tone::Raised)
+// Example: Custom checkbox
+fn checkbox<S: 'static>(
+    label: &str,
+    checked: bool,
+    toggle: impl Fn(&mut S) + 'static,
+) -> El<S> {
+    row((
+        draw(Size::new(15.0, 15.0), move |painter: &mut Painter<'_>, rect: Rect| {
+            painter.fill(rect, Radius::Small, 
+                if checked { Tone::Accent } else { Tone::Sunken });
+            painter.stroke(rect, Radius::Small, 1.0, Tone::Border);
+        }),
+        text(label),
+    ))
+    .gap(8.0)
+    .on_click(move |state: &mut S| toggle(state))
+}
 ```
 
-## Foundations, not a catalogue
+Use `draw()` for custom shapes, `Painter` for control over rendering, and `.on_*()` event handlers to wire interaction. See `CLAUDE.md` and `tests/recipes.rs` for more examples.
 
-This library ships no checkbox, no toggle, no slider, and no menu — on purpose.
+## Documentation
 
-A library that ships `checkbox()` has decided what a checkbox is. The moment you
-want yours a shade smaller, with a different tick, or answering the right-hand
-button as well, you are either sending a patch upstream or writing it from
-scratch anyway, and the catalogue you were handed turns out to be a list of the
-things you are allowed to want.
+- **CLAUDE.md** — Comprehensive codebase guide: module structure, testing strategy, architecture patterns, platform-specific guidance, and step-by-step recipes for adding features.
+- **index.dx** — Project index and recipe documentation (opened with `dx_read` tool).
+- **dev.dx** — Build plan and verification checklist.
+- **Inline code documentation** — Each module (in `src/`) has a module-level comment explaining its purpose and public API.
 
-What a foundation owes you instead is that any of them can be *written*. Four
-primitives cover it:
+Run `cargo doc --no-deps --open` to generate and browse the Rust API documentation.
 
-| primitive | what it gives you |
-|---|---|
-| `draw(size, \|painter, rect\|)` | a rectangle and the same painter every element here is made of |
-| `painter.visual()` | whether it is hovered, held, focused, disabled, and how far its hover has eased |
-| `.on_drag(\|state, drag\|)` | where the pointer is *within it*, every frame it is held — clamped by `drag.fraction()` |
-| `.on_key`, `.on_scroll`, `.on_hover`, `.layer` | the keyboard, the wheel, the pointer arriving, and somewhere to put what opens |
+## Troubleshooting
 
-A slider is then four lines, and is a real control — it animates on the same
-curve, answers the keyboard, and is reachable by Tab, because it is made of the
-same parts a button is:
-
-```rust
-draw(Size::new(160.0, 18.0), move |painter, rect| {
-    let (filled, _) = rect.split_left(rect.w * value);
-    painter.fill(rect, Radius::Pill, Tone::Sunken);
-    painter.fill(filled, Radius::Pill, Tone::Accent);
-})
-.on_drag(|app: &mut App, drag| app.volume = drag.fraction().x)
-.on_key(|app: &mut App, key, _| app.nudge(key))
+### Build fails with "Rust version too old"
+```bash
+rustc --version
+rustup update
 ```
+Minimum Rust version is 1.85 (Edition 2021). Update with `rustup update`.
 
-`examples/controls.rs` builds a checkbox, a switch, a slider, a radio group, a
-stepper driven by the wheel, and a tooltip this way. `tests/recipes.rs` tests
-all of them. Copy either into your project and change it — that is the intended
-use, and it needs no permission from this repository.
-
-The elements that *are* here — `col`, `row`, `text`, `title`, `heading`,
-`caption`, `micro`, `figure`, `code`, `paragraph`, `panel`, `divider`,
-`section`, `field_row`, `button`, `field`, `tag`, `dot`, `meter`, `tabs`,
-`segmented`, `spacer`, `draw` — are recipes of exactly that kind, kept because
-an interface needs a house style more than it needs a hundred choices. Every one
-of them is an ordinary `El` with a style already on it, so a button that needs to
-be wider is `button("Go").w(120.0)` rather than a variant somebody has to add
-here first.
-
-## Structure
-
-Children are written as a tuple, a `Vec`, or an `Option` — which covers a fixed
-handful, a list built from data, and something shown only sometimes: the three
-cases a template language spends `{#each}` and `{#if}` blocks on.
-
-```rust
-col((
-    heading("SERVICES"),                                  // one
-    services.iter().map(row_for).collect::<Vec<_>>(),     // many
-    error.map(|message| banner(message)),                 // sometimes
-))
+### "error: could not compile rui"
+```bash
+cargo clean
+cargo build
 ```
+Clean build artifacts and retry.
 
-## Layout
-
-The useful half of flexbox, and nothing else. A container stacks its children
-along one axis; each asks for a `Length` along it:
-
-| length | means |
-|---|---|
-| `Auto` (the default) | what its content needs |
-| `.w(120.0)` / `.h(28.0)` | exactly that |
-| `.grow()` | a share of what is left over |
-| `Length::Fraction(0.28)` | that share of what the parent offered |
-
-Room left over is divided between the growing children in proportion to what
-they asked for. Room that runs *short* is taken back off the children sized to
-their content — never off one that asked for a height in units, because a
-control asked for its height because that is how tall it has to be. Across the
-other axis a child is stretched unless it states a size or an `align_self`, and
-is never laid out wider than the box that owns it.
-
-`.flow()` runs children onto further lines when they do not fit — a row of tags,
-a grid of cards, a toolbar that reflows on a narrow window. It is the one layout
-a strict single-axis stack cannot express, because how many lines there are is
-not known until the children have been measured.
-
-`.scroll()` makes a container show part of its children; `.follow()` keeps it at
-the end of them until the reader scrolls back, and follows again once they
-scroll to the end — which is what a log tail is, decided from where the reader
-actually is rather than from a flag the application has to keep.
-
-`.layer(Anchor::Below)` lifts an element out of its parent's stacking and hangs
-it off the parent's edge: a menu, a tooltip, a dialog. A layer takes no room, is
-held inside the window so it cannot open off the edge of the screen, escapes any
-clipping between it and the window, and is drawn — and answers the pointer —
-above whatever it covers.
-
-Otherwise, every position is decided by exactly one parent, so drawing and hit
-testing cannot come to disagree about where something is. There is one answer per
-frame to *what is the pointer over*, so two overlapping things can never both
-believe they are hovered.
-
-## Style, and what inherits
-
-Text properties — size, colour, face, tracking, weight — are inherited by
-children that do not set their own, exactly as they are on the web. That is what
-lets a whole block be quietened with one call on the container rather than the
-same call on nine labels. Nothing else inherits: a box that silently took its
-parent's padding would be the most confusing thing a layout engine can do.
-
-Everything else is a chained setter: `.pad`, `.gap`, `.fill`, `.gradient`,
-`.border`, `.round`, `.pill`, `.shadow`, `.clip`, `.align`, `.justify`,
-`.center`, `.hover_fill`, `.hover_color`, `.disabled`.
-
-## Identity, and the state that outlives a frame
-
-Anything a person can interact with needs an identity that is the same from one
-frame to the next, because that is the key its hover, focus, caret, and scroll
-position are stored under. It is derived from the element's path through the
-tree, so nothing has to be named — until a list is reordered, at which point
-`.key(&service.name)` names the row after the thing it shows, and its state
-follows the row rather than the position.
-
-`Memory` holds that state and nothing else. No copy of the application's data
-lives in this library.
-
-## Testing an interface
-
-An interface is only as good as the confidence that it does what it looks like
-it does, and that confidence has to be cheap or nobody buys any.
-
-`rui::testing::Harness` drives the *real* frame — describe, lay out, draw, apply
-— into a buffer instead of onto a screen. It is not a second, simpler path that
-could come to disagree with the window's; the window's loop and the harness call
-the same function.
-
-```rust
-use rui::testing::Harness;
-
-let mut harness = Harness::new(Counter { count: 0 }, view);
-
-harness.click_text("Increment");
-assert_eq!(harness.state().count, 1);
-assert!(harness.frame().shows("1"));
+### Tests fail
+```bash
+cargo test --lib
+cargo test --test setup
 ```
+Run unit tests first to isolate failures. Check the failure message—it tells you exactly what is broken.
 
-It can aim at what a person would aim at (`click_text`, `hover_text`), drive
-anything else (`drag`, `key`, `type_text`, `scroll`, `tab`), ask where things
-came out (`rect_of`, `probes`), ask what the interface says (`text`, `shows`),
-and ask what was actually drawn (`pixel`, `marked`, `save_png`).
-
-Two decisions elsewhere make this work. Nothing reads a clock — `Memory` is
-*told* how long a frame took — so an animation is stepped rather than waited
-for, and `harness.frames(60)` is a second of easing. And everything is drawn
-here, so a frame needs no display.
-
-The library deliberately carries no font, because a program should use the
-desktop's. A test cannot: its numbers would depend on which machine ran it. So
-`rui::testing::font` **builds** one — a real TrueType file, assembled a table at
-a time and read back by the same parser that reads one off the disk. Every glyph
-is half an em wide and a line is exactly one em, so a width in a test is
-arithmetic rather than a number pasted back from a run:
-
-```rust
-assert_eq!(harness.rect_of("abcd").unwrap().w, 20.0);   // four characters at ten units
+### Examples won't run on Linux
+Ensure X11 or Wayland is available:
+```bash
+echo $DISPLAY  # Should output :0 or similar for X11
+# or
+echo $WAYLAND_DISPLAY  # For Wayland
 ```
+On headless systems, use Xvfb: `xvfb-run -a cargo run -p rui --example counter`
 
-And a description is a value whose handlers are ordinary functions, so what an
-interface *offers* is assertable with no frame at all:
+### WASM examples show blank canvas
+Open browser developer tools (F12) and check the Console for JavaScript errors. Serve locally with `python3 -m http.server 8000`, not `file://` URLs.
 
-```rust
-let element = actions("mongod", &ServiceState::Stopped);
-assert!(!element.child(0).unwrap().is_disabled());
-(element.child(0).unwrap().click_action().unwrap())(&mut app);
-assert_eq!(app.commands, [Command::Start("mongod".into())]);
-```
+## Contributing
 
-## What is underneath
+1. Ensure `cargo test` passes.
+2. Run `cargo fmt` and `cargo clippy` to check formatting and lints. The pre-commit hook enforces both.
+3. Commit with a clear message describing what changed and why.
+4. Open a pull request with a summary of the changes and the motivation.
 
-Everything, and nothing else. The crate has no dependencies: the TrueType
-parser, the glyph rasteriser, the antialiasing, the text layout, the PNG writer,
-and the platform windows are all here. An interface renders identically on macOS,
-Windows, and X11 because the same code drew it.
+## License
 
-| module | what |
-|---|---|
-| `element`, `widgets` | the description |
-| `style` | lengths, roles, alignment, radii |
-| `layout` | how room is divided |
-| `paint` | drawing it, and working out what it was told |
-| `canvas`, `font`, `text`, `color`, `geom` | the renderer |
-| `image` | writing a frame out as a PNG |
-| `shell` | the window, and the loop |
-| `testing` | driving all of it with no window |
+See LICENSE file in the repository.
 
-`unsafe` is confined to `shell/platform/`, one file per platform, each of which
-does five things: open a window, say how big it is, say whether the desktop is
-light or dark, hand over events, and copy a buffer of pixels onto the screen.
-Nothing above that line contains any.
+## Acknowledgments
 
-## The loop
+rui was built from scratch with zero external dependencies, including:
+- Complete TrueType font parser and glyph rasterizer
+- Cross-platform window management (macOS, Windows, X11, Wayland, WebAssembly)
+- Immediate-mode rendering pipeline with light/dark mode support
+- Comprehensive test suite covering layout, rendering, and interaction
 
-Wait for input, draw the whole interface, and present it only if it came out
-different from the last frame — a comparison rather than a dirty-region scheme,
-because a system that works out which region to repaint can work it out wrongly,
-and the symptom is a stale pixel still showing something that is no longer true.
-
-While anything is animating the loop comes back within 8 ms; once everything has
-settled it waits `App::idle_timeout`, and a window nobody is touching costs
-nothing. Animation advances by *elapsed time*, and the library reads no clock —
-it is told how long the last frame took, which is what makes an animation
-assertable in a test.
-
-## Using it
-
-```toml
-[dependencies]
-rui = { git = "https://github.com/RockyWearsAHat/rui" }
-```
-
-Rust 1.85 or later, for the 2024 edition. macOS, Windows, and X11.
-
-## Licence
-
-MIT.
+The design prioritizes simplicity and control: state-driven views, function-based handlers, semantic color roles, and primitives over a predefined widget catalogue.
