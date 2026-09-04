@@ -40,12 +40,14 @@ impl EventSequenceBuilder {
     }
 
     /// Add a pointer motion event.
+    #[allow(dead_code)]
     fn pointer_move(mut self, x: f32, y: f32) -> Self {
         self.events.push(MockWaylandEvent::PointerMotion { x, y });
         self
     }
 
     /// Add a pointer button down event.
+    #[allow(dead_code)]
     fn pointer_down(mut self, button: u32, x: f32, y: f32) -> Self {
         self.events
             .push(MockWaylandEvent::PointerButtonDown { button, x, y });
@@ -53,6 +55,7 @@ impl EventSequenceBuilder {
     }
 
     /// Add a pointer button up event.
+    #[allow(dead_code)]
     fn pointer_up(mut self, button: u32, x: f32, y: f32) -> Self {
         self.events
             .push(MockWaylandEvent::PointerButtonUp { button, x, y });
@@ -60,12 +63,14 @@ impl EventSequenceBuilder {
     }
 
     /// Add a pointer leave event.
+    #[allow(dead_code)]
     fn pointer_leave(mut self) -> Self {
         self.events.push(MockWaylandEvent::PointerLeft);
         self
     }
 
     /// Add a key down event.
+    #[allow(dead_code)]
     fn key_down(mut self, keysym: u32, text: Option<char>) -> Self {
         self.events.push(MockWaylandEvent::KeyDown { keysym, text });
         self
@@ -314,6 +319,50 @@ fn wayland_key_translation_maps_keysyms() {
             panic!("Expected KeyUp event");
         }
     }
+    println!();
+}
+
+/// Test: EventSequenceBuilder supports full keyboard event cycle (KeyDown + KeyUp).
+/// Demonstrates the builder pattern for constructing reusable event sequences,
+/// including key release events.
+#[test]
+fn wayland_event_builder_supports_key_release() {
+    println!("\n=== EventSequenceBuilder: Full Keyboard Event Cycle ===");
+
+    // Build a parameterized sequence: key down, then key up (demonstrates full builder API)
+    let wayland_events = EventSequenceBuilder::new()
+        .key_down(28, None)
+        .key_up(28)
+        .build();
+
+    println!("Built sequence with {} events:", wayland_events.len());
+
+    let mut rui_events = Vec::new();
+    for (i, wayland_event) in wayland_events.iter().enumerate() {
+        println!("  [{}] {:?}", i + 1, wayland_event);
+        if let Some(rui_event) = wayland_event.to_rui_event() {
+            println!("      -> {:?}", rui_event);
+            rui_events.push(rui_event);
+        }
+    }
+
+    // Verify the full key cycle: down then up
+    assert_eq!(rui_events.len(), 2);
+    assert_eq!(
+        rui_events[0],
+        Event::KeyDown {
+            key: Key::Enter,
+            modifiers: Modifiers::NONE,
+        }
+    );
+    assert_eq!(
+        rui_events[1],
+        Event::KeyUp {
+            key: Key::Enter,
+            modifiers: Modifiers::NONE,
+        }
+    );
+    println!("✓ Full keyboard cycle (KeyDown + KeyUp) works via builder");
     println!();
 }
 
