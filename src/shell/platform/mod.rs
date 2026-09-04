@@ -230,7 +230,7 @@ pub mod x11 {
         not(target_arch = "wasm32"),
         feature = "wayland"
     ))]
-    pub use super::x11_impl::Window;
+    pub(crate) use super::x11_impl::Window;
 
     #[cfg(not(any(all(unix, not(target_os = "macos"), not(target_arch = "wasm32")),)))]
     /// Stub window type (non-Linux platform).
