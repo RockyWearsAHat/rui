@@ -6,7 +6,7 @@ It takes the three things the web splits across three languages — the structur
 of a page, how it looks, and what it does — and makes them one Rust expression.
 
 ```rust
-use rui::{El, button, col, title};
+use rui_native::{El, button, col, title};
 
 struct Counter {
     count: i32,
@@ -22,8 +22,8 @@ fn view(counter: &Counter) -> El<Counter> {
     .center()
 }
 
-fn main() -> Result<(), rui::Error> {
-    rui::run("Counter", Counter { count: 0 }, view)
+fn main() -> Result<(), rui_native::Error> {
+    rui_native::run("Counter", Counter { count: 0 }, view)
 }
 ```
 
