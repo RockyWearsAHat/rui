@@ -1,0 +1,92 @@
+---
+id: src/font/mod.rs
+title: mod.rs
+kind: file-index
+lang: rust
+rank: 0.029498
+links: [[src/font/sfnt.rs]] [[src/text.rs]] [[src/paint.rs]] [[src/testing/font.rs]] [[src/layout.rs]] [[src/font/raster.rs]] [[src/testing/mod.rs]] [[src/widgets.rs]] [[examples/controls.rs]] [[examples/gallery.rs]] [[src/canvas.rs]] [[src/font/outline.rs]]
+generated_at: 2026-08-08T01:45:22.141Z
+---
+
+# src/font/mod.rs  ·  rust  ·  378 LOC
+
+## Symbols
+
+- `outline` (module) — L30
+- `raster` (module) — L31
+- `sfnt` (module) — L32
+- `FontError` (class) — L47
+- `fmt` (method) — L66
+- `GlyphId` (class) — L91
+- `LineMetrics` (class) — L99
+- `line_height` (method) — L110
+- `RenderedGlyph` (class) — L117
+- `Font` (class) — L128
+- `face_count` (method) — L145
+- `parse` (method) — L150
+- `parse_face` (method) — L159
+- `glyph_for` (method) — L233
+- `has_glyph` (method) — L242
+- `metrics` (method) — L247
+- `advance` (method) — L260
+- `render` (method) — L276
+- `scale_for` (method) — L328
+- `fmt` (method) — L335
+- `tests` (module) — L346
+- `nonsense_bytes_are_not_a_font` (method) — L350
+- `a_truncated_font_is_refused_rather_than_panicking` (method) — L356
+- `errors_explain_themselves` (method) — L364
+- `line_height_is_the_sum_of_the_three_measurements` (method) — L374
+
+## Graph
+
+```mermaid
+graph LR
+  c["mod.rs"]
+  x0["sfnt.rs"]
+  c --> x0
+  x1["text.rs"]
+  c --> x1
+  x2["paint.rs"]
+  c --> x2
+  x3["font.rs"]
+  x3 --> c
+  x4["layout.rs"]
+  x4 --> c
+  x5["raster.rs"]
+  c --> x5
+  x6["mod.rs"]
+  c --> x6
+  x7["widgets.rs"]
+  c --> x7
+  x8["controls.rs"]
+  x8 --> c
+  x9["gallery.rs"]
+  x9 --> c
+  x10["canvas.rs"]
+  c --> x10
+  x11["outline.rs"]
+  c --> x11
+  x12["geom.rs"]
+  c --> x12
+```
+
+### References
+
+- [[src/font/sfnt.rs]] via `i16`, `glyph`, `u16`, `find`
+- [[src/text.rs]] via `len`, `metrics`, `render`, `has_glyph`, `glyph_for`
+- [[src/paint.rs]] via `field`, `line_height`, `metrics`
+- [[src/font/raster.rs]] via `finish`, `edge`
+- [[src/testing/mod.rs]] via `find`
+- [[src/widgets.rs]] via `field`
+- [[src/canvas.rs]] via `bounds`
+- [[src/font/outline.rs]] via `bounds`
+- [[src/geom.rs]] via `contains`
+
+### Referenced by
+
+- [[src/testing/font.rs]] via `metrics`, `glyph_for`, `render`
+- [[src/layout.rs]] via `line_height`, `metrics`
+- [[examples/controls.rs]] via `render`
+- [[examples/gallery.rs]] via `render`
+

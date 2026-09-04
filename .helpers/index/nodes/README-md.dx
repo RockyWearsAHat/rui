@@ -1,0 +1,26 @@
+---
+id: README.md
+title: README.md
+kind: file-index
+lang: markdown
+rank: 0.004736
+generated_at: 2026-08-08T01:45:22.143Z
+---
+
+# README.md  ·  markdown  ·  298 LOC
+
+## Headings
+
+- rui
+- The model
+- Foundations, not a catalogue
+- Structure
+- Layout
+- Style, and what inherits
+- Identity, and the state that outlives a frame
+- Testing an interface
+- What is underneath
+- The loop
+- Using it
+- Licence
+

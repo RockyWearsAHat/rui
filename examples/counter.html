@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rui Counter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+            display: block;
+            margin: 0 auto;
+            width: 960px;
+            height: 640px;
+        }
+
+        .info {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>rui Counter Example</h1>
+        <canvas id="surface"></canvas>
+        <div class="info" id="status">Loading wasm module…</div>
+    </div>
+
+    <script type="module">
+        // The page's whole part in this: give the canvas a drawing buffer at the
+        // display's own resolution, and start the interface. There is no frame
+        // loop here — `start_counter` asks the browser for frames itself, the
+        // same way `run()` asks the platform for them on a desktop, and it
+        // returns as soon as the first one is scheduled.
+        import init, * as rui from '/pkg/rui.js';
+
+        const surface = document.getElementById('surface');
+        const status = document.getElementById('status');
+        const scale = window.devicePixelRatio || 1;
+        surface.width = 960 * scale;
+        surface.height = 640 * scale;
+
+        try {
+            await init();
+            rui.start_counter();
+            status.textContent = 'Running. The buttons are drawn by rui — click them.';
+        } catch (error) {
+            console.error('rui failed to start:', error);
+            status.textContent = 'Error: ' + error;
+        }
+    </script>
+</body>
+
+</html>

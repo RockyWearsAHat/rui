@@ -1,0 +1,100 @@
+---
+id: src/theme.rs
+title: theme.rs
+kind: file-index
+lang: rust
+rank: 0.009308
+links: [[src/paint.rs]] [[src/widgets.rs]] [[src/color.rs]] [[src/lib.rs]] [[examples/gallery.rs]] [[examples/controls.rs]] [[src/testing/mod.rs]] [[src/app.rs]] [[src/element.rs]] [[src/text.rs]] [[examples/counter.rs]] [[tests/recipes.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# src/theme.rs  ·  rust  ·  643 LOC
+
+## Symbols
+
+- `Appearance` (class) — L18
+- `Palette` (class) — L42
+- `Metrics` (class) — L183
+- `Theme` (class) — L258
+- `new` (method) — L271
+- `is_dark` (method) — L287
+- `corner` (method) — L306
+- `corner_small` (method) — L314
+- `title` (method) — L332
+- `heading` (method) — L347
+- `body` (method) — L352
+- `body_strong` (method) — L357
+- `caption` (method) — L362
+- `figure` (method) — L373
+- `mono` (method) — L378
+- `state` (method) — L395
+- `micro` (method) — L405
+- `status` (method) — L410
+- `Status` (class) — L422
+- `tests` (module) — L434
+- `theme` (method) — L439
+- `the_dark_theme_knows_it_is_dark` (method) — L444
+- `text_is_legible_against_its_own_background_in_both_appearances` (method) — L450
+- `every_status_hue_stands_out_from_its_own_tint` (method) — L460
+- `accent_text_is_legible_on_the_accent` (method) — L472
+- `a_surface_shades_away_from_the_light_in_both_appearances` (method) — L482
+- `a_surface_is_shaded_subtly_rather_than_visibly_striped` (method) — L501
+- `the_accent_shades_from_light_to_deep` (method) — L511
+- `a_shadow_is_black_and_barely_there` (method) — L528
+- `the_accent_is_not_near_any_status_colour` (method) — L543
+- `motion_is_quick_enough_to_feel_attached_to_the_pointer` (method) — L560
+- `the_type_scale_ascends` (method) — L567
+- `the_fixed_width_face_is_reserved_for_what_the_machine_produced` (method) — L577
+- `only_small_capitals_are_opened_up` (method) — L594
+- `every_framed_thing_takes_the_same_corner_shape` (method) — L616
+- `a_panel_is_separated_from_the_window_by_value_as_well_as_by_its_outline` (method) — L630
+
+## Graph
+
+```mermaid
+graph LR
+  c["theme.rs"]
+  x0["paint.rs"]
+  x0 --> c
+  x1["widgets.rs"]
+  c --> x1
+  x2["color.rs"]
+  c --> x2
+  x3["lib.rs"]
+  c --> x3
+  x4["gallery.rs"]
+  x4 --> c
+  x5["controls.rs"]
+  x5 --> c
+  x6["mod.rs"]
+  x6 --> c
+  x7["app.rs"]
+  c --> x7
+  x8["element.rs"]
+  c --> x8
+  x9["text.rs"]
+  c --> x9
+  x10["counter.rs"]
+  x10 --> c
+  x11["recipes.rs"]
+  x11 --> c
+```
+
+### References
+
+- [[src/widgets.rs]] via `figure`, `title`, `caption`, `heading`, `micro`
+- [[src/color.rs]] via `luminance`
+- [[src/lib.rs]] via `theme`
+- [[src/app.rs]] via `state`
+- [[src/element.rs]] via `mono`
+- [[src/text.rs]] via `tracked`
+
+### Referenced by
+
+- [[src/paint.rs]] via `corner`, `corner_small`, `theme`
+- [[examples/gallery.rs]] via `micro`, `figure`, `heading`, `caption`, `title`
+- [[examples/controls.rs]] via `heading`, `caption`
+- [[src/testing/mod.rs]] via `state`
+- [[examples/counter.rs]] via `title`
+- [[tests/recipes.rs]] via `caption`
+

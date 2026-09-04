@@ -1,0 +1,101 @@
+---
+id: src/style.rs
+title: style.rs
+kind: file-index
+lang: rust
+rank: 0.018938
+links: [[src/paint.rs]] [[src/layout.rs]] [[examples/gallery.rs]] [[src/canvas.rs]] [[src/text.rs]] [[src/widgets.rs]] [[tests/layout.rs]] [[src/geom.rs]] [[src/app.rs]] [[src/color.rs]] [[src/element.rs]] [[src/image.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# src/style.rs  ·  rust  ·  514 LOC
+
+## Symbols
+
+- `Tone` (class) — L33
+- `resolve` (method) — L100
+- `ink` (method) — L132
+- `tint` (method) — L142
+- `from` (method) — L153
+- `Length` (class) — L160
+- `grow` (method) — L174
+- `Axis` (class) — L184
+- `Align` (class) — L193
+- `offset` (method) — L206
+- `Justify` (class) — L218
+- `Anchor` (class) — L237
+- `Radius` (class) — L257
+- `Face` (class) — L272
+- `Ink` (class) — L285
+- `default` (method) — L299
+- `style` (method) — L306
+- `Hover` (class) — L322
+- `is_empty` (method) — L333
+- `Style` (class) — L343
+- `InkOverride` (class) — L410
+- `over` (method) — L425
+- `default` (method) — L437
+- `has_decoration` (method) — L470
+- `tests` (module) — L476
+- `a_role_resolves_differently_in_the_two_appearances` (method) — L480
+- `an_exact_colour_ignores_the_theme` (method) — L489
+- `unset_text_properties_come_from_the_parent` (method) — L500
+- `only_a_filling_length_asks_for_leftover_space` (method) — L509
+
+## Graph
+
+```mermaid
+graph LR
+  c["style.rs"]
+  x0["paint.rs"]
+  x0 --> c
+  x1["layout.rs"]
+  x1 --> c
+  x2["gallery.rs"]
+  x2 --> c
+  x3["canvas.rs"]
+  x3 --> c
+  x4["text.rs"]
+  c --> x4
+  x5["widgets.rs"]
+  x5 --> c
+  x6["layout.rs"]
+  x6 --> c
+  x7["geom.rs"]
+  x7 --> c
+  x8["app.rs"]
+  x8 --> c
+  x9["color.rs"]
+  c --> x9
+  x10["element.rs"]
+  x10 --> c
+  x11["image.rs"]
+  x11 --> c
+  x12["memory.rs"]
+  x12 --> c
+  x13["macos.rs"]
+  x13 --> c
+```
+
+### References
+
+- [[src/text.rs]] via `resolve`, `tracked`, `offset`, `is_empty`
+- [[src/color.rs]] via `mix`
+
+### Referenced by
+
+- [[src/paint.rs]] via `resolve`, `has_decoration`, `is_empty`, `style`, `offset`
+- [[src/layout.rs]] via `over`, `style`, `grow`, `is_empty`, `resolve`
+- [[examples/gallery.rs]] via `grow`
+- [[src/canvas.rs]] via `is_empty`
+- [[src/widgets.rs]] via `grow`
+- [[tests/layout.rs]] via `grow`
+- [[src/geom.rs]] via `is_empty`
+- [[src/app.rs]] via `is_empty`
+- [[src/element.rs]] via `is_empty`
+- [[src/image.rs]] via `is_empty`
+- [[src/memory.rs]] via `is_empty`
+- [[src/shell/platform/macos.rs]] via `is_empty`
+- [[src/shell/platform/x11.rs]] via `is_empty`
+- [[src/testing/mod.rs]] via `is_empty`
+

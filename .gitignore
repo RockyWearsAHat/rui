@@ -1,18 +1,39 @@
-# What the compiler makes.
-/target
-Cargo.lock
 
-# What the examples write when they are asked to draw with no window open.
-*.png
-
-# Internal build/cache artifacts and framework state
 .cache/
-.doc/
-.engine/
 .claude/
-# dx: the local index is rebuildable from .doc/repo.dxcp
-.doc/index.db
-.doc/index.db-wal
-.doc/index.db-shm
+.doc/
 .doc/coverage.jsonl
+.doc/index.db
+.doc/index.db-shm
+.doc/index.db-wal
 .doc/local.dxcp
+.DS_Store
+.engine/
+.env
+.env.*.local
+.env.local
+.idea/
+.module-index.md
+.vscode/
+*.png
+*.swo
+*.swp
+*~
+/target
+# dx: the local index is rebuildable from .doc/repo.dxcp
+# Environment files
+# Generated documentation
+# IDE and editor configuration
+# Internal build/cache artifacts and framework state
+# Node.js (package manager and dependencies)
+# System cache and state files
+# What the compiler makes.
+# What the examples write when they are asked to draw with no window open.
+Cargo.lock
+node_modules/
+npm-debug.log
+package-lock.json
+yarn-error.log
+yarn.lock
+.claude/worktrees/
+.claude/worktrees/

@@ -1,0 +1,135 @@
+---
+id: __project_map__
+title: Project Map — rui
+kind: project-map
+commit: 0cd12bd
+generated_at: 2026-08-08T01:45:22.133Z
+---
+
+# Project Map — rui
+
+41 files · 1059 symbols · commit 0cd12bd
+
+## Top modules (by importance)
+
+1. [[src/element.rs]] · rust · 854 LOC — `Action`, `TextAction`, `DragAction`, `KeyAction`
+2. [[src/canvas.rs]] · rust · 1268 LOC — `Corner`, `size`, `grown`, `resized`
+3. [[src/geom.rs]] · rust · 403 LOC — `Point`, `new`, `offset`, `Size`
+4. [[src/widgets.rs]] · rust · 467 LOC — `col`, `row`, `spacer`, `text`
+5. [[src/text.rs]] · rust · 524 LOC — `FontId`, `TextStyle`, `new`, `colored`
+6. [[src/font/sfnt.rs]] · rust · 412 LOC — `Reader`, `at`, `position`, `skip`
+7. [[src/input.rs]] · rust · 539 LOC — `PointerButton`, `index`, `Phase`, `Drag`
+8. [[src/font/outline.rs]] · rust · 596 LOC — `Transform`, `for_glyph`, `component`, `apply`
+9. [[src/testing/mod.rs]] · rust · 590 LOC — `font`, `Probe`, `Harness`, `new`
+10. [[src/color.rs]] · rust · 211 LOC — `Color`, `rgb`, `rgba`, `with_alpha`
+11. [[src/memory.rs]] · rust · 556 LOC — `Id`, `new`, `with`, `index`
+12. [[src/paint.rs]] · rust · 862 LOC — `Deferred`, `Visual`, `Painter`, `new`
+13. [[src/font/mod.rs]] · rust · 378 LOC — `outline`, `raster`, `sfnt`, `FontError`
+14. [[src/lib.rs]] · rust · 164 LOC — `app`, `canvas`, `color`, `element`
+15. [[src/shell/platform/x11.rs]] · rust · 748 LOC — `Display`, `XWindow`, `Atom`, `Visual`
+16. [[src/style.rs]] · rust · 514 LOC — `Tone`, `resolve`, `ink`, `tint`
+17. [[src/shell/mod.rs]] · rust · 284 LOC — `fonts`, `platform`, `WindowOptions`, `Error`
+18. [[src/app.rs]] · rust · 265 LOC — `App`, `View`, `Condition`, `new`
+19. [[src/font/raster.rs]] · rust · 256 LOC — `Rasteriser`, `new`, `edge`, `deposit`
+20. [[src/layout.rs]] · rust · 783 LOC — `Ctx`, `solve`, `measure`, `measure_text`
+21. [[src/shell/platform/macos.rs]] · rust · 1041 LOC — `Object`, `Sel`, `ObserverContext`, `CgPoint`
+22. [[src/theme.rs]] · rust · 643 LOC — `Appearance`, `Palette`, `Metrics`, `Theme`
+23. [[src/shell/platform/windows.rs]] · rust · 698 LOC — `Handle`, `WordParameter`, `LongParameter`, `WindowClass`
+24. [[src/shell/platform/unsupported.rs]] · rust · 46 LOC — `Window`, `open`, `pump`, `surface`
+25. [[examples/gallery.rs]] · rust · 205 LOC — `Gallery`, `view`, `masthead`, `counts`
+26. [[examples/controls.rs]] · rust · 287 LOC — `checkbox`, `tick`, `switch`, `slider`
+27. [[tests/rendering.rs]] · rust · 191 LOC — `Nothing`, `Watched`, `showing`, `a_window_is_drawn_in_the_ground_of_whichever_appearance_is_in_force`
+28. [[tests/recipes.rs]] · rust · 256 LOC — `Settings`, `checkbox`, `switch`, `slider`
+29. [[tests/layout.rs]] · rust · 296 LOC — `Nothing`, `showing`, `a_run_of_text_is_as_wide_as_its_characters`, `text_at_a_larger_size_is_larger_in_both_directions`
+30. [[.github/workflows/ci.yml]] · yaml · 66 LOC
+
+## Project graph
+
+```mermaid
+graph LR
+  n0["element.rs"]
+  n1["canvas.rs"]
+  n2["geom.rs"]
+  n3["widgets.rs"]
+  n4["text.rs"]
+  n5["sfnt.rs"]
+  n6["input.rs"]
+  n7["outline.rs"]
+  n8["mod.rs"]
+  n9["color.rs"]
+  n10["memory.rs"]
+  n11["paint.rs"]
+  n12["mod.rs"]
+  n13["lib.rs"]
+  n14["x11.rs"]
+  n15["style.rs"]
+  n16["mod.rs"]
+  n17["app.rs"]
+  n18["raster.rs"]
+  n19["layout.rs"]
+  n20["macos.rs"]
+  n21["theme.rs"]
+  n22["windows.rs"]
+  n23["unsupported.rs"]
+  n17 --> n1
+  n17 --> n0
+  n17 --> n7
+  n17 --> n2
+  n17 --> n6
+  n17 --> n10
+  n17 --> n16
+  n17 --> n15
+  n17 --> n8
+  n17 --> n4
+  n1 --> n17
+  n1 --> n9
+  n1 --> n0
+  n1 --> n7
+  n1 --> n18
+  n1 --> n5
+  n1 --> n2
+  n1 --> n6
+  n1 --> n11
+  n1 --> n15
+  n1 --> n8
+  n1 --> n4
+  n9 --> n0
+  n0 --> n1
+  n0 --> n2
+  n0 --> n6
+  n0 --> n13
+  n0 --> n11
+  n0 --> n15
+  n0 --> n8
+  n0 --> n4
+  n0 --> n3
+  n12 --> n1
+  n12 --> n7
+  n12 --> n18
+  n12 --> n5
+  n12 --> n2
+  n12 --> n11
+  n12 --> n8
+  n12 --> n4
+  n12 --> n3
+  n7 --> n1
+  n7 --> n5
+  n7 --> n6
+  n7 --> n14
+  n7 --> n4
+  n18 --> n1
+  n18 --> n0
+  n18 --> n11
+  n5 --> n1
+  n5 --> n14
+  n5 --> n8
+  n5 --> n4
+  n2 --> n1
+  n2 --> n7
+  n2 --> n6
+  n2 --> n15
+  n2 --> n4
+  n6 --> n1
+  n6 --> n7
+```
+

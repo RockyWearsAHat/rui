@@ -1,0 +1,114 @@
+---
+id: src/memory.rs
+title: memory.rs
+kind: file-index
+lang: rust
+rank: 0.038175
+links: [[src/input.rs]] [[src/paint.rs]] [[src/layout.rs]] [[src/testing/mod.rs]] [[src/canvas.rs]] [[src/shell/mod.rs]] [[tests/interaction.rs]] [[src/app.rs]] [[src/geom.rs]] [[src/text.rs]] [[src/font/sfnt.rs]] [[src/shell/platform/x11.rs]]
+generated_at: 2026-08-08T01:45:22.141Z
+---
+
+# src/memory.rs  ·  rust  ·  556 LOC
+
+## Symbols
+
+- `Id` (class) — L33
+- `new` (method) — L40
+- `with` (method) — L45
+- `index` (method) — L50
+- `fnv1a` (function) — L59
+- `Response` (class) — L70
+- `none` (method) — L92
+- `Caret` (class) — L107
+- `Eased` (class) — L114
+- `Memory` (class) — L130
+- `new` (method) — L165
+- `focused` (method) — L170
+- `set_focus` (method) — L175
+- `active` (method) — L183
+- `press` (method) — L188
+- `offer_focus` (method) — L194
+- `caret` (method) — L199
+- `set_caret` (method) — L204
+- `scroll_offset` (method) — L209
+- `set_scroll_offset` (method) — L214
+- `content_height` (method) — L226
+- `set_content_height` (method) — L231
+- `request_frame` (method) — L241
+- `is_following` (method) — L246
+- `set_following` (method) — L251
+- `note_hover` (method) — L262
+- `begin_frame` (method) — L275
+- `is_animating` (method) — L290
+- `ease` (method) — L306
+- `end_frame` (method) — L328
+- `step_focus` (method) — L372
+- `tests` (module) — L378
+- `identifiers_are_stable_and_distinct` (method) — L382
+- `a_child_identifier_differs_from_its_parent` (method) — L390
+- `a_press_is_forgotten_when_nothing_is_held_any_more` (method) — L397
+- `tab_moves_focus_through_the_order_the_frame_drew` (method) — L405
+- `shift_tab_moves_backwards_and_wraps` (method) — L419
+- `tab_with_nothing_focusable_on_screen_changes_nothing` (method) — L433
+- `carets_of_fields_that_are_gone_do_not_accumulate` (method) — L441
+- `stepped` (method) — L451
+- `a_value_seen_for_the_first_time_starts_at_its_target` (method) — L456
+- `a_changed_target_is_approached_rather_than_jumped_to` (method) — L464
+- `an_animation_settles_exactly_and_then_stops_asking_for_frames` (method) — L480
+- `the_same_elapsed_time_moves_a_value_the_same_distance_at_any_frame_rate` (method) — L497
+- `a_stalled_frame_is_treated_as_a_slow_one_rather_than_a_leap` (method) — L518
+- `eased_values_nothing_draws_any_more_are_forgotten` (method) — L532
+- `scroll_offsets_are_remembered_per_area` (method) — L549
+
+## Graph
+
+```mermaid
+graph LR
+  c["memory.rs"]
+  x0["input.rs"]
+  x0 --> c
+  x1["paint.rs"]
+  x1 --> c
+  x2["layout.rs"]
+  x2 --> c
+  x3["mod.rs"]
+  c --> x3
+  x4["canvas.rs"]
+  c --> x4
+  x5["mod.rs"]
+  x5 --> c
+  x6["interaction.rs"]
+  x6 --> c
+  x7["app.rs"]
+  x7 --> c
+  x8["geom.rs"]
+  c --> x8
+  x9["text.rs"]
+  c --> x9
+  x10["sfnt.rs"]
+  c --> x10
+  x11["x11.rs"]
+  c --> x11
+  x12["style.rs"]
+  c --> x12
+```
+
+### References
+
+- [[src/testing/mod.rs]] via `press`, `scroll_offset`, `is_animating`, `end_frame`, `begin_frame`
+- [[src/canvas.rs]] via `is_empty`, `clear`
+- [[src/geom.rs]] via `contains`, `is_empty`
+- [[src/text.rs]] via `len`, `is_empty`
+- [[src/font/sfnt.rs]] via `position`
+- [[src/shell/platform/x11.rs]] via `position`
+- [[src/style.rs]] via `is_empty`
+
+### Referenced by
+
+- [[src/input.rs]] via `begin_frame`, `index`, `is_empty`, `any_held`
+- [[src/paint.rs]] via `press`, `set_following`, `begin_frame`, `set_scroll_offset`, `active`
+- [[src/layout.rs]] via `set_scroll_offset`, `scroll_offset`, `is_following`, `set_content_height`, `with`
+- [[src/shell/mod.rs]] via `end_frame`, `begin_frame`, `is_animating`
+- [[tests/interaction.rs]] via `press`
+- [[src/app.rs]] via `request_frame`, `end_frame`, `begin_frame`
+

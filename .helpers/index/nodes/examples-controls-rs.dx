@@ -1,0 +1,81 @@
+---
+id: examples/controls.rs
+title: controls.rs
+kind: file-index
+lang: rust
+rank: 0.005033
+links: [[src/element.rs]] [[src/paint.rs]] [[src/canvas.rs]] [[src/widgets.rs]] [[tests/recipes.rs]] [[src/font/raster.rs]] [[src/app.rs]] [[src/geom.rs]] [[src/testing/mod.rs]] [[src/lib.rs]] [[src/shell/mod.rs]] [[src/text.rs]]
+generated_at: 2026-08-08T01:45:22.142Z
+---
+
+# examples/controls.rs  ·  rust  ·  287 LOC
+
+## Symbols
+
+- `checkbox` (function) — L45
+- `tick` (function) — L75
+- `switch` (function) — L86
+- `slider` (function) — L104
+- `radio_group` (function) — L133
+- `stepper` (function) — L167
+- `with_tip` (function) — L188
+- `Panel` (class) — L204
+- `view` (function) — L214
+- `labelled` (function) — L263
+- `main` (function) — L267
+
+## Graph
+
+```mermaid
+graph LR
+  c["controls.rs"]
+  x0["element.rs"]
+  c --> x0
+  x1["paint.rs"]
+  c --> x1
+  x2["canvas.rs"]
+  c --> x2
+  x3["widgets.rs"]
+  c --> x3
+  x4["recipes.rs"]
+  c --> x4
+  x5["raster.rs"]
+  c --> x5
+  x6["app.rs"]
+  c --> x6
+  x7["geom.rs"]
+  c --> x7
+  x8["mod.rs"]
+  c --> x8
+  x9["lib.rs"]
+  c --> x9
+  x10["mod.rs"]
+  c --> x10
+  x11["text.rs"]
+  c --> x11
+  x12["theme.rs"]
+  c --> x12
+  x13["input.rs"]
+  c --> x13
+```
+
+### References
+
+- [[src/element.rs]] via `on_key`, `on_scroll`, `pad_x`, `on_drag`, `add`
+- [[src/paint.rs]] via `render`, `fill`, `visual`, `stroke`, `draw`
+- [[src/canvas.rs]] via `width`, `fill`, `size`, `stroke`, `height`
+- [[src/widgets.rs]] via `panel`, `heading`, `caption`, `row`, `col`
+- [[tests/recipes.rs]] via `radio_group`, `switch`, `checkbox`, `slider`
+- [[src/font/raster.rs]] via `fill`
+- [[src/app.rs]] via `run`, `render`, `size`
+- [[src/geom.rs]] via `inset`, `center`, `size`, `max_x`
+- [[src/testing/mod.rs]] via `size`, `key`, `text`
+- [[src/lib.rs]] via `code`, `text`
+- [[src/shell/mod.rs]] via `run`, `draw`
+- [[src/text.rs]] via `add`, `draw`
+- [[src/theme.rs]] via `heading`, `caption`
+- [[src/input.rs]] via `fraction`, `text`
+- [[src/font/mod.rs]] via `render`
+- [[src/font/outline.rs]] via `then`
+- [[src/shell/platform/macos.rs]] via `tick`
+
