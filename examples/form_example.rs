@@ -29,12 +29,18 @@ fn view(app: &App) -> El<App> {
         text("Registration Form").text_size(24.0),
         col((
             text("Full Name:").text_size(12.0),
-            widgets::text_input(&app.name).key("name"),
+            widgets::text_input(&app.name, |app: &mut App, new_value| {
+                app.name = new_value;
+            })
+            .key("name"),
         ))
         .gap(4.0),
         col((
             text("Email Address:").text_size(12.0),
-            widgets::text_input(&app.email).key("email"),
+            widgets::text_input(&app.email, |app: &mut App, new_value| {
+                app.email = new_value;
+            })
+            .key("email"),
         ))
         .gap(4.0),
         col((
