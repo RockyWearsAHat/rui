@@ -1,80 +1,84 @@
-# Scout Findings - September 1, 2026
+# Scout Findings — rui Project (2026-09-04)
 
-**Status:** Worklist (index.dx block bulleted-list-7) identified as empty after previous scout run.
+## Understanding Section (Required)
 
-**Analysis:** All tests pass (260+ unit tests), all examples build successfully. Documentation is mostly complete but has identified gaps and ROADMAP items ready for work.
+**rui** is a declarative Rust UI library with zero external dependencies that compiles to native platforms (macOS via Cocoa, Windows via WinAPI, Linux via X11/Wayland) and WebAssembly. The architecture is platform-agnostic: a unified event loop drives five platform backends via a Backend trait, and all rendering flows through a Painter API that automatically respects light/dark themes.
 
-## Recommended Worklist Items (5 total)
+Build with `cargo build`, test with `cargo test`, run examples via `cargo run -p rui --example <name>`. The charter is to ship a production-ready UI toolkit built entirely from primitives, proven by pixel-perfect parity tests across all backends and media query verification for appearance correctness.
 
-The following items should be added to the worklist for autonomous dispatch:
+Key concepts: state → view function (pure, deterministic, rebuilds each frame) → element tree → layout engine → paint operations → Backend (platform-specific window/rendering) → screen. No interior mutability, no retained widget tree—the view describes the full UI from state, handlers receive mutable state as arguments, and all platform-specific code is isolated to six Backend trait methods (open, pump, surface, appearance, present, is_open).
 
-### 1. Fix documentation accuracy: clarify X11-only support on Linux
+---
 
-**Scope:** Documentation correction  
-**Priority:** High (clarity)
+## Proposed Worklist Items (3-5 priority items)
 
-CLAUDE.md and README currently state "X11/Wayland (via X11 server)" but only X11 backend is implemented. Update to clarify that Wayland is not yet supported (planned for v0.2.0).
+### [scout] [ask: charter-rui] Update CLAUDE.md — Wayland backend completed, remove "planned for v0.2.0"
 
-**Verification:**
-- grep for "Wayland" in CLAUDE.md and README returns only v0.2.0 ROADMAP references and template examples
-- Examples on X11-only systems run without error
-- No claims of current Wayland support remain in user-facing documentation
+**Status:** Verification ready
+**Why:** CLAUDE.md line 23 states "Wayland support is planned for v0.2.0" but the backend is fully implemented (src/shell/platform/wayland.rs, 18KB, with event handling, buffer management, appearance detection). This misleads developers about project completion status.
 
-### 2. Document 3 undocumented examples (calculator, theme_switcher, todo_app)
+**Verification:** 
+- `grep -c "planned for v0.2.0" CLAUDE.md` shows 1-2 matches → remove them
+- Confirm `ls src/shell/platform/wayland.rs` exists
+- Update module structure table in CLAUDE.md to list "Wayland (Wayland protocol)"
+- `git diff CLAUDE.md` shows Wayland references updated to past tense
 
-**Scope:** Documentation and audit  
-**Priority:** High (completeness)
+---
 
-Currently CLAUDE.md lists only 8 examples but 11 exist in examples/. Add calculator (numeric input), theme_switcher (appearance toggle), and todo_app (list rendering, stateful updates) to the examples table with descriptions and learning path placement.
+### [scout] [ask: charter-rui] Update CLAUDE.md — Accessibility fields implemented, move from future work to complete
 
-**Verification:**
-- CLAUDE.md examples table lists all 11 .rs files with accurate descriptions
-- `cargo build --examples` exits 0
-- Each example's docstring matches its CLAUDE.md description
-- Learning path updated to incorporate new examples appropriately
-
-### 3. Implement Wayland backend (src/shell/platform/wayland.rs)
-
-**Scope:** Major feature (ROADMAP v0.2.0)  
-**Priority:** Medium (ROADMAP alignment)
-
-Add native Wayland backend following Backend trait pattern established by X11 (Recipe 2). Handle pointer events, keyboard input, system appearance detection via wayland-client bindings. Auto-detect and use Wayland when available, fallback to X11.
+**Status:** Verification ready  
+**Why:** CLAUDE.md "Accessibility Framework" section exists and describes accessible_name, accessible_role, accessible_description fields on El<S>. However, documentation also states "Platform backend implementation (future work):" suggesting accessibility is not done. The fields exist but platform-specific export to NSAccessibility, UIA, ATK, ARIA is future work. Documentation needs clarification.
 
 **Verification:**
-- `cargo build --target x86_64-unknown-linux-gnu` succeeds
-- Backend-selection logic compiles and chooses correct platform
-- `cargo test --lib` passes (platform module doesn't affect core logic)
-- Basic event handling works via protocol mocks in unit tests
+- Confirm accessible_* fields exist in src/element.rs
+- Update CLAUDE.md structure to distinguish between "API complete" vs "platform export future work"  
+- Accessibility section updated with status: "API complete, platform export future (step 2 of 2)"
 
-### 4. Implement accessibility (a11y) framework foundation
+---
 
-**Scope:** API framework (ROADMAP v0.2.0)  
-**Priority:** Medium (prerequisite for backends)
+### [scout] [ask: charter-rui] Add Recipe 3: Form-Building Patterns (text_input, select, combobox)
 
-Add optional semantic annotations to El<S>: `accessible_name`, `accessible_role`, `accessible_description` fields. No backend integration yet; framework only. Verify existing code patterns (segmented, checkbox, meter) still build and render unchanged.
-
-**Verification:**
-- El<S> API compiles with new optional fields
-- `cargo test --lib` passes 100% (all 260+ tests)
-- Existing examples/counter runs unchanged
-- New fields properly documented in rustdoc
-
-### 5. Create v0.3.0 form widget template documentation
-
-**Scope:** Documentation template (ROADMAP v0.3.0 preparation)  
-**Priority:** Low (preparatory)
-
-Document patterns for text_input, select, combobox widgets (ROADMAP v0.3.0) using primitives and memory module for caret/selection state. Provide skeleton implementations showing state shape, view function with text layout, keyboard handler (arrow keys, backspace), and Harness test patterns.
+**Status:** Design + implementation  
+**Why:** CLAUDE.md includes comprehensive form control guidance (text_input, select, combobox implementations) but no Recipe document following the Recipe 1/2 structure (commits, phases, files touched, verification gates). Recipe 3 bridges the gap between exemplars (segmented, meter) and production form building, proving the pattern works end-to-end with state management + validation.
 
 **Verification:**
-- CLAUDE.md contains text_input skeleton with complete handler signature
-- Test skeleton using Harness showing keyboard event simulation
-- Reference to memory module for caret persistence
-- No actual widget implementation (template only)
+- Recipe 3 block in index.dx with commits, file list, phases, 3+ verification gates
+- `cargo test --test recipes -- text_input` passes
+- `cargo test --test recipes -- select` passes  
+- Commit message: "docs: Add Recipe 3 — Form-Building Patterns (text_input, select, combobox)"
 
-## Summary
+---
 
-- All 5 items use `[scout] [ask: charter-rui]` ask identifier
-- Each item has specific, measurable verification gates
-- Items are ordered by priority: documentation accuracy → completeness → ROADMAP alignment → preparation
-- No items require exploratory work; all have clear scope and success criteria
+### [scout] [ask: charter-rui] Audit and document examples/ — clarify purpose and learning path
+
+**Status:** Documentation  
+**Why:** 12 examples exist (counter, controls, calculator, form_example, etc.) but only high-level purpose is in CLAUDE.md. Each example should have inline comments explaining what it teaches and where it fits in the learning path. New contributors should land in examples/ and understand the progression.
+
+**Verification:**
+- Each .rs file has a doc comment block explaining its purpose
+- README.md examples section lists all 12 with learning path order
+- `cargo run -p rui --example <each> --release` succeeds
+- Examples follow "copy and modify" template pattern
+
+---
+
+### [scout] [ask: charter-rui] Performance baseline — profile rendering on counter example (all backends)
+
+**Status:** Measurement + documentation  
+**Why:** Project claims production-ready UI toolkit but provides no performance benchmarks. Frame time, memory usage, and rendering latency should be baselined on each backend (macOS/Windows/X11/WASM) to enable future optimization and regression detection.
+
+**Verification:**
+- Counter renders at 60 FPS, frame time <16ms (native)
+- WASM counter animates @ 60 FPS in Firefox, memory stable < 50MB
+- Baseline metrics documented in dev.dx or new performance.dx block
+- Commit: "perf: Add rendering performance baseline for counter example (all backends)"
+
+---
+
+## Notes
+
+- **Understanding section:** Cannot add to index.dx due to dx schema v5 issue. Recommend upgrading dx or manual fix after tools update.
+- **Wayland maturity:** Backend complete but lacks optimization review. Consider "perf: Wayland backend profiling" as follow-up.
+- **Accessibility:** API fields exist; platform export (NSAccessibility, UIA, ATK, ARIA) is future work.
+
