@@ -341,3 +341,26 @@ fn wasm_builds_for_target() {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn wayland_feature_flag_compiles_successfully() {
+    use std::process::Command;
+
+    // Verify that cargo build --features wayland compiles the wayland backend
+    let output = Command::new("cargo")
+        .arg("build")
+        .arg("--features")
+        .arg("wayland")
+        .arg("-p")
+        .arg("rui-native")
+        .output()
+        .expect("failed to run cargo build --features wayland");
+
+    assert!(
+        output.status.success(),
+        "wayland feature build failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
