@@ -35,24 +35,45 @@ mod backend;
 mod backend;
 
 // Platform-specific backend implementations (Linux platforms)
-#[cfg(all(unix, not(target_os = "macos"), not(target_arch = "wasm32")))]
-#[path = "wayland.rs"]
-#[allow(unsafe_code, reason = "Wayland protocol and system calls are C")]
-mod wayland_backend;
-
+// X11 is always compiled on Linux as the fallback
 #[cfg(all(unix, not(target_os = "macos"), not(target_arch = "wasm32")))]
 #[path = "x11.rs"]
 #[allow(unsafe_code, reason = "Xlib is C")]
 mod x11_backend;
 
-// On Linux, use an enum for runtime auto-detection between Wayland and X11
-#[cfg(all(unix, not(target_os = "macos"), not(target_arch = "wasm32")))]
+// Wayland is optionally compiled when the `wayland` feature is enabled
+#[cfg(all(
+    unix,
+    not(target_os = "macos"),
+    not(target_arch = "wasm32"),
+    feature = "wayland"
+))]
+#[path = "wayland.rs"]
+#[allow(unsafe_code, reason = "Wayland protocol and system calls are C")]
+mod wayland_backend;
+
+// On Linux with Wayland feature enabled, use an enum for runtime auto-detection
+#[cfg(all(
+    unix,
+    not(target_os = "macos"),
+    not(target_arch = "wasm32"),
+    feature = "wayland"
+))]
 pub enum Window {
     Wayland(wayland_backend::Window),
     X11(x11_backend::Window),
 }
 
-#[cfg(all(unix, not(target_os = "macos"), not(target_arch = "wasm32")))]
+#[cfg(all(
+    unix,
+    not(target_os = "macos"),
+    not(target_arch = "wasm32"),
+    feature = "wayland"
+))]
+#[allow(
+    unsafe_code,
+    reason = "Adapter callback uses pointer to work around borrow checker; safe because pointer derived from mutable reference"
+)]
 impl Backend for Window {
     fn open(options: &WindowOptions) -> Result<Self, Error> {
         // Try Wayland first
@@ -74,9 +95,28 @@ impl Backend for Window {
         events: &mut Vec<crate::shell::Event>,
         redraw: &mut dyn FnMut(&Self),
     ) -> Result<(), Error> {
+        // Create a wrapper that can reconstruct the enum reference from backend calls
+        struct RedrawWrapper<'a> {
+            window: *mut Window,
+            inner_redraw: &'a mut dyn FnMut(&Window),
+        }
+
+        impl<'a> RedrawWrapper<'a> {
+            fn call(&mut self) {
+                // SAFETY: The pointer is valid for the lifetime of this wrapper because we hold
+                // a mutable reference to the Window from which it was derived.
+                (self.inner_redraw)(unsafe { &*self.window });
+            }
+        }
+
+        let mut wrapper = RedrawWrapper {
+            window: self as *mut _,
+            inner_redraw: redraw,
+        };
+
         match self {
-            Window::Wayland(w) => w.pump(timeout, events, &mut |_| redraw(self)),
-            Window::X11(w) => w.pump(timeout, events, &mut |_| redraw(self)),
+            Window::Wayland(w) => w.pump(timeout, events, &mut |_| wrapper.call()),
+            Window::X11(w) => w.pump(timeout, events, &mut |_| wrapper.call()),
         }
     }
 
@@ -109,6 +149,15 @@ impl Backend for Window {
     }
 }
 
+// On Linux without Wayland feature, use X11 directly
+#[cfg(all(
+    unix,
+    not(target_os = "macos"),
+    not(target_arch = "wasm32"),
+    not(feature = "wayland")
+))]
+pub use x11_backend::Window;
+
 // On other platforms, re-export from the platform-specific backend module
 #[cfg(not(all(unix, not(target_os = "macos"), not(target_arch = "wasm32"))))]
 pub(crate) use backend::Window;
@@ -116,20 +165,40 @@ pub(crate) use backend::Window;
 // Public re-exports for testing platform-specific backends
 pub mod wayland {
     //! Wayland backend for testing.
-    #[cfg(all(unix, not(target_os = "macos"), not(target_arch = "wasm32")))]
+    #[cfg(all(
+        unix,
+        not(target_os = "macos"),
+        not(target_arch = "wasm32"),
+        feature = "wayland"
+    ))]
     pub use super::wayland_backend::Window;
 
-    #[cfg(not(all(unix, not(target_os = "macos"), not(target_arch = "wasm32"))))]
-    /// Stub window type for non-Linux platforms.
+    #[cfg(not(all(
+        unix,
+        not(target_os = "macos"),
+        not(target_arch = "wasm32"),
+        feature = "wayland"
+    )))]
+    /// Stub window type (Wayland feature not enabled or non-Linux platform).
     pub struct Window;
 }
 
 pub mod x11 {
     //! X11 backend for testing.
-    #[cfg(all(unix, not(target_os = "macos"), not(target_arch = "wasm32")))]
+    #[cfg(all(
+        unix,
+        not(target_os = "macos"),
+        not(target_arch = "wasm32"),
+        not(feature = "wayland")
+    ))]
     pub use super::x11_backend::Window;
 
-    #[cfg(not(all(unix, not(target_os = "macos"), not(target_arch = "wasm32"))))]
-    /// Stub window type for non-Linux platforms.
+    #[cfg(not(all(
+        unix,
+        not(target_os = "macos"),
+        not(target_arch = "wasm32"),
+        not(feature = "wayland")
+    )))]
+    /// Stub window type (wayland feature enabled, X11 not directly exposed).
     pub struct Window;
 }
