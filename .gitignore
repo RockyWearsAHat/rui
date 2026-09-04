@@ -17,3 +17,23 @@ Cargo.lock
 
 # Generated documentation
 .module-index.md
+
+# Node.js (package manager and dependencies)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and editor configuration
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
