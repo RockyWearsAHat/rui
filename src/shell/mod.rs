@@ -616,6 +616,22 @@ pub(crate) fn run<S>(
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+thread_local! {
+    /// The running program's own `requestAnimationFrame` chain, so
+    /// [`request_redraw`] can ask it for one more turn from outside it.
+    ///
+    /// A thread-local rather than a value handed back from [`run_wasm`]:
+    /// `run_wasm` returns before the program that called it does — `start_app`
+    /// hands control back to the browser the moment the first frame is
+    /// scheduled — so there is no live binding left in that caller's hands to
+    /// pass a fetch callback later. wasm is single-threaded, so a thread-local
+    /// is exactly as global as this program is ever going to get, and there is
+    /// only ever one browser window per program to hold here.
+    static WASM_TICK: std::cell::RefCell<Option<(web_sys::Window, std::rc::Rc<std::cell::RefCell<Option<wasm_bindgen::closure::Closure<dyn FnMut()>>>>)>> =
+        std::cell::RefCell::new(None);
+}
+
 /// The wasm32 twin of [`run`].
 ///
 /// [`run`] is a `while` loop that blocks on `Backend::pump` between frames,
@@ -702,12 +718,61 @@ pub(crate) fn run_wasm<S: 'static>(
         .map_err(|_| Error::Platform("could not schedule the first frame".into()))?;
     *tick.borrow_mut() = Some(closure);
 
+    // So `request_redraw` (below) can ask this same self-rescheduling chain
+    // for one more turn from outside it — a future's `.then`, not a DOM
+    // event, which is the one thing this loop does not already wake for. See
+    // `request_redraw`'s own doc for why that gap exists at all.
+    WASM_TICK.with(|cell| *cell.borrow_mut() = Some((browser, Rc::clone(&tick))));
+
     Ok(())
+}
+
+/// Asks the running program to draw one more frame.
+///
+/// For state a click did not change: [`App::redraw`](crate::App::redraw)
+/// covers a native window, whose `Backend::pump` blocks on the OS's own event
+/// queue and needs a nudge to stop waiting — but the wasm backend never
+/// blocks in the first place, it runs one `requestAnimationFrame` chain that
+/// reschedules itself forever, and that chain only ever wakes for a DOM
+/// event. Nothing about it hears a `fetch` promise resolve, because that
+/// resolution runs on the browser's microtask queue, entirely outside DOM
+/// events — a click that starts a fetch and a browser tab a person has not
+/// touched since both look, to that chain, like nothing happened. This asks
+/// the same chain for one more turn regardless, so a future that just wrote
+/// into some state the view reads shows up within a frame rather than
+/// waiting for the next incidental mouse move to surface it.
+///
+/// A no-op anywhere the program has not called [`run_wasm`] — before it has,
+/// on a native build, and inside [`crate::testing::Harness`], which draws
+/// frames on demand and was never waiting on this chain to begin with.
+pub fn request_redraw() {
+    #[cfg(target_arch = "wasm32")]
+    {
+        use wasm_bindgen::JsCast;
+        WASM_TICK.with(|cell| {
+            if let Some((browser, tick)) = cell.borrow().as_ref() {
+                if let Some(handle) = tick.borrow().as_ref() {
+                    let _ = browser.request_animation_frame(handle.as_ref().unchecked_ref());
+                }
+            }
+        });
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Off wasm32 — every native `cargo test` — `request_redraw` has nothing
+    /// to nudge: there is no `run_wasm` chain to hold in `WASM_TICK`, because
+    /// there is no such thread-local outside that target. This is the "keep
+    /// native shells a no-op" half of it, asserted as the one thing a native
+    /// build can assert: calling it compiles into this crate's public API and
+    /// returns, rather than requiring a wasm target to even build against.
+    #[test]
+    fn a_no_op_off_wasm32_still_compiles_and_returns() {
+        request_redraw();
+    }
 
     /// A turn on which nothing at all happened.
     const QUIET: Turn = Turn {
