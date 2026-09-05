@@ -195,7 +195,7 @@ pub use sdf::{
     Paint, Sculpt, Shape,
 };
 /// Platform backend abstraction, error types, and window options.
-pub use shell::{Error, LoadedFonts, WindowOptions};
+pub use shell::{request_redraw, Error, LoadedFonts, WindowOptions};
 /// Layout and style enums: alignment, anchor points, flow directions, radii, roles, spacing.
 pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Pressed, Radius, Style, Tone};
 /// Typography: font IDs, font collection loading, and text layout configuration.
