@@ -750,9 +750,22 @@ pub fn request_redraw() {
     {
         use wasm_bindgen::JsCast;
         WASM_TICK.with(|cell| {
-            if let Some((browser, tick)) = cell.borrow().as_ref() {
+            if let Some((_browser, tick)) = cell.borrow().as_ref() {
                 if let Some(handle) = tick.borrow().as_ref() {
-                    let _ = browser.request_animation_frame(handle.as_ref().unchecked_ref());
+                    // Called directly, synchronously, rather than scheduled
+                    // through `requestAnimationFrame` or even `setTimeout`:
+                    // both are answered on the browser's own paint/timer
+                    // queues, and confirmed live, a tab that has not had
+                    // recent input can leave *both* sitting unfired for
+                    // seconds — an already-queued rAF callback (and,
+                    // separately tested, a `setTimeout`) sat until something
+                    // else (a screenshot, a hover) forced the renderer to
+                    // catch up anyway. A future's own continuation is
+                    // already running JS/wasm code as this call happens —
+                    // there is no browser queue to distrust here, only a
+                    // plain function to call.
+                    let function: &js_sys::Function = handle.as_ref().unchecked_ref();
+                    let _ = function.call0(&wasm_bindgen::JsValue::NULL);
                 }
             }
         });
