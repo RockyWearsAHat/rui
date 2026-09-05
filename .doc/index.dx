@@ -274,3 +274,112 @@ Before committing:
 | **Layout engine** | Read `src/layout.rs` and `tests/layout.rs` for flexbox-like stacking and wrapping |
 | **WASM porting** | Read Recipe 1 commits; verify with `cargo test --test recipe_1_verification` |
 | **Testing** | Use `Harness` in `tests/recipes.rs` examples; see `src/testing/harness.rs` for API |
+
+## Finished
+
+Finished means every gate below exits 0. Scouts write items only for failing, unknown, or suspect gates, tagged [cap: <id>].
+
+::code id=cap-build lang=bash run reads=src,examples,tests,Cargo.toml
+#!/bin/bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+T=$(command -v gtimeout || command -v timeout)
+log=$(mktemp)
+if $T 300 cargo build --all-targets > "$log" 2>&1; then
+  echo "cap-build PASS: cargo build --all-targets (lib, examples, tests, benches) exited 0"
+  exit 0
+else
+  echo "cap-build FAIL: cargo build --all-targets exited nonzero"
+  tail -20 "$log"
+  exit 1
+fi
+::end
+
+::code id=cap-tests lang=bash run reads=src,Cargo.toml
+#!/bin/bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+T=$(command -v gtimeout || command -v timeout)
+log=$(mktemp)
+set +e
+$T 300 cargo test --lib > "$log" 2>&1
+code=$?
+set -e
+result_line=$(grep -E "^test result:" "$log" | tail -1)
+passed=$(echo "$result_line" | grep -oE '[0-9]+ passed' | awk '{print $1}')
+if [ "$code" -eq 0 ] && [ "${passed:-0}" -ge 390 ]; then
+  echo "cap-tests PASS: cargo test --lib passed with $passed tests"
+  exit 0
+fi
+echo "cap-tests FAIL: expected 390+ tests to pass, got ${passed:-0}, code=$code"
+tail -20 "$log"
+exit 1
+::end
+
+::code id=cap-examples lang=bash run reads=examples,src,Cargo.toml
+#!/bin/bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+T=$(command -v gtimeout || command -v timeout)
+count=$(find examples -maxdepth 1 -name "*.rs" -type f | wc -l | tr -d ' ')
+if [ "$count" -lt 2 ]; then
+  echo "cap-examples FAIL: only $count example file(s) found (need >= 2)"
+  exit 1
+fi
+log=$(mktemp)
+if $T 300 cargo build --examples > "$log" 2>&1; then
+  echo "cap-examples PASS: $count example files, cargo build --examples exited 0"
+  exit 0
+else
+  echo "cap-examples FAIL: cargo build --examples exited nonzero"
+  tail -20 "$log"
+  exit 1
+fi
+::end
+
+::code id=cap-clippy lang=bash run reads=src,examples,tests,Cargo.toml
+#!/bin/bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+T=$(command -v gtimeout || command -v timeout)
+log=$(mktemp)
+if $T 300 cargo clippy --all-targets -- -D warnings > "$log" 2>&1; then
+  echo "cap-clippy PASS: cargo clippy --all-targets -- -D warnings exited 0"
+  exit 0
+else
+  echo "cap-clippy FAIL: cargo clippy exited nonzero"
+  tail -20 "$log"
+  exit 1
+fi
+::end
+
+::code id=cap-fmt lang=bash run reads=src,examples,tests,Cargo.toml
+#!/bin/bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+if cargo fmt --all -- --check > /dev/null 2>&1; then
+  echo "cap-fmt PASS: cargo fmt --all -- --check passed (source is formatted)"
+  exit 0
+else
+  echo "cap-fmt FAIL: unformatted files detected"
+  cargo fmt --all -- --check
+  exit 1
+fi
+::end
+
+::code id=cap-recipes lang=bash run reads=tests/recipes.rs,src,Cargo.toml
+#!/bin/bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+T=$(command -v gtimeout || command -v timeout)
+log=$(mktemp)
+if $T 300 cargo test --test recipes > "$log" 2>&1; then
+  passed=$(grep -E "^test result:" "$log" | tail -1 | grep -oE '[0-9]+ passed' | awk '{print $1}')
+  echo "cap-recipes PASS: cargo test --test recipes passed $passed tests"
+  exit 0
+else
+  echo "cap-recipes FAIL: cargo test --test recipes exited nonzero"
+  tail -20 "$log"
+  exit 1
+fi
+::end
