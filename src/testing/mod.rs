@@ -923,6 +923,32 @@ mod tests {
     }
 
     #[test]
+    fn click_without_prior_hover_activates_the_row() {
+        // `click_text` (and every `Harness::click`) presses and releases with
+        // no preceding `move_pointer` — there is no earlier frame in which
+        // this element was ever hovered. Regression coverage for a live
+        // report that a canvas-only wasm page's first click after a fresh
+        // page load did nothing: `PointerDown`/`PointerUp` place the pointer
+        // themselves (see `Input::apply`), so `interact`'s `hovered` and
+        // `pressed_here` are both computed fresh, within the very frame the
+        // click is delivered in — a prior hover is not an input the click
+        // logic reads. Traced live: the wasm build's underlying event
+        // handling was already correct; a raw, un-hovered DOM click landed
+        // on the first try. The reported failure was the browser automation
+        // tool used to test it not delivering the first synthetic click's
+        // DOM events at all (confirmed with a capture-phase document
+        // listener seeing nothing) — outside anything a page's own JS can
+        // observe or fix.
+        let mut harness = Harness::new(Counter::default(), counter);
+        harness.click_text("Increment");
+        assert_eq!(
+            harness.state().count,
+            1,
+            "a click with no prior hover still activates the element it lands on"
+        );
+    }
+
+    #[test]
     fn aiming_at_something_that_is_not_there_fails_loudly() {
         let mut harness = Harness::new(Counter::default(), counter);
         let missing = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
