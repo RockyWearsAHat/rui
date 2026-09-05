@@ -545,4 +545,4 @@ Rust 1.85 or later, for the 2024 edition. macOS, Windows, and X11.
 
 ## Licence
 
-MIT.
+MIT. See the [LICENSE](LICENSE) file for the full license text.
