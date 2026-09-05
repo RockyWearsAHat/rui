@@ -27,15 +27,20 @@ reload = []
 # any of the three native platforms still resolves to no dependencies.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
+# `std::time::Instant::now()` panics on wasm32-unknown-unknown; this is the
+# drop-in backed by `performance.now()` that `shell/mod.rs` imports.
+web-time = "1"
 web-sys = { version = "0.3", features = [
     "CanvasRenderingContext2d",
     "console",
+    "CssStyleDeclaration",
     "Document",
     "DomRect",
     "Element",
     "Event",
     "EventTarget",
     "HtmlCanvasElement",
+    "HtmlElement",
     "ImageData",
     "InputEvent",
     "KeyboardEvent",
