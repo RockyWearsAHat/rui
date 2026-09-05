@@ -41,8 +41,8 @@
 
 use rui::style::{Align, Anchor, Radius};
 use rui::{
-    App, Appearance, Drag, El, Key, Modifiers, Painter, Rect, Role, Size, Tone, caption, code, col,
-    draw, heading, panel, row, text,
+    caption, code, col, draw, heading, panel, row, text, App, Appearance, Drag, El, Key, Modifiers,
+    Painter, Rect, Role, Size, Tone,
 };
 
 // ---------------------------------------------------------------------------

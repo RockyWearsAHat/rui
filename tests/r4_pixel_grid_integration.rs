@@ -3,7 +3,7 @@
 // These tests verify that hairline snapping, gamma-boost LUT, and glyph caching
 // are properly integrated into the rendering and paint systems
 
-use rui::{Canvas, Color, GammaBoostLut, GlyphCache, HairlineSnap, geom::Rect};
+use rui::{geom::Rect, Canvas, Color, GammaBoostLut, GlyphCache, HairlineSnap};
 
 /// ENHANCEMENT PHASE: Canvas can snap rectangles to pixel grid at various scales
 #[test]

@@ -31,7 +31,7 @@ use crate::input::{Drag, Input, Key, Phase, PointerButton, Pointing};
 use crate::memory::{Caret, Id, Memory, Response};
 use crate::sdf::{Paint, Sculpt, Shape};
 use crate::style::{Align, Ink, Radius, Tone};
-use crate::text::{Fonts, TextStyle, grapheme};
+use crate::text::{grapheme, Fonts, TextStyle};
 use crate::theme::Theme;
 
 /// Something an interaction asked to be done to the application's state.

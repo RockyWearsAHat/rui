@@ -29,16 +29,16 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
-use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, Event as DomEvent, HtmlCanvasElement, ImageData};
 
-use crate::Canvas;
 use crate::accessibility::AccessUpdate;
 use crate::geom::Rect;
 use crate::input::{Event, Key, KeyCode, Modifiers, PointerButton};
 use crate::shell::{Backend, Error, WindowOptions};
 use crate::theme::Appearance;
+use crate::Canvas;
 
 /// The id the canvas element must have, in the host page's HTML.
 ///

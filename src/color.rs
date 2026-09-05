@@ -187,7 +187,11 @@ pub fn blend_add(destination: u32, source: Color, coverage: u8) -> u32 {
     }
     let add = |src: u8, dst: u32| {
         let sum = mul_255(src, alpha) as u32 + dst;
-        if sum > 255 { 255 } else { sum }
+        if sum > 255 {
+            255
+        } else {
+            sum
+        }
     };
     let r = add(source.r, (destination >> 16) & 0xff);
     let g = add(source.g, (destination >> 8) & 0xff);

@@ -3,7 +3,7 @@
 //! These tests verify that colors render correctly and distinctly at the pixel level.
 
 use rui::testing::Harness;
-use rui::{Appearance, Tone, col};
+use rui::{col, Appearance, Tone};
 
 #[derive(Default)]
 struct EmptyState;

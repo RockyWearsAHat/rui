@@ -74,7 +74,7 @@
 //!
 //! [`scale`]: Canvas::scale
 
-use crate::color::{Color, blend_add, blend_over};
+use crate::color::{blend_add, blend_over, Color};
 use crate::geom::{Insets, Point, Rect};
 use crate::sdf::{Sculpt, Shape};
 use std::f32::consts::TAU;
@@ -2246,12 +2246,10 @@ mod tests {
     fn drawing_outside_the_surface_is_clipped_not_wrapped() {
         let mut canvas = blank(8, 8, 1.0);
         canvas.fill_rect(Rect::new(-100.0, -100.0, 1000.0, 1000.0), Color::WHITE);
-        assert!(
-            canvas
-                .pixels()
-                .iter()
-                .all(|&word| Color::from_argb(word) == Color::WHITE)
-        );
+        assert!(canvas
+            .pixels()
+            .iter()
+            .all(|&word| Color::from_argb(word) == Color::WHITE));
     }
 
     #[test]
@@ -2523,12 +2521,10 @@ mod tests {
             Color::WHITE,
             Color::WHITE,
         );
-        assert!(
-            canvas
-                .pixels()
-                .iter()
-                .all(|&word| Color::from_argb(word) == Color::WHITE)
-        );
+        assert!(canvas
+            .pixels()
+            .iter()
+            .all(|&word| Color::from_argb(word) == Color::WHITE));
     }
 
     #[test]
@@ -3041,12 +3037,10 @@ mod tests {
     fn a_tick_ring_of_none_draws_nothing() {
         let mut canvas = blank(40, 40, 1.0);
         canvas.ticks(MIDDLE, 10.0, 14.0, 2.0, 0, 0.0, Color::WHITE);
-        assert!(
-            canvas
-                .pixels()
-                .iter()
-                .all(|&word| Color::from_argb(word) == Color::BLACK)
-        );
+        assert!(canvas
+            .pixels()
+            .iter()
+            .all(|&word| Color::from_argb(word) == Color::BLACK));
     }
 
     #[test]
@@ -3221,12 +3215,10 @@ mod tests {
             -1.0,
             Color::WHITE,
         );
-        assert!(
-            canvas
-                .pixels()
-                .iter()
-                .all(|&word| Color::from_argb(word) == Color::BLACK)
-        );
+        assert!(canvas
+            .pixels()
+            .iter()
+            .all(|&word| Color::from_argb(word) == Color::BLACK));
     }
 
     #[test]
@@ -3234,12 +3226,10 @@ mod tests {
         let mut canvas = blank(20, 20, 1.0);
         canvas.polyline(&[], 2.0, Color::WHITE);
         canvas.polyline(&[Point::new(10.0, 10.0)], 2.0, Color::WHITE);
-        assert!(
-            canvas
-                .pixels()
-                .iter()
-                .all(|&word| Color::from_argb(word) == Color::BLACK)
-        );
+        assert!(canvas
+            .pixels()
+            .iter()
+            .all(|&word| Color::from_argb(word) == Color::BLACK));
     }
 
     #[test]
@@ -3319,12 +3309,10 @@ mod tests {
             Color::WHITE,
             Color::WHITE,
         );
-        assert!(
-            canvas
-                .pixels()
-                .iter()
-                .all(|&word| Color::from_argb(word) == Color::WHITE)
-        );
+        assert!(canvas
+            .pixels()
+            .iter()
+            .all(|&word| Color::from_argb(word) == Color::WHITE));
     }
 
     #[test]

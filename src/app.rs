@@ -54,8 +54,8 @@ use crate::paint::{self, Frame};
 use crate::shell::{self, Error, LoadedFonts, WindowOptions};
 use crate::text::{FontId, Fonts};
 use crate::theme::{Appearance, Theme};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
 #[cfg(all(feature = "reload", not(target_arch = "wasm32")))]

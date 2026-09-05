@@ -6,7 +6,7 @@
 //! drive this exact interface rather than a copy of it that could drift from
 //! it. Nothing else about the program needs them to be.
 
-use rui::{El, button, col, row, title};
+use rui::{button, col, row, title, El};
 
 /// Everything this program knows.
 pub struct Counter {

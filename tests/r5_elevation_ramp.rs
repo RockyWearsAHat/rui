@@ -69,7 +69,7 @@ fn elevation_none_is_surface_default() {
     let el: El<State> = col(text("Default"));
     // No explicit elevation() call
     assert_eq!(el.get_elevation(), None); // Not set
-    // But if queried in paint context, would resolve to Surface
+                                          // But if queried in paint context, would resolve to Surface
 }
 
 #[test]

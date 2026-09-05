@@ -226,7 +226,7 @@ fn read_lookup(data: &[u8], table: usize, out: &mut Vec<Pairs>) -> Option<()> {
     let mut reader = Reader::at(data, table);
     let kind = reader.u16()?;
     reader.skip(2)?; // lookupFlag: mark filtering, which needs `GDEF` and no
-    // kerning pair depends on it
+                     // kerning pair depends on it
     let count = reader.u16()? as usize;
     let offsets: Vec<u16> = (0..count).map(|_| reader.u16()).collect::<Option<_>>()?;
 
@@ -637,7 +637,7 @@ mod tests {
         table.extend(u16s(&[1]));
         table.extend(b"kern");
         table.extend(u16s(&[8, 0, 1, 0])); // offset to it, featureParams, one index, index 0
-        // One lookup, of type 2, with one subtable.
+                                           // One lookup, of type 2, with one subtable.
         table.extend(u16s(&[1, 4]));
         table.extend(u16s(&[2, 0, 1, (pair_pos - lookup) as u16]));
         table.extend(subtable);

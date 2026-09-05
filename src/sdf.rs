@@ -782,7 +782,11 @@ fn normalize(v: (f32, f32)) -> (f32, f32) {
 
 /// The sign of `x`, with zero counted positive so an on-edge point reads out.
 fn sign(x: f32) -> f32 {
-    if x < 0.0 { -1.0 } else { 1.0 }
+    if x < 0.0 {
+        -1.0
+    } else {
+        1.0
+    }
 }
 
 /// Where `angle` round a circle of `radius` about `center` lands.

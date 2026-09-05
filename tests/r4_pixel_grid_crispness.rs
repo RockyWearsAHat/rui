@@ -2,7 +2,7 @@
 // STEP 4 RED phase: Test scaffolding for pixel-grid crispness (R6)
 // These tests demonstrate the desired API for hairline snapping, glyph caching, and gamma-boost LUT
 
-use rui::{Color, geom::Rect};
+use rui::{geom::Rect, Color};
 
 /// RED PHASE: HairlineSnap should exist and snap coordinates to pixel grid
 #[test]

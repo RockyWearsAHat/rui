@@ -382,11 +382,9 @@ mod tests {
         assert!(window.clipboard_text().is_ok());
         assert!(window.set_clipboard_text("test").is_ok());
         assert!(window.set_composition_area(None).is_ok());
-        assert!(
-            window
-                .update_accessibility(&AccessUpdate::default())
-                .is_ok()
-        );
+        assert!(window
+            .update_accessibility(&AccessUpdate::default())
+            .is_ok());
 
         let _ = window.appearance();
     }
