@@ -131,6 +131,7 @@ pub mod accessibility;
 pub mod app;
 pub mod canvas;
 pub mod color;
+pub mod demo;
 pub mod element;
 pub mod elevation;
 pub mod font;

@@ -120,6 +120,25 @@ pub fn parity_frames() -> [(Appearance, Vec<u8>); 2] {
     ]
 }
 
+/// Render a parity frame and return its pixels as RGBA bytes.
+///
+/// Core logic for rendering a parity frame to RGBA bytes. Used by the WASM
+/// parity frame rendering function and testable from native code.
+///
+/// Returns the RGBA bytes (4 bytes per pixel, 960x640 = 2,457,600 bytes)
+/// encoded in the same format as [`crate::image::rgba`].
+pub fn render_parity_frame_rgba(dark: bool) -> Result<Vec<u8>, String> {
+    let appearance = if dark {
+        Appearance::Dark
+    } else {
+        Appearance::Light
+    };
+    let canvas = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, appearance)
+        .map_err(|error| format!("the parity frame could not be drawn: {error}"))?;
+
+    Ok(crate::image::rgba(&canvas))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,5 +177,40 @@ mod tests {
         let dark = reference_frame(REFERENCE_WIDTH, REFERENCE_HEIGHT, 1.0, Appearance::Dark)
             .expect("the embedded faces should parse");
         assert_ne!(light.pixels(), dark.pixels());
+    }
+
+    /// Wrapper function for tests that need a synchronous Vec<u8> result.
+    fn render_wasm_parity_frame(dark: bool) -> Vec<u8> {
+        render_parity_frame_rgba(dark).expect("parity frame should render successfully")
+    }
+
+    #[test]
+    fn render_wasm_parity_frame_light_produces_correct_buffer() {
+        let pixels = render_wasm_parity_frame(false);
+        let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+        assert_eq!(
+            pixels.len(),
+            expected_bytes,
+            "light frame should return {}x{}x4 = {} bytes",
+            REFERENCE_WIDTH,
+            REFERENCE_HEIGHT,
+            expected_bytes
+        );
+        assert!(!pixels.is_empty(), "light frame buffer should not be empty");
+    }
+
+    #[test]
+    fn render_wasm_parity_frame_dark_produces_correct_buffer() {
+        let pixels = render_wasm_parity_frame(true);
+        let expected_bytes = (REFERENCE_WIDTH * REFERENCE_HEIGHT * 4) as usize;
+        assert_eq!(
+            pixels.len(),
+            expected_bytes,
+            "dark frame should return {}x{}x4 = {} bytes",
+            REFERENCE_WIDTH,
+            REFERENCE_HEIGHT,
+            expected_bytes
+        );
+        assert!(!pixels.is_empty(), "dark frame buffer should not be empty");
     }
 }
