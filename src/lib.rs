@@ -310,8 +310,10 @@ mod tests {
         );
 
         // Step 6: Verify subscription path matches reports.dx location
+        let normalized_path = project_root.replace('\\', "/");
         assert!(
-            stdout.contains(&format!("{}/reports.dx", project_root)),
+            stdout.contains(&format!("{}/reports.dx", normalized_path))
+                || stdout.contains(&format!("{}\\reports.dx", project_root)),
             "subscription path does not match reports.dx location in output:\n{}",
             stdout
         );
