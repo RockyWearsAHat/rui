@@ -161,6 +161,15 @@ where
         if let Ok(typed) = raw.dyn_into::<E>() {
             if let Some(event) = handle(&typed) {
                 events.borrow_mut().push(event);
+                // Draws synchronously rather than waiting for whatever
+                // `requestAnimationFrame` turn happens to follow: confirmed
+                // live, a tab Chrome has decided is not worth compositing can
+                // leave an already-scheduled rAF callback sitting unfired for
+                // seconds, so a DOM event that only *queued* its `Event` and
+                // trusted the self-rescheduling chain to pick it up could sit
+                // applied-but-unseen the same way a fetch's answer did. See
+                // `crate::shell::request_redraw`.
+                crate::shell::request_redraw();
             }
         }
     }) as Box<dyn FnMut(DomEvent)>);
