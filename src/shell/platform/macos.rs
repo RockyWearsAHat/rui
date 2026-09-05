@@ -125,7 +125,7 @@ use crate::theme::Appearance;
 use crate::{Canvas, Event, Key, KeyCode, Modifiers, Point, PointerButton, Rect};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
-use std::ffi::{CStr, c_char, c_void};
+use std::ffi::{c_char, c_void, CStr};
 use std::time::Duration;
 
 use crate::shell::{Backend, Error, WindowOptions};

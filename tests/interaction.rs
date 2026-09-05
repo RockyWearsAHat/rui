@@ -7,8 +7,8 @@
 
 use rui::testing::Harness;
 use rui::{
-    Align, Anchor, Drag, El, Key, KeyCode, KeyPhase, Modifiers, Point, Size, Tone, button, col,
-    draw, field, panel, row, text,
+    button, col, draw, field, panel, row, text, Align, Anchor, Drag, El, Key, KeyCode, KeyPhase,
+    Modifiers, Point, Size, Tone,
 };
 
 /// A state with somewhere to record everything these tests provoke.

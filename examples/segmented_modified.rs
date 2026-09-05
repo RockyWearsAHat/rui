@@ -2,7 +2,7 @@
 //! This example follows the documented modification: changing ["Small", "Medium", "Large"]
 //! to different choices. This shows that the learning path is complete and working.
 
-use rui::{El, col, text, widgets};
+use rui::{col, text, widgets, El};
 
 struct App {
     selected: usize,

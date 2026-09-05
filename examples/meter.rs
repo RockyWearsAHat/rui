@@ -7,7 +7,7 @@
 //! This example simulates uploading a file and updates the progress bar
 //! in real time. The meter responds to the app state, not to user clicks.
 
-use rui::{Align, El, col, meter, text};
+use rui::{col, meter, text, Align, El};
 
 #[derive(Default)]
 struct App {
