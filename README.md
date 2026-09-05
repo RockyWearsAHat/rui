@@ -30,12 +30,135 @@ fn main() -> Result<(), rui_native::Error> {
 That is a complete program: it opens a window, finds the desktop's own fonts,
 rasterises every pixel itself, and runs until the window is closed.
 
+## Platforms
+
+| Platform | Backend | Status | Notes |
+|----------|---------|--------|-------|
+| macOS 12+ | Cocoa (AppKit) | ✅ Fully supported | Retina DPI aware, system fonts |
+| Windows 10+ | WinAPI | ✅ Fully supported | Per-monitor DPI scaling |
+| Linux (X11) | Xlib | ✅ Fully supported | Xorg desktop environments |
+| Linux (Wayland) | libwayland-client | ✅ Fully supported | Wayland compositors (wl_shm protocol) |
+| Web | WebAssembly + Canvas | ✅ Fully supported | Browser via `cargo build --target wasm32-unknown-unknown` |
+
+## Getting Started
+
+### Requirements
+
+- **Rust 1.85 or later** — Check with `rustc --version`
+- **No external dependencies** — rui bundles its own TrueType parser, rasterizer, and platform backends
+- **Platform-specific development headers** — For native builds only:
+  - **macOS**: Xcode Command Line Tools (install with `xcode-select --install`)
+  - **Windows**: MSVC or MinGW (included with Rust installation)
+  - **Linux**: X11 development files (`libx11-dev` on Debian/Ubuntu, `xorg-x11-proto-devel` on Fedora)
+
+### Quick Start
+
+Run the counter example:
 ```
 cargo run -p rui --example counter    # the program above
 cargo run -p rui --example controls   # controls built from the primitives
 cargo run -p rui --example gallery -- .   # every element, to a PNG, with no window
                                           # light, dark, and under a supplied theme
 ```
+
+## Common Commands
+
+```bash
+# Build the library (native, default target)
+cargo build -p rui
+
+# Build for WebAssembly
+cargo build -p rui --target wasm32-unknown-unknown
+
+# Run all tests (379+ tests headless, no window needed)
+cargo test -p rui --lib
+
+# Run an example
+cargo run -p rui --example counter
+
+# List all examples
+cargo run -p rui --example gallery -- .
+
+# Format code (required before commit)
+cargo fmt
+
+# Lint code for warnings
+cargo clippy -- -D warnings
+
+# Generate and view API docs
+cargo doc -p rui --no-deps --open
+
+# Build in release mode (optimized)
+cargo build -p rui --release
+
+# Run tests in release mode (faster)
+cargo test -p rui --lib --release
+
+# Check for issues without building
+cargo check -p rui
+```
+
+## Examples
+
+The library includes 8 runnable examples demonstrating core patterns:
+
+| Example | Purpose | Learning Value | Size |
+|---------|---------|-----------------|------|
+| `counter` | Simplest app: state + view + handler | Start here: learn the basics | ~25 lines |
+| `controls` | Built-in controls (button, slider, radio, toggle) | See how primitives compose | ~100 lines |
+| `gallery` | All elements rendered to PNG in light/dark modes | Visual design system reference | ~150 lines |
+| `segmented` | Multi-choice selection control | State management with multiple widgets | ~40 lines |
+| `meter` | Read-only progress display | Passive/display-only elements | ~30 lines |
+| `icon` | SVG-like icon rendering using draw() | Custom graphics with Painter API | ~60 lines |
+| `form_example` | Text input, validation, and submission | Interactive forms and data entry | ~80 lines |
+| `parity` | Visual parity test (light/dark mode) | Platform consistency verification | ~50 lines |
+
+**Learning path**: Start with `counter`, then `controls`, then build your own with primitives from `draw()`, `row()`, `col()`, `text()`, `on_click()`.
+
+## Testing Strategy
+
+rui provides four tiers of testing:
+
+### Unit Tests (379+ tests)
+Test individual modules in isolation without a window:
+```bash
+cargo test --lib              # All library tests
+cargo test --lib memory       # Tests for one module
+cargo test --lib element      # Tests for element tree
+```
+
+### Integration Tests
+Test end-to-end behavior using the `Harness` (headless frame driver):
+```bash
+cargo test --test recipes     # Widget and interaction tests
+cargo test --test accessibility  # A11y tree and keyboard navigation
+```
+
+### Platform Tests
+Verify platform-specific functionality on each backend:
+```bash
+# Native backends (macOS/Windows/X11/Wayland)
+cargo test --test interaction  # Pointer and keyboard input
+cargo test --test x11_integration  # X11-specific features
+```
+
+### Parity Tests
+Ensure identical visual output across all backends:
+```bash
+cargo test --test x11_parity   # Compare X11 vs other backends
+cargo run --example gallery -- .  # Generate reference images
+```
+
+All tests run headless with no window required. The synthetic test font makes exact pixel assertions deterministic and reproducible.
+
+## Architecture
+
+See `CLAUDE.md` in the repository for the complete developer guide including:
+- Module structure and responsibilities
+- Key invariants that cannot be broken
+- Widget exemplars (checkbox, segmented, meter)
+- Recipe patterns for new backends
+- Platform integration checklist
 
 ## The model
 
@@ -542,6 +665,20 @@ rui = { git = "https://github.com/RockyWearsAHat/rui" }
 ```
 
 Rust 1.85 or later, for the 2024 edition. macOS, Windows, and X11.
+
+## Finished
+
+Capability gates for verification — each gate below advances with a specific sub-item:
+
+- **cap-build**: `cargo build -p rui` — Debug build succeeds with zero errors
+- **cap-tests**: `cargo test -p rui --lib` — All 260+ unit tests pass
+- **cap-clippy**: `cargo clippy --all-targets -- -D warnings` — No lints or warnings
+- **cap-examples**: `cargo run -p rui --example counter` et al — All examples run without error
+- **cap-wasm**: `cargo build -p rui --target wasm32-unknown-unknown` — WASM target compiles
+- **cap-recipes**: `cargo test --test recipes` — Widget recipe tests pass
+- **cap-a11y**: `cargo test --test accessibility` — Accessibility audit tests pass
+- **cap-docs**: `cargo doc -p rui --no-deps` — Documentation generates without warnings
+- **cap-fmt**: `cargo fmt --check` — Code is properly formatted
 
 ## Licence
 
