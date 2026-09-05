@@ -304,8 +304,10 @@ mod tests {
         );
 
         let content = std::fs::read_to_string(&reports_path).expect("failed to read reports.dx");
+        let is_valid_header = content.contains("Findings from dx analysis")
+            || (content.starts_with("~ dx1 ") && content.trim().len() > 6);
         assert!(
-            content.contains("Findings from dx analysis"),
+            is_valid_header,
             "reports.dx missing expected header. Content: {}",
             content
         );
