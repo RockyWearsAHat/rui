@@ -204,9 +204,9 @@ pub use text::{FontId, Fonts, TextStyle};
 pub use theme::{Appearance, CornerStyle, Height, Palette, Space, Status, TextRole, Theme};
 /// Built-in widget constructors from primitives.
 pub use widgets::{
-    button, caption, code, col, divider, dot, draw, field, field_group, field_row, figure, heading,
-    meter, micro, panel, paragraph, row, section, segmented, spacer, star_rating, tabs, tag, text,
-    title,
+    badge, button, caption, code, col, divider, dot, draw, field, field_group, field_row, figure,
+    heading, link, meter, micro, panel, paragraph, row, section, segmented, spacer, star_rating,
+    tabs, tag, text, title,
 };
 
 /// A run of text, formatted.
