@@ -327,7 +327,12 @@ if [ "$count" -lt 2 ]; then
   exit 1
 fi
 log=$(mktemp)
-if $T 300 cargo build --examples > "$log" 2>&1; then
+# On Windows, use --target x86_64-pc-windows-gnu to work around MSVC linker issues
+BUILD_CMD="cargo build --examples"
+if uname -s | grep -q MINGW; then
+  BUILD_CMD="cargo build --examples --target x86_64-pc-windows-gnu"
+fi
+if $T 300 $BUILD_CMD > "$log" 2>&1; then
   echo "cap-examples PASS: $count example files, cargo build --examples exited 0"
   exit 0
 else
