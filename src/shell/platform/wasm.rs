@@ -47,6 +47,21 @@ use crate::Canvas;
 /// running several programs, which this library has no seam for regardless.
 const CANVAS_ID: &str = "rui-canvas";
 
+/// The browser window's current size in CSS pixels, if one is open.
+///
+/// Read fresh rather than cached: a browser window is resized far more often
+/// than a native one is, and [`Backend::surface`] is polled every frame
+/// already, so asking here is free and a stored value would just be a second
+/// place for the real size to drift from.
+fn live_window_size(window: &web_sys::Window) -> Option<(u32, u32)> {
+    let width = window.inner_width().ok()?.as_f64()?;
+    let height = window.inner_height().ok()?.as_f64()?;
+    if width <= 0.0 || height <= 0.0 {
+        return None;
+    }
+    Some((width.round() as u32, height.round() as u32))
+}
+
 /// A DOM event handler, kept alive for as long as the window is.
 ///
 /// `wasm-bindgen` closures leak by default if dropped while still registered:
@@ -183,22 +198,27 @@ impl Backend for Window {
             }
         };
 
-        let scale = window.device_pixel_ratio() as f32;
-        let scale = if scale.is_finite() && scale > 0.0 {
-            scale
-        } else {
-            1.0
-        };
-        let width_px = (options.width * scale).round().max(1.0) as u32;
-        let height_px = (options.height * scale).round().max(1.0) as u32;
+        // A page's canvas fills the browser window it is in, not a size this
+        // program chose — [`WindowOptions::width`]/`height` are a native
+        // window's dimensions, and only a fallback here for the one frame
+        // before [`Backend::surface`] first measures the real thing. No
+        // device-pixel scaling either: a backing store bigger than its CSS
+        // size only matters for a sharper look, and here it cost text its own
+        // layout — a run measured at one size and drawn into a canvas of
+        // another. Logical and physical pixels are kept equal instead.
+        let scale = 1.0f32;
+        let (width_px, height_px) = live_window_size(&window).unwrap_or((
+            options.width.round().max(1.0) as u32,
+            options.height.round().max(1.0) as u32,
+        ));
         canvas.set_width(width_px);
         canvas.set_height(height_px);
         let html_element = canvas
             .dyn_ref::<web_sys::HtmlElement>()
             .ok_or_else(|| Error::Platform("canvas is not an HtmlElement".into()))?;
         let style = html_element.style();
-        let _ = style.set_property("width", &format!("{}px", options.width));
-        let _ = style.set_property("height", &format!("{}px", options.height));
+        let _ = style.set_property("width", &format!("{}px", width_px));
+        let _ = style.set_property("height", &format!("{}px", height_px));
         let _ = canvas.set_attribute("tabindex", "0");
 
         let ctx = canvas
@@ -346,7 +366,27 @@ impl Backend for Window {
     }
 
     fn surface(&self) -> (u32, u32, f32) {
-        (self.width, self.height, self.scale)
+        // Measured live rather than returning what `open` recorded: the
+        // window this canvas fills can be resized at any time, `Surface::draw`
+        // already calls this once a frame and reacts to a change, and a
+        // cached size here is exactly the staleness that left the canvas one
+        // size and the window another.
+        let (width, height) = web_sys::window()
+            .as_ref()
+            .and_then(live_window_size)
+            .unwrap_or((self.width, self.height));
+
+        if self.canvas.width() != width || self.canvas.height() != height {
+            self.canvas.set_width(width);
+            self.canvas.set_height(height);
+            if let Some(html_element) = self.canvas.dyn_ref::<web_sys::HtmlElement>() {
+                let style = html_element.style();
+                let _ = style.set_property("width", &format!("{width}px"));
+                let _ = style.set_property("height", &format!("{height}px"));
+            }
+        }
+
+        (width, height, self.scale)
     }
 
     fn appearance(&self) -> Appearance {
