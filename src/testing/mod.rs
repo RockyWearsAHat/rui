@@ -58,7 +58,7 @@
 pub mod font;
 
 use crate::accessibility::Role;
-use crate::accessibility::{AccessTree, AccessUpdate, audit};
+use crate::accessibility::{audit, AccessTree, AccessUpdate};
 use crate::app::App;
 use crate::canvas::Canvas;
 use crate::color::Color;

@@ -2,7 +2,7 @@
 // STEP 3 RED phase: Test scaffolding for pressed style struct and disabled = 0.38 alpha convention
 // These tests demonstrate the desired API for interactive elements with visual feedback
 
-use rui::{Pressed, Tone, button, col, testing::Harness};
+use rui::{button, col, testing::Harness, Pressed, Tone};
 
 /// RED PHASE: Pressed struct should exist with fill, ink, and border overrides
 #[test]

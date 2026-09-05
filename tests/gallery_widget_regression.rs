@@ -5,8 +5,8 @@
 
 use rui::testing::Harness;
 use rui::{
-    Appearance, Status, Theme, Tone, button, caption, col, dot, field, figure, heading, meter,
-    micro, row, segmented, spacer, tabs, tag, text, title,
+    button, caption, col, dot, field, figure, heading, meter, micro, row, segmented, spacer, tabs,
+    tag, text, title, Appearance, Status, Theme, Tone,
 };
 
 #[derive(Default, Clone)]

@@ -28,7 +28,7 @@ use crate::geom::{Rect, Size};
 use crate::paint::Painter;
 use crate::style::{Align, Axis, Length, Radius, Tone};
 use crate::theme::{
-    CAPTION_SIZE, CODE_SIZE, FIGURE_SIZE, HEADING_SIZE, MICRO_SIZE, Metrics, Status, TITLE_SIZE,
+    Metrics, Status, CAPTION_SIZE, CODE_SIZE, FIGURE_SIZE, HEADING_SIZE, MICRO_SIZE, TITLE_SIZE,
 };
 
 /// How far a section label's letters are opened up.

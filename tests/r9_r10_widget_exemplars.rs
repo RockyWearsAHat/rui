@@ -9,7 +9,7 @@
 //! and fully keyboard-navigable and accessible.
 
 use rui::testing::Harness;
-use rui::{Align, Drag, El, Key, Modifiers, Painter, Radius, Size, Tone, col, draw, row, text};
+use rui::{col, draw, row, text, Align, Drag, El, Key, Modifiers, Painter, Radius, Size, Tone};
 
 #[derive(Clone, Copy, Default)]
 struct ControlsState {

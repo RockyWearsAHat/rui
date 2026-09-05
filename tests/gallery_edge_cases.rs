@@ -4,7 +4,7 @@
 //! and complex component combinations to ensure robust visual regression coverage.
 
 use rui::testing::Harness;
-use rui::{Key, Tone, button, col, field, meter, row, text};
+use rui::{button, col, field, meter, row, text, Key, Tone};
 
 #[derive(Default, Clone)]
 struct EdgeCaseState {
