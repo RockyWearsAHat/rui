@@ -12,7 +12,7 @@
 
 use rui::shell::WindowOptions;
 use rui::testing::Harness;
-use rui::{Radius, Size, Tone, button, col, draw, text};
+use rui::{button, col, draw, text, Radius, Size, Tone};
 
 #[test]
 fn wayland_feature_is_enabled() {

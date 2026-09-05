@@ -18,8 +18,8 @@
 
 use rui::testing::Harness;
 use rui::{
-    Align, Anchor, Bgra, Color, Drag, El, Key, KeyCode, KeyPhase, KeyStroke, Modifiers, Painter,
-    Point, Pointing, Radius, Rect, Role, Size, Tone, caption, col, draw, panel, row, text,
+    caption, col, draw, panel, row, text, Align, Anchor, Bgra, Color, Drag, El, Key, KeyCode,
+    KeyPhase, KeyStroke, Modifiers, Painter, Point, Pointing, Radius, Rect, Role, Size, Tone,
 };
 use std::sync::Arc;
 

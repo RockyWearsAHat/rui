@@ -5,10 +5,10 @@
 //! are made where they were meant to be, that the same description twice is the
 //! same picture, and that an animation both moves and then stops.
 
-use rui::testing::{Harness, test_fonts};
+use rui::testing::{test_fonts, Harness};
 use rui::{
-    Align, App, Appearance, Color, CornerStyle, El, FontId, Radius, Rect, Size, Theme, Tone,
-    button, col, draw, row, spacer, text,
+    button, col, draw, row, spacer, text, Align, App, Appearance, Color, CornerStyle, El, FontId,
+    Radius, Rect, Size, Theme, Tone,
 };
 
 /// Nothing to hold: these are about pixels.

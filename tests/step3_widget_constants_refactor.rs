@@ -4,9 +4,9 @@
 //! to verify that widgets render at sizes determined by Metrics::DEFAULT values.
 //! Tests exercise actual widget rendering, not brittle source code string matching.
 
-use rui::Tone;
 use rui::testing::Harness;
 use rui::widgets::{button, col, field, meter, segmented, tabs, text};
+use rui::Tone;
 
 struct App {
     count: usize,

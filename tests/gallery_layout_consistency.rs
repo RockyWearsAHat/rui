@@ -4,7 +4,7 @@
 //! remain consistent across frames and rendering modes.
 
 use rui::testing::Harness;
-use rui::{Tone, button, col, field, meter, row, tabs, text};
+use rui::{button, col, field, meter, row, tabs, text, Tone};
 
 #[derive(Default, Clone)]
 struct LayoutState {

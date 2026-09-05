@@ -3,7 +3,7 @@
 //!
 //! Run with: `cargo run -p rui-native --example calculator`
 
-use rui::{El, Tone, col, heading, panel, row, text, widgets};
+use rui::{col, heading, panel, row, text, widgets, El, Tone};
 
 struct State {
     display: String,
