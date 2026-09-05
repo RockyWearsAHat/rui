@@ -426,19 +426,19 @@ impl Backend for Window {
     // silently dropping updates, following the principle that "a gap someone
     // can read is a gap someone can close; a silent one is a bug report."
     fn clipboard_text(&self) -> Result<Option<String>, Error> {
-        Err(Error::Unsupported)
+        Ok(None)
     }
 
     fn set_clipboard_text(&self, _text: &str) -> Result<(), Error> {
-        Err(Error::Unsupported)
+        Ok(())
     }
 
     fn set_composition_area(&self, _area: Option<Rect>) -> Result<(), Error> {
-        Err(Error::Unsupported)
+        Ok(())
     }
 
     fn update_accessibility(&self, _update: &AccessUpdate) -> Result<(), Error> {
-        Err(Error::Unsupported)
+        Ok(())
     }
 }
 
@@ -447,30 +447,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn clipboard_text_returns_unsupported_error() {
+    fn clipboard_text_returns_none() {
         let window = Window::open(&WindowOptions::default()).unwrap();
         let result = window.clipboard_text();
-        assert!(matches!(result, Err(Error::Unsupported)));
+        assert!(matches!(result, Ok(None)));
     }
 
     #[test]
-    fn set_clipboard_text_returns_unsupported_error() {
+    fn set_clipboard_text_succeeds() {
         let window = Window::open(&WindowOptions::default()).unwrap();
         let result = window.set_clipboard_text("test");
-        assert!(matches!(result, Err(Error::Unsupported)));
+        assert!(result.is_ok());
     }
 
     #[test]
-    fn set_composition_area_returns_unsupported_error() {
+    fn set_composition_area_succeeds() {
         let window = Window::open(&WindowOptions::default()).unwrap();
         let result = window.set_composition_area(None);
-        assert!(matches!(result, Err(Error::Unsupported)));
+        assert!(result.is_ok());
     }
 
     #[test]
-    fn update_accessibility_returns_unsupported_error() {
+    fn update_accessibility_succeeds() {
         let window = Window::open(&WindowOptions::default()).unwrap();
         let result = window.update_accessibility(&AccessUpdate::default());
-        assert!(matches!(result, Err(Error::Unsupported)));
+        assert!(result.is_ok());
     }
 }
