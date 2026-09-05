@@ -19,6 +19,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 wayland = []
+reload = []
 
 # Except in a browser, where the platform is not callable from Rust at all: its
 # windows and its canvases are JavaScript objects, and `wasm-bindgen` *is* the
