@@ -1,7 +1,0 @@
-﻿cargo :     Finished `release` profile [optimized] target(s) in 0.07s
-At line:1 char:328
-+ ...  "D:\SARA\Desktop\rui"; cargo build --examples --release 2>&1 | Out-F ...
-+                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (    Finished `r...get(s) in 0.07s:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 

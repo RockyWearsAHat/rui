@@ -186,21 +186,24 @@ fn load_imm32() {
             return; // IMM32 not available
         }
 
-        let ptr = GetProcAddress(imm32, b"ImmGetContextA\0".as_ptr());
-        if !ptr.is_null() {
-            IMM_CONTEXT = Some(std::mem::transmute(ptr));
-        }
-        let ptr = GetProcAddress(imm32, b"ImmReleaseContextA\0".as_ptr());
-        if !ptr.is_null() {
-            IMM_RELEASE_CONTEXT = Some(std::mem::transmute(ptr));
-        }
-        let ptr = GetProcAddress(imm32, b"ImmGetCompositionStringW\0".as_ptr());
-        if !ptr.is_null() {
-            IMM_GET_COMPOSITION_STRING = Some(std::mem::transmute(ptr));
-        }
-        let ptr = GetProcAddress(imm32, b"ImmSetCompositionWindow\0".as_ptr());
-        if !ptr.is_null() {
-            IMM_SET_COMPOSITION_WINDOW = Some(std::mem::transmute(ptr));
+        #[allow(clippy::manual_c_str_literals, clippy::missing_transmute_annotations)]
+        {
+            let ptr = GetProcAddress(imm32, b"ImmGetContextA\0".as_ptr());
+            if !ptr.is_null() {
+                IMM_CONTEXT = Some(std::mem::transmute(ptr));
+            }
+            let ptr = GetProcAddress(imm32, b"ImmReleaseContextA\0".as_ptr());
+            if !ptr.is_null() {
+                IMM_RELEASE_CONTEXT = Some(std::mem::transmute(ptr));
+            }
+            let ptr = GetProcAddress(imm32, b"ImmGetCompositionStringW\0".as_ptr());
+            if !ptr.is_null() {
+                IMM_GET_COMPOSITION_STRING = Some(std::mem::transmute(ptr));
+            }
+            let ptr = GetProcAddress(imm32, b"ImmSetCompositionWindow\0".as_ptr());
+            if !ptr.is_null() {
+                IMM_SET_COMPOSITION_WINDOW = Some(std::mem::transmute(ptr));
+            }
         }
     }
 }
@@ -208,9 +211,12 @@ fn load_imm32() {
 #[allow(non_snake_case, static_mut_refs)]
 unsafe fn ImmGetContext(window: Handle) -> Handle {
     load_imm32();
-    IMM_CONTEXT
-        .map(|f| f(window))
-        .unwrap_or_else(std::ptr::null_mut)
+    #[allow(clippy::redundant_closure)]
+    {
+        IMM_CONTEXT
+            .map(|f| f(window))
+            .unwrap_or_else(std::ptr::null_mut)
+    }
 }
 
 #[allow(non_snake_case, static_mut_refs)]
