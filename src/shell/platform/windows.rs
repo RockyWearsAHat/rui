@@ -210,7 +210,7 @@ unsafe fn ImmGetContext(window: Handle) -> Handle {
     load_imm32();
     IMM_CONTEXT
         .map(|f| f(window))
-        .unwrap_or_else(|| std::ptr::null_mut())
+        .unwrap_or_else(std::ptr::null_mut)
 }
 
 #[allow(non_snake_case, static_mut_refs)]
