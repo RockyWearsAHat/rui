@@ -8,7 +8,7 @@
 //! why the counter lives here rather than in `examples/counter.rs` alone.
 //!
 //! Three drivers, one description: `examples/counter.rs` opens it in a native
-//! window, [`crate::wasm`] drives it from `requestAnimationFrame` in a browser,
+//! window, the wasm backend drives it from `requestAnimationFrame` in a browser,
 //! and [`reference_frame`] draws one frame of it with no window at all.
 //! `examples/parity.rs` writes that frame out, and the page in
 //! `examples/parity.html` compares it — byte for byte — with what the browser
