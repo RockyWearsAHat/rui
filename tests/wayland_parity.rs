@@ -8,7 +8,7 @@
 
 use rui::shell::WindowOptions;
 use rui::testing::Harness;
-use rui::{Appearance, Radius, Size, Tone, button, col, draw, row, text};
+use rui::{button, col, draw, row, text, Appearance, Radius, Size, Tone};
 
 #[test]
 fn wayland_parity_window_options() {

@@ -20,7 +20,7 @@
 //! - See `src/widgets.rs` line 333–365 for the segmented() implementation.
 //! - See `tests/recipes.rs` for more examples: checkbox, switch, slider, radio.
 
-use rui::{El, col, row, text, widgets};
+use rui::{col, row, text, widgets, El};
 
 // === STATE ===
 // This struct holds all the application's interactive state.

@@ -158,7 +158,7 @@ pub mod widgets;
 /// Accessibility tree: semantic structure that assistive technologies consume.
 pub use accessibility::{AccessNode, AccessTree, AccessUpdate, Role};
 /// Application loop and entry points (`run` and `App` for custom loops).
-pub use app::{App, Redraw, run};
+pub use app::{run, App, Redraw};
 /// CPU rasterizer and frame buffer types for rendering and pixel operations.
 pub use canvas::{Bgra, Canvas, Corner, Mask};
 /// 8-bit sRGB color with contrast-ratio validation.
@@ -190,8 +190,8 @@ pub use pixelgrid::{GammaBoostLut, GlyphCache, HairlineSnap};
 pub use recipes::{empty_state, error_state, loading_state, stale_data_state};
 /// Signed-distance-field primitives: shapes, strokes, glows, and composable shape algebra.
 pub use sdf::{
-    Paint, Sculpt, Shape, arc, bevel, capsule, circle, linear, ngon, polygon, radial, rect, ring,
-    rounded_rect, solid,
+    arc, bevel, capsule, circle, linear, ngon, polygon, radial, rect, ring, rounded_rect, solid,
+    Paint, Sculpt, Shape,
 };
 /// Platform backend abstraction, error types, and window options.
 pub use shell::{Error, LoadedFonts, WindowOptions};

@@ -23,13 +23,13 @@
 //! The examples are included as modules rather than copied, so what is checked
 //! is the code that actually runs.
 
-use rui::Size;
-use rui::accessibility::{Role, audit};
+use rui::accessibility::{audit, Role};
 use rui::testing::Harness;
+use rui::Size;
 use rui::{
-    Align, El, Status, Tone, button, caption, code, col, divider, dot, draw, field, field_row,
-    figure, heading, meter, micro, panel, paragraph, row, section, segmented, spacer, tabs, tag,
-    text, title,
+    button, caption, code, col, divider, dot, draw, field, field_row, figure, heading, meter,
+    micro, panel, paragraph, row, section, segmented, spacer, tabs, tag, text, title, Align, El,
+    Status, Tone,
 };
 
 #[path = "../examples/controls.rs"]

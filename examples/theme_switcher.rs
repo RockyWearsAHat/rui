@@ -3,7 +3,7 @@
 //!
 //! Run with: `cargo run -p rui-native --example theme_switcher`
 
-use rui::{El, Tone, caption, col, heading, panel, row, text, widgets};
+use rui::{caption, col, heading, panel, row, text, widgets, El, Tone};
 
 struct State {
     selection: usize,

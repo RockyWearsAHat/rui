@@ -94,7 +94,7 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
-pub use fonts::{LoadedFonts, load_system_fonts};
+pub use fonts::{load_system_fonts, LoadedFonts};
 
 /// How long the loop waits between frames while something is animating.
 ///
@@ -823,12 +823,10 @@ mod tests {
         // consider, and the promise an application makes with
         // `App::idle_timeout`: a machine that changed on its own is on screen
         // within that long, whether or not anything thought to ask.
-        assert!(
-            Turn {
-                idle_elapsed: true,
-                ..QUIET
-            }
-            .is_due()
-        );
+        assert!(Turn {
+            idle_elapsed: true,
+            ..QUIET
+        }
+        .is_due());
     }
 }
