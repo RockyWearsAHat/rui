@@ -37,6 +37,7 @@ use crate::theme::Appearance;
 use crate::{Canvas, Event, Key, KeyCode, Modifiers, Point, PointerButton, Rect};
 use std::cell::Cell;
 use std::ffi::c_void;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use crate::shell::{Backend, Error, WindowOptions};
@@ -145,19 +146,101 @@ unsafe extern "system" {
     fn GlobalFree(memory: Handle) -> Handle;
     fn GlobalLock(memory: Handle) -> *mut c_void;
     fn GlobalUnlock(memory: Handle) -> i32;
+    fn LoadLibraryA(name: *const u8) -> Handle;
+    fn GetProcAddress(module: Handle, name: *const u8) -> *const c_void;
 }
 
-#[link(name = "imm32")]
-unsafe extern "system" {
-    fn ImmGetContext(window: Handle) -> Handle;
-    fn ImmReleaseContext(window: Handle, context: Handle) -> i32;
-    fn ImmGetCompositionStringW(
-        context: Handle,
-        index: u32,
-        buffer: *mut c_void,
-        bytes: u32,
-    ) -> i32;
-    fn ImmSetCompositionWindow(context: Handle, form: *const CompositionForm) -> i32;
+/// The four IMM32 entry points an input method needs, bound the first time one
+/// is called rather than at link time.
+///
+/// `-limm32` would need an import library, and the mingw sysroot Rust bundles
+/// for `x86_64-pc-windows-gnu` ships none — every native binary in the crate
+/// then fails to link on a machine without a full mingw-w64 install. Binding by
+/// name costs one `LoadLibraryA` for the life of the process and asks the
+/// linker for nothing. A machine with no IMM32 reads as no input context, which
+/// is what a keyboard needing no input method already looks like to callers.
+type ImmGetContext = unsafe extern "system" fn(Handle) -> Handle;
+type ImmReleaseContext = unsafe extern "system" fn(Handle, Handle) -> i32;
+type ImmCompositionString = unsafe extern "system" fn(Handle, u32, *mut c_void, u32) -> i32;
+type ImmSetCompositionWindow = unsafe extern "system" fn(Handle, *const CompositionForm) -> i32;
+
+struct Imm {
+    get_context: ImmGetContext,
+    release_context: ImmReleaseContext,
+    composition_string: ImmCompositionString,
+    set_composition_window: ImmSetCompositionWindow,
+}
+
+impl Imm {
+    fn get() -> Option<&'static Imm> {
+        static IMM: OnceLock<Option<Imm>> = OnceLock::new();
+        IMM.get_or_init(|| unsafe {
+            let module = LoadLibraryA(c"imm32.dll".as_ptr().cast());
+            if module.is_null() {
+                return None;
+            }
+            let get_context = GetProcAddress(module, c"ImmGetContext".as_ptr().cast());
+            let release_context = GetProcAddress(module, c"ImmReleaseContext".as_ptr().cast());
+            let composition = GetProcAddress(module, c"ImmGetCompositionStringW".as_ptr().cast());
+            let set_window = GetProcAddress(module, c"ImmSetCompositionWindow".as_ptr().cast());
+            if get_context.is_null()
+                || release_context.is_null()
+                || composition.is_null()
+                || set_window.is_null()
+            {
+                return None;
+            }
+            Some(Imm {
+                get_context: std::mem::transmute::<*const c_void, ImmGetContext>(get_context),
+                release_context: std::mem::transmute::<*const c_void, ImmReleaseContext>(
+                    release_context,
+                ),
+                composition_string: std::mem::transmute::<*const c_void, ImmCompositionString>(
+                    composition,
+                ),
+                set_composition_window: std::mem::transmute::<
+                    *const c_void,
+                    ImmSetCompositionWindow,
+                >(set_window),
+            })
+        })
+        .as_ref()
+    }
+}
+
+/// A null context, the ordinary "no input method here" answer, when IMM32 is
+/// missing — so every caller's existing null check covers that case too.
+unsafe fn imm_get_context(window: Handle) -> Handle {
+    match Imm::get() {
+        Some(imm) => unsafe { (imm.get_context)(window) },
+        None => std::ptr::null_mut(),
+    }
+}
+
+unsafe fn imm_release_context(window: Handle, context: Handle) -> i32 {
+    match Imm::get() {
+        Some(imm) => unsafe { (imm.release_context)(window, context) },
+        None => 0,
+    }
+}
+
+unsafe fn imm_composition_string(
+    context: Handle,
+    index: u32,
+    buffer: *mut c_void,
+    bytes: u32,
+) -> i32 {
+    match Imm::get() {
+        Some(imm) => unsafe { (imm.composition_string)(context, index, buffer, bytes) },
+        None => 0,
+    }
+}
+
+unsafe fn imm_set_composition_window(context: Handle, form: *const CompositionForm) -> i32 {
+    match Imm::get() {
+        Some(imm) => unsafe { (imm.set_composition_window)(context, form) },
+        None => 0,
+    }
 }
 
 #[link(name = "advapi32")]
@@ -698,7 +781,7 @@ impl Backend for Window {
             return Ok(());
         };
         unsafe {
-            let context = ImmGetContext(self.handle);
+            let context = imm_get_context(self.handle);
             if context.is_null() {
                 // No input context means no input method is loaded, which is the
                 // ordinary case for a keyboard that needs none.
@@ -714,8 +797,8 @@ impl Backend for Window {
                 },
                 area: WindowRect::default(),
             };
-            let placed = ImmSetCompositionWindow(context, &form);
-            ImmReleaseContext(self.handle, context);
+            let placed = imm_set_composition_window(context, &form);
+            imm_release_context(self.handle, context);
             if placed == 0 {
                 return Err(Error::Platform(
                     "the input method refused a position".into(),
@@ -807,17 +890,17 @@ impl Window {
     /// in bytes, which is why the length is halved before it becomes a buffer.
     fn composition_string(&self, index: u32) -> Option<(String, usize)> {
         unsafe {
-            let context = ImmGetContext(self.handle);
+            let context = imm_get_context(self.handle);
             if context.is_null() {
                 return None;
             }
-            let bytes = ImmGetCompositionStringW(context, index, std::ptr::null_mut(), 0);
+            let bytes = imm_composition_string(context, index, std::ptr::null_mut(), 0);
             if bytes <= 0 {
-                ImmReleaseContext(self.handle, context);
+                imm_release_context(self.handle, context);
                 return None;
             }
             let mut buffer = vec![0u16; bytes as usize / 2];
-            ImmGetCompositionStringW(
+            imm_composition_string(
                 context,
                 index,
                 buffer.as_mut_ptr().cast::<c_void>(),
@@ -825,8 +908,8 @@ impl Window {
             );
             // Negative means the input method has no opinion about the caret, in
             // which case the end of the composition is where it goes.
-            let caret = ImmGetCompositionStringW(context, GCS_CURSORPOS, std::ptr::null_mut(), 0);
-            ImmReleaseContext(self.handle, context);
+            let caret = imm_composition_string(context, GCS_CURSORPOS, std::ptr::null_mut(), 0);
+            imm_release_context(self.handle, context);
 
             let text = String::from_utf16_lossy(&buffer);
             let caret = if caret < 0 {
