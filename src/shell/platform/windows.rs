@@ -141,23 +141,11 @@ unsafe extern "system" {
 #[link(name = "kernel32")]
 unsafe extern "system" {
     fn GetModuleHandleW(name: *const u16) -> Handle;
+    fn GetProcAddress(module: Handle, name: *const u8) -> *mut c_void;
     fn GlobalAlloc(flags: u32, bytes: usize) -> Handle;
     fn GlobalFree(memory: Handle) -> Handle;
     fn GlobalLock(memory: Handle) -> *mut c_void;
     fn GlobalUnlock(memory: Handle) -> i32;
-}
-
-#[link(name = "imm32")]
-unsafe extern "system" {
-    fn ImmGetContext(window: Handle) -> Handle;
-    fn ImmReleaseContext(window: Handle, context: Handle) -> i32;
-    fn ImmGetCompositionStringW(
-        context: Handle,
-        index: u32,
-        buffer: *mut c_void,
-        bytes: u32,
-    ) -> i32;
-    fn ImmSetCompositionWindow(context: Handle, form: *const CompositionForm) -> i32;
 }
 
 #[link(name = "advapi32")]
@@ -171,6 +159,82 @@ unsafe extern "system" {
         data: *mut c_void,
         size: *mut u32,
     ) -> i32;
+}
+
+// IMM32 (Input Method Manager) is loaded at runtime so native binaries can link on
+// systems where imm32.dll is not available (like MinGW sysroot builds). If IMM32 is
+// not available, input composition simply returns null, which is correct: a keyboard
+// that needs no input method already looks this way to callers.
+type ImmGetContextFn = unsafe extern "system" fn(Handle) -> Handle;
+type ImmReleaseContextFn = unsafe extern "system" fn(Handle, Handle) -> i32;
+type ImmGetCompositionStringWFn = unsafe extern "system" fn(Handle, u32, *mut c_void, u32) -> i32;
+type ImmSetCompositionWindowFn = unsafe extern "system" fn(Handle, *const CompositionForm) -> i32;
+
+static mut IMM_CONTEXT: Option<ImmGetContextFn> = None;
+static mut IMM_RELEASE_CONTEXT: Option<ImmReleaseContextFn> = None;
+static mut IMM_GET_COMPOSITION_STRING: Option<ImmGetCompositionStringWFn> = None;
+static mut IMM_SET_COMPOSITION_WINDOW: Option<ImmSetCompositionWindowFn> = None;
+
+#[allow(static_mut_refs)]
+fn load_imm32() {
+    unsafe {
+        if IMM_CONTEXT.is_some() {
+            return; // Already loaded
+        }
+        let imm32 = GetModuleHandleW(wide("imm32.dll").as_ptr());
+        if imm32.is_null() {
+            return; // IMM32 not available
+        }
+
+        let ptr = GetProcAddress(imm32, b"ImmGetContextA\0".as_ptr());
+        if !ptr.is_null() {
+            IMM_CONTEXT = Some(std::mem::transmute(ptr));
+        }
+        let ptr = GetProcAddress(imm32, b"ImmReleaseContextA\0".as_ptr());
+        if !ptr.is_null() {
+            IMM_RELEASE_CONTEXT = Some(std::mem::transmute(ptr));
+        }
+        let ptr = GetProcAddress(imm32, b"ImmGetCompositionStringW\0".as_ptr());
+        if !ptr.is_null() {
+            IMM_GET_COMPOSITION_STRING = Some(std::mem::transmute(ptr));
+        }
+        let ptr = GetProcAddress(imm32, b"ImmSetCompositionWindow\0".as_ptr());
+        if !ptr.is_null() {
+            IMM_SET_COMPOSITION_WINDOW = Some(std::mem::transmute(ptr));
+        }
+    }
+}
+
+#[allow(non_snake_case, static_mut_refs)]
+unsafe fn ImmGetContext(window: Handle) -> Handle {
+    load_imm32();
+    IMM_CONTEXT
+        .map(|f| f(window))
+        .unwrap_or_else(|| std::ptr::null_mut())
+}
+
+#[allow(non_snake_case, static_mut_refs)]
+unsafe fn ImmReleaseContext(window: Handle, context: Handle) -> i32 {
+    IMM_RELEASE_CONTEXT.map(|f| f(window, context)).unwrap_or(0)
+}
+
+#[allow(non_snake_case, static_mut_refs)]
+unsafe fn ImmGetCompositionStringW(
+    context: Handle,
+    index: u32,
+    buffer: *mut c_void,
+    bytes: u32,
+) -> i32 {
+    IMM_GET_COMPOSITION_STRING
+        .map(|f| f(context, index, buffer, bytes))
+        .unwrap_or(-1)
+}
+
+#[allow(non_snake_case, static_mut_refs)]
+unsafe fn ImmSetCompositionWindow(context: Handle, form: *const CompositionForm) -> i32 {
+    IMM_SET_COMPOSITION_WINDOW
+        .map(|f| f(context, form))
+        .unwrap_or(0)
 }
 
 #[repr(C)]
