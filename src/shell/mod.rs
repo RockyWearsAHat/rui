@@ -72,7 +72,7 @@
 //! not something only this loop can do: `Backend::pump` is handed a way to
 //! draw one, for a backend to call when the platform has taken over.
 
-mod embedded_fonts;
+pub mod embedded_fonts;
 pub mod fonts;
 mod platform;
 
