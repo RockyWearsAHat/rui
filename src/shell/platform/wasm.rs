@@ -193,7 +193,10 @@ impl Backend for Window {
         let height_px = (options.height * scale).round().max(1.0) as u32;
         canvas.set_width(width_px);
         canvas.set_height(height_px);
-        let style = canvas.style();
+        let html_element = canvas
+            .dyn_ref::<web_sys::HtmlElement>()
+            .ok_or_else(|| Error::Platform("canvas is not an HtmlElement".into()))?;
+        let style = html_element.style();
         let _ = style.set_property("width", &format!("{}px", options.width));
         let _ = style.set_property("height", &format!("{}px", options.height));
         let _ = canvas.set_attribute("tabindex", "0");
