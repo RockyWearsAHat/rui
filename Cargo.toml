@@ -30,12 +30,14 @@ wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = [
     "CanvasRenderingContext2d",
     "console",
+    "CssStyleDeclaration",
     "Document",
     "DomRect",
     "Element",
     "Event",
     "EventTarget",
     "HtmlCanvasElement",
+    "HtmlElement",
     "ImageData",
     "InputEvent",
     "KeyboardEvent",
@@ -45,6 +47,7 @@ web-sys = { version = "0.3", features = [
     "Window",
     "WheelEvent",
 ] }
+web-time = "1"
 
 # The rendering suite builds the `<canvas>` the backend looks for, and reads the
 # pixels back out of it afterwards, inside a browser `wasm-bindgen-test` drives.
