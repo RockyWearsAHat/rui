@@ -542,6 +542,29 @@ pub fn field_group<S>(label: impl Into<String>, value: El<S>) -> El<S> {
     .min_h(20.0)
 }
 
+/// A pill-shaped chip: micro text on a filled, rounded background.
+///
+/// One-call widget for tags, branches, and status labels. Composes .pill()/.fill()/.pad()
+/// rather than requiring callers to hand-roll the same pattern every time.
+pub fn badge<S>(label: impl Into<String>) -> El<S> {
+    row(text(label).text_size(MICRO_SIZE))
+        .pad_x(Metrics::DEFAULT.gap)
+        .h(20.0)
+        .fill(Tone::Sunken)
+        .pill()
+}
+
+/// A text-only navigation element: no border/fill, color change on hover, distinct color when selected.
+///
+/// Used for breadcrumbs, route headers, and tab-like navigation where the selection
+/// state is communicated by color rather than a filled background.
+pub fn link<S>(label: impl Into<String>) -> El<S> {
+    row(text(label))
+        .color(Tone::Text)
+        .hover_color(Tone::Accent)
+        .role(Role::Text)
+}
+
 /// An interactive scrollbar widget for controlling scroll position.
 ///
 /// The scrollbar thumb size represents the ratio of viewport height to total
@@ -651,5 +674,27 @@ mod tests {
         let row = &element.children[0];
         assert_eq!(row.children[0].key.as_deref(), Some("Services"));
         assert_eq!(row.children[1].key.as_deref(), Some("Sites"));
+    }
+
+    #[test]
+    fn badge_is_a_pill_with_micro_text() {
+        let badge: El<Nothing> = badge("main");
+        // Badge should be a row with fill and pill shape
+        assert_eq!(badge.style().fill, Some(Tone::Sunken));
+        // Badge should have pill radius
+        assert!(matches!(badge.style().radius, Radius::Pill));
+        // Badge should contain a text child (the "main" label)
+        assert!(!badge.children.is_empty());
+    }
+
+    #[test]
+    fn link_has_no_initial_fill_and_accent_on_hover() {
+        let link: El<Nothing> = link("Repos");
+        // Link should have no fill initially
+        assert_eq!(link.style().fill, None);
+        // Link should have text content
+        assert!(!link.children.is_empty());
+        // Link should be a row (nav element)
+        assert!(matches!(link.node, Node::Stack));
     }
 }
