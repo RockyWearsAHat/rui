@@ -49,8 +49,8 @@ pub fn avatar<S: 'static>(name: &str, size: f32) -> El<S> {
             }
         }
     })
-    .w(Length::Auto)
-    .h(Length::Auto)
+    .w(Length::Fixed(size))
+    .h(Length::Fixed(size))
     .role(Role::Image)
     .label(name)
 }
