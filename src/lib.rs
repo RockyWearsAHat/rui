@@ -150,6 +150,7 @@ pub mod recipes;
 pub mod reload;
 pub mod sdf;
 pub mod shell;
+pub mod skeleton;
 pub mod style;
 pub mod testing;
 pub mod text;
@@ -196,6 +197,8 @@ pub use sdf::{
 };
 /// Platform backend abstraction, error types, and window options.
 pub use shell::{request_redraw, Error, LoadedFonts, WindowOptions};
+/// Loading placeholders with a sweeping shimmer effect.
+pub use skeleton::{skeleton, skeleton_rows};
 /// Layout and style enums: alignment, anchor points, flow directions, radii, roles, spacing.
 pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Pressed, Radius, Style, Tone};
 /// Typography: font IDs, font collection loading, and text layout configuration.
