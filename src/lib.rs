@@ -129,18 +129,23 @@
 
 pub mod accessibility;
 pub mod app;
+pub mod avatar;
 pub mod breadcrumb;
 pub mod canvas;
+pub mod code_view;
 pub mod color;
 pub mod demo;
 pub mod element;
 pub mod elevation;
 pub mod font;
 pub mod geom;
+pub mod icon;
 pub mod image;
 pub mod input;
 mod layout;
+pub mod markdown;
 pub mod memory;
+pub mod menu;
 pub mod motion;
 /// Visual and interaction semantics for overlays (modals, popovers, dropdowns).
 pub mod overlay;
@@ -153,7 +158,9 @@ pub mod sdf;
 pub mod shell;
 pub mod skeleton;
 pub mod style;
+pub mod syntax;
 pub mod table;
+pub mod tabbar;
 pub mod testing;
 pub mod text;
 pub mod theme;
@@ -163,8 +170,80 @@ pub mod widgets;
 pub use accessibility::{AccessNode, AccessTree, AccessUpdate, Role};
 /// Application loop and entry points (`run` and `App` for custom loops).
 pub use app::{run, App, Redraw};
+/// Square identicon derived from a name.
+pub use avatar::{avatar, avatar_color};
 /// Breadcrumb navigation component.
 pub use breadcrumb::breadcrumb;
+/// CPU rasterizer and frame buffer types for rendering and pixel operations.
+pub use canvas::{Bgra, Canvas, Corner, Mask};
+/// A block of source: numbered, monospaced, and scrolled rather than wrapped.
+pub use code_view::{code_view, language_for_path, CodeStyle, CodeView};
+/// 8-bit sRGB color with contrast-ratio validation.
+pub use color::Color;
+/// `El<S>`: elements and their builder API (layout, style, handlers, layer).
+pub use element::{Children, El};
+/// Visual elevation (surface layers): 0%, 3%, 6%, 9% lightness boosts.
+pub use elevation::Elevation;
+/// TrueType font loading and rendering.
+pub use font::{Font, FontError};
+/// 2D geometry: points, sizes, rectangles, and insets in logical units.
+pub use geom::{Insets, Point, Rect, Size};
+/// The marks Forge needs. Drawn, never a font glyph and never an image file.
+pub use icon::{icon, icon_tinted, Icon};
+/// Input events and keyboard semantics.
+pub use input::{
+    Composition, Drag, Event, Input, Key, KeyCode, KeyPhase, KeyStroke, Modifiers, Phase,
+    PointerButton, Pointing,
+};
+/// Interaction state that outlives a frame: focus, scroll, animation state, IME composition.
+pub use memory::{FocusSource, Id, Memory, Response};
+/// A markdown document, rendered. Links are drawn but do nothing.
+pub use markdown::{markdown, markdown_with};
+/// Animation: physics-based springs, easing curves, enter/exit transitions.
+pub use motion::{Easing, SlideDirection, Spring, Transition};
+/// A button that opens a list under itself.
+pub use menu::{menu_button, MenuItem};
+/// Overlay positioning: modals, popovers, dropdowns with z-order and anchoring.
+pub use overlay::{Overlay, OverlayAnchor, OverlayPlacement};
+/// Drawing API: shapes, text, and visual state inspection during render.
+pub use paint::{Painter, Visual};
+/// Pixel-grid: glyph rasterization cache, hairline snapping, gamma boost.
+pub use pixelgrid::{GammaBoostLut, GlyphCache, HairlineSnap};
+/// Pre-built UI states: loading, empty, error, and stale-data screens.
+pub use recipes::{empty_state, error_state, loading_state, stale_data_state};
+/// Signed-distance-field primitives: shapes, strokes, glows, and composable shape algebra.
+pub use sdf::{
+    arc, bevel, capsule, circle, linear, ngon, polygon, radial, rect, ring, rounded_rect, solid,
+    Paint, Sculpt, Shape,
+};
+/// Platform backend abstraction, error types, and window options.
+pub use shell::{request_redraw, Error, LoadedFonts, WindowOptions};
+/// Loading placeholders with a sweeping shimmer effect.
+pub use skeleton::{skeleton, skeleton_rows};
+/// Layout and style enums: alignment, anchor points, flow directions, radii, roles, spacing.
+pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Pressed, Radius, Style, Tone};
+/// Language tokenization for syntax highlighting.
+pub use syntax::{tokenize, Language, Token, TokenType};
+/// Table component: columns, rows, and data display.
+pub use table::{column, table, table_row, Column, Row};
+/// A row of tabs, one of them chosen.
+pub use tabbar::{tab_bar, TabItem};
+/// Typography: font IDs, font collection loading, and text layout configuration.
+pub use text::{FontId, Fonts, TextStyle};
+/// Theme infrastructure: appearance mode, palette, metrics, corner style, type scale.
+pub use theme::{Appearance, CornerStyle, Height, Palette, Space, Status, TextRole, Theme};
+/// Built-in widget constructors from primitives.
+pub use widgets::{
+    badge, button, caption, code, col, divider, dot, draw, field, field_group, field_row, figure,
+    heading, link, meter, micro, panel, paragraph, row, section, segmented, spacer, star_rating,
+    tabs, tag, text, title,
+};
+/// Application loop and entry points (`run` and `App` for custom loops).
+pub use app::{run, App, Redraw};
+/// Breadcrumb navigation component.
+pub use breadcrumb::breadcrumb;
+/// Square identicon derived from a name.
+pub use avatar::{avatar, avatar_color};
 /// CPU rasterizer and frame buffer types for rendering and pixel operations.
 pub use canvas::{Bgra, Canvas, Corner, Mask};
 /// 8-bit sRGB color with contrast-ratio validation.
