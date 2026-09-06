@@ -1,3 +1,5 @@
+//! Tests for markdown rendering.
+
 use rui::testing::Harness;
 use rui::{markdown, markdown_with};
 
@@ -22,8 +24,8 @@ fn markdown_renders_paragraphs_split_on_blank_lines() {
     let mut harness = Harness::new(State, view).size(400.0, 600.0);
     harness.frame();
 
-    assert!(harness.shows("First paragraph"));
-    assert!(harness.shows("Second paragraph"));
+    assert!(harness.shows("First paragraph."));
+    assert!(harness.shows("Second paragraph."));
 }
 
 #[test]
@@ -46,7 +48,7 @@ fn markdown_fenced_block_becomes_a_code_view() {
     let mut harness = Harness::new(State, view).size(400.0, 600.0);
     harness.frame();
 
-    assert!(harness.shows("fn main()"));
+    assert!(harness.shows("fn main() {}"));
 }
 
 #[test]
@@ -56,7 +58,8 @@ fn markdown_fence_info_string_picks_the_language() {
     let mut harness = Harness::new(State, view).size(400.0, 600.0);
     harness.frame();
 
-    assert!(harness.shows("def hello"));
+    assert!(harness.shows("def hello():"));
+    assert!(harness.shows("    pass"));
 }
 
 #[test]
@@ -66,9 +69,9 @@ fn markdown_inline_code_is_monospaced() {
     let mut harness = Harness::new(State, view).size(400.0, 600.0);
     harness.frame();
 
+    assert!(harness.shows("The "));
     assert!(harness.shows("code"));
-    assert!(harness.shows("The"));
-    assert!(harness.shows("is here"));
+    assert!(harness.shows(" is here."));
 }
 
 #[test]
@@ -87,7 +90,7 @@ fn markdown_bold_is_bold_and_emphasis_is_not_italic() {
 
 #[test]
 fn markdown_link_reports_its_href_when_clicked() {
-    let view = |state: &State| {
+    let view = |_: &State| {
         markdown_with(
             "[Click me](https://example.com)",
             |_: &mut State, href: String| {
@@ -126,9 +129,9 @@ fn markdown_strips_html_and_keeps_its_text() {
     let mut harness = Harness::new(State, view).size(400.0, 600.0);
     harness.frame();
 
-    assert!(harness.shows("Some"));
+    assert!(harness.shows("Some "));
     assert!(harness.shows("HTML"));
-    assert!(harness.shows("text"));
+    assert!(harness.shows(" text "));
     assert!(harness.shows("here"));
 }
 
@@ -139,9 +142,9 @@ fn markdown_image_becomes_a_placeholder() {
     let mut harness = Harness::new(State, view).size(400.0, 600.0);
     harness.frame();
 
-    assert!(harness.shows("Some text"));
-    assert!(harness.shows("image: alt text"));
-    assert!(harness.shows("more text"));
+    assert!(harness.shows("Some text "));
+    assert!(harness.shows("[image: alt text]"));
+    assert!(harness.shows(" more text"));
 }
 
 #[test]
