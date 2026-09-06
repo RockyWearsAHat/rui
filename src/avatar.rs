@@ -4,7 +4,7 @@ use crate::accessibility::Role;
 use crate::color::Color;
 use crate::element::El;
 use crate::geom::{Rect, Size};
-use crate::style::Radius;
+use crate::style::{Length, Radius};
 use crate::widgets;
 
 /// A square identicon derived from a name — the same name always draws the
@@ -19,7 +19,7 @@ pub fn avatar<S: 'static>(name: &str, size: f32) -> El<S> {
 
         // 5x5 grid with mirroring: columns 0-2 are hashed, 3-4 mirror 1-0
         let cell_size = rect.w / 5.0;
-        let inset = size * 0.12;
+        let inset = (cell_size * 0.2).max(0.5);
 
         for row in 0..5 {
             for col in 0..5 {
@@ -49,6 +49,8 @@ pub fn avatar<S: 'static>(name: &str, size: f32) -> El<S> {
             }
         }
     })
+    .w(Length::Fixed(size))
+    .h(Length::Fixed(size))
     .role(Role::Image)
     .label(name)
 }
