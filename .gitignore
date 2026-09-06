@@ -36,3 +36,6 @@ yarn-error.log
 yarn.lock
 .claude/worktrees/
 .claude/worktrees/
+*.rej
+*.rej.rej
+*.orig
