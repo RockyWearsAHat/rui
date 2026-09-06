@@ -4,7 +4,7 @@ use crate::accessibility::Role;
 use crate::color::Color;
 use crate::element::El;
 use crate::geom::{Rect, Size};
-use crate::style::Radius;
+use crate::style::{Length, Radius};
 use crate::widgets;
 
 /// A square identicon derived from a name — the same name always draws the
@@ -49,6 +49,8 @@ pub fn avatar<S: 'static>(name: &str, size: f32) -> El<S> {
             }
         }
     })
+    .w(Length::Auto)
+    .h(Length::Auto)
     .role(Role::Image)
     .label(name)
 }
