@@ -103,11 +103,14 @@ pub fn menu_button<S: 'static>(
             .layer(Anchor::Below)
             .overlay(Overlay::Dropdown)
             .overlay_placement(OverlayPlacement::top_start(0.0, 4.0))
+            .fill(Tone::Raised)
+            .border(1.0, Tone::Border)
+            .round(Radius::Panel)
             .elevation(Elevation::Overlay)
             .min_w(220.0)
-            .max_h(320.0)
+            .max_h(280.0)
             .scroll()
-            .key("menu-panel")
+            .key("menu-popover")
             .on_key(move |s, key, _| {
                 if key == Key::Escape {
                     toggle(s);
