@@ -1138,6 +1138,13 @@ impl<S> El<S> {
     }
 
     /// Whether anything about this element depends on the pointer or keyboard.
+    ///
+    /// Broad on purpose: it gates whether [`interact`](crate::paint) bothers
+    /// computing a [`Response`](crate::paint::Response) for this element at
+    /// all, and a hover colour with nothing behind it still needs that
+    /// response to know when to draw itself. For the narrower question of
+    /// which element a *click* belongs to, see [`El::captures_click`] —
+    /// hover styling alone must never win that away from a real handler.
     pub(crate) fn interactive(&self) -> bool {
         !self.disabled
             && (self.on_click.is_some()
@@ -1155,6 +1162,32 @@ impl<S> El<S> {
                 || self.reactive
                 || self.scrolls
                 || !self.style.hover.is_empty())
+    }
+
+    /// Whether a click or a key at this element belongs to *it*, rather than
+    /// to whatever merely watches the pointer here.
+    ///
+    /// Narrower than [`El::interactive`] on purpose. `on_hover`,
+    /// `on_pointer_move`, `.reactive()`, and a bare hover colour are all ways
+    /// of *noticing* the pointer without answering it — a `link()` coloured
+    /// on hover inside a clickable table row is exactly that, and the row's
+    /// own click handler is the one a person aimed at when they clicked the
+    /// name it happens to be drawn with. [`crate::paint::resolve_hit`] uses
+    /// this to decide who a click belongs to, and falls back to the broader
+    /// [`El::interactive`] only where nothing narrower claimed the point —
+    /// see [`crate::paint::Hit`].
+    pub(crate) fn captures_click(&self) -> bool {
+        !self.disabled
+            && (self.on_click.is_some()
+                || self.on_secondary_click.is_some()
+                || self.on_input.is_some()
+                || self.on_submit.is_some()
+                || self.on_drag.is_some()
+                || self.on_key.is_some()
+                || self.on_key_up.is_some()
+                || self.on_raw_key.is_some()
+                || self.on_scroll.is_some()
+                || self.focusable)
     }
 
     /// Whether Tab can reach it: it takes the keyboard, and is not disabled.
