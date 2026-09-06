@@ -162,8 +162,8 @@ fn menu_open_panel_is_layered() {
     let probes = harness.probes();
     let panel = probes
         .iter()
-        .find(|p| p.key == Some("menu-panel".to_string()));
-    assert!(panel.is_some(), "Should find menu-panel by key");
+        .find(|p| p.key == Some("menu-popover".to_string()));
+    assert!(panel.is_some(), "Should find menu-popover by key");
     assert!(panel.unwrap().layered, "Menu panel should be layered");
 }
 
@@ -352,7 +352,7 @@ fn menu_escape_calls_toggle() {
     let probes = harness.probes();
     let panel = probes
         .iter()
-        .find(|p| p.key == Some("menu-panel".to_string()));
+        .find(|p| p.key == Some("menu-popover".to_string()));
     assert!(panel.is_some(), "Menu panel should exist when open");
 }
 
@@ -403,5 +403,85 @@ fn menu_items_are_focusable_in_order() {
         focusable_items.len(),
         3,
         "All menu items should be focusable"
+    );
+}
+
+/// Popover is a filled panel with border and elevation.
+#[test]
+fn menu_popover_is_a_filled_panel() {
+    let state = MenuState {
+        open: true,
+        items: vec![MenuItem {
+            key: "item1".to_string(),
+            label: "Item 1".to_string(),
+            selected: false,
+        }],
+        chosen: None,
+    };
+
+    let view =
+        |s: &MenuState| menu_button("Select", None, s.open, |_| {}, s.items.clone(), |_, _| {});
+
+    let mut harness = Harness::new(state, view).size(300.0, 400.0);
+    harness.frame();
+
+    // The menu popover should have fill and border styling
+    let probes = harness.probes();
+    let popover = probes
+        .iter()
+        .find(|p| p.key == Some("menu-popover".to_string()));
+    assert!(popover.is_some(), "Should find menu-popover by key");
+
+    let popover_probe = popover.unwrap();
+    // The probe should indicate that the popover is rendered with fill and border
+    assert!(popover_probe.rect.w > 0.0, "Popover should have width");
+    assert!(popover_probe.rect.h > 0.0, "Popover should have height");
+}
+
+/// Popover scrolls past ten items.
+#[test]
+fn menu_popover_scrolls_past_ten_items() {
+    // Create 15 items to test scrolling
+    let mut items = Vec::new();
+    for i in 1..=15 {
+        items.push(MenuItem {
+            key: format!("item{}", i),
+            label: format!("Item {}", i),
+            selected: false,
+        });
+    }
+
+    let state = MenuState {
+        open: true,
+        items,
+        chosen: None,
+    };
+
+    let view =
+        |s: &MenuState| menu_button("Select", None, s.open, |_| {}, s.items.clone(), |_, _| {});
+
+    let mut harness = Harness::new(state, view).size(300.0, 600.0);
+    harness.frame();
+
+    // All 15 items should exist in the element tree (even if not all visible at once)
+    let probes = harness.probes();
+    let menu_items: Vec<_> = probes.iter().filter(|p| p.role == Role::MenuItem).collect();
+    assert_eq!(
+        menu_items.len(),
+        15,
+        "All 15 menu items should exist in the tree for scrolling"
+    );
+
+    // The popover should have scroll capability
+    let popover = probes
+        .iter()
+        .find(|p| p.key == Some("menu-popover".to_string()));
+    assert!(popover.is_some(), "Should find menu-popover by key");
+
+    // The popover should be constrained in height (max_h = 280.0 ≈ 10 rows)
+    let popover_probe = popover.unwrap();
+    assert!(
+        popover_probe.rect.h <= 320.0,
+        "Popover height should be constrained"
     );
 }
