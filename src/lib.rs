@@ -159,8 +159,8 @@ pub mod shell;
 pub mod skeleton;
 pub mod style;
 pub mod syntax;
-pub mod table;
 pub mod tabbar;
+pub mod table;
 pub mod testing;
 pub mod text;
 pub mod theme;
@@ -197,14 +197,14 @@ pub use input::{
     Composition, Drag, Event, Input, Key, KeyCode, KeyPhase, KeyStroke, Modifiers, Phase,
     PointerButton, Pointing,
 };
-/// Interaction state that outlives a frame: focus, scroll, animation state, IME composition.
-pub use memory::{FocusSource, Id, Memory, Response};
 /// A markdown document, rendered. Links are drawn but do nothing.
 pub use markdown::{markdown, markdown_with};
-/// Animation: physics-based springs, easing curves, enter/exit transitions.
-pub use motion::{Easing, SlideDirection, Spring, Transition};
+/// Interaction state that outlives a frame: focus, scroll, animation state, IME composition.
+pub use memory::{FocusSource, Id, Memory, Response};
 /// A button that opens a list under itself.
 pub use menu::{menu_button, MenuItem};
+/// Animation: physics-based springs, easing curves, enter/exit transitions.
+pub use motion::{Easing, SlideDirection, Spring, Transition};
 /// Overlay positioning: modals, popovers, dropdowns with z-order and anchoring.
 pub use overlay::{Overlay, OverlayAnchor, OverlayPlacement};
 /// Drawing API: shapes, text, and visual state inspection during render.
@@ -226,24 +226,24 @@ pub use skeleton::{skeleton, skeleton_rows};
 pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Pressed, Radius, Style, Tone};
 /// Language tokenization for syntax highlighting.
 pub use syntax::{tokenize, Language, Token, TokenType};
-/// Table component: columns, rows, and data display.
-pub use table::{column, table, table_row, Column, Row};
 /// A row of tabs, one of them chosen.
 pub use tabbar::{tab_bar, TabItem};
+/// Table component: columns, rows, and data display.
+pub use table::{column, table, table_row, Column, Row};
 /// Typography: font IDs, font collection loading, and text layout configuration.
 pub use text::{FontId, Fonts, TextStyle};
 /// Theme infrastructure: appearance mode, palette, metrics, corner style, type scale.
 pub use theme::{Appearance, CornerStyle, Height, Palette, Space, Status, TextRole, Theme};
+/// A short confirmation, floating at the bottom of the window.
+pub use toast::toast;
+/// A label that appears above an element when open.
+pub use tooltip::tooltip;
 /// Built-in widget constructors from primitives.
 pub use widgets::{
     badge, button, caption, code, col, divider, dot, draw, field, field_group, field_row, figure,
     heading, link, meter, micro, panel, paragraph, row, section, segmented, spacer, star_rating,
     tabs, tag, text, title,
 };
-/// A short confirmation, floating at the bottom of the window.
-pub use toast::toast;
-/// A label that appears above an element when open.
-pub use tooltip::tooltip;
 
 /// A run of text, formatted.
 ///
