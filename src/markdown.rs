@@ -1,4 +1,5 @@
 //! Markdown renderer — hand-written line-oriented parser with no dependencies.
+#![allow(clippy::while_let_on_iterator, clippy::redundant_pattern_matching)]
 
 use crate::code_view::code_view;
 use crate::element::El;
@@ -31,7 +32,7 @@ enum Block {
     Heading2(String),
     Heading3(String),
     Paragraph(String),
-    CodeBlock {
+    Code {
         language: String,
         code: String,
     },
@@ -42,7 +43,7 @@ enum Block {
         rows: Vec<Vec<String>>,
     },
     Divider,
-    BlockQuote(String),
+    Quote(String),
 }
 
 fn parse_blocks(source: &str) -> Vec<Block> {
@@ -85,7 +86,7 @@ fn parse_blocks(source: &str) -> Vec<Block> {
             if i < lines.len() {
                 i += 1;
             }
-            blocks.push(Block::CodeBlock {
+            blocks.push(Block::Code {
                 language: info,
                 code,
             });
@@ -98,23 +99,16 @@ fn parse_blocks(source: &str) -> Vec<Block> {
             let mut items = Vec::new();
             while i < lines.len() {
                 let l = lines[i].trim_start();
-                if l.starts_with("- ") || l.starts_with("* ") || l.starts_with("+ ") {
-                    let item = if l.starts_with("- ") {
-                        &l[2..]
-                    } else if l.starts_with("* ") {
-                        &l[2..]
-                    } else {
-                        &l[2..]
-                    };
+                if let Some(item) = l
+                    .strip_prefix("- ")
+                    .or_else(|| l.strip_prefix("* "))
+                    .or_else(|| l.strip_prefix("+ "))
+                {
                     items.push(item.to_string());
                     i += 1;
                 } else if l.is_empty() {
                     i += 1;
-                    if i < lines.len()
-                        && !lines[i]
-                            .trim_start()
-                            .starts_with(|c| c == '-' || c == '*' || c == '+')
-                    {
+                    if i < lines.len() && !lines[i].trim_start().starts_with(['-', '*', '+']) {
                         break;
                     }
                 } else {
@@ -178,7 +172,7 @@ fn parse_blocks(source: &str) -> Vec<Block> {
                 quote.push_str(content);
                 i += 1;
             }
-            blocks.push(Block::BlockQuote(quote));
+            blocks.push(Block::Quote(quote));
         }
         // Paragraphs
         else {
@@ -204,7 +198,7 @@ fn is_numbered_list_start(line: &str) -> bool {
     if let Some(rest) = trimmed.strip_prefix(|c: char| c.is_ascii_digit()) {
         if let Some(after) = rest.strip_prefix(|c: char| c.is_ascii_digit()) {
             if let Some(after) = after.strip_prefix(|c: char| c.is_ascii_digit()) {
-                if let Some(_) = after.strip_prefix(". ") {
+                if after.strip_prefix(". ").is_some() {
                     return true;
                 }
             } else if let Some(_) = after.strip_prefix(". ") {
@@ -329,7 +323,7 @@ fn render_block<S: 'static>(
         Block::Heading2(heading_text) => col((heading(heading_text).bold(), divider())).gap(8.0),
         Block::Heading3(heading_text) => heading(heading_text).bold(),
         Block::Paragraph(para_text) => parse_and_render_inline(para_text, on_link),
-        Block::CodeBlock { language, code } => {
+        Block::Code { language, code } => {
             let lang = if language.is_empty() {
                 None
             } else {
@@ -341,7 +335,7 @@ fn render_block<S: 'static>(
             } else {
                 cv
             };
-            panel(cv.numbers(false).build()).into()
+            panel(cv.numbers(false).build())
         }
         Block::BulletList(items) => {
             let elements: Vec<El<S>> = items
@@ -387,10 +381,10 @@ fn render_block<S: 'static>(
 
             let header_cells: Vec<El<S>> = header.into_iter().map(|h| text(h).bold()).collect();
 
-            table(&cols, Some(header_cells), table_rows).into()
+            table(&cols, Some(header_cells), table_rows)
         }
         Block::Divider => divider(),
-        Block::BlockQuote(quote_text) => parse_and_render_inline(quote_text, on_link)
+        Block::Quote(quote_text) => parse_and_render_inline(quote_text, on_link)
             .color(Tone::Muted)
             .border(2.0, Tone::Border)
             .pad(12.0),
@@ -427,7 +421,7 @@ fn parse_inline<S: 'static>(
                     }
                     code_text.push(c);
                 }
-                result.push(text(code_text).mono());
+                result.push(text(code_text));
             }
             '[' => {
                 if !current.is_empty() {
