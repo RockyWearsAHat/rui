@@ -11,10 +11,18 @@ pub enum Language {
     Python,
     /// JavaScript
     JavaScript,
+    /// TypeScript
+    TypeScript,
     /// Bash
     Bash,
     /// Diff format
     Diff,
+    /// JSON
+    Json,
+    /// Markdown
+    Markdown,
+    /// TOML
+    Toml,
 }
 
 /// A token type with its semantic meaning.
@@ -28,6 +36,10 @@ pub enum TokenType {
     Comment,
     /// Number literals
     Number,
+    /// Type names
+    Type,
+    /// Function names
+    Function,
     /// Everything else
     Other,
 }
@@ -40,6 +52,8 @@ impl TokenType {
             TokenType::String => Tone::Accent, // Can be customized
             TokenType::Comment => Tone::Muted,
             TokenType::Number => Tone::Accent,
+            TokenType::Type => Tone::Accent,
+            TokenType::Function => Tone::Accent,
             TokenType::Other => Tone::Text,
         }
     }
@@ -60,8 +74,37 @@ pub fn tokenize(code: &str, language: Language) -> Vec<Token> {
         Language::Rust => tokenize_rust(code),
         Language::Python => tokenize_python(code),
         Language::JavaScript => tokenize_javascript(code),
+        Language::TypeScript => tokenize_typescript(code),
         Language::Bash => tokenize_bash(code),
         Language::Diff => tokenize_diff(code),
+        Language::Json => tokenize_json(code),
+        Language::Markdown => tokenize_markdown(code),
+        Language::Toml => tokenize_toml(code),
+    }
+}
+
+/// Detect language from file path/extension.
+pub fn language_for_path(path: &str) -> Option<Language> {
+    if path.ends_with(".rs") {
+        Some(Language::Rust)
+    } else if path.ends_with(".py") {
+        Some(Language::Python)
+    } else if path.ends_with(".js") || path.ends_with(".mjs") || path.ends_with(".cjs") {
+        Some(Language::JavaScript)
+    } else if path.ends_with(".ts") || path.ends_with(".tsx") {
+        Some(Language::TypeScript)
+    } else if path.ends_with(".sh") || path.ends_with(".bash") {
+        Some(Language::Bash)
+    } else if path.ends_with(".diff") || path.ends_with(".patch") {
+        Some(Language::Diff)
+    } else if path.ends_with(".json") {
+        Some(Language::Json)
+    } else if path.ends_with(".md") {
+        Some(Language::Markdown)
+    } else if path.ends_with(".toml") {
+        Some(Language::Toml)
+    } else {
+        None
     }
 }
 
@@ -229,6 +272,28 @@ fn tokenize_javascript(code: &str) -> Vec<Token> {
     basic_tokenize(code, &keywords)
 }
 
+fn tokenize_typescript(code: &str) -> Vec<Token> {
+    let keywords = [
+        "let",
+        "const",
+        "var",
+        "function",
+        "if",
+        "else",
+        "for",
+        "while",
+        "return",
+        "interface",
+        "type",
+        "enum",
+        "implements",
+        "declare",
+        "namespace",
+        "readonly",
+    ];
+    basic_tokenize(code, &keywords)
+}
+
 fn tokenize_bash(code: &str) -> Vec<Token> {
     let keywords = ["if", "else", "for", "while", "do", "done", "function"];
     basic_tokenize(code, &keywords)
@@ -253,6 +318,297 @@ fn tokenize_diff(code: &str) -> Vec<Token> {
             ty: TokenType::Other,
         });
     }
+    tokens
+}
+
+fn tokenize_json(code: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+    let mut chars = code.chars().peekable();
+    let mut current = String::new();
+    let mut in_string = false;
+
+    while let Some(&ch) = chars.peek() {
+        if ch == '"' {
+            current.push(ch);
+            chars.next();
+            in_string = !in_string;
+
+            if !in_string && current.starts_with('"') && current.ends_with('"') {
+                // Check if this is a key (followed by ':')
+                let mut temp_chars = chars.clone();
+                let mut is_key_candidate = false;
+                while let Some(&c) = temp_chars.peek() {
+                    if c == ':' {
+                        is_key_candidate = true;
+                        break;
+                    } else if !c.is_whitespace() {
+                        break;
+                    }
+                    temp_chars.next();
+                }
+
+                if is_key_candidate {
+                    tokens.push(Token {
+                        text: current.clone(),
+                        ty: TokenType::Type,
+                    });
+                } else {
+                    tokens.push(Token {
+                        text: current.clone(),
+                        ty: TokenType::String,
+                    });
+                }
+                current.clear();
+            }
+        } else if !in_string {
+            match ch {
+                '{' | '}' | '[' | ']' | ':' | ',' => {
+                    if !current.is_empty() {
+                        let ty = if current == "true"
+                            || current == "false"
+                            || current == "null"
+                            || current.parse::<f64>().is_ok()
+                        {
+                            TokenType::Number
+                        } else {
+                            TokenType::Other
+                        };
+                        tokens.push(Token {
+                            text: current.clone(),
+                            ty,
+                        });
+                        current.clear();
+                    }
+                    if !ch.is_whitespace() {
+                        tokens.push(Token {
+                            text: ch.to_string(),
+                            ty: TokenType::Other,
+                        });
+                    }
+                    chars.next();
+                }
+                c if c.is_whitespace() => {
+                    if !current.is_empty() {
+                        let ty = if current == "true"
+                            || current == "false"
+                            || current == "null"
+                            || current.parse::<f64>().is_ok()
+                        {
+                            TokenType::Number
+                        } else {
+                            TokenType::Other
+                        };
+                        tokens.push(Token {
+                            text: current.clone(),
+                            ty,
+                        });
+                        current.clear();
+                    }
+                    tokens.push(Token {
+                        text: ch.to_string(),
+                        ty: TokenType::Other,
+                    });
+                    chars.next();
+                }
+                _ => {
+                    current.push(ch);
+                    chars.next();
+                }
+            }
+        } else {
+            current.push(ch);
+            chars.next();
+        }
+    }
+
+    if !current.is_empty() {
+        tokens.push(Token {
+            text: current,
+            ty: TokenType::String,
+        });
+    }
+
+    tokens
+}
+
+fn tokenize_markdown(code: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+
+    for line in code.lines() {
+        let trimmed = line.trim_start();
+
+        if trimmed.starts_with('#') {
+            // Heading
+            tokens.push(Token {
+                text: line.to_string(),
+                ty: TokenType::Keyword,
+            });
+        } else if trimmed.starts_with('>') {
+            // Quote
+            tokens.push(Token {
+                text: line.to_string(),
+                ty: TokenType::Comment,
+            });
+        } else if line.contains('`') {
+            // Line with code
+            let mut in_backtick = false;
+            let mut current = String::new();
+            for ch in line.chars() {
+                if ch == '`' {
+                    if !current.is_empty() {
+                        tokens.push(Token {
+                            text: current.clone(),
+                            ty: if in_backtick {
+                                TokenType::String
+                            } else {
+                                TokenType::Other
+                            },
+                        });
+                        current.clear();
+                    }
+                    in_backtick = !in_backtick;
+                    tokens.push(Token {
+                        text: "`".to_string(),
+                        ty: TokenType::Other,
+                    });
+                } else {
+                    current.push(ch);
+                }
+            }
+            if !current.is_empty() {
+                tokens.push(Token {
+                    text: current,
+                    ty: if in_backtick {
+                        TokenType::String
+                    } else {
+                        TokenType::Other
+                    },
+                });
+            }
+        } else {
+            tokens.push(Token {
+                text: line.to_string(),
+                ty: TokenType::Other,
+            });
+        }
+
+        tokens.push(Token {
+            text: "\n".to_string(),
+            ty: TokenType::Other,
+        });
+    }
+
+    tokens
+}
+
+fn tokenize_toml(code: &str) -> Vec<Token> {
+    let mut tokens = Vec::new();
+
+    for line in code.lines() {
+        let trimmed = line.trim_start();
+
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            // Section
+            tokens.push(Token {
+                text: line.to_string(),
+                ty: TokenType::Type,
+            });
+        } else if trimmed.contains('=') {
+            // Key-value pair
+            let mut current = String::new();
+            let mut seen_equals = false;
+
+            for ch in line.chars() {
+                if ch == '=' {
+                    if !current.is_empty() {
+                        tokens.push(Token {
+                            text: current.trim().to_string(),
+                            ty: TokenType::Keyword,
+                        });
+                        current.clear();
+                    }
+                    tokens.push(Token {
+                        text: "=".to_string(),
+                        ty: TokenType::Other,
+                    });
+                    seen_equals = true;
+                } else if seen_equals && ch == '"' {
+                    if !current.is_empty() && !current.trim().is_empty() {
+                        tokens.push(Token {
+                            text: current.clone(),
+                            ty: TokenType::Other,
+                        });
+                    }
+                    let mut string = String::from(ch);
+                    let mut rest_chars = line[line.find(ch).unwrap() + 1..].chars().peekable();
+                    let mut escaped = false;
+
+                    while let Some(&c) = rest_chars.peek() {
+                        string.push(c);
+                        rest_chars.next();
+                        if escaped {
+                            escaped = false;
+                        } else if c == '\\' {
+                            escaped = true;
+                        } else if c == '"' {
+                            break;
+                        }
+                    }
+
+                    tokens.push(Token {
+                        text: string,
+                        ty: TokenType::String,
+                    });
+                    current.clear();
+                } else if seen_equals && ch.is_numeric() {
+                    if !current.is_empty() && !current.trim().is_empty() {
+                        tokens.push(Token {
+                            text: current.clone(),
+                            ty: TokenType::Other,
+                        });
+                    }
+
+                    let mut number = String::from(ch);
+                    let mut rest_chars = line[line.find(ch).unwrap() + 1..].chars().peekable();
+
+                    while let Some(&c) = rest_chars.peek() {
+                        if c.is_numeric() || c == '.' || c == '_' {
+                            number.push(c);
+                            rest_chars.next();
+                        } else {
+                            break;
+                        }
+                    }
+
+                    tokens.push(Token {
+                        text: number,
+                        ty: TokenType::Number,
+                    });
+                    current.clear();
+                } else {
+                    current.push(ch);
+                }
+            }
+
+            if !current.is_empty() && !current.trim().is_empty() {
+                tokens.push(Token {
+                    text: current.trim().to_string(),
+                    ty: TokenType::Other,
+                });
+            }
+        } else {
+            tokens.push(Token {
+                text: line.to_string(),
+                ty: TokenType::Other,
+            });
+        }
+
+        tokens.push(Token {
+            text: "\n".to_string(),
+            ty: TokenType::Other,
+        });
+    }
+
     tokens
 }
 
