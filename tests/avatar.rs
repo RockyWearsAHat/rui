@@ -118,3 +118,30 @@ fn normalize_channel(channel: u8) -> f32 {
         ((c + 0.055) / 1.055).powf(2.4)
     }
 }
+
+#[test]
+fn avatar_actually_paints_pixels_inside_its_rect() {
+    let mut harness = Harness::new((), |_| col((avatar("Test User", 32.0),))).size(100.0, 100.0);
+    harness.frame();
+
+    let probes = harness.probes();
+
+    // Find the avatar probe (Role::Image)
+    let avatar_probe = probes
+        .iter()
+        .find(|p| p.role == rui::accessibility::Role::Image);
+
+    assert!(
+        avatar_probe.is_some(),
+        "Avatar should create an Image probe"
+    );
+
+    let avatar_rect = avatar_probe.unwrap().rect;
+
+    // The avatar should have pixels marked inside its rect
+    assert!(
+        harness.marked(avatar_rect),
+        "Avatar at {:?} should have pixels marked inside its rect (not just background)",
+        avatar_rect
+    );
+}
