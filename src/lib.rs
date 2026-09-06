@@ -129,6 +129,7 @@
 
 pub mod accessibility;
 pub mod app;
+pub mod breadcrumb;
 pub mod canvas;
 pub mod color;
 pub mod demo;
@@ -160,6 +161,8 @@ pub mod widgets;
 pub use accessibility::{AccessNode, AccessTree, AccessUpdate, Role};
 /// Application loop and entry points (`run` and `App` for custom loops).
 pub use app::{run, App, Redraw};
+/// Breadcrumb navigation component.
+pub use breadcrumb::breadcrumb;
 /// CPU rasterizer and frame buffer types for rendering and pixel operations.
 pub use canvas::{Bgra, Canvas, Corner, Mask};
 /// 8-bit sRGB color with contrast-ratio validation.
