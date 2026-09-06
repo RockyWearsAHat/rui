@@ -154,6 +154,7 @@ pub mod style;
 pub mod testing;
 pub mod text;
 pub mod theme;
+pub mod tooltip;
 pub mod widgets;
 
 /// Accessibility tree: semantic structure that assistive technologies consume.
@@ -202,6 +203,8 @@ pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Pressed, Radius
 pub use text::{FontId, Fonts, TextStyle};
 /// Theme infrastructure: appearance mode, palette, metrics, corner style, type scale.
 pub use theme::{Appearance, CornerStyle, Height, Palette, Space, Status, TextRole, Theme};
+/// A label that appears above an element when open.
+pub use tooltip::tooltip;
 /// Built-in widget constructors from primitives.
 pub use widgets::{
     badge, button, caption, code, col, divider, dot, draw, field, field_group, field_row, figure,
