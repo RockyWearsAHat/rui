@@ -266,11 +266,29 @@ pub(crate) struct Frame<'a> {
 /// underneath also lights up is one nobody can aim at.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub(crate) struct Hit {
-    /// The topmost element the pointer is over that can answer it at all.
+    /// The topmost element under the pointer that can actually act on a
+    /// click or a key — see [`El::captures_click`](crate::El::captures_click).
+    /// Wins over `passive` regardless of nesting: a hover-coloured `link()`
+    /// inside a clickable table row must never take the row's own click.
     pub(crate) target: Option<Id>,
+    /// The topmost element under the pointer that merely watches it —
+    /// `on_hover`, `on_pointer_move`, `.reactive()`, or a bare hover style —
+    /// with nothing narrower covering the same point. [`Hit::responder`] is
+    /// what an element actually asks; this exists so that one still lights up
+    /// when it is the only thing there, and not otherwise.
+    pub(crate) passive: Option<Id>,
     /// The innermost scrolling area under the pointer, which the wheel belongs
     /// to — so a list inside a page scrolls the list, not the page.
     pub(crate) scroll: Option<Id>,
+}
+
+impl Hit {
+    /// Which element this point's click, hover, or key answers to: whatever
+    /// can act on it, or — only when nothing can — whatever merely noticed
+    /// it.
+    pub(crate) fn responder(&self) -> Option<Id> {
+        self.target.or(self.passive)
+    }
 }
 
 /// The name every value an application eases or cycles is kept under.
@@ -353,8 +371,10 @@ fn probe<'tree, S>(
     // is still at a position; it is just not visible, and it must not be
     // clickable either.
     if clip.contains(pointer) && el.rect.contains(pointer) {
-        if el.interactive() {
+        if el.captures_click() {
             hit.target = Some(el.id);
+        } else if el.interactive() {
+            hit.passive = Some(el.id);
         }
         if el.scrolls {
             hit.scroll = Some(el.id);
@@ -494,7 +514,7 @@ fn interact<S>(el: &El<S>, frame: &mut Frame<'_>) -> Response {
     // Decided once for the whole frame rather than element by element, so that
     // exactly one thing is hovered however many rectangles the pointer is
     // inside; see [`Hit`].
-    let hovered = input.pointer_inside() && frame.hit.target == Some(el.id);
+    let hovered = input.pointer_inside() && frame.hit.responder() == Some(el.id);
 
     if el.takes_focus() {
         frame.memory.offer_focus(el.id);

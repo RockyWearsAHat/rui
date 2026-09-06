@@ -193,3 +193,62 @@ pub fn table<S: 'static>(
         .border(1.0, Tone::Border)
         .clip()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::Harness;
+    use crate::widgets::{badge, caption, link};
+
+    #[derive(Default)]
+    struct St {
+        clicked: bool,
+    }
+
+    /// A row shaped exactly like Forge's repo list: a `link()` (hover-
+    /// coloured, no click handler of its own) and a `caption()` in the name
+    /// cell, with the actual `on_click` on the row.
+    fn view(_state: &St) -> El<St> {
+        let columns = vec![
+            column("name", Length::Fill(1.0)),
+            column("branch", Length::Auto),
+        ];
+        let name_cell = col((link("forge").text_size(16.0).bold(), caption("desc")))
+            .gap(4.0)
+            .grow();
+        let row = table_row("forge", vec![name_cell, badge("main")])
+            .on_click(|state: &mut St| state.clicked = true);
+        table(&columns, None, vec![row])
+    }
+
+    /// Regression test: clicking a `link()` nested in a table row's cell must
+    /// still activate the row's own `on_click`.
+    ///
+    /// `link()` sets a hover colour (`El::hover_color`), which is enough to
+    /// make `El::interactive()` true — a bare hover style still needs
+    /// `interact()` to run so it knows when to draw itself. But
+    /// [`resolve_hit`]'s hit-test used to treat *any* interactive element,
+    /// hover-only ones included, as capturing the click for whatever point it
+    /// covers — so a `link()` drawn deeper in the tree than the row that
+    /// contains it stole the row's own click the moment the point landed on
+    /// the link's text, which in a name column is most of the row. Nothing
+    /// ever reached `table_row::on_click`.
+    ///
+    /// Fixed by splitting `El::interactive` (broad: gates whether `interact`
+    /// bothers computing a response at all) from the new, narrower
+    /// `El::captures_click` (real handlers and focus only) and having
+    /// [`Hit`] track them separately — `target` for anything that can act on
+    /// a click, `passive` for anything that merely watches the pointer — with
+    /// `target` always winning. A `link()` with nothing behind it still gets
+    /// its hover colour from `passive`; a `link()` inside a clickable row no
+    /// longer takes the row's click away from it.
+    #[test]
+    fn clicking_on_the_name_cells_link_still_fires_the_rows_on_click() {
+        let mut harness = Harness::new(St::default(), view).size(400.0, 200.0);
+        harness.click_text("forge");
+        assert!(
+            harness.state().clicked,
+            "clicking the repo name inside the row's first cell should still fire the row's on_click"
+        );
+    }
+}
