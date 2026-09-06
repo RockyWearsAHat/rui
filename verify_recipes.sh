@@ -16,13 +16,8 @@ check() {
     fi
 }
 
-# ============================================================
-# RECIPE 1: Adding a WASM Backend
-# ============================================================
-
 # 1. Verify commit references (on any branch, not just main)
 echo ""
-echo "=== RECIPE 1: Adding a WASM Backend ==="
 echo "Checking commits referenced..."
 COMMITS=(
     "531214f" "9afc9b1" "b6a1b2c" "2ef3c2b" "caa3066"
@@ -90,35 +85,39 @@ check "git show 2df7f1c --stat | grep -q 'parity' || true" "Commit 2df7f1c (pari
 check "git show 401a8a7 --stat | grep -q 'src' || true" "Commit 401a8a7 (expose FrameDriver) exists"
 
 # ============================================================
-# RECIPE 2: Add a New Widget
+# RECIPE 2: Adding an X11 Backend
 # ============================================================
 
 echo ""
-echo "=== RECIPE 2: Add a New Widget ==="
+echo "=== RECIPE 2: Adding an X11 Backend ==="
 echo "Checking Recipe 2 documentation..."
-check "grep -q '### Recipe 2: Add a New Widget' CLAUDE.md" "Recipe 2 section exists"
-check "grep -q 'src/widgets.rs' CLAUDE.md && grep -q 'tests/recipes.rs' CLAUDE.md" "Recipe 2 mentions widgets and recipes files"
-check "grep -q 'End-to-End Example: Building a Custom Widget' CLAUDE.md" "Recipe 2 has end-to-end example"
-check "grep -q 'star_rating' CLAUDE.md" "Recipe 2 example widget (star_rating) documented"
-check "test -f 'src/widgets.rs'" "File src/widgets.rs exists"
-check "test -f 'tests/recipes.rs'" "File tests/recipes.rs exists"
+check "grep -q '### Recipe 2: Adding an X11 Backend' CLAUDE.md" "Recipe 2 section exists"
+check "grep -q 'src/shell/platform/x11.rs' CLAUDE.md" "Recipe 2 mentions X11 platform file"
+check "grep -q 'XCreateSimpleWindow' CLAUDE.md" "Recipe 2 discusses X11 window creation"
+check "grep -q 'Phase 1: Backend Trait Implementation' CLAUDE.md" "Recipe 2 has Phase 1 documented"
+check "grep -q 'Phase 2: Event Loop Integration' CLAUDE.md" "Recipe 2 has Phase 2 documented"
+check "grep -q 'Phase 3: Platform-Specific Refinements' CLAUDE.md" "Recipe 2 has Phase 3 documented"
+check "test -f 'src/shell/platform/x11.rs'" "File src/shell/platform/x11.rs exists"
 
 # ============================================================
-# RECIPE 3: Control Recipes
+# RECIPE 3: Add a New Widget
 # ============================================================
 
 echo ""
-echo "=== RECIPE 3: Control Recipes ==="
+echo "=== RECIPE 3: Add a New Widget ==="
 echo "Checking Recipe 3 documentation..."
 
 # Check if Recipe 3 is documented in CLAUDE.md
-if grep -q '### Recipe 3:' CLAUDE.md; then
+if grep -q '### Recipe 3: Add a New Widget' CLAUDE.md; then
     echo "Recipe 3 is documented, checking details..."
-    check "grep -q '### Recipe 3:' CLAUDE.md" "Recipe 3 section exists"
-    check "grep -q 'Commits:' CLAUDE.md | grep -A 2 'Recipe 3'" "Recipe 3 has commits listed"
-    check "grep -q 'Files Touched:' CLAUDE.md | grep -A 10 'Recipe 3'" "Recipe 3 lists files touched"
+    check "grep -q '### Recipe 3: Add a New Widget' CLAUDE.md" "Recipe 3 section exists"
+    check "grep -q 'src/widgets.rs' CLAUDE.md && sed -n '/### Recipe 3:/,/## Workflow/p' CLAUDE.md | grep -q 'src/widgets.rs'" "Recipe 3 mentions src/widgets.rs"
+    check "grep -q 'tests/recipes.rs' CLAUDE.md && sed -n '/### Recipe 3:/,/## Workflow/p' CLAUDE.md | grep -q 'tests/recipes.rs'" "Recipe 3 mentions tests/recipes.rs"
+    check "grep -q 'star_rating' CLAUDE.md && sed -n '/### Recipe 3:/,/## Workflow/p' CLAUDE.md | grep -q 'star_rating'" "Recipe 3 has star_rating example"
+    check "test -f 'src/widgets.rs'" "File src/widgets.rs exists"
+    check "test -f 'tests/recipes.rs'" "File tests/recipes.rs exists"
 else
-    echo "Note: Recipe 3 is not yet documented in CLAUDE.md (planned for future update)"
+    echo "Note: Recipe 3 (Add a New Widget) is not yet documented in CLAUDE.md"
 fi
 
 # ============================================================
@@ -177,6 +176,6 @@ if [ $FAILED -eq 0 ]; then
     echo "All recipe checks passed."
     exit 0
 else
-    echo "Some checks failed. Review the recipes and fix gaps."
+    echo "Some checks failed. Review the recipe and fix gaps."
     exit 1
 fi
