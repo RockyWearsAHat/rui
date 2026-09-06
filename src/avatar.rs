@@ -19,7 +19,7 @@ pub fn avatar<S: 'static>(name: &str, size: f32) -> El<S> {
 
         // 5x5 grid with mirroring: columns 0-2 are hashed, 3-4 mirror 1-0
         let cell_size = rect.w / 5.0;
-        let inset = size * 0.12;
+        let inset = (cell_size * 0.2).max(0.5);
 
         for row in 0..5 {
             for col in 0..5 {
