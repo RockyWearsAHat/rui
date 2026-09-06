@@ -1,0 +1,21 @@
+~ dx1 aa360b65a9b83b0be5f2a844a55a406a8edc4493a7c27e0dd880b8090252808c
+
+# rui — Capability Gate Verification
+
+Verify the rui library builds and passes all tests across every gate.
+
+## Worklist
+
+Decomposed into mechanical sub-items, each under 10 minutes per haiku agent:
+
+- [ ] [scout] [ask: gate-1] [cap: cap-build] Build debug: Run `cargo build -p rui`. Success = zero compilation errors, 0.20s elapsed
+- [ ] [scout] [ask: gate-2] [cap: cap-fmt] Format check: Run `cargo fmt --check`. Success = zero formatting violations reported
+- [ ] [scout] [ask: gate-3] [cap: cap-clippy] Lint check: Run `cargo clippy --all-targets -- -D warnings`. Success = zero warnings reported
+- [ ] [scout] [ask: gate-4] [cap: cap-tests] Library tests: Run `cargo test -p rui --lib`. Success = 260+ tests pass, 0 failures
+- [ ] [scout] [ask: gate-5] [cap: cap-examples] Example counter: Run `cargo run -p rui --example counter --release` and exit. Success = runs without panic or error code ≠ 0
+
+## Rationale
+
+Original item tried to verify all gates at once, exceeding 20-minute wall time budget. Each sub-item is independent (no dependencies between gates) and mechanical (verifiable by command output alone). Parallel execution by 5 haiku agents = 10 minutes wall time for the full gate suite.
+
+Remaining gates (cap-wasm, cap-recipes, cap-a11y, cap-docs) are deferred to follow-up item once these 5 land.
