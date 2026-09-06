@@ -151,6 +151,7 @@ pub mod reload;
 pub mod sdf;
 pub mod shell;
 pub mod style;
+pub mod table;
 pub mod testing;
 pub mod text;
 pub mod theme;
@@ -198,6 +199,8 @@ pub use sdf::{
 pub use shell::{request_redraw, Error, LoadedFonts, WindowOptions};
 /// Layout and style enums: alignment, anchor points, flow directions, radii, roles, spacing.
 pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Pressed, Radius, Style, Tone};
+/// Table component: columns, rows, and data display.
+pub use table::{column, table, table_row, Column, Row};
 /// Typography: font IDs, font collection loading, and text layout configuration.
 pub use text::{FontId, Fonts, TextStyle};
 /// Theme infrastructure: appearance mode, palette, metrics, corner style, type scale.
