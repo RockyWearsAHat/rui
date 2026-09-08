@@ -742,7 +742,7 @@ pub(crate) fn run_wasm<S: 'static>(
 /// into some state the view reads shows up within a frame rather than
 /// waiting for the next incidental mouse move to surface it.
 ///
-/// A no-op anywhere the program has not called [`run_wasm`] — before it has,
+/// A no-op anywhere the program has not called `run_wasm` — before it has,
 /// on a native build, and inside [`crate::testing::Harness`], which draws
 /// frames on demand and was never waiting on this chain to begin with.
 pub fn request_redraw() {

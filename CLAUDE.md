@@ -40,6 +40,25 @@ Use this guide to navigate CLAUDE.md and the project:
 | **What's been implemented and what's next?** | Check "Library Roadmap" for landed features and priority items |
 | **Where's the authoritative source for everything?** | `rui.dx` is the working document with full module map, invariants, and implementation status |
 
+## Examples
+
+The library includes 8 core examples demonstrating key patterns and techniques:
+
+| Example | Purpose | Learning Value | Lines |
+|---------|---------|-----------------|-------|
+| `counter` | Simplest rui program: state, view, handlers | Start here: learn the fundamentals | ~25 |
+| `controls` | Widget showcase: buttons, fields, radio buttons | See how primitives compose into controls | ~100 |
+| `gallery` | Render all UI elements to PNG (light/dark modes) | Visual design system reference | ~150 |
+| `segmented` | Multi-choice selection control exemplar | Interactive widget state management | ~26 |
+| `meter` | Read-only progress display | Passive/display-only controls | ~30 |
+| `icon` | SVG-like icon rendering using draw() | Custom graphics with Painter API | ~60 |
+| `parity` | Visual parity test (light/dark mode) | Platform consistency verification | ~50 |
+| `segmented_modified` | Modified segmented control (learning path test) | Proof that the modification guide works | ~26 |
+
+**Learning path**: Start with `counter`, run it with `cargo run -p rui --example counter`. Then read `controls` to see how primitives compose. Study `segmented` to understand interactive widgets, then try modifying it (see `segmented_modified` for an example). Use `gallery` and `parity` to verify visual correctness across platforms.
+
+Additional examples exist for benchmarking (`cost`) and other purposes, but the 8 above are the core learning sequence. Build with `cargo build --examples` to compile all examples.
+
 ## Module Structure
 
 The rui library is organized into 19 core modules (see `rui.dx` for the complete technical map):
