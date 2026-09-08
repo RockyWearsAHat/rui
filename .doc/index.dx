@@ -229,19 +229,42 @@ Recipes are step-by-step implementations of major features with verification gat
 - `wasm-pack test --headless --firefox` — Browser tests pass
 - `cargo test --test wasm_parity` — Pixel-perfect parity confirmed
 
-### Recipe 2: Add a New Widget
+### Recipe 2: X11 Backend Implementation
 
-**Pattern:**
-1. Define state and appearance
-2. Write widget function in `src/widgets.rs` (build El<S> from primitives)
-3. Add test in `tests/recipes.rs` (use Harness)
-4. Verify `cargo test --test recipes -- widget_name`
-5. Run example to confirm visually
+**Purpose:** Detailed exemplar of the three-phase pattern applied to a real platform backend. Reference implementation for Linux X11 systems.
 
-**Examples to copy:**
-- `segmented` (interactive choice selector, 59 lines)
-- `meter` (passive progress bar, 22 lines)
-- checkbox, switch, slider, radio (in tests/recipes.rs)
+**Overview:** X11 backend implements the Backend trait (12 methods) with full event translation (pointer, keyboard, window lifecycle, DPI changes).
+
+**Files touched (ordered):**
+1. `src/shell/platform/x11.rs` — Core X11 implementation (1368 lines)
+2. `src/shell/mod.rs` — Platform selector and feature gating
+3. `src/input.rs` — Event → Input translation
+
+**Phases:**
+
+1. **Phase 1: Foundation (748 lines)**
+   - Implement Backend trait core: `open()`, `pump()`, `surface()`, `present()`
+   - Basic window creation and event pump loop
+   - Verify: `cargo build --target x86_64-unknown-linux-gnu && cargo test --lib`
+
+2. **Phase 2: Enhancement (1220 lines)**
+   - DPI scaling and coordinate transformation
+   - Keyboard event translation (X11 KeyCode → rui Key)
+   - Pointer event handling (motion, press, release)
+   - Appearance detection (light/dark mode)
+   - Verify: `cargo test --test x11_integration`
+
+3. **Phase 3: Integration (1321 lines)**
+   - Frame loop wiring with platform-agnostic code
+   - Cross-module coordination (app.rs, memory.rs, paint.rs)
+   - Parity validation across backends
+   - Verify: `cargo test --test interaction && cargo test --test x11_parity`
+
+**Cross-module coordination:**
+- Backend trait pattern (`src/shell/mod.rs`) — All backends implement 12 trait methods uniformly
+- Clock abstraction (`src/shell/clock.rs`) — Platform-agnostic elapsed time, no wall-clock reads
+- Coordinate transformation — Device pixels (scale_factor) → logical units via `canvas.rs`
+- Event translation flow — X11 events → rui Event types → Input handlers
 
 ## Verification Checklist
 
