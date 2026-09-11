@@ -60,6 +60,7 @@ impl TrayInner {
         _icon_data: &[u8],
         _tooltip: &str,
         event_queue: Arc<Mutex<Vec<TrayEvent>>>,
+        _use_panel: bool,
     ) -> Result<Self, Error> {
         let event_queue_clone = event_queue.clone();
 
@@ -96,6 +97,13 @@ impl TrayInner {
         self.tx
             .send(TrayCommand::SetIcon(data.to_vec()))
             .map_err(|_| Error::Platform("Tray service channel closed".into()))?;
+        Ok(())
+    }
+
+    /// Enable or disable panel mode (not yet implemented on Linux).
+    pub fn set_panel_mode(&self, _enabled: bool) -> Result<(), Error> {
+        // Panel mode is not yet implemented on Linux.
+        // For now, this is a no-op.
         Ok(())
     }
 }

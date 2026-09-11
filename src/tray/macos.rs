@@ -39,6 +39,30 @@ type Object = *mut c_void;
 /// Platform-specific selector for Objective-C method names.
 type Sel = *const c_void;
 
+/// macOS NSPoint struct for screen coordinates.
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct NSPoint {
+    x: f64,
+    y: f64,
+}
+
+/// macOS NSSize struct for dimensions.
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct NSSize {
+    width: f64,
+    height: f64,
+}
+
+/// macOS NSRect struct combining point and size.
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct NSRect {
+    origin: NSPoint,
+    size: NSSize,
+}
+
 /// The macOS tray implementation using NSStatusItem.
 pub struct TrayInner {
     #[allow(dead_code)]
@@ -47,6 +71,10 @@ pub struct TrayInner {
     menu: Object,
     #[allow(dead_code)]
     event_queue: Arc<Mutex<Vec<TrayEvent>>>,
+    /// Whether to emit IconActivatedForPanel events on button click instead
+    /// of showing the standard menu.
+    #[allow(dead_code)]
+    use_panel: bool,
 }
 
 // SAFETY: The underlying Objective-C objects are thread-safe as long as
@@ -54,7 +82,7 @@ pub struct TrayInner {
 unsafe impl Send for TrayInner {}
 unsafe impl Sync for TrayInner {}
 
-// Thread-local storage for the event queue (used for icon click detection)
+// Thread-local storage for the event queue and panel mode flag
 //
 // A thread-local rather than passing the queue through the Objective-C call is
 // what makes the click handler below possible without a custom ivar: AppKit
@@ -63,6 +91,8 @@ unsafe impl Sync for TrayInner {}
 // guaranteed to hold the right queue when the handler runs.
 thread_local! {
     static TRAY_MENU_HANDLER: RefCell<Option<Arc<Mutex<Vec<TrayEvent>>>>> = const { RefCell::new(None) };
+    static TRAY_PANEL_MODE: RefCell<bool> = const { RefCell::new(false) };
+    static TRAY_BUTTON: RefCell<Option<Object>> = const { RefCell::new(None) };
 }
 
 /// The Objective-C class that receives menu-item clicks, created once and
@@ -119,6 +149,42 @@ fn tray_target_instance() -> Object {
     ptr as Object
 }
 
+/// The Objective-C class for button click handling in panel mode.
+fn tray_button_target_class() -> Object {
+    use std::sync::OnceLock;
+    static CLASS: OnceLock<usize> = OnceLock::new();
+    let ptr = *CLASS.get_or_init(|| unsafe {
+        let superclass = class(c"NSObject");
+        let cls: Object = objc_allocateClassPair(superclass, c"RuiTrayButtonTarget".as_ptr(), 0);
+        if !cls.is_null() {
+            let imp: extern "C" fn(Object, Sel, Object) = tray_button_clicked;
+            class_addMethod(
+                cls,
+                sel(c"buttonClicked:"),
+                imp as *const c_void,
+                c"v@:@".as_ptr(),
+            );
+            objc_registerClassPair(cls);
+        }
+        cls as usize
+    });
+    ptr as Object
+}
+
+/// The single instance of [`tray_button_target_class`] for button click handling.
+fn tray_button_target_instance() -> Object {
+    use std::sync::OnceLock;
+    static INSTANCE: OnceLock<usize> = OnceLock::new();
+    let ptr = *INSTANCE.get_or_init(|| unsafe {
+        let cls = tray_button_target_class();
+        let obj: Object = send(cls, sel(c"alloc"));
+        let obj: Object = send(obj, sel(c"init"));
+        let _: () = send(obj, sel(c"retain"));
+        obj as usize
+    });
+    ptr as Object
+}
+
 /// The `menuItemClicked:` action every tray menu item's `target`/`action`
 /// point at. `sender` is the `NSMenuItem` that was clicked; its `tag` is the
 /// [`TrayMenuItem::id`] `set_menu` stamped onto it, which is how this reaches
@@ -134,16 +200,51 @@ extern "C" fn tray_menu_item_clicked(_this: Object, _cmd: Sel, sender: Object) {
     });
 }
 
+/// The `buttonClicked:` action for the tray button when in panel mode.
+/// This is called when the tray icon is clicked in panel mode.
+extern "C" fn tray_button_clicked(_this: Object, _cmd: Sel, _sender: Object) {
+    TRAY_PANEL_MODE.with(|mode_ref| {
+        let is_panel_mode = *mode_ref.borrow();
+        if is_panel_mode {
+            TRAY_BUTTON.with(|button_ref| {
+                if let Some(button) = button_ref.borrow().as_ref() {
+                    // Get the button's frame in screen coordinates
+                    let button = *button;
+                    unsafe {
+                        let frame: NSRect = send(button, sel(c"frame"));
+                        // Convert to screen coordinates
+                        let window: Object = send(button, sel(c"window"));
+                        let window_frame: NSRect = send(window, sel(c"frame"));
+                        let screen_x = window_frame.origin.x + frame.origin.x;
+                        let screen_y = window_frame.origin.y + frame.origin.y;
+
+                        TRAY_MENU_HANDLER.with(|handler| {
+                            if let Some(queue) = handler.borrow().as_ref() {
+                                if let Ok(mut events) = queue.lock() {
+                                    events.push(TrayEvent::IconActivatedForPanel {
+                                        screen_position: (screen_x, screen_y),
+                                    });
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    });
+}
+
 impl TrayInner {
     /// Create a new tray icon on macOS.
     pub fn new(
         icon_data: &[u8],
         tooltip: &str,
         event_queue: Arc<Mutex<Vec<TrayEvent>>>,
+        use_panel: bool,
     ) -> Result<Self, Error> {
         unsafe {
             let pool = objc_autoreleasePoolPush();
-            let result = Self::new_inner(icon_data, tooltip, event_queue.clone())?;
+            let result = Self::new_inner(icon_data, tooltip, event_queue.clone(), use_panel)?;
 
             // Explicitly retain the status item to keep it alive after the autorelease pool is popped.
             // NSStatusBar should retain it, but we add an extra retain to be safe.
@@ -158,6 +259,7 @@ impl TrayInner {
         icon_data: &[u8],
         tooltip: &str,
         event_queue: Arc<Mutex<Vec<TrayEvent>>>,
+        use_panel: bool,
     ) -> Result<Self, Error> {
         // Get the system status bar
         let status_bar: Object = send(class(c"NSStatusBar"), sel(c"systemStatusBar"));
@@ -207,8 +309,23 @@ impl TrayInner {
         };
         let _: () = send1(button, sel(c"setImage:"), image);
 
-        // Set the menu on the status item
+        // Set the menu on the status item (even in panel mode, for fallback)
         let _: () = send1(status_item, sel(c"setMenu:"), menu);
+
+        // If in panel mode, set up button action to emit IconActivatedForPanel events
+        if use_panel {
+            TRAY_PANEL_MODE.with(|mode| {
+                *mode.borrow_mut() = true;
+            });
+            TRAY_BUTTON.with(|btn| {
+                *btn.borrow_mut() = Some(button);
+            });
+
+            // Create the target object for the button click
+            let button_target: Object = tray_button_target_instance();
+            let _: () = send1(button, sel(c"setTarget:"), button_target);
+            let _: () = send1(button, sel(c"setAction:"), sel(c"buttonClicked:"));
+        }
 
         // Store event queue in thread-local for button click handler
         TRAY_MENU_HANDLER.with(|handler| {
@@ -220,6 +337,7 @@ impl TrayInner {
             button,
             menu,
             event_queue,
+            use_panel,
         })
     }
 
@@ -296,6 +414,36 @@ impl TrayInner {
             Ok(())
         }
     }
+
+    /// Enable or disable panel mode.
+    pub fn set_panel_mode(&self, enabled: bool) -> Result<(), Error> {
+        unsafe {
+            if enabled {
+                TRAY_PANEL_MODE.with(|mode| {
+                    *mode.borrow_mut() = true;
+                });
+                TRAY_BUTTON.with(|btn| {
+                    *btn.borrow_mut() = Some(self.button);
+                });
+
+                // Set up button action for panel mode
+                let button_target: Object = tray_button_target_instance();
+                let _: () = send1(self.button, sel(c"setTarget:"), button_target);
+                let _: () = send1(self.button, sel(c"setAction:"), sel(c"buttonClicked:"));
+            } else {
+                TRAY_PANEL_MODE.with(|mode| {
+                    *mode.borrow_mut() = false;
+                });
+                TRAY_BUTTON.with(|btn| {
+                    *btn.borrow_mut() = None;
+                });
+
+                // Revert to menu mode: set menu back on status item
+                let _: () = send1(self.status_item, sel(c"setMenu:"), self.menu);
+            }
+            Ok(())
+        }
+    }
 }
 
 impl Drop for TrayInner {
@@ -305,9 +453,15 @@ impl Drop for TrayInner {
             let _: () = send(self.status_item, sel(c"release"));
         }
 
-        // Clean up thread-local event queue reference
+        // Clean up thread-local references
         TRAY_MENU_HANDLER.with(|handler| {
             *handler.borrow_mut() = None;
+        });
+        TRAY_PANEL_MODE.with(|mode| {
+            *mode.borrow_mut() = false;
+        });
+        TRAY_BUTTON.with(|btn| {
+            *btn.borrow_mut() = None;
         });
     }
 }
