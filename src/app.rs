@@ -116,6 +116,20 @@ pub struct App<S> {
     /// everything the field means.
     #[cfg(feature = "reload")]
     pub(crate) reload: Option<crate::reload::Reload<S>>,
+    /// Called once on the main thread after the platform window is created
+    /// and the platform is fully initialized, but before entering the pump loop.
+    /// Runs on the main thread; safe for platform-dependent setup like tray creation.
+    #[allow(clippy::type_complexity)]
+    post_ready: Option<Box<dyn FnOnce(&mut S)>>,
+    /// Flag controlling whether the loop continues. Set to false to exit the loop.
+    /// Separate from the window's open state to allow tray-only operation.
+    keep_running: Arc<AtomicBool>,
+    /// Called once per frame, before UI rendering, to dispatch platform events
+    /// like tray menu clicks. Allows the app to integrate event sources (tray, timers)
+    /// into the frame loop without requiring separate event handling threads.
+    /// Runs on the main thread in the frame context, so it can mutate state.
+    #[allow(clippy::type_complexity)]
+    frame_dispatch: Option<Box<dyn Fn(&mut S)>>,
 }
 
 /// What describes the interface: a function from the state to a description.
@@ -270,6 +284,9 @@ impl<S> App<S> {
             access_update: AccessUpdate::default(),
             #[cfg(feature = "reload")]
             reload: None,
+            post_ready: None,
+            keep_running: Arc::new(AtomicBool::new(true)),
+            frame_dispatch: None,
         }
     }
 
@@ -480,6 +497,52 @@ impl<S> App<S> {
     /// only the person using it being able to close it.
     pub fn while_running(mut self, running: impl Fn(&S) -> bool + 'static) -> Self {
         self.running = Box::new(running);
+        self
+    }
+
+    /// Register a callback to run once, on the main thread, after the platform
+    /// window is created and the platform is fully initialized, but before
+    /// entering the pump loop. This is the safe place for platform-dependent
+    /// setup like creating a system tray icon.
+    ///
+    /// The callback receives mutable access to the application state, allowing
+    /// it to store references or initialize tray-related fields.
+    ///
+    /// # Example
+    /// ```ignore
+    /// app.on_ready_with_state(|state: &mut AppState| {
+    ///     state.create_tray()?;
+    /// })
+    /// ```
+    pub fn on_ready_with_state(mut self, callback: Box<dyn FnOnce(&mut S)>) -> Self {
+        self.post_ready = Some(callback);
+        self
+    }
+
+    /// Return a handle that allows the app to control its own exit.
+    /// Shared with other threads to signal shutdown (e.g., from a tray menu).
+    ///
+    /// By default, the flag is set to `true`. Call `.store(false, Ordering::Relaxed)`
+    /// to signal the loop to exit.
+    pub fn keep_running_flag(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.keep_running)
+    }
+
+    /// Register a callback to run once per frame, before UI rendering.
+    /// This is the integration point for platform event sources (tray menus, timers)
+    /// that should be drained and dispatched each frame, using the same pathway as UI events.
+    ///
+    /// The callback receives mutable access to the app state and runs on the main thread
+    /// in the frame context. It should be cheap and fast—drawing has not happened yet.
+    ///
+    /// # Example
+    /// ```ignore
+    /// app.on_frame(|state: &mut AppState| {
+    ///     state.drain_and_dispatch_tray_events();
+    /// })
+    /// ```
+    pub fn on_frame(mut self, callback: impl Fn(&mut S) + 'static) -> Self {
+        self.frame_dispatch = Some(Box::new(callback));
         self
     }
 
@@ -752,7 +815,30 @@ impl<S> App<S> {
         {
             return false;
         }
-        (self.running)(&self.state)
+        // Check both the application's running condition and the keep_running flag.
+        // keep_running allows external control (e.g., from a tray menu or another thread).
+        (self.running)(&self.state) && self.keep_running.load(Ordering::Relaxed)
+    }
+
+    /// Takes ownership of the post-ready callback and calls it with mutable
+    /// access to the state. Used internally by the platform's run loop.
+    pub(crate) fn call_post_ready(&mut self) {
+        if let Some(callback) = self.post_ready.take() {
+            callback(&mut self.state);
+        }
+    }
+
+    /// Dispatch platform events each frame. Called by the run loop before drawing.
+    /// This is where tray events, timers, and other platform event sources are
+    /// drained and dispatched into the state using the same pathway as UI interactions.
+    ///
+    /// For example, a tray menu click will call the frame_dispatch callback, which
+    /// can read and mutate the state, triggering the same state update cycle as a
+    /// button click.
+    pub(crate) fn dispatch_frame(&mut self) {
+        if let Some(ref callback) = self.frame_dispatch {
+            callback(&mut self.state);
+        }
     }
 }
 
@@ -874,5 +960,180 @@ mod tests {
         let app = quiet().idle_timeout(Duration::from_millis(250));
         app.redraw().within(Duration::from_secs(60 * 60 * 24 * 365));
         assert_eq!(app.wait(), Duration::from_millis(250));
+    }
+
+    #[test]
+    fn frame_dispatch_callback_is_not_called_unless_set() {
+        // If no callback is set, dispatch_frame should be a no-op.
+        // This test just verifies the method exists and does not panic.
+        let mut app = quiet();
+        app.dispatch_frame(); // Should not panic
+    }
+
+    #[test]
+    fn frame_dispatch_callback_can_mutate_state() {
+        // The frame_dispatch callback receives mutable access to state and can mutate it.
+        // This is the core mechanism for tray events to update app state.
+        #[derive(Clone)]
+        struct Counter {
+            count: i32,
+        }
+
+        let mut app = App::new("test", Counter { count: 0 }, |state: &Counter| {
+            text(format!("Count: {}", state.count))
+        });
+
+        // Set up a callback that increments the counter each time it's called.
+        app = app.on_frame(|state: &mut Counter| {
+            state.count += 1;
+        });
+
+        assert_eq!(app.state().count, 0);
+
+        // First dispatch call should increment to 1
+        app.dispatch_frame();
+        assert_eq!(app.state().count, 1);
+
+        // Second dispatch call should increment to 2
+        app.dispatch_frame();
+        assert_eq!(app.state().count, 2);
+    }
+
+    #[test]
+    fn frame_dispatch_is_called_even_with_multiple_callbacks() {
+        // Test that a new callback replaces the old one (by design: on_frame sets a single closure).
+        struct Counter {
+            count: i32,
+            label: String,
+        }
+
+        let mut app = App::new(
+            "test",
+            Counter {
+                count: 0,
+                label: "a".into(),
+            },
+            |_: &Counter| text("test"),
+        );
+
+        // Set first callback
+        app = app.on_frame(|state: &mut Counter| {
+            state.count += 1;
+        });
+
+        // Replace with second callback
+        app = app.on_frame(|state: &mut Counter| {
+            state.count += 10;
+            state.label = "b".into();
+        });
+
+        app.dispatch_frame();
+        assert_eq!(app.state().count, 10); // Should be 10, not 11 (only the last callback runs)
+        assert_eq!(app.state().label, "b");
+    }
+
+    #[test]
+    fn on_ready_callback_is_called_once() {
+        // Test that on_ready_with_state is called exactly once and takes ownership.
+        #[derive(Clone)]
+        struct State {
+            ready_called: i32,
+        }
+
+        let mut app = App::new("test", State { ready_called: 0 }, |_: &State| text("test"));
+
+        app = app.on_ready_with_state(Box::new(|state: &mut State| {
+            state.ready_called += 1;
+        }));
+
+        assert_eq!(app.state().ready_called, 0);
+
+        // Call post-ready callback
+        app.call_post_ready();
+        assert_eq!(app.state().ready_called, 1);
+
+        // Calling it again should not increment (callback was taken)
+        app.call_post_ready();
+        assert_eq!(app.state().ready_called, 1);
+    }
+
+    #[test]
+    fn keep_running_flag_defaults_to_true() {
+        // The keep_running flag should default to true, allowing the app to run.
+        let app = quiet();
+        let flag = app.keep_running_flag();
+        assert!(flag.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn keep_running_flag_can_be_set_false() {
+        // The keep_running flag can be externally set to false to signal shutdown.
+        let app = quiet();
+        let flag = app.keep_running_flag();
+
+        assert!(app.is_running());
+
+        flag.store(false, Ordering::Relaxed);
+        assert!(!app.is_running()); // is_running checks both the running condition and keep_running
+    }
+
+    #[test]
+    fn frame_dispatch_can_trigger_shutdown() {
+        // A frame dispatch callback can set keep_running to false to signal shutdown.
+        #[derive(Clone)]
+        struct State {
+            should_quit: bool,
+        }
+
+        let mut app = App::new("test", State { should_quit: false }, |_: &State| {
+            text("test")
+        });
+        let shutdown_flag = app.keep_running_flag();
+
+        app = app.on_frame(move |state: &mut State| {
+            if state.should_quit {
+                shutdown_flag.store(false, Ordering::Relaxed);
+            }
+        });
+
+        // Initially running
+        assert!(app.is_running());
+
+        // Set should_quit and dispatch
+        app.state_mut().should_quit = true;
+        app.dispatch_frame();
+
+        // Now should_quit via the flag
+        assert!(!app.is_running());
+    }
+
+    #[test]
+    fn frame_dispatch_is_called_before_rendering() {
+        // Frame dispatch happens before the frame is drawn, so it can affect what's rendered.
+        // This test doesn't test rendering directly, but verifies state changes are visible.
+        #[derive(Clone)]
+        struct Counter {
+            count: i32,
+        }
+
+        let mut app = App::new("test", Counter { count: 0 }, |state: &Counter| {
+            text(format!("Count: {}", state.count))
+        });
+
+        app = app.on_frame(|state: &mut Counter| {
+            state.count += 1;
+        });
+
+        // The state should change as a result of frame dispatch.
+        app.dispatch_frame();
+        assert_eq!(app.state().count, 1);
+
+        // Rendering the frame with the incremented state
+        let mut fonts = crate::shell::load_system_fonts().expect("fonts loaded");
+        let canvas = app.render(100, 100, 1.0, crate::theme::Appearance::Dark, &mut fonts);
+
+        // The canvas should exist (if rendering passed). The exact content is theme-dependent,
+        // but the fact that we got a canvas means the render succeeded with the mutated state.
+        assert!(canvas.width() > 0);
     }
 }

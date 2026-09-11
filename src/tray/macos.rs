@@ -68,14 +68,19 @@ impl TrayInner {
     ) -> Result<Self, Error> {
         unsafe {
             let pool = objc_autoreleasePoolPush();
-            let result = Self::new_inner(icon_data, tooltip, event_queue.clone());
+            let result = Self::new_inner(icon_data, tooltip, event_queue.clone())?;
+
+            // Explicitly retain the status item to keep it alive after the autorelease pool is popped.
+            // NSStatusBar should retain it, but we add an extra retain to be safe.
+            let _: () = send(result.status_item, sel(c"retain"));
+
             objc_autoreleasePoolPop(pool);
-            result
+            Ok(result)
         }
     }
 
     unsafe fn new_inner(
-        _icon_data: &[u8],
+        icon_data: &[u8],
         tooltip: &str,
         event_queue: Arc<Mutex<Vec<TrayEvent>>>,
     ) -> Result<Self, Error> {
@@ -118,8 +123,13 @@ impl TrayInner {
             }
         }
 
-        // Set a placeholder image
-        let image = create_placeholder_image()?;
+        // Set the actual icon image (use the provided data, not a placeholder)
+        // NSStatusBar requires a valid image to display the item
+        let image = if icon_data.is_empty() {
+            create_placeholder_image()?
+        } else {
+            image_from_png(icon_data)?
+        };
         let _: () = send1(button, sel(c"setImage:"), image);
 
         // Set the menu on the status item
@@ -212,9 +222,10 @@ impl TrayInner {
 
 impl Drop for TrayInner {
     fn drop(&mut self) {
-        // The status item is retained by the status bar and will be cleaned up
-        // automatically when the status bar is deallocated. We don't need to
-        // explicitly release it here.
+        unsafe {
+            // Release the extra retain we added to keep the status item alive.
+            let _: () = send(self.status_item, sel(c"release"));
+        }
 
         // Clean up thread-local event queue reference
         TRAY_MENU_HANDLER.with(|handler| {
