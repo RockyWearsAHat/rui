@@ -147,6 +147,7 @@ pub mod style;
 pub mod testing;
 pub mod text;
 pub mod theme;
+pub mod tray;
 pub mod widgets;
 
 pub use accessibility::{AccessNode, AccessTree, AccessUpdate, Role};
@@ -163,17 +164,17 @@ pub use input::{
 pub use memory::{FocusSource, Id, Memory, Response};
 pub use paint::{Painter, Visual};
 pub use sdf::{
-    Paint, Sculpt, Shape, arc, bevel, capsule, circle, linear, ngon, polygon, radial, rect,
-    ring, rounded_rect, solid,
+    Paint, Sculpt, Shape, arc, bevel, capsule, circle, linear, ngon, polygon, radial, rect, ring,
+    rounded_rect, solid,
 };
 pub use shell::{Error, LoadedFonts, WindowOptions};
 pub use style::{Align, Anchor, Axis, Face, Ink, Justify, Length, Radius, Style, Tone};
 pub use text::{FontId, Fonts, TextStyle};
 pub use theme::{Appearance, CornerStyle, Palette, Status, Theme};
+pub use tray::{Tray, TrayEvent, TrayMenuItem};
 pub use widgets::{
     button, caption, code, col, divider, dot, draw, field, field_group, field_row, figure, heading,
-    meter,
-    micro, panel, paragraph, row, section, segmented, spacer, tabs, tag, text, title,
+    meter, micro, panel, paragraph, row, section, segmented, spacer, tabs, tag, text, title,
 };
 
 /// A run of text, formatted.

@@ -27,7 +27,7 @@ use crate::canvas::{Canvas, Corner};
 use crate::color::Color;
 use crate::element::{El, Node};
 use crate::geom::{Insets, Point, Rect};
-use crate::input::{Drag, Input, Key, Phase, Pointing, PointerButton};
+use crate::input::{Drag, Input, Key, Phase, PointerButton, Pointing};
 use crate::memory::{Caret, Id, Memory, Response};
 use crate::sdf::{Paint, Sculpt, Shape};
 use crate::style::{Align, Ink, Radius, Tone};
@@ -96,7 +96,14 @@ impl<'a> Painter<'a> {
     /// reports an element at rest, and nothing outlives a single drawing, so
     /// [`Painter::ease`] answers its target at once.
     pub fn new(canvas: &'a mut Canvas, fonts: &'a Fonts, theme: &'a Theme) -> Self {
-        Self { canvas, fonts, theme, visual: Visual::default(), id: Id::ROOT, memory: None }
+        Self {
+            canvas,
+            fonts,
+            theme,
+            visual: Visual::default(),
+            id: Id::ROOT,
+            memory: None,
+        }
     }
 
     /// What the pointer and keyboard are doing to the element being drawn.
@@ -278,7 +285,9 @@ pub(crate) fn render<'tree, S>(
     // happens to be focused: focus has to move even when what holds it does not
     // handle keys, and only the finished frame knows the full order.
     if frame.input.key_pressed(Key::Tab) {
-        frame.memory.step_focus(if frame.input.modifiers().shift { -1 } else { 1 });
+        frame
+            .memory
+            .step_focus(if frame.input.modifiers().shift { -1 } else { 1 });
     }
     frame.hit = resolve_hit(root, frame.input.pointer(), frame.canvas.bounds());
 
@@ -335,7 +344,11 @@ fn probe<'tree, S>(
         }
     }
 
-    let inner = if el.style.clip { clip.intersect(el.rect) } else { clip };
+    let inner = if el.style.clip {
+        clip.intersect(el.rect)
+    } else {
+        clip
+    };
     for child in &el.children {
         match child.style.layer {
             Some(_) => layers.push(child),
@@ -352,12 +365,16 @@ fn draw<'tree, S>(
     layers: &mut Vec<&'tree El<S>>,
 ) {
     let rect = el.rect;
-    let visible = frame.canvas.is_visible(rect.expand(Insets::uniform(FOCUS_OFFSET * 2.0)));
+    let visible = frame
+        .canvas
+        .is_visible(rect.expand(Insets::uniform(FOCUS_OFFSET * 2.0)));
 
     let response = interact(el, frame);
     let lit = if el.reactive || !el.hover().is_empty() {
         let target = f32::from(u8::from(response.hovered));
-        frame.memory.ease(el.id.with("hover"), target, frame.theme.metrics.motion)
+        frame
+            .memory
+            .ease(el.id.with("hover"), target, frame.theme.metrics.motion)
     } else {
         0.0
     };
@@ -558,7 +575,9 @@ fn decorate<S>(el: &El<S>, frame: &mut Frame<'_>, response: &Response, lit: f32)
     if let Some((blur, tone)) = style.glow {
         // Cast from where the element is rather than offset downward — an even
         // halo is what separates a glow from a shadow; see [`El::glow`].
-        frame.canvas.shadow(rect, corner, blur, 0.0, tone.resolve(theme));
+        frame
+            .canvas
+            .shadow(rect, corner, blur, 0.0, tone.resolve(theme));
     }
 
     if let Some(fill) = style.fill {
@@ -590,18 +609,14 @@ fn decorate<S>(el: &El<S>, frame: &mut Frame<'_>, response: &Response, lit: f32)
     if response.focused && el.takes_focus() && (el.is_field() || frame.memory.focus_visible()) {
         let ring = rect.expand(Insets::uniform(FOCUS_OFFSET));
         let color = Tone::Focus.resolve(theme);
-        frame.canvas.stroke(ring, corner.grown(FOCUS_OFFSET), FOCUS_THICKNESS, color);
+        frame
+            .canvas
+            .stroke(ring, corner.grown(FOCUS_OFFSET), FOCUS_THICKNESS, color);
     }
 }
 
 /// What an element is actually filled with, once it has answered the pointer.
-fn surface<S>(
-    base: Color,
-    el: &El<S>,
-    response: &Response,
-    lit: f32,
-    theme: &Theme,
-) -> Color {
+fn surface<S>(base: Color, el: &El<S>, response: &Response, lit: f32, theme: &Theme) -> Color {
     if el.disabled {
         // Tinted only faintly toward what it would be. A disabled control that
         // keeps most of its colour reads as an enabled one that is merely a bit
@@ -620,7 +635,11 @@ fn surface<S>(
     // different: a hover is the interface noticing the pointer, which should
     // feel smooth, and a press is the person acting, which must land on the
     // frame they pressed.
-    if response.held { lift(hovered, 0.0, true) } else { hovered }
+    if response.held {
+        lift(hovered, 0.0, true)
+    } else {
+        hovered
+    }
 }
 
 /// Draws an element's own content: its text, its field, or its own drawing.
@@ -714,10 +733,7 @@ fn field<'tree, S>(
         // Any edit or caret move restarts the blink, so the caret holds solid
         // while the person is typing — a mark mid-blink under active typing
         // reads as the field dropping characters.
-        if edit.changed
-            || caret.offset != resting.offset
-            || caret.anchor != resting.anchor
-        {
+        if edit.changed || caret.offset != resting.offset || caret.anchor != resting.anchor {
             frame.memory.reset_phase(el.id.with(CARET_BLINK_KEY));
         }
         if edit.changed {
@@ -745,7 +761,15 @@ fn field<'tree, S>(
         // ink real text is read by it impersonates one — a blank field has to
         // be unmistakably blank.
         let hint = style.colored(Tone::Idle.resolve(frame.theme));
-        draw_line(frame.canvas, frame.fonts, &hint, inner, Align::Start, placeholder, false);
+        draw_line(
+            frame.canvas,
+            frame.fonts,
+            &hint,
+            inner,
+            Align::Start,
+            placeholder,
+            false,
+        );
         return;
     }
 
@@ -753,7 +777,11 @@ fn field<'tree, S>(
     // caret. A composition belongs to the interaction and not to the value —
     // the application never sees it — but the person choosing between 日 and 火
     // has to be able to read what they are choosing, in place.
-    let composing = if editing { frame.input.composition() } else { None };
+    let composing = if editing {
+        frame.input.composition()
+    } else {
+        None
+    };
     let (display, preedit) = match composing {
         Some(composition) => {
             let mut display = text;
@@ -789,10 +817,18 @@ fn field<'tree, S>(
         let start = frame.fonts.measure(&style, &display[..selection.start]);
         let end = frame.fonts.measure(&style, &display[..selection.end]);
         let rect = Rect::new(left + start, top, end - start, line_height);
-        frame.canvas.fill_rect(rect, Tone::Selection.resolve(frame.theme));
+        frame
+            .canvas
+            .fill_rect(rect, Tone::Selection.resolve(frame.theme));
     }
 
-    frame.fonts.draw(frame.canvas, &style, Point::new(left, baseline), &display, style.color);
+    frame.fonts.draw(
+        frame.canvas,
+        &style,
+        Point::new(left, baseline),
+        &display,
+        style.color,
+    );
 
     if let Some((range, selection)) = &preedit {
         underline_composition(frame, &style, &display, range, selection, left, baseline);
@@ -804,12 +840,15 @@ fn field<'tree, S>(
         // The loop runs only while a field is focused — the blink *is* the
         // report that typing has somewhere to land, which is what earns it the
         // frames — and every edit resets it, so it holds solid under typing.
-        let lit =
-            frame.memory.phase(el.id.with(CARET_BLINK_KEY), CARET_BLINK_PERIOD) < CARET_BLINK_LIT;
-        let caret_rect =
-            Rect::new(inner.x + caret_x - shift, top, CARET_THICKNESS, line_height);
+        let lit = frame
+            .memory
+            .phase(el.id.with(CARET_BLINK_KEY), CARET_BLINK_PERIOD)
+            < CARET_BLINK_LIT;
+        let caret_rect = Rect::new(inner.x + caret_x - shift, top, CARET_THICKNESS, line_height);
         if lit {
-            frame.canvas.fill_rect(caret_rect, Tone::Accent.resolve(frame.theme));
+            frame
+                .canvas
+                .fill_rect(caret_rect, Tone::Accent.resolve(frame.theme));
         }
         // What the platform's input method is told, so that a list of candidate
         // characters opens beside the text being composed. Reported from here
@@ -872,12 +911,21 @@ fn underline_composition(
         let start = frame.fonts.measure(style, &display[..from]);
         let end = frame.fonts.measure(style, &display[..to]);
         if end > start {
-            let rect = Rect::new(left + start, baseline + UNDERLINE_DROP, end - start, thickness);
+            let rect = Rect::new(
+                left + start,
+                baseline + UNDERLINE_DROP,
+                end - start,
+                thickness,
+            );
             frame.canvas.fill_rect(rect, color);
         }
     };
     rule(range.start, range.end, UNDERLINE.0);
-    rule(range.start + selection.start, range.start + selection.end, UNDERLINE.1);
+    rule(
+        range.start + selection.start,
+        range.start + selection.end,
+        UNDERLINE.1,
+    );
 }
 
 /// Puts the caret where the pointer pressed, and selects where it dragged.
@@ -900,7 +948,11 @@ fn aim_caret(
     let drawn_at = frame.fonts.measure(style, &text[..caret.offset]);
     let x = drag.at.x + scroll_shift(drawn_at, width);
     // A press starts a new selection; every frame after it drags the far end.
-    move_caret(caret, offset_at(frame.fonts, style, text, x), drag.phase != Phase::Began);
+    move_caret(
+        caret,
+        offset_at(frame.fonts, style, text, x),
+        drag.phase != Phase::Began,
+    );
 }
 
 /// The cluster boundary in `text` nearest to `x`, measured from its own origin.
@@ -923,7 +975,9 @@ fn offset_at(fonts: &Fonts, style: &TextStyle, text: &str, x: f32) -> usize {
 
 /// Every place in `text` a caret may sit, in order.
 fn boundaries(text: &str) -> impl Iterator<Item = usize> + '_ {
-    grapheme::clusters(text).map(|(start, _)| start).chain(std::iter::once(text.len()))
+    grapheme::clusters(text)
+        .map(|(start, _)| start)
+        .chain(std::iter::once(text.len()))
 }
 
 /// Moves the caret, dragging the selection with it or collapsing it.
@@ -957,7 +1011,9 @@ fn insert(text: &mut String, caret: &mut Caret, typed: &str) {
 /// A newline pasted into a field would otherwise be stored and then silently not
 /// drawn, so the value would disagree with what is on screen.
 fn printable(text: &str) -> String {
-    text.chars().filter(|character| !character.is_control()).collect()
+    text.chars()
+        .filter(|character| !character.is_control())
+        .collect()
 }
 
 /// What a frame's typing did to a field.
@@ -973,13 +1029,11 @@ struct Edit {
 /// `memory` is here for the clipboard: cutting and copying leave a request on it
 /// for the window loop to perform, and pasting reads what the loop left there in
 /// answer to the last one. See [`Memory::copy_to_clipboard`].
-fn apply_edits(
-    input: &Input,
-    memory: &mut Memory,
-    text: &mut String,
-    caret: &mut Caret,
-) -> Edit {
-    let mut edit = Edit { changed: false, submitted: false };
+fn apply_edits(input: &Input, memory: &mut Memory, text: &mut String, caret: &mut Caret) -> Edit {
+    let mut edit = Edit {
+        changed: false,
+        submitted: false,
+    };
 
     for (key, modifiers) in input.keys() {
         // The accelerator with a letter is a command and never typing, so it is
@@ -1013,7 +1067,11 @@ fn apply_edits(
             Key::Left => {
                 let selection = caret.selection();
                 match selection.is_empty() || extend {
-                    true => move_caret(caret, grapheme::before(text, caret.offset).unwrap_or(0), extend),
+                    true => move_caret(
+                        caret,
+                        grapheme::before(text, caret.offset).unwrap_or(0),
+                        extend,
+                    ),
                     false => move_caret(caret, selection.start, false),
                 }
             }
@@ -1112,10 +1170,16 @@ fn scrollbar<S>(el: &El<S>, frame: &mut Frame<'_>) {
 
     // Grey, dim, and thin. A scroll bar reports where you are in something you
     // are reading; it is never the thing being read.
-    let thumb =
-        Rect::new(track.x + width * 0.25, track.y + travel * position, width * 0.5, thumb_height);
+    let thumb = Rect::new(
+        track.x + width * 0.25,
+        track.y + travel * position,
+        width * 0.5,
+        thumb_height,
+    );
     let color = Tone::Muted.resolve(theme).fade(0.55);
-    frame.canvas.fill(thumb, Corner::Round(thumb.w / 2.0), color);
+    frame
+        .canvas
+        .fill(thumb, Corner::Round(thumb.w / 2.0), color);
 }
 
 /// Draws one line of text in `rect`, cut short if it does not fit.
@@ -1165,10 +1229,14 @@ fn draw_wrapped(
         let line = &text[start..end];
         let width = frame.fonts.measure(style, line);
         let origin = Point::new(rect.x + align.offset(rect.w, width), y + metrics.ascent);
-        frame.fonts.draw(frame.canvas, style, origin, line, style.color);
+        frame
+            .fonts
+            .draw(frame.canvas, style, origin, line, style.color);
         if bold {
             let doubled = Point::new(origin.x + BOLD_OFFSET, origin.y);
-            frame.fonts.draw(frame.canvas, style, doubled, line, style.color);
+            frame
+                .fonts
+                .draw(frame.canvas, style, doubled, line, style.color);
         }
         y += line_height;
     }
@@ -1196,7 +1264,11 @@ fn corner_of(radius: Radius, rect: Rect, theme: &Theme) -> Corner {
 /// nothing visible, so the shift is always *away* from the colour's own
 /// lightness and therefore always visible.
 fn lift(base: Color, lit: f32, held: bool) -> Color {
-    let toward = if base.luminance() > 0.5 { Color::BLACK } else { Color::WHITE };
+    let toward = if base.luminance() > 0.5 {
+        Color::BLACK
+    } else {
+        Color::WHITE
+    };
     let amount = 0.12 * lit.clamp(0.0, 1.0) + if held { 0.16 } else { 0.0 };
     if amount <= 0.0 {
         return base;
@@ -1256,11 +1328,18 @@ mod tests {
         // which is what a first sight of a value does inside a frame too.
         let mut canvas = Canvas::new(16, 16, 1.0);
         let fonts = crate::testing::test_fonts();
-        let theme =
-            Theme::new(crate::theme::Appearance::Dark, fonts.ui_font, fonts.mono_font);
+        let theme = Theme::new(
+            crate::theme::Appearance::Dark,
+            fonts.ui_font,
+            fonts.mono_font,
+        );
         let mut painter = Painter::new(&mut canvas, &fonts.fonts, &theme);
         assert_eq!(painter.ease("sweep", 0.75, 0.1), 0.75);
-        assert_eq!(painter.ease("sweep", 0.25, 0.1), 0.25, "and it does not accumulate");
+        assert_eq!(
+            painter.ease("sweep", 0.25, 0.1),
+            0.25,
+            "and it does not accumulate"
+        );
     }
 
     #[test]
@@ -1269,8 +1348,11 @@ mod tests {
         // nowhere to be remembered is drawn where it starts.
         let mut canvas = Canvas::new(16, 16, 1.0);
         let fonts = crate::testing::test_fonts();
-        let theme =
-            Theme::new(crate::theme::Appearance::Dark, fonts.ui_font, fonts.mono_font);
+        let theme = Theme::new(
+            crate::theme::Appearance::Dark,
+            fonts.ui_font,
+            fonts.mono_font,
+        );
         let mut painter = Painter::new(&mut canvas, &fonts.fonts, &theme);
         assert_eq!(painter.phase("sweep", 1.2), 0.0);
     }
@@ -1287,7 +1369,11 @@ mod tests {
         assert_eq!(clamp_to_boundary("aé", 999), 3);
         // A letter and the accent that belongs to it are one place, not two:
         // a caret between them would draw the accent over the next letter.
-        assert_eq!(clamp_to_boundary("e\u{301}f", 1), 0, "between e and its accent");
+        assert_eq!(
+            clamp_to_boundary("e\u{301}f", 1),
+            0,
+            "between e and its accent"
+        );
     }
 
     use crate::input::{Composition, Event, Modifiers};
@@ -1307,23 +1393,39 @@ mod tests {
         Event::KeyDown {
             key: Some(Key::Character(character)),
             code: None,
-            modifiers: Modifiers { command: true, ..Modifiers::NONE },
+            modifiers: Modifiers {
+                command: true,
+                ..Modifiers::NONE
+            },
         }
     }
 
     /// A key pressed with nothing, or with only shift, held.
     fn press(key: Key, shift: bool) -> Event {
-        Event::KeyDown { key: Some(key), code: None, modifiers: Modifiers { shift, ..Modifiers::NONE } }
+        Event::KeyDown {
+            key: Some(key),
+            code: None,
+            modifiers: Modifiers {
+                shift,
+                ..Modifiers::NONE
+            },
+        }
     }
 
     /// A caret at `offset` with nothing selected.
     fn at(offset: usize) -> Caret {
-        Caret { offset, anchor: offset }
+        Caret {
+            offset,
+            anchor: offset,
+        }
     }
 
     /// A caret selecting `from..to`, dragged in that direction.
     fn selecting(from: usize, to: usize) -> Caret {
-        Caret { offset: to, anchor: from }
+        Caret {
+            offset: to,
+            anchor: from,
+        }
     }
 
     #[test]
@@ -1331,7 +1433,12 @@ mod tests {
         let mut memory = Memory::new();
         let mut text = "ad".to_owned();
         let mut caret = at(1);
-        let edit = apply_edits(&typed([Event::Text("bc".into())]), &mut memory, &mut text, &mut caret);
+        let edit = apply_edits(
+            &typed([Event::Text("bc".into())]),
+            &mut memory,
+            &mut text,
+            &mut caret,
+        );
 
         assert!(edit.changed);
         assert_eq!(text, "abcd");
@@ -1355,7 +1462,12 @@ mod tests {
         let mut memory = Memory::new();
         let mut text = "ae\u{301}".to_owned();
         let mut caret = at(text.len());
-        apply_edits(&typed([press(Key::Backspace, false)]), &mut memory, &mut text, &mut caret);
+        apply_edits(
+            &typed([press(Key::Backspace, false)]),
+            &mut memory,
+            &mut text,
+            &mut caret,
+        );
         assert_eq!(text, "a");
     }
 
@@ -1377,11 +1489,21 @@ mod tests {
         let mut text = "abcd".to_owned();
 
         let mut caret = selecting(1, 3);
-        apply_edits(&typed([press(Key::Left, false)]), &mut memory, &mut text, &mut caret);
+        apply_edits(
+            &typed([press(Key::Left, false)]),
+            &mut memory,
+            &mut text,
+            &mut caret,
+        );
         assert_eq!(caret.offset, 1, "left over a selection goes to its start");
 
         let mut caret = selecting(1, 3);
-        apply_edits(&typed([press(Key::Right, false)]), &mut memory, &mut text, &mut caret);
+        apply_edits(
+            &typed([press(Key::Right, false)]),
+            &mut memory,
+            &mut text,
+            &mut caret,
+        );
         assert_eq!(caret.offset, 3, "and right to its end");
     }
 
@@ -1390,10 +1512,19 @@ mod tests {
         let mut memory = Memory::new();
         let mut text = "abcd".to_owned();
         let mut caret = selecting(1, 3);
-        apply_edits(&typed([Event::Text("X".into())]), &mut memory, &mut text, &mut caret);
+        apply_edits(
+            &typed([Event::Text("X".into())]),
+            &mut memory,
+            &mut text,
+            &mut caret,
+        );
 
         assert_eq!(text, "aXd");
-        assert_eq!(caret.selection(), 2..2, "the selection is gone, not merely moved");
+        assert_eq!(
+            caret.selection(),
+            2..2,
+            "the selection is gone, not merely moved"
+        );
     }
 
     #[test]
@@ -1404,7 +1535,10 @@ mod tests {
         let edit = apply_edits(&typed([shortcut('c')]), &mut memory, &mut text, &mut caret);
 
         assert!(!edit.changed, "copying is not an edit");
-        assert_eq!(memory.take_clipboard_request().copy.as_deref(), Some("self"));
+        assert_eq!(
+            memory.take_clipboard_request().copy.as_deref(),
+            Some("self")
+        );
         assert_eq!(text, "selfhost");
     }
 
@@ -1416,7 +1550,10 @@ mod tests {
         let edit = apply_edits(&typed([shortcut('x')]), &mut memory, &mut text, &mut caret);
 
         assert!(edit.changed);
-        assert_eq!(memory.take_clipboard_request().copy.as_deref(), Some("self"));
+        assert_eq!(
+            memory.take_clipboard_request().copy.as_deref(),
+            Some("self")
+        );
         assert_eq!(text, "host");
     }
 
@@ -1437,8 +1574,14 @@ mod tests {
         let mut caret = at(1);
 
         apply_edits(&typed([shortcut('v')]), &mut memory, &mut text, &mut caret);
-        assert!(memory.take_clipboard_request().paste, "the window was never asked");
-        assert_eq!(text, "ad", "nothing can be pasted before the clipboard has answered");
+        assert!(
+            memory.take_clipboard_request().paste,
+            "the window was never asked"
+        );
+        assert_eq!(
+            text, "ad",
+            "nothing can be pasted before the clipboard has answered"
+        );
 
         // What the window loop does with the answer, and the frame after it.
         memory.deliver_paste("bc".into());
@@ -1494,7 +1637,10 @@ mod tests {
         let edit = apply_edits(&composing, &mut memory, &mut text, &mut caret);
         assert!(!edit.changed, "a composition is not an edit");
         assert_eq!(text, "");
-        assert!(composing.composition().is_some(), "but it is there to be drawn");
+        assert!(
+            composing.composition().is_some(),
+            "but it is there to be drawn"
+        );
 
         let committed = typed([
             Event::Composing(Composition::default()),

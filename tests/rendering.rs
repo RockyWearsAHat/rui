@@ -7,8 +7,8 @@
 
 use rui::testing::{Harness, test_fonts};
 use rui::{
-    Align, App, Appearance, Color, CornerStyle, El, FontId, Radius, Rect, Size, Theme, Tone, button,
-    col, draw, row, spacer, text,
+    Align, App, Appearance, Color, CornerStyle, El, FontId, Radius, Rect, Size, Theme, Tone,
+    button, col, draw, row, spacer, text,
 };
 
 /// Nothing to hold: these are about pixels.
@@ -35,8 +35,14 @@ fn a_window_is_drawn_in_the_ground_of_whichever_appearance_is_in_force() {
 
     let dark_ground = dark.pixel(100, 50).expect("inside the window");
     let light_ground = light.pixel(100, 50).expect("inside the window");
-    assert_ne!(dark_ground, light_ground, "one description, two appearances");
-    assert!(light_ground.luminance() > dark_ground.luminance(), "and the light one is lighter");
+    assert_ne!(
+        dark_ground, light_ground,
+        "one description, two appearances"
+    );
+    assert!(
+        light_ground.luminance() > dark_ground.luminance(),
+        "and the light one is lighter"
+    );
 }
 
 #[test]
@@ -69,7 +75,11 @@ fn an_application_may_paint_the_ground_its_interface_sits_on() {
     let mut harness = Harness::with_app(app).size(200.0, 100.0);
     harness.frame();
 
-    assert_eq!(harness.pixel(100, 50), Some(claret), "the ground is the application's");
+    assert_eq!(
+        harness.pixel(100, 50),
+        Some(claret),
+        "the ground is the application's"
+    );
     // What `marked` calls "nothing was drawn here" comes from the same ground,
     // so an empty window over a custom ground still counts as empty.
     assert!(!harness.marked(rui::Rect::new(0.0, 0.0, 200.0, 100.0)));
@@ -81,13 +91,22 @@ fn the_same_description_twice_is_the_same_picture() {
     // came out identical is one the screen already shows. A renderer with any
     // state carried between frames would fail this.
     let mut harness = showing(|_| {
-        col((text("Services").text_size(14.0), button("Restart"), spacer().h(10.0))).pad(8.0)
+        col((
+            text("Services").text_size(14.0),
+            button("Restart"),
+            spacer().h(10.0),
+        ))
+        .pad(8.0)
     });
     harness.frame();
     let first: Vec<u32> = harness.canvas().pixels().to_vec();
 
     harness.frame();
-    assert_eq!(first, harness.canvas().pixels(), "an unchanged interface must redraw identically");
+    assert_eq!(
+        first,
+        harness.canvas().pixels(),
+        "an unchanged interface must redraw identically"
+    );
 }
 
 #[test]
@@ -107,30 +126,49 @@ fn a_hover_eases_in_over_several_frames_and_then_settles() {
     .size(200.0, 100.0);
 
     harness.frame();
-    assert!(!harness.is_animating(), "an interface nobody is touching must not keep drawing");
+    assert!(
+        !harness.is_animating(),
+        "an interface nobody is touching must not keep drawing"
+    );
     let at_rest: Vec<u32> = harness.canvas().pixels().to_vec();
 
     harness.hover_text("Restart");
-    assert!(harness.is_animating(), "the pointer arriving starts the hover moving");
+    assert!(
+        harness.is_animating(),
+        "the pointer arriving starts the hover moving"
+    );
     let part_way: Vec<u32> = harness.canvas().pixels().to_vec();
     assert_ne!(at_rest, part_way, "and it is visibly under way");
 
     // Time is given, not read, so an animation is stepped rather than waited
     // for. A second is far past any hover the theme allows itself.
     harness.frames(60);
-    assert!(!harness.is_animating(), "an animation that never settles never stops drawing");
+    assert!(
+        !harness.is_animating(),
+        "an animation that never settles never stops drawing"
+    );
     let settled: Vec<u32> = harness.canvas().pixels().to_vec();
-    assert_ne!(part_way, settled, "it got further than where it was part way");
+    assert_ne!(
+        part_way, settled,
+        "it got further than where it was part way"
+    );
 
     harness.frame();
-    assert_eq!(settled, harness.canvas().pixels(), "and having settled, it stays");
+    assert_eq!(
+        settled,
+        harness.canvas().pixels(),
+        "and having settled, it stays"
+    );
 }
 
 #[test]
 fn a_disabled_control_is_drawn_differently_from_an_available_one() {
     let mut available = showing(|_| col(button("Start").on_click(|_: &mut Nothing| {})));
-    let mut unavailable =
-        showing(|_| col(button("Start").on_click(|_: &mut Nothing| {}).disabled(true)));
+    let mut unavailable = showing(|_| {
+        col(button("Start")
+            .on_click(|_: &mut Nothing| {})
+            .disabled(true))
+    });
     available.frame();
     unavailable.frame();
     assert_ne!(
@@ -147,7 +185,11 @@ fn an_applications_own_drawing_sees_what_a_button_sees() {
     // same answer about the pointer.
     let mut harness = Harness::new(Watched::default(), |_: &Watched| {
         col(draw(Size::new(60.0, 30.0), |painter, rect| {
-            let tone = if painter.visual().hovered { Tone::Ok } else { Tone::Bad };
+            let tone = if painter.visual().hovered {
+                Tone::Ok
+            } else {
+                Tone::Bad
+            };
             painter.fill(rect, Radius::None, tone);
         })
         .key("custom")
@@ -156,12 +198,22 @@ fn an_applications_own_drawing_sees_what_a_button_sees() {
     .size(200.0, 100.0);
 
     harness.frame();
-    let rect = harness.find_key("custom").expect("the control is on screen").rect;
-    let at_rest = harness.pixel(rect.center().x as u32, rect.center().y as u32).expect("a pixel");
+    let rect = harness
+        .find_key("custom")
+        .expect("the control is on screen")
+        .rect;
+    let at_rest = harness
+        .pixel(rect.center().x as u32, rect.center().y as u32)
+        .expect("a pixel");
 
     harness.move_pointer(rect.center());
-    let hovered = harness.pixel(rect.center().x as u32, rect.center().y as u32).expect("a pixel");
-    assert_ne!(at_rest, hovered, "custom drawing must be able to answer the pointer");
+    let hovered = harness
+        .pixel(rect.center().x as u32, rect.center().y as u32)
+        .expect("a pixel");
+    assert_ne!(
+        at_rest, hovered,
+        "custom drawing must be able to answer the pointer"
+    );
 }
 
 #[test]
@@ -172,26 +224,48 @@ fn a_higher_pixel_density_draws_more_pixels_of_the_same_picture() {
     dense.frame();
 
     assert_eq!(plain.canvas().width(), 200);
-    assert_eq!(dense.canvas().width(), 400, "twice the density is twice the pixels across");
-    assert_eq!(dense.canvas().pixels().len(), plain.canvas().pixels().len() * 4);
+    assert_eq!(
+        dense.canvas().width(),
+        400,
+        "twice the density is twice the pixels across"
+    );
+    assert_eq!(
+        dense.canvas().pixels().len(),
+        plain.canvas().pixels().len() * 4
+    );
 }
 
 #[test]
 fn a_layer_is_drawn_over_what_it_covers() {
     let mut harness = showing(|_| {
-        col(row(text("underneath")).h(40.0).fill(Tone::Bad).key("under").add(
-            col(()).size(200.0, 40.0).fill(Tone::Ok).key("over").layer(rui::Anchor::Over),
-        ))
+        col(row(text("underneath"))
+            .h(40.0)
+            .fill(Tone::Bad)
+            .key("under")
+            .add(
+                col(())
+                    .size(200.0, 40.0)
+                    .fill(Tone::Ok)
+                    .key("over")
+                    .layer(rui::Anchor::Over),
+            ))
     });
     harness.frame();
 
     let under = harness.find_key("under").expect("the pane").rect;
-    let drawn = harness.pixel(under.center().x as u32, under.center().y as u32).expect("a pixel");
+    let drawn = harness
+        .pixel(under.center().x as u32, under.center().y as u32)
+        .expect("a pixel");
     let mut alone = showing(|_| col(row(()).h(40.0).fill(Tone::Ok)));
     alone.frame();
-    let expected = alone.pixel(under.center().x as u32, under.center().y as u32).expect("a pixel");
+    let expected = alone
+        .pixel(under.center().x as u32, under.center().y as u32)
+        .expect("a pixel");
 
-    assert_eq!(drawn, expected, "the layer, not what it covers, is what is on top");
+    assert_eq!(
+        drawn, expected,
+        "the layer, not what it covers, is what is on top"
+    );
 }
 
 // ----- what the application supplies --------------------------------------
@@ -237,10 +311,9 @@ fn a_supplied_corner_shape_reaches_a_panel_nobody_told_about_it() {
     // One word in the theme, and every framed thing in the interface follows —
     // which is the whole reason the shape lives there rather than on a widget.
     let mut round = showing(|_| plate(Radius::Panel));
-    let mut cut = showing(|_| plate(Radius::Panel))
-        .theme(|appearance, ui, mono| {
-            Theme::new(appearance, ui, mono).with_corners(CornerStyle::Cut)
-        });
+    let mut cut = showing(|_| plate(Radius::Panel)).theme(|appearance, ui, mono| {
+        Theme::new(appearance, ui, mono).with_corners(CornerStyle::Cut)
+    });
     round.frame();
     cut.frame();
 
@@ -286,8 +359,10 @@ fn a_rendered_frame_and_a_driven_one_are_the_same_frame() {
     };
     let view = |_: &Nothing| plate(Radius::Panel);
 
-    let mut harness =
-        Harness::new(Nothing, view).size(200.0, 100.0).appearance(Appearance::Light).theme(theme);
+    let mut harness = Harness::new(Nothing, view)
+        .size(200.0, 100.0)
+        .appearance(Appearance::Light)
+        .theme(theme);
     harness.frame();
 
     let mut app = App::new("rendered", Nothing, view).theme(theme);
@@ -326,28 +401,51 @@ fn gauge(state: &Gauge) -> El<Gauge> {
 
 /// What the gauge above is reading, from zero to two hundred and fifty-five.
 fn reading(harness: &mut Harness<Gauge>) -> u8 {
-    let rect = harness.find_key("gauge").expect("the gauge is on screen").rect;
-    harness.pixel(rect.center().x as u32, rect.center().y as u32).expect("a pixel").r
+    let rect = harness
+        .find_key("gauge")
+        .expect("the gauge is on screen")
+        .rect;
+    harness
+        .pixel(rect.center().x as u32, rect.center().y as u32)
+        .expect("a pixel")
+        .r
 }
 
 #[test]
 fn an_applications_own_easing_moves_over_frames_and_then_settles() {
     let mut harness = Harness::new(Gauge::default(), gauge).size(200.0, 100.0);
     harness.frame();
-    assert_eq!(reading(&mut harness), 0, "a value first seen starts at its target, not at zero");
+    assert_eq!(
+        reading(&mut harness),
+        0,
+        "a value first seen starts at its target, not at zero"
+    );
     assert!(!harness.is_animating(), "and nothing is moving yet");
 
     // The click sets the target; the frame that delivered it drew the old one.
     harness.activate_named("Gauge");
     harness.frame();
     let part_way = reading(&mut harness);
-    assert!(part_way > 0 && part_way < 255, "expected a step along the way, got {part_way}");
-    assert!(harness.is_animating(), "a value short of its target must keep the loop awake");
+    assert!(
+        part_way > 0 && part_way < 255,
+        "expected a step along the way, got {part_way}"
+    );
+    assert!(
+        harness.is_animating(),
+        "a value short of its target must keep the loop awake"
+    );
 
     // A second of it, stepped rather than waited for: nothing reads a clock.
     harness.frames(60);
-    assert_eq!(reading(&mut harness), 255, "a second is far past a tenth-of-a-second constant");
-    assert!(!harness.is_animating(), "an animation that never settles never stops drawing");
+    assert_eq!(
+        reading(&mut harness),
+        255,
+        "a second is far past a tenth-of-a-second constant"
+    );
+    assert!(
+        !harness.is_animating(),
+        "an animation that never settles never stops drawing"
+    );
 }
 
 #[test]
@@ -396,10 +494,19 @@ fn two_eased_values_in_one_drawing_do_not_share_a_number() {
     harness.frames(60);
 
     let rect = harness.find_key("pair").expect("on screen").rect;
-    let left = harness.pixel((rect.x + 5.0) as u32, rect.center().y as u32).expect("a pixel").r;
-    let right = harness.pixel((rect.max_x() - 5.0) as u32, rect.center().y as u32).expect("a pixel").r;
+    let left = harness
+        .pixel((rect.x + 5.0) as u32, rect.center().y as u32)
+        .expect("a pixel")
+        .r;
+    let right = harness
+        .pixel((rect.max_x() - 5.0) as u32, rect.center().y as u32)
+        .expect("a pixel")
+        .r;
     assert_eq!(left, 255, "the value that was sent up should have arrived");
-    assert_eq!(right, 0, "and the one that was left alone should not have moved with it");
+    assert_eq!(
+        right, 0,
+        "and the one that was left alone should not have moved with it"
+    );
 }
 
 #[test]
@@ -420,9 +527,18 @@ fn an_easing_an_application_names_hover_is_not_the_hover_the_library_eases() {
 
     harness.frames(60);
     let rect = harness.find_key("named").expect("on screen").rect;
-    let drawn = harness.pixel(rect.center().x as u32, rect.center().y as u32).expect("a pixel").r;
-    assert_eq!(drawn, 255, "the drawing's own value was pulled about by the pointer's");
-    assert!(!harness.is_animating(), "two values sharing one number never settle");
+    let drawn = harness
+        .pixel(rect.center().x as u32, rect.center().y as u32)
+        .expect("a pixel")
+        .r;
+    assert_eq!(
+        drawn, 255,
+        "the drawing's own value was pulled about by the pointer's"
+    );
+    assert!(
+        !harness.is_animating(),
+        "two values sharing one number never settle"
+    );
 }
 
 /// The grey a value from zero to one comes to.
@@ -435,9 +551,11 @@ fn grey(value: f32) -> Color {
 
 /// A plate of a known size, with `decorate` applied to it.
 fn lit(decorate: fn(El<Nothing>) -> El<Nothing>) -> El<Nothing> {
-    col(decorate(col(()).size(60.0, 30.0).fill(Tone::Surface).key("plate")))
-        .pad(20.0)
-        .align(Align::Start)
+    col(decorate(
+        col(()).size(60.0, 30.0).fill(Tone::Surface).key("plate"),
+    ))
+    .pad(20.0)
+    .align(Align::Start)
 }
 
 #[test]
@@ -452,7 +570,10 @@ fn a_glow_carries_a_hue_where_a_shadow_stays_the_absence_of_light() {
     glowing.frame();
     shadowed.frame();
 
-    let plate = plain.find_key("plate").expect("the plate is on screen").rect;
+    let plate = plain
+        .find_key("plate")
+        .expect("the plate is on screen")
+        .rect;
     let (x, y) = ((plate.x - 3.0) as u32, plate.center().y as u32);
     let ground = plain.pixel(x, y).expect("a pixel");
     let halo = glowing.pixel(x, y).expect("a pixel");
@@ -460,9 +581,18 @@ fn a_glow_carries_a_hue_where_a_shadow_stays_the_absence_of_light() {
 
     let hue = |color: Color| color.r as i32 - color.b as i32;
     assert_ne!(halo, ground, "the halo never reached outside the element");
-    assert!(hue(halo) > hue(ground), "a glow should carry the colour it was given");
-    assert!((hue(shade) - hue(ground)).abs() <= 1, "a shadow must never take a hue");
-    assert!(shade.luminance() < ground.luminance(), "and it darkens what it falls on");
+    assert!(
+        hue(halo) > hue(ground),
+        "a glow should carry the colour it was given"
+    );
+    assert!(
+        (hue(shade) - hue(ground)).abs() <= 1,
+        "a shadow must never take a hue"
+    );
+    assert!(
+        shade.luminance() < ground.luminance(),
+        "and it darkens what it falls on"
+    );
 }
 
 #[test]
@@ -481,7 +611,10 @@ fn a_glow_is_cast_evenly_where_a_shadow_falls_downward() {
     };
     let ground = read(&glowing, plate.y - 12.0);
 
-    assert!(read(&glowing, plate.y - 3.0) > ground, "a halo reaches above what casts it");
+    assert!(
+        read(&glowing, plate.y - 3.0) > ground,
+        "a halo reaches above what casts it"
+    );
     assert!(
         read(&shadowed, plate.y - 3.0) >= read(&shadowed, plate.max_y() + 3.0),
         "a shadow should be deeper below the panel than above it"
@@ -507,24 +640,39 @@ fn sweep(_: &Nothing) -> El<Nothing> {
 fn an_applications_own_loop_comes_round_and_keeps_the_window_awake() {
     let mut harness = Harness::new(Nothing, sweep).size(200.0, 100.0);
     let read = |harness: &mut Harness<Nothing>| {
-        let rect = harness.find_key("sweep").expect("the sweep is on screen").rect;
-        harness.pixel(rect.center().x as u32, rect.center().y as u32).expect("a pixel").r
+        let rect = harness
+            .find_key("sweep")
+            .expect("the sweep is on screen")
+            .rect;
+        harness
+            .pixel(rect.center().x as u32, rect.center().y as u32)
+            .expect("a pixel")
+            .r
     };
 
     harness.frame();
     let started = read(&mut harness);
-    assert!(harness.is_animating(), "a loop that never arrives has to keep drawing");
+    assert!(
+        harness.is_animating(),
+        "a loop that never arrives has to keep drawing"
+    );
 
     // A quarter of a second of a one-second loop, stepped rather than waited
     // for: nothing here reads a clock either.
     harness.frames(15);
     let quarter = read(&mut harness);
-    assert!(quarter > started, "the loop should have moved on: {started} then {quarter}");
+    assert!(
+        quarter > started,
+        "the loop should have moved on: {started} then {quarter}"
+    );
 
     // And past the end of it, where a value that merely counted up would not go.
     harness.frames(45);
     let round = read(&mut harness);
-    assert!(round < quarter, "the loop should have come back round, and stopped at {round}");
+    assert!(
+        round < quarter,
+        "the loop should have come back round, and stopped at {round}"
+    );
     assert!(harness.is_animating(), "a loop does not settle");
 }
 
@@ -536,7 +684,9 @@ fn a_frame_can_be_written_out_as_a_png() {
     harness.frame();
 
     let path = std::env::temp_dir().join("rui-rendering-test.png");
-    harness.save_png(&path).expect("the frame should be writable");
+    harness
+        .save_png(&path)
+        .expect("the frame should be writable");
 
     let written = std::fs::read(&path).expect("the file should be there");
     assert_eq!(&written[..8], b"\x89PNG\r\n\x1a\n", "and be a PNG");

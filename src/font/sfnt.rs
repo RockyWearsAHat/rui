@@ -14,7 +14,10 @@ pub(super) struct Reader<'a> {
 impl<'a> Reader<'a> {
     /// A reader positioned at `offset`, or at the end if that is out of range.
     pub(super) fn at(data: &'a [u8], offset: usize) -> Self {
-        Self { data, position: offset.min(data.len()) }
+        Self {
+            data,
+            position: offset.min(data.len()),
+        }
     }
 
     /// How far into the file the cursor is.
@@ -24,7 +27,10 @@ impl<'a> Reader<'a> {
 
     /// Advances the cursor, failing if that would pass the end.
     pub(super) fn skip(&mut self, bytes: usize) -> Option<()> {
-        self.position = self.position.checked_add(bytes).filter(|end| *end <= self.data.len())?;
+        self.position = self
+            .position
+            .checked_add(bytes)
+            .filter(|end| *end <= self.data.len())?;
         Some(())
     }
 
@@ -108,8 +114,17 @@ impl Directory {
             // A table claiming to run past the end of the file is dropped rather
             // than clamped: a wrong length is a corrupt font, and silently
             // shortening it would hand later parsing a plausible-looking lie.
-            if table_offset.checked_add(length).is_some_and(|end| end <= data.len()) {
-                entries.push((tag, Table { offset: table_offset, length }));
+            if table_offset
+                .checked_add(length)
+                .is_some_and(|end| end <= data.len())
+            {
+                entries.push((
+                    tag,
+                    Table {
+                        offset: table_offset,
+                        length,
+                    },
+                ));
             }
         }
         Some(Self { entries })
@@ -117,7 +132,10 @@ impl Directory {
 
     /// The table with this tag, if the font has it.
     pub(super) fn find(&self, tag: &[u8; 4]) -> Option<Table> {
-        self.entries.iter().find(|(entry, _)| entry == tag).map(|(_, table)| *table)
+        self.entries
+            .iter()
+            .find(|(entry, _)| entry == tag)
+            .map(|(_, table)| *table)
     }
 }
 
@@ -156,7 +174,11 @@ enum Segment {
     /// `glyph = character + delta`, wrapping at 16 bits as the format requires.
     Delta { start: u32, end: u32, delta: i32 },
     /// Glyph ids listed one per character from `start`.
-    Explicit { start: u32, end: u32, glyphs: Vec<u16> },
+    Explicit {
+        start: u32,
+        end: u32,
+        glyphs: Vec<u16>,
+    },
 }
 
 impl Segment {
@@ -175,9 +197,10 @@ impl Segment {
     fn lookup(&self, character: u32) -> u16 {
         match self {
             Self::Delta { delta, .. } => (character as i32).wrapping_add(*delta) as u16,
-            Self::Explicit { start, glyphs, .. } => {
-                glyphs.get((character - start) as usize).copied().unwrap_or(0)
-            }
+            Self::Explicit { start, glyphs, .. } => glyphs
+                .get((character - start) as usize)
+                .copied()
+                .unwrap_or(0),
         }
     }
 }
@@ -224,10 +247,10 @@ impl CharMap {
             let encoding = reader.u16()?;
             let subtable = table.offset.checked_add(reader.u32()? as usize)?;
             let rank = match (platform, encoding) {
-                (3, 10) => 4, // Windows, full Unicode
+                (3, 10) => 4,         // Windows, full Unicode
                 (0, 4) | (0, 6) => 3, // Unicode, full repertoire
-                (3, 1) => 2,  // Windows, basic multilingual plane
-                (0, _) => 1,  // Unicode, older
+                (3, 1) => 2,          // Windows, basic multilingual plane
+                (0, _) => 1,          // Unicode, older
                 _ => 0,
             };
             if rank > 0 && best.is_none_or(|(best_rank, _)| rank > best_rank) {
@@ -246,7 +269,10 @@ impl CharMap {
         // formats specify sorted segments, but a font that breaks that would
         // otherwise turn into wrong glyphs rather than a refusal to load.
         segments.sort_by_key(|segment| segment.start());
-        if segments.windows(2).any(|pair| pair[0].end() >= pair[1].start()) {
+        if segments
+            .windows(2)
+            .any(|pair| pair[0].end() >= pair[1].start())
+        {
             return None;
         }
         Some(Self { segments })
@@ -260,15 +286,23 @@ fn read_format_4(data: &[u8], offset: usize) -> Option<Vec<Segment>> {
     let segment_count = reader.u16()? as usize / 2;
     reader.skip(6)?; // searchRange, entrySelector, rangeShift
 
-    let ends: Vec<u16> = (0..segment_count).map(|_| reader.u16()).collect::<Option<_>>()?;
+    let ends: Vec<u16> = (0..segment_count)
+        .map(|_| reader.u16())
+        .collect::<Option<_>>()?;
     reader.skip(2)?; // reservedPad
-    let starts: Vec<u16> = (0..segment_count).map(|_| reader.u16()).collect::<Option<_>>()?;
-    let deltas: Vec<i16> = (0..segment_count).map(|_| reader.i16()).collect::<Option<_>>()?;
+    let starts: Vec<u16> = (0..segment_count)
+        .map(|_| reader.u16())
+        .collect::<Option<_>>()?;
+    let deltas: Vec<i16> = (0..segment_count)
+        .map(|_| reader.i16())
+        .collect::<Option<_>>()?;
 
     // `idRangeOffset` is a byte offset measured from its own position in the
     // file, so where each one sits has to be remembered to resolve it.
     let range_offset_base = reader.position();
-    let range_offsets: Vec<u16> = (0..segment_count).map(|_| reader.u16()).collect::<Option<_>>()?;
+    let range_offsets: Vec<u16> = (0..segment_count)
+        .map(|_| reader.u16())
+        .collect::<Option<_>>()?;
 
     let mut segments = Vec::with_capacity(segment_count);
     for index in 0..segment_count {
@@ -279,7 +313,11 @@ fn read_format_4(data: &[u8], offset: usize) -> Option<Vec<Segment>> {
         }
 
         if range_offsets[index] == 0 {
-            segments.push(Segment::Delta { start, end, delta: deltas[index] as i32 });
+            segments.push(Segment::Delta {
+                start,
+                end,
+                delta: deltas[index] as i32,
+            });
             continue;
         }
 
@@ -379,7 +417,13 @@ mod tests {
 
     #[test]
     fn a_delta_segment_maps_by_addition() {
-        let map = CharMap { segments: vec![Segment::Delta { start: 65, end: 90, delta: -29 }] };
+        let map = CharMap {
+            segments: vec![Segment::Delta {
+                start: 65,
+                end: 90,
+                delta: -29,
+            }],
+        };
         assert_eq!(map.glyph('A'), 36);
         assert_eq!(map.glyph('Z'), 61);
         assert_eq!(map.glyph('a'), 0, "outside every segment is .notdef");
@@ -388,7 +432,11 @@ mod tests {
     #[test]
     fn an_explicit_segment_maps_by_lookup() {
         let map = CharMap {
-            segments: vec![Segment::Explicit { start: 10, end: 12, glyphs: vec![7, 0, 9] }],
+            segments: vec![Segment::Explicit {
+                start: 10,
+                end: 12,
+                glyphs: vec![7, 0, 9],
+            }],
         };
         assert_eq!(map.glyph('\u{a}'), 7);
         assert_eq!(map.glyph('\u{b}'), 0, "a zero entry stays unmapped");
@@ -399,14 +447,30 @@ mod tests {
     fn lookup_finds_the_right_segment_among_many() {
         let map = CharMap {
             segments: vec![
-                Segment::Delta { start: 0, end: 10, delta: 1 },
-                Segment::Delta { start: 100, end: 110, delta: 2 },
-                Segment::Delta { start: 1000, end: 1010, delta: 3 },
+                Segment::Delta {
+                    start: 0,
+                    end: 10,
+                    delta: 1,
+                },
+                Segment::Delta {
+                    start: 100,
+                    end: 110,
+                    delta: 2,
+                },
+                Segment::Delta {
+                    start: 1000,
+                    end: 1010,
+                    delta: 3,
+                },
             ],
         };
         assert_eq!(map.glyph('\u{5}'), 6);
         assert_eq!(map.glyph('\u{69}'), 107);
         assert_eq!(map.glyph('\u{3ea}'), 1005);
-        assert_eq!(map.glyph('\u{32}'), 0, "the gap between segments is unmapped");
+        assert_eq!(
+            map.glyph('\u{32}'),
+            0,
+            "the gap between segments is unmapped"
+        );
     }
 }
