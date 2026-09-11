@@ -157,6 +157,7 @@ pub mod reload;
 pub mod sdf;
 pub mod shell;
 pub mod skeleton;
+pub mod tray;
 pub mod style;
 pub mod syntax;
 pub mod tabbar;
@@ -238,6 +239,8 @@ pub use theme::{Appearance, CornerStyle, Height, Palette, Space, Status, TextRol
 pub use toast::toast;
 /// A label that appears above an element when open.
 pub use tooltip::tooltip;
+/// System tray icon with menu support.
+pub use tray::{Tray, TrayEvent, TrayMenuItem};
 /// Built-in widget constructors from primitives.
 pub use widgets::{
     badge, button, caption, code, col, divider, dot, draw, field, field_group, field_row, figure,
