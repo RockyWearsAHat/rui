@@ -319,6 +319,7 @@ impl TrayInner {
         icon_data: &[u8],
         tooltip: &str,
         event_queue: Arc<Mutex<Vec<TrayEvent>>>,
+        _use_panel: bool,
     ) -> Result<Self, Error> {
         unsafe {
             // Register the window class
@@ -526,6 +527,13 @@ impl TrayInner {
 
             Ok(())
         }
+    }
+
+    /// Enable or disable panel mode (not yet implemented on Windows).
+    pub fn set_panel_mode(&self, _enabled: bool) -> Result<(), Error> {
+        // Panel mode is not yet implemented on Windows.
+        // For now, this is a no-op.
+        Ok(())
     }
 }
 

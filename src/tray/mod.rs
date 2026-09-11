@@ -95,6 +95,7 @@ impl TrayInner {
         _icon_data: &[u8],
         _tooltip: &str,
         _event_queue: Arc<Mutex<Vec<TrayEvent>>>,
+        _use_panel: bool,
     ) -> Result<Self, crate::Error> {
         Err(crate::Error::Platform(
             "Tray requires the 'linux-tray' feature on Linux. \
@@ -120,6 +121,12 @@ impl TrayInner {
             "Tray not available without 'linux-tray' feature".into(),
         ))
     }
+
+    pub fn set_panel_mode(&self, _enabled: bool) -> Result<(), crate::Error> {
+        Err(crate::Error::Platform(
+            "Tray not available without 'linux-tray' feature".into(),
+        ))
+    }
 }
 
 /// An event from the system tray.
@@ -140,6 +147,16 @@ pub enum TrayEvent {
     /// Typically used to show the window, toggle visibility, or perform
     /// a primary action. The interpretation is application-dependent.
     IconActivated,
+    /// Panel mode: icon clicked, panel should be shown at this screen point.
+    ///
+    /// Only emitted when the tray is in panel mode (created with `new_with_panel()`
+    /// or `set_panel_mode(true)`). The contained position is the status item's
+    /// frame origin in screen coordinates, allowing the application to position
+    /// a panel window just below the tray icon.
+    IconActivatedForPanel {
+        /// The screen-coordinate position of the tray icon's frame origin (x, y).
+        screen_position: (f64, f64),
+    },
 }
 
 /// A menu item in the tray icon's menu.
@@ -192,9 +209,17 @@ pub struct TrayMenuItem {
 /// that is shared with all platform implementations. This queue is drained
 /// once per frame via `drain_events()`, ensuring all handler calls result
 /// in a vec of events ready to process synchronously on the app thread.
+///
+/// # Panel Mode
+///
+/// By default, clicking the tray icon shows a standard system menu (NSMenu on macOS).
+/// In panel mode (enabled with `new_with_panel()` or `set_panel_mode(true)`),
+/// clicking the icon fires `IconActivatedForPanel` events instead, allowing the
+/// application to display a custom panel window.
 pub struct Tray {
     inner: TrayInner,
     event_queue: Arc<Mutex<Vec<TrayEvent>>>,
+    use_panel: bool,
 }
 
 impl Tray {
@@ -220,8 +245,48 @@ impl Tray {
     /// which the app drains once per frame. This avoids callback threads.
     pub fn new(icon_data: &[u8], tooltip: &str) -> Result<Self, crate::Error> {
         let event_queue = Arc::new(Mutex::new(Vec::new()));
-        let inner = TrayInner::new(icon_data, tooltip, event_queue.clone())?;
-        Ok(Tray { inner, event_queue })
+        let inner = TrayInner::new(icon_data, tooltip, event_queue.clone(), false)?;
+        Ok(Tray {
+            inner,
+            event_queue,
+            use_panel: false,
+        })
+    }
+
+    /// Create a tray icon that displays a panel instead of a menu when clicked.
+    ///
+    /// In panel mode, clicking the tray icon fires `IconActivatedForPanel` events
+    /// with the status item's screen position, allowing the application to display
+    /// a custom panel window. This is useful for apps that want more control over
+    /// the dropdown appearance and behavior.
+    ///
+    /// # Arguments
+    /// - `icon_data`: PNG bytes for the icon (same as `new()`)
+    /// - `tooltip`: Hover text (same as `new()`)
+    ///
+    /// # Design Note
+    /// Panel mode is optional and does not affect menu items set via `set_menu()`.
+    /// The application can still use menu items for reference or fallback,
+    /// though in panel mode they will not be displayed by the tray itself.
+    pub fn new_with_panel(icon_data: &[u8], tooltip: &str) -> Result<Self, crate::Error> {
+        let event_queue = Arc::new(Mutex::new(Vec::new()));
+        let inner = TrayInner::new(icon_data, tooltip, event_queue.clone(), true)?;
+        Ok(Tray {
+            inner,
+            event_queue,
+            use_panel: true,
+        })
+    }
+
+    /// Enable or disable panel mode.
+    ///
+    /// When enabled, clicking the tray icon fires `IconActivatedForPanel` events
+    /// instead of showing the standard system menu. When disabled, the standard
+    /// menu behavior is restored.
+    pub fn set_panel_mode(&mut self, enabled: bool) -> Result<(), crate::Error> {
+        self.use_panel = enabled;
+        self.inner.set_panel_mode(enabled)?;
+        Ok(())
     }
 
     /// Update the menu items displayed when the tray is right-clicked.
@@ -332,7 +397,7 @@ mod tests {
         let event = TrayEvent::MenuItemClicked(42);
         match event {
             TrayEvent::MenuItemClicked(id) => assert_eq!(id, 42),
-            TrayEvent::IconActivated => panic!("Expected MenuItemClicked"),
+            _ => panic!("Expected MenuItemClicked"),
         }
     }
 
@@ -341,10 +406,27 @@ mod tests {
     fn tray_event_icon_activated() {
         let event = TrayEvent::IconActivated;
         match event {
-            TrayEvent::MenuItemClicked(_) => panic!("Expected IconActivated"),
             TrayEvent::IconActivated => {
                 // This is correct
             }
+            _ => panic!("Expected IconActivated"),
+        }
+    }
+
+    /// TrayEvent::IconActivatedForPanel carries screen position data.
+    #[test]
+    fn tray_event_icon_activated_for_panel() {
+        let event = TrayEvent::IconActivatedForPanel {
+            screen_position: (100.0, 50.0),
+        };
+        match event {
+            TrayEvent::IconActivatedForPanel {
+                screen_position: (x, y),
+            } => {
+                assert_eq!(x, 100.0);
+                assert_eq!(y, 50.0);
+            }
+            _ => panic!("Expected IconActivatedForPanel"),
         }
     }
 
