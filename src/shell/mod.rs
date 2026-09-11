@@ -557,6 +557,10 @@ pub(crate) fn run<S>(
     // whole interface sixty times a second to present nothing.
     let mut idle_due = Instant::now();
 
+    // Call the post-ready callback now that the window is open and the platform
+    // is initialized. This is the safe point for platform-dependent setup.
+    app.call_post_ready();
+
     while window.is_open() && app.is_running() {
         events.clear();
         let wait = if surface.memory.is_animating() {
@@ -606,6 +610,10 @@ pub(crate) fn run<S>(
             idle_elapsed: now >= idle_due,
         };
         if turn.is_due() {
+            // Before drawing, call the frame dispatch callback.
+            // This allows the app to drain and dispatch platform events (like tray menu clicks)
+            // into the same event pathway as UI interactions, integrating them into the frame loop.
+            app.dispatch_frame();
             surface.draw(&window, &mut fonts, &mut app, &mut events)?;
             idle_due = now + app.idle();
         }
