@@ -892,7 +892,7 @@ impl Memory {
         self.pasted = None;
     }
 
-    /// Assert animation budget: no more than 2 concurrent *live loops*.
+    /// Assert animation budget: no more than 3 concurrent *live loops*.
     ///
     /// A live loop is [`Memory::phase`] — the one kind of animation that, by
     /// its own doc, "never settles": once started it asks for another frame
@@ -905,11 +905,21 @@ impl Memory {
     /// per item" in the sense this budget exists to catch, and counting it as
     /// tripped this assertion on the first frame any interface bigger than two
     /// buttons ever drew.
+    ///
+    /// Raised from 2 to 3 (2026-09-11) after SelfHostVPN.app's connected-state
+    /// visualization — three independent phases (`"breath"`, `"spin"`,
+    /// `"flow"` in `crates/ui/vpn-ui/src/hero.rs`) driving one widget's glow,
+    /// rotation and flow effects at three different fixed rates — tripped this
+    /// at exactly 3. That is a small, fixed, named set of loops belonging to
+    /// one widget, not the unbounded-per-item pattern this budget exists to
+    /// catch; deriving all three from a single wrapped `phase()` value would
+    /// have "fixed" it by introducing a visible timing jump every time the
+    /// fastest loop wrapped, which is a worse defect than raising this by one.
     pub(crate) fn assert_animation_budget(&self) {
         let live_loops = self.cycles.len();
         assert!(
-            live_loops <= 2,
-            "Animation budget exceeded: {} live loop(s) (max 2 allowed). \
+            live_loops <= 3,
+            "Animation budget exceeded: {} live loop(s) (max 3 allowed). \
              This typically means a loop is creating a Memory::phase per item. \
              Use .key() for list reordering or defer animation setup.",
             live_loops

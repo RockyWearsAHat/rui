@@ -55,8 +55,83 @@ unsafe impl Send for TrayInner {}
 unsafe impl Sync for TrayInner {}
 
 // Thread-local storage for the event queue (used for icon click detection)
+//
+// A thread-local rather than passing the queue through the Objective-C call is
+// what makes the click handler below possible without a custom ivar: AppKit
+// always invokes a menu item's action on the main thread, which is the same
+// thread that ever calls `TrayInner::new`/`set_menu`, so the thread-local is
+// guaranteed to hold the right queue when the handler runs.
 thread_local! {
     static TRAY_MENU_HANDLER: RefCell<Option<Arc<Mutex<Vec<TrayEvent>>>>> = const { RefCell::new(None) };
+}
+
+/// The Objective-C class that receives menu-item clicks, created once and
+/// reused for every menu item on every tray this process ever creates.
+///
+/// # Why a real class instead of the null-action placeholder this replaced
+///
+/// A menu item with `action: null` never invokes anything — AppKit simply has
+/// nothing to call, so a click just closes the menu. Making a click actually
+/// do something requires a real Objective-C target/action pair, and Rust has
+/// no compiler support for defining an Objective-C method — the runtime has
+/// to be asked to build one. `objc_allocateClassPair` plus `class_addMethod`
+/// is exactly that ask: it manufactures a subclass of `NSObject` at runtime
+/// carrying one C function as its `menuItemClicked:` implementation. The
+/// class (and the one instance of it below) are process-lifetime singletons
+/// on purpose — every tray this process creates shares the same target, so
+/// there is exactly one place a click ever lands, matching the single shared
+/// `TRAY_MENU_HANDLER` it reads from.
+fn tray_target_class() -> Object {
+    use std::sync::OnceLock;
+    static CLASS: OnceLock<usize> = OnceLock::new();
+    let ptr = *CLASS.get_or_init(|| unsafe {
+        let superclass = class(c"NSObject");
+        let cls: Object = objc_allocateClassPair(superclass, c"RuiTrayMenuTarget".as_ptr(), 0);
+        if !cls.is_null() {
+            let imp: extern "C" fn(Object, Sel, Object) = tray_menu_item_clicked;
+            // "v@:@" = void return, (self, _cmd, one object argument) — the
+            // standard Cocoa action-method signature every NSMenuItem expects.
+            class_addMethod(
+                cls,
+                sel(c"menuItemClicked:"),
+                imp as *const c_void,
+                c"v@:@".as_ptr(),
+            );
+            objc_registerClassPair(cls);
+        }
+        cls as usize
+    });
+    ptr as Object
+}
+
+/// The single instance of [`tray_target_class`], retained for the process's
+/// whole lifetime — every menu item's `target` points at this one object.
+fn tray_target_instance() -> Object {
+    use std::sync::OnceLock;
+    static INSTANCE: OnceLock<usize> = OnceLock::new();
+    let ptr = *INSTANCE.get_or_init(|| unsafe {
+        let cls = tray_target_class();
+        let obj: Object = send(cls, sel(c"alloc"));
+        let obj: Object = send(obj, sel(c"init"));
+        let _: () = send(obj, sel(c"retain"));
+        obj as usize
+    });
+    ptr as Object
+}
+
+/// The `menuItemClicked:` action every tray menu item's `target`/`action`
+/// point at. `sender` is the `NSMenuItem` that was clicked; its `tag` is the
+/// [`TrayMenuItem::id`] `set_menu` stamped onto it, which is how this reaches
+/// back to which item fired without needing per-item Objective-C state.
+extern "C" fn tray_menu_item_clicked(_this: Object, _cmd: Sel, sender: Object) {
+    let tag: i64 = unsafe { send(sender, sel(c"tag")) };
+    TRAY_MENU_HANDLER.with(|handler| {
+        if let Some(queue) = handler.borrow().as_ref() {
+            if let Ok(mut events) = queue.lock() {
+                events.push(TrayEvent::MenuItemClicked(tag as usize));
+            }
+        }
+    });
 }
 
 impl TrayInner {
@@ -165,21 +240,24 @@ impl TrayInner {
                     std::ffi::CString::new(item.label.clone()).unwrap_or_else(|_| c"".to_owned());
                 let ns_label = ns_string(&label);
 
-                // Create menu item with no action selector (since we can't implement proper
-                // Objective-C methods from Rust FFI without significant complexity).
-                // In a full implementation, a custom NSObject subclass with proper method dispatch
-                // would be needed. For now, we create items with display-only purpose.
+                // Real target/action: `tray_menu_item_clicked` (a runtime-built
+                // Objective-C method, see `tray_target_class`) reads the clicked
+                // item's tag and posts a TrayEvent — this is what makes a click
+                // actually do something, replacing the previous null-action
+                // placeholder that only ever closed the menu.
                 let menu_item: Object = send(class(c"NSMenuItem"), sel(c"alloc"));
                 let menu_item: Object = send3(
                     menu_item,
                     sel(c"initWithTitle:action:keyEquivalent:"),
                     ns_label,
-                    std::ptr::null::<c_void>(), // No action
+                    sel(c"menuItemClicked:"),
                     ns_string(c""),
                 );
 
                 if !menu_item.is_null() {
-                    // Store the item ID as the tag (could be used for event delivery in future)
+                    let _: () = send1(menu_item, sel(c"setTarget:"), tray_target_instance());
+                    // The tag IS the event's payload: tray_menu_item_clicked reads
+                    // it straight off the sender, so this is not optional bookkeeping.
                     let _: () = send1(menu_item, sel(c"setTag:"), item.id as i64);
 
                     // Set enabled state
@@ -297,6 +375,22 @@ unsafe extern "C" {
     fn objc_autoreleasePoolPush() -> *mut c_void;
     fn objc_autoreleasePoolPop(pool: *mut c_void);
     fn objc_msgSend();
+    /// Builds a new class at runtime — this is how `tray_target_class` gets
+    /// an `NSObject` subclass to hang `menuItemClicked:` off of without the
+    /// compiler (which has no notion of an Objective-C class) being involved.
+    fn objc_allocateClassPair(
+        superclass: Object,
+        name: *const c_char,
+        extra_bytes: usize,
+    ) -> Object;
+    /// Finishes registering a class built with `objc_allocateClassPair` —
+    /// the class cannot be instantiated (`alloc`/`init`) before this runs.
+    fn objc_registerClassPair(cls: Object);
+    /// Attaches a C function as an Objective-C method's implementation.
+    /// `types` is the old-style Objective-C type-encoding string; `"v@:@"` is
+    /// void-returning with the two implicit args (self, _cmd) plus one object
+    /// argument, which is exactly an action method's signature.
+    fn class_addMethod(cls: Object, name: Sel, imp: *const c_void, types: *const c_char) -> bool;
 }
 
 #[link(name = "AppKit", kind = "framework")]
