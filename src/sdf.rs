@@ -197,7 +197,10 @@ pub fn circle(center: Point, radius: f32) -> Shape {
 
 /// The axis-aligned rectangle `bounds`, square-cornered.
 pub fn rect(bounds: Rect) -> Shape {
-    Shape::Rect { center: bounds.center(), half: Size::new(bounds.w / 2.0, bounds.h / 2.0) }
+    Shape::Rect {
+        center: bounds.center(),
+        half: Size::new(bounds.w / 2.0, bounds.h / 2.0),
+    }
 }
 
 /// `bounds` with all four corners rounded to `radius`, staying within `bounds`.
@@ -207,29 +210,57 @@ pub fn rect(bounds: Rect) -> Shape {
 /// [`Canvas::fill`](crate::canvas::Canvas::fill) clamps a corner to the shape.
 pub fn rounded_rect(bounds: Rect, radius: f32) -> Shape {
     let radius = radius.max(0.0);
-    let half = Size::new((bounds.w / 2.0 - radius).max(0.0), (bounds.h / 2.0 - radius).max(0.0));
-    Shape::Rect { center: bounds.center(), half }.offset(radius)
+    let half = Size::new(
+        (bounds.w / 2.0 - radius).max(0.0),
+        (bounds.h / 2.0 - radius).max(0.0),
+    );
+    Shape::Rect {
+        center: bounds.center(),
+        half,
+    }
+    .offset(radius)
 }
 
 /// A line from `a` to `b`, `thickness` wide, with round ends.
 pub fn capsule(a: Point, b: Point, thickness: f32) -> Shape {
-    Shape::Capsule { a, b, half: thickness / 2.0 }
+    Shape::Capsule {
+        a,
+        b,
+        half: thickness / 2.0,
+    }
 }
 
 /// A full ring: a band of width `thickness` centred on `radius`.
 pub fn ring(center: Point, radius: f32, thickness: f32) -> Shape {
-    Shape::Arc { center, radius, half: thickness / 2.0, start: 0.0, sweep: TAU }
+    Shape::Arc {
+        center,
+        radius,
+        half: thickness / 2.0,
+        start: 0.0,
+        sweep: TAU,
+    }
 }
 
 /// Part of a ring, from `start` running `sweep` radians (clockwise; round ends).
 pub fn arc(center: Point, radius: f32, thickness: f32, start: f32, sweep: f32) -> Shape {
-    Shape::Arc { center, radius, half: thickness / 2.0, start, sweep }
+    Shape::Arc {
+        center,
+        radius,
+        half: thickness / 2.0,
+        start,
+        sweep,
+    }
 }
 
 /// A regular polygon of `sides` sides, `circumradius` to each vertex, turned
 /// `rotation` radians.
 pub fn ngon(center: Point, sides: u32, circumradius: f32, rotation: f32) -> Shape {
-    Shape::Ngon { center, circumradius, sides, rotation }
+    Shape::Ngon {
+        center,
+        circumradius,
+        sides,
+        rotation,
+    }
 }
 
 /// A polygon through `points` in order.
@@ -250,23 +281,37 @@ impl Shape {
             Shape::Circle { center, radius } => length(sub(p, *center)) - radius,
             Shape::Rect { center, half } => rect_sd(p, *center, *half),
             Shape::Capsule { a, b, half } => capsule_sd(p, *a, *b, *half),
-            Shape::Arc { center, radius, half, start, sweep } => {
-                arc_sd(p, *center, *radius, *half, *start, *sweep)
-            }
-            Shape::Ngon { center, circumradius, sides, rotation } => {
-                ngon_sd(p, *center, *circumradius, *sides, *rotation)
-            }
+            Shape::Arc {
+                center,
+                radius,
+                half,
+                start,
+                sweep,
+            } => arc_sd(p, *center, *radius, *half, *start, *sweep),
+            Shape::Ngon {
+                center,
+                circumradius,
+                sides,
+                rotation,
+            } => ngon_sd(p, *center, *circumradius, *sides, *rotation),
             Shape::Polygon { points } => polygon_sd(p, points),
             Shape::Offset { of, delta } => of.sd(p) - delta,
             Shape::Outline { of, width } => of.sd(p).abs() - width * 0.5,
             Shape::Translate { of, dx, dy } => of.sd(Point::new(p.x - dx, p.y - dy)),
-            Shape::Rotate { of, center, radians } => {
+            Shape::Rotate {
+                of,
+                center,
+                radians,
+            } => {
                 let r = rotate(sub(p, *center), -radians);
                 of.sd(Point::new(center.x + r.0, center.y + r.1))
             }
             Shape::Scale { of, center, factor } => {
                 let f = if factor.abs() < EPS { EPS } else { *factor };
-                let local = Point::new(center.x + (p.x - center.x) / f, center.y + (p.y - center.y) / f);
+                let local = Point::new(
+                    center.x + (p.x - center.x) / f,
+                    center.y + (p.y - center.y) / f,
+                );
                 of.sd(local) * f
             }
             Shape::Union(a, b) => a.sd(p).min(b.sd(p)),
@@ -291,23 +336,39 @@ impl Shape {
     pub fn bbox(&self) -> Rect {
         match self {
             Shape::Circle { center, radius } => square(*center, *radius),
-            Shape::Rect { center, half } => {
-                Rect::new(center.x - half.w, center.y - half.h, 2.0 * half.w, 2.0 * half.h)
-            }
+            Shape::Rect { center, half } => Rect::new(
+                center.x - half.w,
+                center.y - half.h,
+                2.0 * half.w,
+                2.0 * half.h,
+            ),
             Shape::Capsule { a, b, half } => {
                 Rect::from_corners(*a, *b).expand(crate::geom::Insets::uniform(*half))
             }
-            Shape::Arc { center, radius, half, .. } => square(*center, radius + half),
-            Shape::Ngon { center, circumradius, .. } => square(*center, *circumradius),
+            Shape::Arc {
+                center,
+                radius,
+                half,
+                ..
+            } => square(*center, radius + half),
+            Shape::Ngon {
+                center,
+                circumradius,
+                ..
+            } => square(*center, *circumradius),
             Shape::Polygon { points } => aabb(points.iter().map(|p| (p.x, p.y))),
-            Shape::Offset { of, delta } => {
-                of.bbox().expand(crate::geom::Insets::uniform(delta.max(0.0)))
-            }
+            Shape::Offset { of, delta } => of
+                .bbox()
+                .expand(crate::geom::Insets::uniform(delta.max(0.0))),
             Shape::Outline { of, width } => {
                 of.bbox().expand(crate::geom::Insets::uniform(width * 0.5))
             }
             Shape::Translate { of, dx, dy } => of.bbox().translate(*dx, *dy),
-            Shape::Rotate { of, center, radians } => {
+            Shape::Rotate {
+                of,
+                center,
+                radians,
+            } => {
                 let b = of.bbox();
                 aabb(corners(b).into_iter().map(|c| {
                     let r = rotate((c.0 - center.x, c.1 - center.y), *radians);
@@ -317,15 +378,19 @@ impl Shape {
             Shape::Scale { of, center, factor } => {
                 let b = of.bbox();
                 aabb(corners(b).into_iter().map(|c| {
-                    (center.x + (c.0 - center.x) * factor, center.y + (c.1 - center.y) * factor)
+                    (
+                        center.x + (c.0 - center.x) * factor,
+                        center.y + (c.1 - center.y) * factor,
+                    )
                 }))
             }
             Shape::Union(a, b) => a.bbox().union(b.bbox()),
             Shape::Intersect(a, b) => a.bbox().intersect(b.bbox()),
             Shape::Subtract(a, _) => a.bbox(),
-            Shape::SmoothUnion { a, b, k } => {
-                a.bbox().union(b.bbox()).expand(crate::geom::Insets::uniform(k.max(0.0)))
-            }
+            Shape::SmoothUnion { a, b, k } => a
+                .bbox()
+                .union(b.bbox())
+                .expand(crate::geom::Insets::uniform(k.max(0.0))),
         }
     }
 
@@ -346,12 +411,19 @@ impl Shape {
 
     /// A union with `other` whose join is blended over a radius `k`.
     pub fn smooth_union(self, other: Shape, k: f32) -> Shape {
-        Shape::SmoothUnion { a: Box::new(self), b: Box::new(other), k }
+        Shape::SmoothUnion {
+            a: Box::new(self),
+            b: Box::new(other),
+            k,
+        }
     }
 
     /// This shape's field shifted outward by `delta` (its surface grows).
     pub fn offset(self, delta: f32) -> Shape {
-        Shape::Offset { of: Box::new(self), delta }
+        Shape::Offset {
+            of: Box::new(self),
+            delta,
+        }
     }
 
     /// This shape rounded by `radius` — the same operation as [`Shape::offset`],
@@ -362,22 +434,37 @@ impl Shape {
 
     /// This shape's outline, `width` wide, centred on its edge.
     pub fn outline(self, width: f32) -> Shape {
-        Shape::Outline { of: Box::new(self), width }
+        Shape::Outline {
+            of: Box::new(self),
+            width,
+        }
     }
 
     /// This shape moved by `(dx, dy)`.
     pub fn translate(self, dx: f32, dy: f32) -> Shape {
-        Shape::Translate { of: Box::new(self), dx, dy }
+        Shape::Translate {
+            of: Box::new(self),
+            dx,
+            dy,
+        }
     }
 
     /// This shape turned `radians` about `center`.
     pub fn rotate(self, center: Point, radians: f32) -> Shape {
-        Shape::Rotate { of: Box::new(self), center, radians }
+        Shape::Rotate {
+            of: Box::new(self),
+            center,
+            radians,
+        }
     }
 
     /// This shape scaled uniformly by `factor` about `center`.
     pub fn scale(self, center: Point, factor: f32) -> Shape {
-        Shape::Scale { of: Box::new(self), center, factor }
+        Shape::Scale {
+            of: Box::new(self),
+            center,
+            factor,
+        }
     }
 }
 
@@ -432,7 +519,11 @@ fn capsule_sd(p: Point, a: Point, b: Point, half: f32) -> f32 {
 /// caps and no seam at the start angle.
 fn arc_sd(p: Point, center: Point, radius: f32, half: f32, start: f32, sweep: f32) -> f32 {
     // A backwards sweep is the same band read the other way, turned round here.
-    let (start, sweep) = if sweep < 0.0 { (start + sweep, -sweep) } else { (start, sweep) };
+    let (start, sweep) = if sweep < 0.0 {
+        (start + sweep, -sweep)
+    } else {
+        (start, sweep)
+    };
     let v = sub(p, center);
     let radial = (length(v) - radius).abs();
     if sweep >= TAU {
@@ -558,12 +649,24 @@ pub fn linear(a: Point, b: Point, c0: Color, c1: Color) -> Paint {
 
 /// A radial gradient: solid `c0` within `inner`, mixing to `c1` by `outer`.
 pub fn radial(center: Point, inner: f32, outer: f32, c0: Color, c1: Color) -> Paint {
-    Paint::Radial { center, inner, outer, c0, c1 }
+    Paint::Radial {
+        center,
+        inner,
+        outer,
+        c0,
+        c1,
+    }
 }
 
 /// A bevel edge-light lit from `direction`; see [`Paint::Bevel`].
 pub fn bevel(base: Color, light: Color, shadow: Color, direction: Point, depth: f32) -> Paint {
-    Paint::Bevel { base, light, shadow, direction, depth }
+    Paint::Bevel {
+        base,
+        light,
+        shadow,
+        direction,
+        depth,
+    }
 }
 
 impl Paint {
@@ -581,11 +684,24 @@ impl Paint {
                 let t = (dot(ap, ab) / dot(ab, ab).max(EPS)).clamp(0.0, 1.0);
                 c0.mix(c1, t)
             }
-            Paint::Radial { center, inner, outer, c0, c1 } => {
-                let t = ((length(sub(p, center)) - inner) / (outer - inner).max(EPS)).clamp(0.0, 1.0);
+            Paint::Radial {
+                center,
+                inner,
+                outer,
+                c0,
+                c1,
+            } => {
+                let t =
+                    ((length(sub(p, center)) - inner) / (outer - inner).max(EPS)).clamp(0.0, 1.0);
                 c0.mix(c1, t)
             }
-            Paint::Bevel { base, light, shadow, direction, depth } => {
+            Paint::Bevel {
+                base,
+                light,
+                shadow,
+                direction,
+                depth,
+            } => {
                 let e = 0.5;
                 let gx = shape.sd(Point::new(p.x + e, p.y)) - shape.sd(Point::new(p.x - e, p.y));
                 let gy = shape.sd(Point::new(p.x, p.y + e)) - shape.sd(Point::new(p.x, p.y - e));
@@ -657,7 +773,11 @@ fn rotate(v: (f32, f32), theta: f32) -> (f32, f32) {
 /// `v` scaled to unit length, or the zero vector when it has no length.
 fn normalize(v: (f32, f32)) -> (f32, f32) {
     let l = length(v);
-    if l <= EPS { (0.0, 0.0) } else { (v.0 / l, v.1 / l) }
+    if l <= EPS {
+        (0.0, 0.0)
+    } else {
+        (v.0 / l, v.1 / l)
+    }
 }
 
 /// The sign of `x`, with zero counted positive so an on-edge point reads out.
@@ -678,7 +798,12 @@ fn square(center: Point, reach: f32) -> Rect {
 
 /// The four corners of a rectangle, clockwise from the top-left.
 fn corners(r: Rect) -> [(f32, f32); 4] {
-    [(r.x, r.y), (r.max_x(), r.y), (r.max_x(), r.max_y()), (r.x, r.max_y())]
+    [
+        (r.x, r.y),
+        (r.max_x(), r.y),
+        (r.max_x(), r.max_y()),
+        (r.x, r.max_y()),
+    ]
 }
 
 /// The axis-aligned bounding box of a set of points, empty if there are none.
@@ -709,9 +834,18 @@ mod tests {
     #[test]
     fn a_circles_distance_is_signed_and_measured_from_its_edge() {
         let c = circle(Point::new(0.0, 0.0), 10.0);
-        assert!(near(c.sd(Point::new(0.0, 0.0)), -10.0), "the centre is a radius inside");
-        assert!(near(c.sd(Point::new(10.0, 0.0)), 0.0), "the rim is on the edge");
-        assert!(near(c.sd(Point::new(15.0, 0.0)), 5.0), "outside is the gap to the rim");
+        assert!(
+            near(c.sd(Point::new(0.0, 0.0)), -10.0),
+            "the centre is a radius inside"
+        );
+        assert!(
+            near(c.sd(Point::new(10.0, 0.0)), 0.0),
+            "the rim is on the edge"
+        );
+        assert!(
+            near(c.sd(Point::new(15.0, 0.0)), 5.0),
+            "outside is the gap to the rim"
+        );
     }
 
     #[test]
@@ -719,8 +853,15 @@ mod tests {
         let a = circle(Point::new(-5.0, 0.0), 6.0);
         let b = circle(Point::new(5.0, 0.0), 6.0);
         let u = a.clone().union(b.clone());
-        for p in [Point::new(0.0, 0.0), Point::new(-8.0, 3.0), Point::new(20.0, 20.0)] {
-            assert!(near(u.sd(p), a.sd(p).min(b.sd(p))), "union must be the min at {p:?}");
+        for p in [
+            Point::new(0.0, 0.0),
+            Point::new(-8.0, 3.0),
+            Point::new(20.0, 20.0),
+        ] {
+            assert!(
+                near(u.sd(p), a.sd(p).min(b.sd(p))),
+                "union must be the min at {p:?}"
+            );
         }
         // `|` is the same operator.
         let piped = a.clone() | b.clone();
@@ -732,8 +873,14 @@ mod tests {
         let a = circle(Point::new(0.0, 0.0), 10.0);
         let b = circle(Point::new(0.0, 0.0), 4.0);
         let ring = a - b; // a disc with its middle removed
-        assert!(ring.sd(Point::new(0.0, 0.0)) > 0.0, "the removed middle is now outside");
-        assert!(ring.sd(Point::new(7.0, 0.0)) < 0.0, "the surviving annulus is inside");
+        assert!(
+            ring.sd(Point::new(0.0, 0.0)) > 0.0,
+            "the removed middle is now outside"
+        );
+        assert!(
+            ring.sd(Point::new(7.0, 0.0)) < 0.0,
+            "the surviving annulus is inside"
+        );
     }
 
     #[test]
@@ -742,7 +889,11 @@ mod tests {
         let b = circle(Point::new(5.0, 0.0), 6.0);
         let k = 4.0;
         let smooth = a.clone().smooth_union(b.clone(), k);
-        for p in [Point::new(0.0, 0.0), Point::new(0.0, 5.0), Point::new(3.0, 2.0)] {
+        for p in [
+            Point::new(0.0, 0.0),
+            Point::new(0.0, 5.0),
+            Point::new(3.0, 2.0),
+        ] {
             let hard = a.sd(p).min(b.sd(p));
             let s = smooth.sd(p);
             assert!(s <= hard + 1e-4, "smin never exceeds min at {p:?}");
@@ -755,8 +906,15 @@ mod tests {
         let c = circle(Point::new(0.0, 0.0), 10.0);
         let rounded = c.clone().round(3.0);
         // Rounding a circle is a bigger circle: every point is 3 units more inside.
-        for p in [Point::new(0.0, 0.0), Point::new(8.0, 0.0), Point::new(14.0, 0.0)] {
-            assert!(near(rounded.sd(p), c.sd(p) - 3.0), "round shifts the field by -r at {p:?}");
+        for p in [
+            Point::new(0.0, 0.0),
+            Point::new(8.0, 0.0),
+            Point::new(14.0, 0.0),
+        ] {
+            assert!(
+                near(rounded.sd(p), c.sd(p) - 3.0),
+                "round shifts the field by -r at {p:?}"
+            );
         }
     }
 
@@ -768,16 +926,28 @@ mod tests {
         // outside sit at the same signed distance from the outline.
         let inside = line.sd(Point::new(8.0, 0.0)); // 2 in
         let outside = line.sd(Point::new(12.0, 0.0)); // 2 out
-        assert!(near(inside, outside), "the outline is not symmetric: {inside} vs {outside}");
-        assert!(near(line.sd(Point::new(10.0, 0.0)), -1.0), "its own centre is half a width in");
+        assert!(
+            near(inside, outside),
+            "the outline is not symmetric: {inside} vs {outside}"
+        );
+        assert!(
+            near(line.sd(Point::new(10.0, 0.0)), -1.0),
+            "its own centre is half a width in"
+        );
     }
 
     #[test]
     fn a_regular_polygon_measures_its_inradius_at_the_centre() {
         let hex = ngon(Point::new(0.0, 0.0), 6, 10.0, 0.0);
         let apothem = 10.0 * (PI / 6.0).cos();
-        assert!(near(hex.sd(Point::new(0.0, 0.0)), -apothem), "centre is an inradius inside");
-        assert!(hex.sd(Point::new(20.0, 0.0)) > 0.0, "well outside is positive");
+        assert!(
+            near(hex.sd(Point::new(0.0, 0.0)), -apothem),
+            "centre is an inradius inside"
+        );
+        assert!(
+            hex.sd(Point::new(20.0, 0.0)) > 0.0,
+            "well outside is positive"
+        );
     }
 
     #[test]
@@ -825,17 +995,17 @@ mod tests {
     /// Whether `p` sits on (within a hair of) the border of `r`, since a
     /// half-open `contains` excludes the far edges a zero-set can touch exactly.
     fn on_border(r: Rect, p: Point) -> bool {
-        p.x >= r.x - 1e-3
-            && p.x <= r.max_x() + 1e-3
-            && p.y >= r.y - 1e-3
-            && p.y <= r.max_y() + 1e-3
+        p.x >= r.x - 1e-3 && p.x <= r.max_x() + 1e-3 && p.y >= r.y - 1e-3 && p.y <= r.max_y() + 1e-3
     }
 
     #[test]
     fn translate_and_rotate_preserve_distance() {
         let c = circle(Point::new(0.0, 0.0), 5.0);
         let moved = c.clone().translate(20.0, 10.0);
-        assert!(near(moved.sd(Point::new(20.0, 10.0)), -5.0), "the centre moved with it");
+        assert!(
+            near(moved.sd(Point::new(20.0, 10.0)), -5.0),
+            "the centre moved with it"
+        );
 
         let turned = c.rotate(Point::new(0.0, 0.0), 1.0);
         // Rotating a circle about its own centre changes nothing.
@@ -858,16 +1028,27 @@ mod tests {
         let disc = circle(Point::new(20.0, 20.0), 10.0);
         canvas.sculpt(&disc, &solid(Color::WHITE), Sculpt::Fill);
         assert_eq!(pixel(&canvas, 20, 20), Color::WHITE, "the middle is filled");
-        assert_eq!(pixel(&canvas, 2, 2), Color::BLACK, "far outside is untouched");
+        assert_eq!(
+            pixel(&canvas, 2, 2),
+            Color::BLACK,
+            "far outside is untouched"
+        );
     }
 
     #[test]
     fn a_fractional_edge_is_antialiased_rather_than_snapped() {
         let mut canvas = blank(40, 40);
-        canvas.sculpt(&circle(Point::new(20.0, 20.0), 10.5), &solid(Color::WHITE), Sculpt::Fill);
+        canvas.sculpt(
+            &circle(Point::new(20.0, 20.0), 10.5),
+            &solid(Color::WHITE),
+            Sculpt::Fill,
+        );
         // A pixel astride the rim is partly covered.
         let edge = pixel(&canvas, 30, 20);
-        assert!(edge.r > 0 && edge.r < 255, "expected a part-covered rim pixel, got {edge:?}");
+        assert!(
+            edge.r > 0 && edge.r < 255,
+            "expected a part-covered rim pixel, got {edge:?}"
+        );
     }
 
     #[test]
@@ -876,11 +1057,32 @@ mod tests {
         let paint = solid(Color::rgb(80, 80, 80));
 
         let mut once = blank(40, 40);
-        once.sculpt(&disc, &paint, Sculpt::Glow { radius: 8.0, intensity: 1.0 });
+        once.sculpt(
+            &disc,
+            &paint,
+            Sculpt::Glow {
+                radius: 8.0,
+                intensity: 1.0,
+            },
+        );
 
         let mut twice = blank(40, 40);
-        twice.sculpt(&disc, &paint, Sculpt::Glow { radius: 8.0, intensity: 1.0 });
-        twice.sculpt(&disc, &paint, Sculpt::Glow { radius: 8.0, intensity: 1.0 });
+        twice.sculpt(
+            &disc,
+            &paint,
+            Sculpt::Glow {
+                radius: 8.0,
+                intensity: 1.0,
+            },
+        );
+        twice.sculpt(
+            &disc,
+            &paint,
+            Sculpt::Glow {
+                radius: 8.0,
+                intensity: 1.0,
+            },
+        );
 
         assert!(
             pixel(&twice, 20, 20).r > pixel(&once, 20, 20).r,
@@ -894,7 +1096,11 @@ mod tests {
         let bar = rect(Rect::new(0.0, 0.0, 60.0, 20.0));
         let a = Point::new(2.0, 10.0);
         let b = Point::new(58.0, 10.0);
-        canvas.sculpt(&bar, &linear(a, b, Color::rgb(0, 0, 0), Color::rgb(255, 255, 255)), Sculpt::Fill);
+        canvas.sculpt(
+            &bar,
+            &linear(a, b, Color::rgb(0, 0, 0), Color::rgb(255, 255, 255)),
+            Sculpt::Fill,
+        );
         assert!(pixel(&canvas, 1, 10).r < 20, "the start is near c0");
         assert!(pixel(&canvas, 58, 10).r > 235, "the end is near c1");
     }
@@ -904,7 +1110,14 @@ mod tests {
         let mut canvas = blank(40, 40);
         let disc = circle(Point::new(20.0, 20.0), 12.0);
         canvas.sculpt(&disc, &solid(Color::WHITE), Sculpt::Stroke { width: 2.0 });
-        assert!(pixel(&canvas, 20, 8).r > 100, "the top of the ring is drawn");
-        assert_eq!(pixel(&canvas, 20, 20), Color::BLACK, "the middle is untouched");
+        assert!(
+            pixel(&canvas, 20, 8).r > 100,
+            "the top of the ring is drawn"
+        );
+        assert_eq!(
+            pixel(&canvas, 20, 20),
+            Color::BLACK,
+            "the middle is untouched"
+        );
     }
 }

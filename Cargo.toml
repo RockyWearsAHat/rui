@@ -26,6 +26,8 @@ exclude = ["/.github"]
 # It adds no dependency. The application supplies its own save and restore, so
 # this library never has to know how to write `S` down; see `src/reload.rs`.
 reload = []
+# Linux tray feature: requires D-Bus and system integration
+linux-tray = []
 
 [lints.rust]
 # Not `forbid`: opening a window is the one thing that cannot be done without
