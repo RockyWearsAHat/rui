@@ -166,6 +166,7 @@ pub mod text;
 pub mod theme;
 pub mod toast;
 pub mod tooltip;
+pub mod tray;
 pub mod widgets;
 
 /// Accessibility tree: semantic structure that assistive technologies consume.
@@ -238,6 +239,8 @@ pub use theme::{Appearance, CornerStyle, Height, Palette, Space, Status, TextRol
 pub use toast::toast;
 /// A label that appears above an element when open.
 pub use tooltip::tooltip;
+/// Menu-bar and system tray icon support.
+pub use tray::{Tray, TrayEvent, TrayMenuItem};
 /// Built-in widget constructors from primitives.
 pub use widgets::{
     badge, button, caption, code, col, divider, dot, draw, field, field_group, field_row, figure,
