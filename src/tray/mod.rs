@@ -89,6 +89,39 @@ use windows::TrayInner;
 #[cfg(all(target_os = "linux", not(feature = "linux-tray")))]
 struct TrayInner;
 
+#[cfg(all(target_os = "linux", not(feature = "linux-tray")))]
+impl TrayInner {
+    pub fn new(
+        _icon_data: &[u8],
+        _tooltip: &str,
+        _event_queue: Arc<Mutex<Vec<TrayEvent>>>,
+    ) -> Result<Self, crate::Error> {
+        Err(crate::Error::Platform(
+            "Tray requires the 'linux-tray' feature on Linux. \
+             Add it to Cargo.toml: rui = { version = \"...\", features = [\"linux-tray\"] }"
+                .into(),
+        ))
+    }
+
+    pub fn set_menu(&self, _items: Vec<TrayMenuItem>) -> Result<(), crate::Error> {
+        Err(crate::Error::Platform(
+            "Tray not available without 'linux-tray' feature".into(),
+        ))
+    }
+
+    pub fn set_tooltip(&self, _text: &str) -> Result<(), crate::Error> {
+        Err(crate::Error::Platform(
+            "Tray not available without 'linux-tray' feature".into(),
+        ))
+    }
+
+    pub fn set_icon(&self, _data: &[u8]) -> Result<(), crate::Error> {
+        Err(crate::Error::Platform(
+            "Tray not available without 'linux-tray' feature".into(),
+        ))
+    }
+}
+
 /// An event from the system tray.
 ///
 /// Tray events are posted to a thread-safe queue by platform-specific handlers

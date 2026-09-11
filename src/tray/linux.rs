@@ -310,6 +310,10 @@ async fn register_with_watcher(
 
 /// Linux tray stub when the `linux-tray` feature is not enabled.
 #[cfg(all(target_os = "linux", not(feature = "linux-tray")))]
+pub struct TrayInner;
+
+/// Linux tray stub when the `linux-tray` feature is not enabled.
+#[cfg(all(target_os = "linux", not(feature = "linux-tray")))]
 impl TrayInner {
     /// Create a new tray icon on Linux without the `linux-tray` feature.
     pub fn new(
