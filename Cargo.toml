@@ -20,6 +20,8 @@ crate-type = ["rlib"]
 [features]
 wayland = []
 reload = []
+# Linux tray feature: requires D-Bus and system integration
+linux-tray = []
 
 # Except in a browser, where the platform is not callable from Rust at all: its
 # windows and its canvases are JavaScript objects, and `wasm-bindgen` *is* the
