@@ -29,14 +29,25 @@
 //! Wait for input, fold it into the frame's [`Input`], draw the whole interface,
 //! and present it if it came out different from the last one.
 //!
-//! There is no partial redraw and no dirty tracking. A system that works out
-//! *which region* to repaint is a system that can work it out wrongly, and the
-//! symptom is a stale pixel still showing a service as running after it has
-//! died. Comparing the finished frame with the previous one has the same effect
-//! on cost with none of that risk: it cannot conclude that something changed
-//! when it did not, or the reverse. This matters because sending a frame to the
-//! compositor costs several times what drawing it does, and most interfaces
-//! spend nearly all of their life displaying the same picture.
+//! There is no dirty *tracking* — nothing here guesses which region changed.
+//! A system that guesses can guess wrongly, and the symptom is a stale pixel
+//! still showing a service as running after it has died. Every full frame
+//! still describes, lays out, and paints everything, and still compares the
+//! finished result with the last one before spending anything on presenting
+//! it, which is what makes "did this change" a fact rather than a guess.
+//!
+//! There is one narrow, provably safe exception: a [`Node::Draw`](crate::element::Node::Draw)
+//! that turns out to animate is remembered (see [`App::has_animated_draws`],
+//! [`paint::AnimatedDraw`]), and for as long as *nothing else at all* is due —
+//! no event, no explicit request, not even the idle timeout — a turn replays
+//! only those rectangles instead of a full frame. This is not dirty-region
+//! *guessing*: the drawings replayed are exactly the ones a full frame already
+//! proved animate, at exactly the rects that full frame already laid them out
+//! at, and the very next turn that has any other reason to run takes the full
+//! path again and repaints everything, so nothing can go stale for longer than
+//! one such turn. What it buys: a small ambiently-animating widget (a
+//! breathing glow, a spinner) no longer costs relaying out and repainting an
+//! entire window many times a second just to keep moving.
 //!
 //! # Two speeds, chosen by whether anything is moving
 //!
@@ -351,19 +362,36 @@ struct Surface {
 impl Surface {
     /// Folds `events` in, draws the whole interface, and presents it if it came
     /// out different from what is already on screen.
+    ///
+    /// `full` chooses between describing, laying out, and painting everything
+    /// (the only option there ever used to be) and the fast path: replaying
+    /// only whatever [`App::has_animated_draws`] found, straight onto the
+    /// buffer already on screen. A caller asks for the fast path only when
+    /// nothing else about the interface could have changed since the full
+    /// frame that populated that list — see the turn-classifying logic in
+    /// [`run`] — which is what makes skipping the view closure, the layout
+    /// pass, and painting every other widget correct rather than merely fast.
     fn draw<B: Backend, S>(
         &mut self,
         window: &B,
         fonts: &mut Fonts,
         app: &mut App<S>,
         events: &mut Vec<Event>,
+        full: bool,
     ) -> Result<(), Error> {
         let (width, height, scale) = window.surface();
-        if width != self.drawn.width()
+        let resized = width != self.drawn.width()
             || height != self.drawn.height()
-            || scale != self.drawn.scale()
-        {
+            || scale != self.drawn.scale();
+        // A resize invalidates whatever the fast path would otherwise replay:
+        // every rect it holds was measured against the old size. Forcing a
+        // full frame here, rather than trusting the caller to have noticed,
+        // is what makes that a correctness fact instead of a convention two
+        // call sites have to independently uphold.
+        let full = full || resized;
+        if resized {
             self.drawn.resize(width, height, scale);
+            self.presented.resize(width, height, scale);
         }
         fonts.set_scale(scale);
 
@@ -381,6 +409,20 @@ impl Surface {
         for event in events.drain(..) {
             self.input.apply(event);
         }
+
+        if !full {
+            // The fast path paints directly onto `self.presented` — the
+            // buffer already on screen — and presents that same buffer
+            // again, rather than `self.drawn`, which the full path's
+            // present/swap below leaves one generation stale. Painting into
+            // a stale buffer and presenting it would show old content
+            // everywhere the fast path is not actively touching.
+            app.redraw_animated(&mut self.presented, fonts, &theme, &mut self.memory);
+            self.memory.end_frame(&self.input);
+            window.present(&self.presented)?;
+            return Ok(());
+        }
+
         app.paint_ground(&mut self.drawn, &theme);
         app.frame(
             &mut self.drawn,
@@ -619,7 +661,13 @@ pub(crate) fn run<S>(
             // tracking is not one this program is being told about, and folding
             // the same click in twice would fire whatever it landed on twice.
             let mut redraw = |window: &platform::Window| {
-                if let Err(error) = surface.draw(window, &mut fonts, &mut app, &mut Vec::new()) {
+                // Always full: this only runs when AppKit has taken the loop
+                // away for a live resize, and a resize forces one regardless
+                // (see `Surface::draw`) — stated here too so this call reads
+                // as correct on its own, not just safe by coincidence.
+                if let Err(error) =
+                    surface.draw(window, &mut fonts, &mut app, &mut Vec::new(), true)
+                {
                     surface.failed = Some(error);
                 }
             };
@@ -658,6 +706,19 @@ pub(crate) fn run<S>(
             animating: surface.memory.is_animating() && window.is_visible(),
             idle_elapsed: now >= idle_due,
         };
+        // Whether this turn needs the expensive half at all: describing the
+        // interface, laying it out, and painting everything in it, rather
+        // than just replaying whatever is animating. An event or an explicit
+        // request always earns a full frame outright — either could have
+        // changed anything, including what `dispatch_frame` below is about to
+        // do off its own back (a tray click, say) — and `idle_elapsed` does
+        // too, which is what puts a firm ceiling (one `idle_timeout`) on how
+        // stale such a change is ever allowed to sit unshown, exactly the
+        // promise `idle_elapsed` already existed to keep. Only when none of
+        // those apply, and the last full frame actually found something
+        // animating to replay, does the fast path apply.
+        let full =
+            turn.requested || turn.had_events || turn.idle_elapsed || !app.has_animated_draws();
         if turn.is_due() {
             // Before drawing, call the frame dispatch callback.
             // This allows the app to drain and dispatch platform events (like tray menu clicks)
@@ -673,7 +734,7 @@ pub(crate) fn run<S>(
             // (at most one `idle_timeout` later) draws it, so nothing is ever
             // shown stale.
             if window.is_visible() {
-                surface.draw(&window, &mut fonts, &mut app, &mut events)?;
+                surface.draw(&window, &mut fonts, &mut app, &mut events, full)?;
             }
             idle_due = now + app.idle();
         }
@@ -763,7 +824,10 @@ pub(crate) fn run_wasm<S: 'static>(
         // `begin_frame` — the same order every native backend's turn of `run`
         // uses, so applying them here first would both double-apply them and
         // apply them before the frame state they belong to has started.
-        if let Err(error) = surface.draw(&window, &mut fonts, &mut app, &mut events) {
+        // Always full: wasm has no separate hidden/animating-only state to
+        // fast-path around (this loop only ever runs while visible), and a
+        // browser's own `requestAnimationFrame` already paces this.
+        if let Err(error) = surface.draw(&window, &mut fonts, &mut app, &mut events, true) {
             surface.failed = Some(error);
         }
         if let Some(error) = &surface.failed {

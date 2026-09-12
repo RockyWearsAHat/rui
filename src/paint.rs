@@ -33,6 +33,7 @@ use crate::sdf::{Paint, Sculpt, Shape};
 use crate::style::{Align, Ink, Radius, Tone};
 use crate::text::{grapheme, Fonts, TextStyle};
 use crate::theme::Theme;
+use std::rc::Rc;
 
 /// Something an interaction asked to be done to the application's state.
 ///
@@ -255,6 +256,20 @@ pub(crate) struct Frame<'a> {
     pub(crate) memory: &'a mut Memory,
     /// What the pointer is over, decided once for the whole frame.
     pub(crate) hit: Hit,
+    /// Where a [`Node::Draw`] that turns out to animate is recorded, so a
+    /// later frame that only needs to advance that animation can redraw just
+    /// it — see [`AnimatedDraw`] and the fast path in `shell::mod::Surface`.
+    pub(crate) animated: &'a mut Vec<AnimatedDraw>,
+}
+
+/// A drawing this frame discovered animates (it called [`Painter::phase`] or
+/// an equivalent), kept past the frame that found it so a later,
+/// animation-only frame can redraw just this rectangle instead of the whole
+/// window.
+pub(crate) struct AnimatedDraw {
+    pub(crate) rect: Rect,
+    pub(crate) id: Id,
+    pub(crate) paint: crate::element::Drawing,
 }
 
 /// What the pointer is actually over, resolved before anything is drawn.
@@ -310,6 +325,38 @@ const FOCUS_THICKNESS: f32 = 2.0;
 /// offset edge and the stem reads heavier, and little enough that the letter
 /// does not read as doubled.
 const BOLD_OFFSET: f32 = 0.35;
+
+/// Redraws exactly the [`AnimatedDraw`]s the last full frame found — the
+/// window's fast path, for a frame whose only reason to run at all is that
+/// one of them is still moving.
+///
+/// Skips describing the interface (the view closure), laying it out, and
+/// painting everything else in it; the canvas is left exactly as the last
+/// full (or fast) frame drew it everywhere outside these rectangles, which is
+/// correct because nothing outside them has changed. Each drawing still calls
+/// through to `Painter::phase`/`ease`/`spring` itself, so `memory.animating`
+/// and the eased/cycling values they read keep advancing precisely as they
+/// would inside a full frame — this is not a simulation of animating, it is
+/// the same drawings, actually called, just without the surrounding frame.
+pub(crate) fn redraw_animated(
+    animated: &[AnimatedDraw],
+    canvas: &mut Canvas,
+    fonts: &Fonts,
+    theme: &Theme,
+    memory: &mut Memory,
+) {
+    for cell in animated {
+        let mut painter = Painter {
+            canvas,
+            fonts,
+            theme,
+            visual: Visual::default(),
+            id: cell.id,
+            memory: Some(memory),
+        };
+        (cell.paint)(&mut painter, cell.rect);
+    }
+}
 
 /// Draws the whole tree and collects what it was told to do.
 pub(crate) fn render<'tree, S>(
@@ -757,6 +804,7 @@ fn content<'tree, S>(
                 lit,
                 disabled: el.disabled,
             };
+            frame.memory.reset_this_draw();
             let mut painter = Painter {
                 canvas: frame.canvas,
                 fonts: frame.fonts,
@@ -768,6 +816,13 @@ fn content<'tree, S>(
                 memory: Some(frame.memory),
             };
             paint(&mut painter, el.rect);
+            if frame.memory.took_this_draw() {
+                frame.animated.push(AnimatedDraw {
+                    rect: el.rect,
+                    id: el.id,
+                    paint: Rc::clone(paint),
+                });
+            }
         }
     }
 }

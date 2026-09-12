@@ -130,6 +130,11 @@ pub struct App<S> {
     /// Runs on the main thread in the frame context, so it can mutate state.
     #[allow(clippy::type_complexity)]
     frame_dispatch: Option<Box<dyn Fn(&mut S)>>,
+    /// Every [`crate::element::Node::Draw`] the last full frame found
+    /// animating, kept so a later, animation-only frame can redraw just
+    /// those rectangles instead of describing, laying out, and painting the
+    /// whole window again — see `shell::mod::Surface`'s fast path.
+    pub(crate) animated: Vec<paint::AnimatedDraw>,
 }
 
 /// What describes the interface: a function from the state to a description.
@@ -287,6 +292,7 @@ impl<S> App<S> {
             post_ready: None,
             keep_running: Arc::new(AtomicBool::new(true)),
             frame_dispatch: None,
+            animated: Vec::new(),
         }
     }
 
@@ -362,13 +368,23 @@ impl<S> App<S> {
     }
 
     /// How long the loop waits between frames while something is animating —
-    /// see [`WindowOptions::animation_interval`]. Raise this for an interface
-    /// whose only motion is ambient (a breathing glow, a slow pulse) rather
-    /// than a gesture being tracked, to trade the default's tight input-
-    /// latency bound — unused by ambient motion — for much less idle CPU.
+    /// see [`WindowOptions::animation_interval`]. Once a window's [`Surface`]
+    /// is only replaying [`App::has_animated_draws`] rather than repainting
+    /// everything (which it is, automatically, on any frame that has nothing
+    /// else to do), this is mostly a smoothness dial rather than a CPU one —
+    /// [`Self::animation_fps`] is the more direct way to set it.
+    ///
+    /// [`Surface`]: crate::shell::Surface
     pub fn animation_interval(mut self, interval: Duration) -> Self {
         self.options.animation_interval = interval;
         self
+    }
+
+    /// The same, as a frame rate rather than a period — `animation_fps(120)`
+    /// reads better at the call site than converting it to `8.33ms` by hand.
+    /// `fps` of `0` is treated as `1` rather than dividing by zero.
+    pub fn animation_fps(self, fps: u32) -> Self {
+        self.animation_interval(Duration::from_secs_f64(1.0 / fps.max(1) as f64))
     }
 
     /// How long the loop may wait for input before drawing again.
@@ -692,6 +708,28 @@ impl<S> App<S> {
         memory.end_frame(&input);
     }
 
+    /// Whether the last full frame found anything still animating — the fast
+    /// path in `shell::mod::Surface` is only available once this is true, so
+    /// there is something in [`Self::redraw_animated`] worth calling instead
+    /// of a full [`Self::frame`].
+    pub(crate) fn has_animated_draws(&self) -> bool {
+        !self.animated.is_empty()
+    }
+
+    /// Redraws only what [`Self::has_animated_draws`] found — see
+    /// [`paint::redraw_animated`]. Far cheaper than [`Self::frame`], and
+    /// correct only because nothing else about the interface has changed
+    /// since the full frame that populated [`Self::animated`].
+    pub(crate) fn redraw_animated(
+        &mut self,
+        canvas: &mut Canvas,
+        fonts: &Fonts,
+        theme: &Theme,
+        memory: &mut Memory,
+    ) {
+        paint::redraw_animated(&self.animated, canvas, fonts, theme, memory);
+    }
+
     /// Describes, lays out, draws, and then applies whatever was interacted
     /// with.
     pub(crate) fn frame(
@@ -749,6 +787,11 @@ impl<S> App<S> {
         };
         layout::solve(&mut tree, canvas.bounds(), &ctx, memory);
 
+        // Repopulated below by whichever `Node::Draw`s this full frame finds
+        // animating — cleared first since a widget that stopped animating
+        // (or vanished) must not leave a stale entry the fast path would go
+        // on redrawing forever.
+        self.animated.clear();
         let mut frame = Frame {
             canvas,
             fonts,
@@ -756,6 +799,7 @@ impl<S> App<S> {
             input,
             memory,
             hit: paint::Hit::default(),
+            animated: &mut self.animated,
         };
         let actions = paint::render(&tree, &mut frame);
 

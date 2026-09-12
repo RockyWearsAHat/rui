@@ -299,7 +299,7 @@ pub fn meter<S>(fraction: f32, tone: impl Into<Tone>) -> El<S> {
 pub fn draw<S>(intrinsic: Size, paint: impl Fn(&mut Painter<'_>, Rect) + 'static) -> El<S> {
     El::of(Node::Draw {
         intrinsic,
-        paint: Box::new(paint),
+        paint: std::rc::Rc::new(paint),
     })
 }
 
