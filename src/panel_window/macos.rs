@@ -12,6 +12,7 @@
 
 use crate::Error;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CStr};
 use std::sync::mpsc;
 use std::sync::{
@@ -22,6 +23,90 @@ use std::thread;
 use std::time::Duration;
 
 use super::PanelOptions;
+
+/// A handle to one native control (a label or a button) placed on a panel
+/// window's content view.
+///
+/// Opaque on purpose: what it wraps is a platform pointer, and the only
+/// things a caller may do with it are the ones [`super::PanelWindow`] exposes
+/// (`set_text`, `set_enabled`, `on_action`'s tag).
+#[derive(Clone, Copy)]
+pub struct Widget(pub(crate) Object);
+
+unsafe impl Send for Widget {}
+unsafe impl Sync for Widget {}
+
+/// Name of the button-target class this backend builds once per process.
+const ACTION_TARGET_CLASS: &CStr = c"RuiPanelActionTarget";
+
+/// A panel's button-click callback, shared between its own struct and its
+/// [`ACTION_CALLBACKS`] entry so updating one updates what `buttonClicked:`
+/// invokes.
+type ActionCallback = Arc<Mutex<Option<Box<dyn Fn(i64) + Send + Sync>>>>;
+
+thread_local! {
+    // Registry from a live action-target object (as a pointer) to the Rust
+    // callback it should invoke. Keyed by pointer rather than carried in an
+    // ivar: the callback is a fat `Box<dyn Fn>`, and an ivar only has room
+    // for one pointer-sized slot, so the trait object lives here instead and
+    // the ivar-sized identity (the object's own address) is the key.
+    static ACTION_CALLBACKS: RefCell<HashMap<usize, ActionCallback>> =
+        RefCell::new(HashMap::new());
+}
+
+/// Builds (or finds, on a later panel) the Objective-C class every panel
+/// button's target is an instance of.
+fn action_target_class() -> Result<Object, Error> {
+    unsafe {
+        let existing = class(ACTION_TARGET_CLASS);
+        if !existing.is_null() {
+            return Ok(existing);
+        }
+        let superclass = class(c"NSObject");
+        if superclass.is_null() {
+            return Err(Error::Platform(
+                "AppKit is not loaded: there is no NSObject".into(),
+            ));
+        }
+        let built = objc_allocateClassPair(superclass, ACTION_TARGET_CLASS.as_ptr(), 0);
+        if built.is_null() {
+            return Err(Error::Platform(
+                "a panel action target class could not be created".into(),
+            ));
+        }
+        // "v@:@" — void return, self, selector, one object argument (the sender).
+        let added = class_addMethod(
+            built,
+            sel(c"buttonClicked:"),
+            button_clicked as *const c_void,
+            c"v@:@".as_ptr(),
+        );
+        if !added {
+            return Err(Error::Platform(
+                "the panel action target would not take buttonClicked:".into(),
+            ));
+        }
+        objc_registerClassPair(built);
+        Ok(built)
+    }
+}
+
+/// The `buttonClicked:` implementation shared by every panel button.
+///
+/// Looks itself up in [`ACTION_CALLBACKS`] by its own address, reads the
+/// sender's tag (how a widget names itself back to the caller), and calls the
+/// registered closure with it.
+extern "C" fn button_clicked(this: Object, _sel: Sel, sender: Object) {
+    let key = this as usize;
+    let callback = ACTION_CALLBACKS.with(|callbacks| callbacks.borrow().get(&key).cloned());
+    let Some(callback) = callback else { return };
+    let tag: i64 = unsafe { send(sender, sel(c"tag")) };
+    if let Ok(guard) = callback.lock() {
+        if let Some(f) = guard.as_ref() {
+            f(tag);
+        }
+    };
+}
 
 /// Platform-specific opaque handle for Objective-C objects.
 type Object = *mut c_void;
@@ -79,6 +164,14 @@ pub struct PanelWindowInner {
     /// Receiver to acknowledge shutdown from the monitor thread.
     #[allow(dead_code)]
     shutdown_rx: Arc<Mutex<Option<mpsc::Receiver<()>>>>,
+    /// This panel's own button target, an instance of [`action_target_class`].
+    /// Retained for the panel's lifetime; every button's `setTarget:` points
+    /// here, and [`ACTION_CALLBACKS`] is keyed by its address.
+    action_target: Object,
+    /// The one callback a caller has registered via `on_action`, shared with
+    /// the [`ACTION_CALLBACKS`] entry so updating it here updates what
+    /// `buttonClicked:` invokes.
+    action_callback: ActionCallback,
 }
 
 impl PanelWindowInner {
@@ -153,11 +246,24 @@ impl PanelWindowInner {
             let shutdown_signal = Arc::new(AtomicBool::new(false));
             let (shutdown_tx, shutdown_rx) = mpsc::channel();
 
+            let target_class = action_target_class()?;
+            let action_target: Object = send(target_class, sel(c"alloc"));
+            let action_target: Object = send(action_target, sel(c"init"));
+            let _: Object = send(action_target, sel(c"retain"));
+            let action_callback: ActionCallback = Arc::new(Mutex::new(None));
+            ACTION_CALLBACKS.with(|callbacks| {
+                callbacks
+                    .borrow_mut()
+                    .insert(action_target as usize, Arc::clone(&action_callback));
+            });
+
             let inner = PanelWindowInner {
                 panel,
                 dismiss_callback: Arc::new(Mutex::new(SendableCallback(None))),
                 shutdown_signal: shutdown_signal.clone(),
                 shutdown_rx: Arc::new(Mutex::new(Some(shutdown_rx))),
+                action_target,
+                action_callback,
             };
 
             // Set up event monitors after creation.
@@ -381,6 +487,120 @@ impl PanelWindowInner {
         }
     }
 
+    /// Adds a non-interactive line of text to the panel's content view.
+    pub fn add_label(
+        &self,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        text: &str,
+    ) -> Result<Widget, Error> {
+        unsafe {
+            let pool = objc_autoreleasePoolPush();
+            let field_class = class(c"NSTextField");
+            if field_class.is_null() {
+                objc_autoreleasePoolPop(pool);
+                return Err(Error::Platform("NSTextField class not found".into()));
+            }
+            let field: Object = send(field_class, sel(c"alloc"));
+            let frame = CGRect {
+                origin: CGPoint { x, y },
+                size: CGSize { width, height },
+            };
+            let field: Object = send1(field, sel(c"initWithFrame:"), frame);
+            let value = ns_string(text);
+            let _: () = send1(field, sel(c"setStringValue:"), value);
+            let _: () = send1(field, sel(c"setEditable:"), false);
+            let _: () = send1(field, sel(c"setSelectable:"), false);
+            let _: () = send1(field, sel(c"setBezeled:"), false);
+            let _: () = send1(field, sel(c"setDrawsBackground:"), false);
+            let content_view: Object = send(self.panel, sel(c"contentView"));
+            let _: () = send1(content_view, sel(c"addSubview:"), field);
+            objc_autoreleasePoolPop(pool);
+            Ok(Widget(field))
+        }
+    }
+
+    /// Adds a clickable button to the panel's content view. `tag` is the
+    /// value handed to the [`on_action`](Self::on_action) callback when this
+    /// button is pressed — the caller's own way of telling buttons apart.
+    pub fn add_button(
+        &self,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        title: &str,
+        tag: i64,
+    ) -> Result<Widget, Error> {
+        unsafe {
+            let pool = objc_autoreleasePoolPush();
+            let button_class = class(c"NSButton");
+            if button_class.is_null() {
+                objc_autoreleasePoolPop(pool);
+                return Err(Error::Platform("NSButton class not found".into()));
+            }
+            let button: Object = send(button_class, sel(c"alloc"));
+            let frame = CGRect {
+                origin: CGPoint { x, y },
+                size: CGSize { width, height },
+            };
+            let button: Object = send1(button, sel(c"initWithFrame:"), frame);
+            let value = ns_string(title);
+            let _: () = send1(button, sel(c"setTitle:"), value);
+            // NSBezelStyleRounded = 1
+            let _: () = send1(button, sel(c"setBezelStyle:"), 1i64);
+            let _: () = send1(button, sel(c"setTag:"), tag);
+            let _: () = send1(button, sel(c"setTarget:"), self.action_target);
+            let _: () = send1(button, sel(c"setAction:"), sel(c"buttonClicked:"));
+            let content_view: Object = send(self.panel, sel(c"contentView"));
+            let _: () = send1(content_view, sel(c"addSubview:"), button);
+            objc_autoreleasePoolPop(pool);
+            Ok(Widget(button))
+        }
+    }
+
+    /// Changes a label's or button's text.
+    pub fn set_text(&self, widget: &Widget, text: &str) -> Result<(), Error> {
+        unsafe {
+            let pool = objc_autoreleasePoolPush();
+            // NSTextField reads back through `stringValue`/`setStringValue:`;
+            // NSButton's `setTitle:` covers a button the same call is used on.
+            let class_name = send::<Object>(widget.0, sel(c"className"));
+            let name = from_ns_string(class_name);
+            let value = ns_string(text);
+            if name == "NSButton" {
+                let _: () = send1(widget.0, sel(c"setTitle:"), value);
+            } else {
+                let _: () = send1(widget.0, sel(c"setStringValue:"), value);
+            }
+            objc_autoreleasePoolPop(pool);
+            Ok(())
+        }
+    }
+
+    /// Enables or disables a button (a no-op, harmlessly, on a label).
+    pub fn set_enabled(&self, widget: &Widget, enabled: bool) -> Result<(), Error> {
+        unsafe {
+            let _: () = send1(widget.0, sel(c"setEnabled:"), enabled);
+            Ok(())
+        }
+    }
+
+    /// Registers the one callback every button on this panel reports its
+    /// press to, carrying the tag it was created with. Replaces any callback
+    /// registered earlier.
+    pub fn on_action<F>(&self, callback: F) -> Result<(), Error>
+    where
+        F: Fn(i64) + Send + Sync + 'static,
+    {
+        if let Ok(mut guard) = self.action_callback.lock() {
+            *guard = Some(Box::new(callback));
+        }
+        Ok(())
+    }
+
     /// Close and release the panel.
     pub fn close(&mut self) -> Result<(), Error> {
         // Signal the event monitor thread to shut down.
@@ -409,6 +629,12 @@ impl PanelWindowInner {
                 let mut windows = pw.borrow_mut();
                 windows.retain(|&w| w != self.panel);
             });
+            ACTION_CALLBACKS.with(|callbacks| {
+                callbacks
+                    .borrow_mut()
+                    .remove(&(self.action_target as usize));
+            });
+            let _: Object = send(self.action_target, sel(c"release"));
 
             Ok(())
         }
@@ -433,6 +659,39 @@ unsafe extern "C" {
     fn objc_autoreleasePoolPop(pool: *mut c_void);
     fn objc_getClass(name: *const c_char) -> Object;
     fn sel_registerName(name: *const c_char) -> Sel;
+    fn objc_allocateClassPair(
+        superclass: Object,
+        name: *const c_char,
+        extra_bytes: usize,
+    ) -> Object;
+    fn objc_registerClassPair(class: Object);
+    fn class_addMethod(class: Object, name: Sel, imp: *const c_void, types: *const c_char) -> bool;
+}
+
+/// An `NSString` holding `text`, valid until the pool is popped.
+fn ns_string(text: &str) -> Object {
+    let text = std::ffi::CString::new(text).unwrap_or_default();
+    unsafe {
+        send1(
+            class(c"NSString"),
+            sel(c"stringWithUTF8String:"),
+            text.as_ptr(),
+        )
+    }
+}
+
+/// The Rust string behind an `NSString`, or empty when there is none.
+fn from_ns_string(string: Object) -> String {
+    if string.is_null() {
+        return String::new();
+    }
+    let utf8: *const c_char = unsafe { send(string, sel(c"UTF8String")) };
+    if utf8.is_null() {
+        return String::new();
+    }
+    unsafe { CStr::from_ptr(utf8) }
+        .to_string_lossy()
+        .into_owned()
 }
 
 /// Get an Objective-C class by name.

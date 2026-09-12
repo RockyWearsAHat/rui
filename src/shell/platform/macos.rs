@@ -570,6 +570,10 @@ pub(crate) struct Window {
     view: Object,
     layer: Object,
     open: Cell<bool>,
+    /// From [`WindowOptions::close_hides`]: when true, the window losing
+    /// visibility never clears `open` — only an explicit end of the run loop
+    /// (the caller's own `while_running`) does. See that field for why.
+    close_hides: bool,
     /// Logical size of the content view, as of the last time it was read.
     size: Cell<(f64, f64)>,
     /// Device pixels per logical unit, as of the last time it was read.
@@ -802,6 +806,7 @@ impl Backend for Window {
                 view,
                 layer,
                 open: Cell::new(true),
+                close_hides: options.close_hides,
                 size: Cell::new((options.width as f64, options.height as f64)),
                 scale: Cell::new(1.0),
                 presented_scale: Cell::new(0.0),
@@ -1133,9 +1138,11 @@ impl Window {
             self.accessibility.inbox.drain(events);
 
             self.refresh_geometry();
-            let visible: bool = send(self.window, sel(c"isVisible"));
-            if !visible {
-                self.open.set(false);
+            if !self.close_hides {
+                let visible: bool = send(self.window, sel(c"isVisible"));
+                if !visible {
+                    self.open.set(false);
+                }
             }
 
             objc_autoreleasePoolPop(pool);
