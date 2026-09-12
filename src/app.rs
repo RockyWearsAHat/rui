@@ -361,6 +361,16 @@ impl<S> App<S> {
         self
     }
 
+    /// How long the loop waits between frames while something is animating —
+    /// see [`WindowOptions::animation_interval`]. Raise this for an interface
+    /// whose only motion is ambient (a breathing glow, a slow pulse) rather
+    /// than a gesture being tracked, to trade the default's tight input-
+    /// latency bound — unused by ambient motion — for much less idle CPU.
+    pub fn animation_interval(mut self, interval: Duration) -> Self {
+        self.options.animation_interval = interval;
+        self
+    }
+
     /// How long the loop may wait for input before drawing again.
     ///
     /// Shorter keeps up better with a machine that changes on its own; longer
