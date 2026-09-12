@@ -309,6 +309,13 @@ impl PixelBounds {
     }
 }
 
+/// A copy of one rectangle's device pixels, taken by [`Canvas::snapshot`] and
+/// given back by [`Canvas::restore`].
+pub(crate) struct RectSnapshot {
+    bounds: PixelBounds,
+    pixels: Vec<u32>,
+}
+
 /// The smallest backing scale a display may claim before it is disbelieved.
 ///
 /// A zero or negative scale collapses every layout to nothing, and a windowing
@@ -414,6 +421,54 @@ impl Canvas {
     /// The pixels, for a backend to present.
     pub fn pixels(&self) -> &[u32] {
         &self.pixels
+    }
+
+    /// Copies out the pixels under `rect`, to be given back to
+    /// [`Self::restore`] later.
+    ///
+    /// What makes replaying a [`crate::element::Node::Draw`] outside a full
+    /// frame (the fast path in `shell::mod::Surface`) safe for a drawing that
+    /// paints *additively* over its own background rather than opaquely
+    /// covering it — a glow, most of what this library's own `Sculpt::Glow`
+    /// produces — which is nearly every interesting drawing. Without
+    /// restoring first, replaying such a drawing on top of what it already
+    /// painted last time brightens it a little further every single replay,
+    /// which is a flicker/ghosting bug, not a slow fade to some settled
+    /// brightness: confirmed live, reported as "the connection animation is
+    /// flickering a ton."
+    pub(crate) fn snapshot(&self, rect: Rect) -> RectSnapshot {
+        let bounds = self.device_bounds(rect);
+        if bounds.is_empty() {
+            return RectSnapshot {
+                bounds,
+                pixels: Vec::new(),
+            };
+        }
+        let width = (bounds.right - bounds.left) as usize;
+        let mut pixels = Vec::with_capacity(width * (bounds.bottom - bounds.top) as usize);
+        for y in bounds.top..bounds.bottom {
+            let row = y as usize * self.width as usize;
+            let start = row + bounds.left as usize;
+            pixels.extend_from_slice(&self.pixels[start..start + width]);
+        }
+        RectSnapshot { bounds, pixels }
+    }
+
+    /// The other half of [`Self::snapshot`]: puts those pixels back, exactly
+    /// where they came from.
+    pub(crate) fn restore(&mut self, snapshot: &RectSnapshot) {
+        let bounds = snapshot.bounds;
+        if bounds.is_empty() {
+            return;
+        }
+        let width = (bounds.right - bounds.left) as usize;
+        for (row_index, y) in (bounds.top..bounds.bottom).enumerate() {
+            let row = y as usize * self.width as usize;
+            let start = row + bounds.left as usize;
+            let source = row_index * width;
+            self.pixels[start..start + width]
+                .copy_from_slice(&snapshot.pixels[source..source + width]);
+        }
     }
 
     /// The current clip, in logical units.

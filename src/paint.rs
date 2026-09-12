@@ -270,6 +270,12 @@ pub(crate) struct AnimatedDraw {
     pub(crate) rect: Rect,
     pub(crate) id: Id,
     pub(crate) paint: crate::element::Drawing,
+    /// What was under this drawing the moment before it last painted itself
+    /// during a full frame — restored before every fast-path replay, so a
+    /// drawing that paints additively over its own background (a glow, most
+    /// of them) does not compound brighter every time it is replayed. See
+    /// [`crate::canvas::Canvas::snapshot`].
+    pub(crate) background: crate::canvas::RectSnapshot,
 }
 
 /// What the pointer is actually over, resolved before anything is drawn.
@@ -346,6 +352,12 @@ pub(crate) fn redraw_animated(
     memory: &mut Memory,
 ) {
     for cell in animated {
+        // Undoes what this same drawing left behind last time it painted,
+        // before it paints again — see `AnimatedDraw::background` and
+        // `Canvas::snapshot`. Skipping this is exactly what turned an
+        // additive glow effect into a flicker that brightened a little
+        // further on every single replay.
+        canvas.restore(&cell.background);
         let mut painter = Painter {
             canvas,
             fonts,
@@ -804,6 +816,12 @@ fn content<'tree, S>(
                 lit,
                 disabled: el.disabled,
             };
+            // Taken before this drawing paints itself, so it is exactly
+            // "whatever a full frame had already painted under this rect" —
+            // everything behind it (a panel's background, most commonly),
+            // with nothing of this drawing's own marks in it yet. Only kept
+            // if this turns out to animate; otherwise it is simply dropped.
+            let background = frame.canvas.snapshot(el.rect);
             frame.memory.enter_draw();
             let mut painter = Painter {
                 canvas: frame.canvas,
@@ -821,6 +839,7 @@ fn content<'tree, S>(
                     rect: el.rect,
                     id: el.id,
                     paint: Rc::clone(paint),
+                    background,
                 });
             }
         }
