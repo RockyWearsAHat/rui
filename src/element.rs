@@ -83,7 +83,14 @@ pub type HoverAction<S> = Box<dyn Fn(&mut S, bool)>;
 pub type PointerAction<S> = Box<dyn Fn(&mut S, Pointing)>;
 
 /// An application's own drawing, given the painter and the room it was placed in.
-pub type Drawing = Box<dyn Fn(&mut Painter<'_>, Rect)>;
+///
+/// `Rc` rather than `Box`: a closure that turns out to be animating (it asked
+/// [`Painter::phase`] or an equivalent for a value that keeps moving) is worth
+/// keeping past the frame that built it — see `shell::mod::Surface`'s fast
+/// path — and an `Rc` is what lets a frame clone it out of a tree that is
+/// about to be dropped, rather than needing to keep the whole tree, or the
+/// whole view closure, alive just to reach one small drawing inside it.
+pub type Drawing = std::rc::Rc<dyn Fn(&mut Painter<'_>, Rect)>;
 
 /// Lifecycle animation: how an element enters and exits the interface.
 #[derive(Clone, Copy, Debug)]

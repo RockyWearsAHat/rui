@@ -373,6 +373,12 @@ pub struct Memory {
     frame: u64,
     /// Whether anything is still short of its target.
     animating: bool,
+    /// Whether the [`Node::Draw`](crate::element::Node::Draw) currently being
+    /// painted is the one that just asked for another frame — reset before
+    /// each one so the answer is about *that* drawing specifically, not
+    /// `animating`'s frame-wide, only-ever-set-once-never-cleared state. See
+    /// `paint::AnimatedDraw`.
+    requested_this_draw: bool,
     /// Which following areas the reader has scrolled away from.
     ///
     /// Absent means still following, so an area that has never been touched
@@ -711,6 +717,7 @@ impl Memory {
         } else {
             entry.value = value;
             self.animating = true;
+            self.requested_this_draw = true;
         }
         entry.value
     }
@@ -745,7 +752,22 @@ impl Memory {
         cycle.seen = frame;
         cycle.value = (cycle.value + self.delta / period).fract();
         self.animating = true;
+        self.requested_this_draw = true;
         cycle.value
+    }
+
+    /// Clears the per-drawing animation flag, right before that drawing's own
+    /// paint call — see [`Self::took_this_draw`].
+    pub(crate) fn reset_this_draw(&mut self) {
+        self.requested_this_draw = false;
+    }
+
+    /// Whether the drawing just painted (since the last [`Self::reset_this_draw`])
+    /// asked for another frame — as opposed to [`Self::is_animating`], which
+    /// is frame-wide and, once true, stays true no matter which further
+    /// drawing set it.
+    pub(crate) fn took_this_draw(&self) -> bool {
+        self.requested_this_draw
     }
 
     /// Restarts the looping value held under `id` from the top of its turn.
@@ -788,6 +810,7 @@ impl Memory {
             target
         } else {
             self.animating = true;
+            self.requested_this_draw = true;
             new_pos
         }
     }
