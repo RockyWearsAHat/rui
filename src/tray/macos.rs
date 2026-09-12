@@ -203,11 +203,15 @@ extern "C" fn tray_menu_item_clicked(_this: Object, _cmd: Sel, sender: Object) {
 /// The `buttonClicked:` action for the tray button when in panel mode.
 /// This is called when the tray icon is clicked in panel mode.
 extern "C" fn tray_button_clicked(_this: Object, _cmd: Sel, _sender: Object) {
+    eprintln!("RUI TRAY: button_clicked handler INVOKED");
     TRAY_PANEL_MODE.with(|mode_ref| {
         let is_panel_mode = *mode_ref.borrow();
+        eprintln!("RUI TRAY: is_panel_mode = {}", is_panel_mode);
         if is_panel_mode {
+            eprintln!("RUI TRAY: In panel mode, attempting to get button");
             TRAY_BUTTON.with(|button_ref| {
                 if let Some(button) = button_ref.borrow().as_ref() {
+                    eprintln!("RUI TRAY: Got button, computing screen position");
                     // Get the button's frame in screen coordinates
                     let button = *button;
                     unsafe {
@@ -224,12 +228,22 @@ extern "C" fn tray_button_clicked(_this: Object, _cmd: Sel, _sender: Object) {
                                     events.push(TrayEvent::IconActivatedForPanel {
                                         screen_position: (screen_x, screen_y),
                                     });
+                                    eprintln!(
+                                        "RUI TRAY: Posted IconActivatedForPanel event at ({}, {})",
+                                        screen_x, screen_y
+                                    );
                                 }
+                            } else {
+                                eprintln!("RUI TRAY: No event queue in handler");
                             }
                         });
                     }
+                } else {
+                    eprintln!("RUI TRAY: No button in thread-local storage");
                 }
             });
+        } else {
+            eprintln!("RUI TRAY: NOT in panel mode, ignoring click");
         }
     });
 }
@@ -309,8 +323,9 @@ impl TrayInner {
         };
         let _: () = send1(button, sel(c"setImage:"), image);
 
-        // Set the menu on the status item (even in panel mode, for fallback)
+        // Set the menu on the status item. In panel mode, we'll remove it later in set_panel_mode.
         let _: () = send1(status_item, sel(c"setMenu:"), menu);
+        eprintln!("RUI TRAY: Initial menu set on status item");
 
         // If in panel mode, set up button action to emit IconActivatedForPanel events
         if use_panel {
@@ -419,6 +434,7 @@ impl TrayInner {
     pub fn set_panel_mode(&self, enabled: bool) -> Result<(), Error> {
         unsafe {
             if enabled {
+                eprintln!("RUI TRAY: Enabling panel mode");
                 TRAY_PANEL_MODE.with(|mode| {
                     *mode.borrow_mut() = true;
                 });
@@ -426,10 +442,37 @@ impl TrayInner {
                     *btn.borrow_mut() = Some(self.button);
                 });
 
-                // Set up button action for panel mode
-                let button_target: Object = tray_button_target_instance();
-                let _: () = send1(self.button, sel(c"setTarget:"), button_target);
-                let _: () = send1(self.button, sel(c"setAction:"), sel(c"buttonClicked:"));
+                // Create a simple menu with a single item that posts the panel event.
+                // Use the existing menu infrastructure so the click handler works.
+                // The item will have id=999 (reserved for panel), and when clicked,
+                // the menu_item_clicked handler will route it to the panel logic.
+                eprintln!("RUI TRAY: Clearing menu items for panel mode");
+                let count: i64 = send(self.menu, sel(c"numberOfItems"));
+                for _ in 0..count {
+                    let _: () = send1(self.menu, sel(c"removeItemAtIndex:"), 0i64);
+                }
+
+                // Add a single "Panel" item
+                let menu_item: Object = send(class(c"NSMenuItem"), sel(c"alloc"));
+                let menu_item: Object = send3(
+                    menu_item,
+                    sel(c"initWithTitle:action:keyEquivalent:"),
+                    ns_string(c"Show"),
+                    sel(c"menuItemClicked:"),
+                    ns_string(c""),
+                );
+
+                if !menu_item.is_null() {
+                    let button_target: Object = tray_target_instance();
+                    let _: () = send1(menu_item, sel(c"setTarget:"), button_target);
+                    // Use a special tag (9999) to identify this as the panel trigger
+                    let _: () = send1(menu_item, sel(c"setTag:"), 9999i64);
+                    let _: () = send1(self.menu, sel(c"addItem:"), menu_item);
+                    eprintln!("RUI TRAY: Added panel trigger item (tag=9999) to menu");
+                }
+
+                // The normal menu is already set, so nothing else to do
+                eprintln!("RUI TRAY: Panel mode enabled");
             } else {
                 TRAY_PANEL_MODE.with(|mode| {
                     *mode.borrow_mut() = false;
@@ -438,8 +481,7 @@ impl TrayInner {
                     *btn.borrow_mut() = None;
                 });
 
-                // Revert to menu mode: set menu back on status item
-                let _: () = send1(self.status_item, sel(c"setMenu:"), self.menu);
+                eprintln!("RUI TRAY: Panel mode disabled");
             }
             Ok(())
         }
