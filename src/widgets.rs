@@ -479,6 +479,13 @@ impl<S> El<S> {
 /// word. It also does the grouping a box would do, without the cost a box has —
 /// which is that ten nested boxes read as a diagram of an interface rather than
 /// as one.
+///
+/// The rule runs through the middle of the label's line, not along its top: a
+/// row stretches a child with no height of its own, but the hairline states
+/// one, and an unaligned stated height lands at the row's top edge — which put
+/// the rule level with the capitals' cap-top and made every "ROUTES ————"
+/// read a touch off. Centring the row's children puts the rule on the
+/// label's optical middle, and the note beside it on the same line.
 pub fn section<S>(label: impl Into<String>, note: Option<String>) -> El<S> {
     row((
         heading(label),
@@ -491,6 +498,7 @@ pub fn section<S>(label: impl Into<String>, note: Option<String>) -> El<S> {
     // used by: section() line 491
     .h(14.0) // UNMATCHED: section header height, widget-specific sizing
     .gap(Metrics::DEFAULT.gap)
+    .align(Align::Center)
 }
 
 /// A row that names something and shows its value beside it.
