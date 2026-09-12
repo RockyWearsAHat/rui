@@ -2648,6 +2648,19 @@ fn application_delegate() -> Result<Object, Error> {
                 should_terminate as *const c_void,
                 c"Q@:@",
             )?;
+            // `B@:@B` — returns a bool, takes the receiver, the selector, the
+            // application asking, and whether it already has a visible window.
+            // Fires on a Dock icon click (or Recent Items) when the app has no
+            // visible window — the counterpart to `close_hides`: a window that
+            // hides instead of closing needs exactly this to come back, or the
+            // Dock icon does nothing forever once clicked away.
+            add_method(
+                built,
+                DELEGATE_OWNER,
+                c"applicationShouldHandleReopen:hasVisibleWindows:",
+                should_handle_reopen as *const c_void,
+                c"B@:@B",
+            )?;
             unsafe { objc_registerClassPair(built) };
             built
         }
@@ -2681,6 +2694,46 @@ unsafe extern "C" fn should_terminate(_self: Object, _selector: Sel, application
         }
     }
     TERMINATE_CANCEL
+}
+
+/// Answers a Dock icon click (or Recent Items reopen) by bringing every
+/// window back, when the application currently has none visible.
+///
+/// This is the counterpart to `close_hides` (see [`WindowOptions::close_hides`]):
+/// a red-button close that only orders the window out, rather than closing it,
+/// leaves the app running with no visible window and no way back short of
+/// quitting and relaunching — the Dock icon is normally exactly this hook, and
+/// without it AppKit's default answer ("yes, but I have nothing to show you")
+/// makes the click silently do nothing forever.
+///
+/// # Safety
+///
+/// Called by the Objective-C runtime with an `NSApplication` as `application`
+/// and whether it already has a visible window as `has_visible_windows`.
+unsafe extern "C" fn should_handle_reopen(
+    _self: Object,
+    _selector: Sel,
+    application: Object,
+    has_visible_windows: bool,
+) -> bool {
+    if !has_visible_windows {
+        unsafe {
+            let windows: Object = send(application, sel(c"windows"));
+            let count: usize = send(windows, sel(c"count"));
+            for index in 0..count {
+                let window: Object = send1(windows, sel(c"objectAtIndex:"), index);
+                if !window.is_null() {
+                    let _: () = send1(
+                        window,
+                        sel(c"makeKeyAndOrderFront:"),
+                        std::ptr::null_mut::<c_void>(),
+                    );
+                }
+            }
+            let _: () = send1(application, sel(c"activateIgnoringOtherApps:"), true);
+        }
+    }
+    true
 }
 
 /// Installs the one menu a window needs, so Command-Q works.
