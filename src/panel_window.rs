@@ -237,6 +237,33 @@ impl PanelWindow {
         self.inner.set_text_color(widget, rgb)
     }
 
+    /// Sets the panel's own background color, corner radius, and a hairline
+    /// border. `background`/`border` are sRGB `(r, g, b)`, each `0.0..=1.0`;
+    /// `border_width` in points (`0.0` omits the border). Call once, after
+    /// [`Self::new`] — this is the panel's own look, not any one control's.
+    pub fn style(
+        &self,
+        background: (f32, f32, f32),
+        corner_radius: f64,
+        border: (f32, f32, f32),
+        border_width: f64,
+    ) -> Result<(), Error> {
+        self.inner
+            .style(background, corner_radius, border, border_width)
+    }
+
+    /// Tints a button's bezel (a no-op, harmlessly, on a label). `emphasis`
+    /// draws it filled with a light title, matching a primary action;
+    /// otherwise it is a quieter outline in that color, for a secondary one.
+    pub fn set_button_tint(
+        &self,
+        widget: &Widget,
+        rgb: (f32, f32, f32),
+        emphasis: bool,
+    ) -> Result<(), Error> {
+        self.inner.set_button_tint(widget, rgb, emphasis)
+    }
+
     /// Registers the callback every button on this panel reports its press
     /// to, carrying the tag it was created with. Replaces any callback
     /// registered earlier — there is one action sink per panel, not one per
