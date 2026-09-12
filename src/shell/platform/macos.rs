@@ -2619,10 +2619,11 @@ const TERMINATE_CANCEL: usize = 0;
 ///
 /// Closing the window with the red button has never had this problem, because
 /// that path is a fact the loop reads: the window stops being visible, the loop
-/// ends, `run` returns, and everything unwinds. So the fix is to make Quit take
-/// exactly that path — close the windows, refuse the termination, and let the
-/// loop notice — rather than to invent a second shutdown that would then have
-/// to be kept in step with the first.
+/// ends, `run` returns, and everything unwinds. So the fix is to make Quit end
+/// the same loop — refuse the termination, write the request down, and let the
+/// loop read it on its own thread and ask the application — rather than to
+/// invent a second shutdown that would then have to be kept in step with the
+/// first. See [`should_terminate`] for why it is a request and not a close.
 fn application_delegate() -> Result<Object, Error> {
     let class_object = match class(DELEGATE_CLASS) {
         existing if !existing.is_null() => existing,
@@ -2673,26 +2674,36 @@ fn application_delegate() -> Result<Object, Error> {
     Ok(delegate)
 }
 
-/// Answers a Quit by closing every window and refusing to terminate.
+/// Answers a Quit by writing the request down and refusing to terminate.
 ///
-/// The loop is watching each window's visibility, so this *is* the shutdown:
-/// the frame after this one finds nothing visible, ends, and lets the
-/// application's own destructors run. See [`application_delegate`].
+/// The loop reads the request on its next turn (see
+/// [`crate::shell::request_quit`]) and asks the application; if it agrees —
+/// which an application that never registered [`App::on_quit`] always does —
+/// the loop ends and its destructors run. See [`application_delegate`].
+///
+/// It used to close every window instead and let the loop notice nothing was
+/// visible. That was a quit only for a window that ends the loop by closing:
+/// under `close_hides` a closed window is merely a hidden one, so Command-Q in
+/// a menu-bar app did exactly what its red button did — hid the window, kept
+/// the tray, the tunnel and the process — and never reached the application's
+/// own Quit, confirmation and all. It also closed every `NSWindow` the process
+/// had, a tray's dropdown panel included, which was never asked for.
+///
+/// [`wake`] afterwards: a Quit sent from the Dock or by AppleEvent arrives
+/// inside `nextEventMatchingMask:` without an event to return, so without this
+/// the loop would notice at the end of its wait — up to the idle timeout — and
+/// the confirmation would come up late.
 ///
 /// # Safety
 ///
 /// Called by the Objective-C runtime with an `NSApplication` as `application`.
-unsafe extern "C" fn should_terminate(_self: Object, _selector: Sel, application: Object) -> usize {
-    unsafe {
-        let windows: Object = send(application, sel(c"windows"));
-        let count: usize = send(windows, sel(c"count"));
-        for index in 0..count {
-            let window: Object = send1(windows, sel(c"objectAtIndex:"), index);
-            if !window.is_null() {
-                let _: () = send1(window, sel(c"close"), std::ptr::null_mut::<c_void>());
-            }
-        }
-    }
+unsafe extern "C" fn should_terminate(
+    _self: Object,
+    _selector: Sel,
+    _application: Object,
+) -> usize {
+    crate::shell::request_quit();
+    wake();
     TERMINATE_CANCEL
 }
 
