@@ -202,6 +202,27 @@ pub struct WindowOptions {
     /// direct cut in idle CPU and power draw — a period like 40-60ms (17-25
     /// draws/second) is still a fluid-looking breathe or pulse.
     pub animation_interval: Duration,
+    /// An appearance to pin the window to, or `None` to follow the desktop.
+    ///
+    /// The platform's own chrome — the title bar, its traffic lights, a
+    /// native alert — is drawn by the platform in whatever appearance the
+    /// desktop is in, while the content is drawn by the theme; an
+    /// application whose theme only ever answers one appearance (a dark-only
+    /// instrument) otherwise gets a light title bar over dark content the
+    /// moment the desktop is light, or the reverse. Pinning tells the
+    /// platform the same thing the theme already decided, so the two cannot
+    /// disagree. `None` — the default — is the original behaviour: the
+    /// backend's [`Backend::appearance`] reports the desktop's, and the
+    /// theme is asked with it every frame.
+    pub appearance: Option<Appearance>,
+    /// A name under which the platform remembers where the window was left
+    /// — its position and size — between launches, or `None` to open where
+    /// the backend puts a fresh window (centred on the main display).
+    ///
+    /// On macOS this is the window's frame autosave name: a window dragged
+    /// to the second display comes back there next time, and the first
+    /// launch on a machine that has never seen it still opens centred.
+    pub frame_name: Option<String>,
 }
 
 impl Default for WindowOptions {
@@ -214,6 +235,8 @@ impl Default for WindowOptions {
             min_height: 320.0,
             close_hides: false,
             animation_interval: FRAME,
+            appearance: None,
+            frame_name: None,
         }
     }
 }

@@ -396,6 +396,25 @@ impl<S> App<S> {
         self.animation_interval(Duration::from_secs_f64(1.0 / fps.max(1) as f64))
     }
 
+    /// Pins the window — its native title bar and alerts included — to one
+    /// appearance instead of following the desktop; see
+    /// [`WindowOptions::appearance`]. For an application whose [`App::theme`]
+    /// answers the same palette whatever it is asked: without this, a dark
+    /// theme under a light desktop wears a light title bar, and the platform
+    /// and the theme visibly disagree about what the window is.
+    pub fn appearance(mut self, appearance: Appearance) -> Self {
+        self.options.appearance = Some(appearance);
+        self
+    }
+
+    /// Has the platform remember where the window was left between launches,
+    /// under `name` — see [`WindowOptions::frame_name`]. Without it a fresh
+    /// window opens centred on the main display every time.
+    pub fn remember_frame(mut self, name: impl Into<String>) -> Self {
+        self.options.frame_name = Some(name.into());
+        self
+    }
+
     /// How long the loop may wait for input before drawing again.
     ///
     /// Shorter keeps up better with a machine that changes on its own; longer
@@ -1202,6 +1221,21 @@ mod tests {
 
         flag.store(false, Ordering::Relaxed);
         assert!(!app.is_running()); // is_running checks both the running condition and keep_running
+    }
+
+    #[test]
+    fn a_window_follows_the_desktop_and_opens_fresh_unless_told_otherwise() {
+        // The defaults: no pin, no memory — the original behaviour, so every
+        // existing caller keeps a window that follows the desktop's
+        // appearance and opens where the backend puts a fresh one.
+        let app = quiet();
+        assert_eq!(app.options.appearance, None);
+        assert_eq!(app.options.frame_name, None);
+
+        // The dark-only instrument: pinned, and remembered under its name.
+        let app = quiet().appearance(Appearance::Dark).remember_frame("Panel");
+        assert_eq!(app.options.appearance, Some(Appearance::Dark));
+        assert_eq!(app.options.frame_name.as_deref(), Some("Panel"));
     }
 
     #[test]
