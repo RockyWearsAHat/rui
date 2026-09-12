@@ -804,7 +804,7 @@ fn content<'tree, S>(
                 lit,
                 disabled: el.disabled,
             };
-            frame.memory.reset_this_draw();
+            frame.memory.enter_draw();
             let mut painter = Painter {
                 canvas: frame.canvas,
                 fonts: frame.fonts,
@@ -816,7 +816,7 @@ fn content<'tree, S>(
                 memory: Some(frame.memory),
             };
             paint(&mut painter, el.rect);
-            if frame.memory.took_this_draw() {
+            if frame.memory.exit_draw() {
                 frame.animated.push(AnimatedDraw {
                     rect: el.rect,
                     id: el.id,
