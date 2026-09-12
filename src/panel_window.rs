@@ -57,6 +57,15 @@ use windows::PanelWindowInner;
 #[cfg(target_os = "linux")]
 use linux::PanelWindowInner;
 
+#[cfg(target_os = "macos")]
+pub use macos::Widget;
+
+#[cfg(target_os = "windows")]
+pub use windows::Widget;
+
+#[cfg(target_os = "linux")]
+pub use linux::Widget;
+
 use crate::Error;
 
 /// Configuration for creating a panel window.
@@ -182,6 +191,55 @@ impl PanelWindow {
         F: Fn() + Send + Sync + 'static,
     {
         self.inner.on_dismiss(Box::new(callback))
+    }
+
+    /// Adds a non-interactive line of text to the panel, in its own
+    /// coordinate space (origin at the panel's bottom-left, in points).
+    pub fn add_label(
+        &self,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        text: &str,
+    ) -> Result<Widget, Error> {
+        self.inner.add_label(x, y, width, height, text)
+    }
+
+    /// Adds a clickable button. `tag` is the value passed back to
+    /// [`Self::on_action`] when this button is pressed, so the caller can
+    /// tell its buttons apart without keeping its own id-to-widget map.
+    pub fn add_button(
+        &self,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        title: &str,
+        tag: i64,
+    ) -> Result<Widget, Error> {
+        self.inner.add_button(x, y, width, height, title, tag)
+    }
+
+    /// Changes a label's or button's text.
+    pub fn set_text(&self, widget: &Widget, text: &str) -> Result<(), Error> {
+        self.inner.set_text(widget, text)
+    }
+
+    /// Enables or disables a button.
+    pub fn set_enabled(&self, widget: &Widget, enabled: bool) -> Result<(), Error> {
+        self.inner.set_enabled(widget, enabled)
+    }
+
+    /// Registers the callback every button on this panel reports its press
+    /// to, carrying the tag it was created with. Replaces any callback
+    /// registered earlier — there is one action sink per panel, not one per
+    /// button.
+    pub fn on_action<F>(&self, callback: F) -> Result<(), Error>
+    where
+        F: Fn(i64) + Send + Sync + 'static,
+    {
+        self.inner.on_action(callback)
     }
 }
 

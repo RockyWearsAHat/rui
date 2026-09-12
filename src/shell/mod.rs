@@ -117,6 +117,18 @@ pub struct WindowOptions {
     pub min_width: f32,
     /// The smallest height.
     pub min_height: f32,
+    /// Whether the window disappearing (the close button, `orderOut:`, a
+    /// programmatic hide) should end [`run`]'s loop, the way it always has,
+    /// or merely hide it while the loop — and whatever else the process is
+    /// still doing, a tray icon included — keeps running.
+    ///
+    /// A menu-bar app whose window is a dropdown onto a tray icon needs the
+    /// latter: closing that window is not asking to quit, and the run loop
+    /// otherwise has no way to tell the two apart, since both leave the
+    /// window not visible. Defaults to `false` — the original behavior,
+    /// where losing the window's visibility is exactly the shutdown signal
+    /// `run` watches for — so every existing caller keeps working unchanged.
+    pub close_hides: bool,
 }
 
 impl Default for WindowOptions {
@@ -127,6 +139,7 @@ impl Default for WindowOptions {
             height: 640.0,
             min_width: 420.0,
             min_height: 320.0,
+            close_hides: false,
         }
     }
 }

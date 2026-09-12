@@ -352,6 +352,15 @@ impl<S> App<S> {
         self
     }
 
+    /// Makes closing the window (the close button, or hiding it
+    /// programmatically) leave the run loop going instead of ending it —
+    /// see [`WindowOptions::close_hides`]. For a menu-bar app whose window is
+    /// a tray dropdown: closing it is not asking to quit.
+    pub fn close_hides(mut self, hides: bool) -> Self {
+        self.options.close_hides = hides;
+        self
+    }
+
     /// How long the loop may wait for input before drawing again.
     ///
     /// Shorter keeps up better with a machine that changes on its own; longer
