@@ -705,6 +705,25 @@ impl Backend for Window {
                 sel(c"setActivationPolicy:"),
                 ACTIVATION_REGULAR,
             );
+            // Before the window exists, so it — and every panel, menu and
+            // alert the application later opens — inherits the pin rather
+            // than the desktop's setting. `effectiveAppearance`, which
+            // [`Backend::appearance`] reads, follows it, so the theme is
+            // asked with the same answer the title bar was drawn in.
+            if let Some(appearance) = options.appearance {
+                let name = match appearance {
+                    Appearance::Dark => c"NSAppearanceNameDarkAqua",
+                    Appearance::Light => c"NSAppearanceNameAqua",
+                };
+                let pinned: Object = send1(
+                    class(c"NSAppearance"),
+                    sel(c"appearanceNamed:"),
+                    ns_string(name),
+                );
+                if !pinned.is_null() {
+                    let _: () = send1(application, sel(c"setAppearance:"), pinned);
+                }
+            }
 
             let content = CgRect {
                 origin: CgPoint { x: 0.0, y: 0.0 },
@@ -736,6 +755,23 @@ impl Backend for Window {
             let title = std::ffi::CString::new(options.title.as_str())
                 .unwrap_or_else(|_| c"rui".to_owned());
             let _: () = send1(window, sel(c"setTitle:"), ns_string(&title));
+            // A content rect at the origin puts a fresh window in the bottom-
+            // left corner of the display, which is where it sat on every
+            // launch before this: centre it, and then — for a window that
+            // asked to be remembered — let the saved frame, when there is
+            // one, override the centring. `setFrameAutosaveName:` applies the
+            // saved frame immediately, which is why it comes after `center`
+            // and before the window is shown, so nothing jumps.
+            let _: () = send(window, sel(c"center"));
+            if let Some(frame_name) = options.frame_name.as_deref() {
+                if let Ok(frame_name) = std::ffi::CString::new(frame_name) {
+                    let _: bool = send1(
+                        window,
+                        sel(c"setFrameAutosaveName:"),
+                        ns_string(&frame_name),
+                    );
+                }
+            }
             let _: () = send1(
                 window,
                 sel(c"setContentMinSize:"),
