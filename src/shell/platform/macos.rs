@@ -201,8 +201,14 @@ unsafe extern "C" {
     /// them are the plain strings used at the call sites below.
     fn NSAccessibilityPostNotification(element: Object, notification: Object);
 
-    fn CGColorSpaceCreateDeviceRGB() -> *mut c_void;
+    fn CGColorSpaceCreateWithName(name: *const c_void) -> *mut c_void;
+    /// Unused: the one color space this backend creates lives as long as its
+    /// window, which — like the window itself — lives as long as the process.
+    #[allow(dead_code)]
     fn CGColorSpaceRelease(space: *mut c_void);
+    /// The name CoreGraphics exports for the sRGB color space — a `CFStringRef`
+    /// constant, not a function, so it is declared as a static.
+    static kCGColorSpaceSRGB: *const c_void;
     fn CGDataProviderCreateWithCFData(data: *const c_void) -> *mut c_void;
     fn CGDataProviderRelease(provider: *mut c_void);
     #[allow(clippy::too_many_arguments)]
@@ -587,6 +593,17 @@ pub(crate) struct Window {
     /// What the input method is composing. Boxed for the same reason: the view
     /// holds its address.
     composer: Box<Composer>,
+    /// The color space every presented frame's `CGImage` is tagged with,
+    /// created once rather than every frame.
+    ///
+    /// sRGB specifically, not `CGColorSpaceCreateDeviceRGB()`'s generic
+    /// device-dependent space: a device space forces Core Animation to
+    /// color-match the image against the layer's own space (typically
+    /// Display P3) on every single composite, which is real, measured CPU —
+    /// `vImageConverterConvert` and friends showing up in a profile of an
+    /// otherwise idle, animating-only window. Declaring the space the image
+    /// is already in as the one the layer expects skips that conversion.
+    color_space: Object,
     /// The interface as an assistive technology sees it.
     accessibility: Accessibility,
 }
@@ -780,6 +797,20 @@ impl Backend for Window {
             // is behind it, for every pixel, every frame.
             let _: () = send1(layer, sel(c"setOpaque:"), true);
             let _: () = send1(window, sel(c"setOpaque:"), true);
+            // Tried and abandoned: telling the layer its own color space
+            // explicitly (`-setColorspace:`), to stop Core Animation
+            // color-matching every presented frame against the display's
+            // (usually wide-gamut) space on every composite. Neither the
+            // default `NSViewBackingLayer` nor a plain `CALayer` obtained via
+            // an overridden `-makeBackingLayer` responds to that selector —
+            // confirmed live both ways (an uncaught
+            // `NSInvalidArgumentException`, the app terminating on launch) —
+            // so whatever API actually controls this is not `colorspace` on
+            // `CALayer` as commonly documented. The `CGImage` handed to
+            // `setContents:` in [`Window::present`] is still tagged sRGB
+            // rather than `CGColorSpaceCreateDeviceRGB()`'s generic device
+            // space, which is the harmless half of this worth keeping.
+            let color_space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
 
             install_menu(application, &options.title);
             // Before the window is shown, so a Quit pressed the instant it
@@ -807,6 +838,7 @@ impl Backend for Window {
                 layer,
                 open: Cell::new(true),
                 close_hides: options.close_hides,
+                color_space,
                 size: Cell::new((options.width as f64, options.height as f64)),
                 scale: Cell::new(1.0),
                 presented_scale: Cell::new(0.0),
@@ -887,14 +919,13 @@ impl Backend for Window {
                 bytes as isize,
             );
             let provider = CGDataProviderCreateWithCFData(data);
-            let space = CGColorSpaceCreateDeviceRGB();
             let image = CGImageCreate(
                 width,
                 height,
                 8,
                 32,
                 width * 4,
-                space,
+                self.color_space,
                 BITMAP_INFO,
                 provider,
                 std::ptr::null(),
@@ -919,7 +950,6 @@ impl Backend for Window {
             let _: () = send(transaction, sel(c"commit"));
 
             CGImageRelease(image);
-            CGColorSpaceRelease(space);
             CGDataProviderRelease(provider);
             CFRelease(data);
 
