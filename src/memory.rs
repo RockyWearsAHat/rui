@@ -379,6 +379,23 @@ pub struct Memory {
     /// `animating`'s frame-wide, only-ever-set-once-never-cleared state. See
     /// `paint::AnimatedDraw`.
     requested_this_draw: bool,
+    /// Whether a `Node::Draw`'s own paint closure is on the stack right now —
+    /// what tells [`Self::mark_animating`] whether to credit
+    /// `requested_this_draw` (an animation the fast path *can* replay) or
+    /// [`Self::animating_outside_draw`] (one it cannot — a hover fade eased
+    /// from `paint::draw`'s own walk of every element, not from inside any
+    /// one drawing).
+    draw_scope: bool,
+    /// Whether anything *other than* a `Node::Draw`'s own paint closure asked
+    /// to animate during the frame that last actually walked the whole tree
+    /// (a full frame — see `shell::mod::Surface`'s fast path). Reset only by
+    /// [`Self::reset_animating_outside_draw`], which only a full frame calls,
+    /// so unlike `animating` this does not get silently cleared by a fast
+    /// frame that never re-examined it: it keeps saying "yes, still going"
+    /// until a full frame actually rechecks and finds it settled — which is
+    /// exactly what makes it safe for the fast path to trust as "nothing I
+    /// cannot replay is still moving."
+    animating_outside_draw: bool,
     /// Which following areas the reader has scrolled away from.
     ///
     /// Absent means still following, so an area that has never been touched
@@ -513,7 +530,7 @@ impl Memory {
     /// It reuses the same path an animation does, so the loop needs no second
     /// notion of being behind.
     pub fn request_frame(&mut self) {
-        self.animating = true;
+        self.mark_animating();
     }
 
     /// Asks for `text` to be placed on the system clipboard.
@@ -643,7 +660,7 @@ impl Memory {
     pub fn start_transition(&mut self, id: Id, duration: f32) {
         self.transitions
             .insert(id, (self.accumulated_time, duration));
-        self.animating = true;
+        self.mark_animating();
     }
 
     /// Get the progress of a transition (0.0 to 1.0), or None if not transitioning.
@@ -711,15 +728,13 @@ impl Memory {
             1.0
         };
         let value = entry.value + (target - entry.value) * step;
-
-        if (target - value).abs() <= SETTLED {
-            entry.value = target;
-        } else {
-            entry.value = value;
-            self.animating = true;
-            self.requested_this_draw = true;
+        let settled = (target - value).abs() <= SETTLED;
+        entry.value = if settled { target } else { value };
+        let result = entry.value;
+        if !settled {
+            self.mark_animating();
         }
-        entry.value
+        result
     }
 
     /// Advances the looping value held under `id`, and answers where it is.
@@ -751,23 +766,59 @@ impl Memory {
         });
         cycle.seen = frame;
         cycle.value = (cycle.value + self.delta / period).fract();
-        self.animating = true;
-        self.requested_this_draw = true;
-        cycle.value
+        let result = cycle.value;
+        self.mark_animating();
+        result
     }
 
-    /// Clears the per-drawing animation flag, right before that drawing's own
-    /// paint call — see [`Self::took_this_draw`].
-    pub(crate) fn reset_this_draw(&mut self) {
+    /// The one place `animating` is ever set — everything that asks for
+    /// another frame (a phase, an ease, a spring, an explicit request, a
+    /// transition) calls this rather than setting the field directly, so it
+    /// cannot forget to also attribute the request to whichever of
+    /// [`Self::requested_this_draw`]/[`Self::animating_outside_draw`] is
+    /// correct for where it was called from.
+    fn mark_animating(&mut self) {
+        self.animating = true;
+        if self.draw_scope {
+            self.requested_this_draw = true;
+        } else {
+            self.animating_outside_draw = true;
+        }
+    }
+
+    /// Marks that a `Node::Draw`'s own paint closure is now running, and
+    /// clears the per-drawing animation flag for it — call right before that
+    /// closure, pair with [`Self::exit_draw`] right after.
+    pub(crate) fn enter_draw(&mut self) {
+        self.draw_scope = true;
         self.requested_this_draw = false;
     }
 
-    /// Whether the drawing just painted (since the last [`Self::reset_this_draw`])
-    /// asked for another frame — as opposed to [`Self::is_animating`], which
-    /// is frame-wide and, once true, stays true no matter which further
-    /// drawing set it.
-    pub(crate) fn took_this_draw(&self) -> bool {
+    /// The other half of [`Self::enter_draw`]: ends the scope, and answers
+    /// whether the drawing just painted asked for another frame — as opposed
+    /// to [`Self::is_animating`], which is frame-wide and, once true, stays
+    /// true no matter which further drawing set it.
+    pub(crate) fn exit_draw(&mut self) -> bool {
+        self.draw_scope = false;
         self.requested_this_draw
+    }
+
+    /// Clears [`Self::animating_outside_draw`] — call once, at the start of a
+    /// full frame (one that is about to walk every element), so what it
+    /// answers after that walk is about *this* frame and not left over from
+    /// whichever full frame last checked.
+    pub(crate) fn reset_animating_outside_draw(&mut self) {
+        self.animating_outside_draw = false;
+    }
+
+    /// Whether the last full frame found anything animating *outside* a
+    /// `Node::Draw` — a hover fade easing in `paint::draw`'s walk of every
+    /// element, most commonly. The fast path has no way to replay that (it
+    /// is not a self-contained drawing at a known rect; it depends on hit
+    /// -testing the whole tree), so this being true means only a full frame
+    /// is safe, no matter how many recorded `AnimatedDraw`s there are.
+    pub(crate) fn animating_outside_draw(&self) -> bool {
+        self.animating_outside_draw
     }
 
     /// Restarts the looping value held under `id` from the top of its turn.
@@ -809,8 +860,7 @@ impl Memory {
             self.springs.remove(&id);
             target
         } else {
-            self.animating = true;
-            self.requested_this_draw = true;
+            self.mark_animating();
             new_pos
         }
     }

@@ -714,11 +714,25 @@ pub(crate) fn run<S>(
         // do off its own back (a tray click, say) — and `idle_elapsed` does
         // too, which is what puts a firm ceiling (one `idle_timeout`) on how
         // stale such a change is ever allowed to sit unshown, exactly the
-        // promise `idle_elapsed` already existed to keep. Only when none of
-        // those apply, and the last full frame actually found something
-        // animating to replay, does the fast path apply.
-        let full =
-            turn.requested || turn.had_events || turn.idle_elapsed || !app.has_animated_draws();
+        // promise `idle_elapsed` already existed to keep.
+        //
+        // `animating_outside_draw` is just as disqualifying as any of those:
+        // a hover fade easing in from `paint::draw`'s own walk of every
+        // element is real motion the fast path has no way to replay (it is
+        // not a self-contained drawing at a known rect — it depends on
+        // hit-testing the whole tree), so fast-pathing while it is in flight
+        // would silently freeze it until the next full frame happened to run
+        // — confirmed live: a button's hover highlight fading out on its own
+        // schedule *after* the mouse had already stopped moving, because the
+        // fade had been frozen mid-transition by fast frames and only caught
+        // up once something else forced a full one. Only once none of that,
+        // and the last full frame actually found something in a `Node::Draw`
+        // to replay, does the fast path apply.
+        let full = turn.requested
+            || turn.had_events
+            || turn.idle_elapsed
+            || !app.has_animated_draws()
+            || surface.memory.animating_outside_draw();
         if turn.is_due() {
             // Before drawing, call the frame dispatch callback.
             // This allows the app to drain and dispatch platform events (like tray menu clicks)

@@ -792,6 +792,12 @@ impl<S> App<S> {
         // (or vanished) must not leave a stale entry the fast path would go
         // on redrawing forever.
         self.animated.clear();
+        // Same idea for whatever this full frame finds animating *outside* a
+        // `Node::Draw` (a hover fade, most commonly) — see
+        // `Memory::animating_outside_draw`. Reset here, alongside `animated`,
+        // because both answer the same question — "is the fast path safe
+        // right now" — and both are only ever re-examined by a full frame.
+        memory.reset_animating_outside_draw();
         let mut frame = Frame {
             canvas,
             fonts,
