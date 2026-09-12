@@ -150,6 +150,7 @@ pub mod motion;
 /// Visual and interaction semantics for overlays (modals, popovers, dropdowns).
 pub mod overlay;
 pub mod paint;
+pub mod panel_window;
 pub mod pixelgrid;
 pub mod recipes;
 #[cfg(feature = "reload")]
@@ -210,6 +211,8 @@ pub use motion::{Easing, SlideDirection, Spring, Transition};
 pub use overlay::{Overlay, OverlayAnchor, OverlayPlacement};
 /// Drawing API: shapes, text, and visual state inspection during render.
 pub use paint::{Painter, Visual};
+/// Panel window API: borderless, non-activating floating windows for tray dropdowns.
+pub use panel_window::{PanelOptions, PanelWindow};
 /// Pixel-grid: glyph rasterization cache, hairline snapping, gamma boost.
 pub use pixelgrid::{GammaBoostLut, GlyphCache, HairlineSnap};
 /// Pre-built UI states: loading, empty, error, and stale-data screens.
