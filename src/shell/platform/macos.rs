@@ -230,16 +230,6 @@ unsafe extern "C" {
     fn CFRelease(object: *const c_void);
 
     fn CFRunLoopGetCurrent() -> *mut c_void;
-    /// The loop this process pumps its window on — the one a display link's
-    /// callback, firing on its own high-priority thread, has to reach in
-    /// order to end that loop's wait early. See [`start_display_link`].
-    fn CFRunLoopGetMain() -> *mut c_void;
-    /// Ends a run loop's current wait immediately, so a call blocked in
-    /// `nextEventMatchingMask:untilDate:` returns with no event rather than
-    /// sleeping out its deadline. This is the whole mechanism a display
-    /// link's callback uses to pace redraws off the real display refresh
-    /// instead of the software timer `pump_events` would otherwise wait on.
-    fn CFRunLoopWakeUp(loop_: *mut c_void);
     fn CFRunLoopObserverCreate(
         allocator: *const c_void,
         activities: u64,
@@ -282,12 +272,57 @@ unsafe extern "C" {
     fn CVDisplayLinkStart(link: *mut c_void) -> i32;
 }
 
+/// `NSEventTypeApplicationDefined`: a synthetic event with no meaning of its
+/// own, existing only to be a real event `-nextEventMatchingMask:` is
+/// actually watching for.
+const EVENT_TYPE_APPLICATION_DEFINED: u64 = 15;
+
+/// Wakes `pump_events`'s wait immediately, from any thread.
+///
+/// `CFRunLoopWakeUp` alone was tried first and dropped: `pump_events` waits
+/// inside AppKit's own `-nextEventMatchingMask:untilDate:inMode:dequeue:`,
+/// which is not the plain `CFRunLoopRunInMode` a raw wake is guaranteed to
+/// interrupt — a wake with nothing actually queued is easy for AppKit to
+/// treat as spurious and simply resume the same wait on the same deadline,
+/// which would make this whole mechanism a no-op indistinguishable from the
+/// software timer it replaced. Posting a real, harmless event of a type nothing
+/// else looks for is the same trick GLFW and SDL use for exactly this reason:
+/// `-nextEventMatchingMask:` cannot mistake an event actually sitting in its
+/// queue for one it should keep waiting past.
+fn wake_main_run_loop() {
+    unsafe {
+        let pool = objc_autoreleasePoolPush();
+        let app: Object = send(class(c"NSApplication"), sel(c"sharedApplication"));
+        if !app.is_null() {
+            let event: Object = send9(
+                class(c"NSEvent"),
+                sel(
+                    c"otherEventWithType:location:modifierFlags:timestamp:windowNumber:context:subtype:data1:data2:",
+                ),
+                EVENT_TYPE_APPLICATION_DEFINED,
+                CgPoint { x: 0.0, y: 0.0 },
+                0u64,
+                0.0f64,
+                0isize,
+                std::ptr::null_mut::<c_void>(),
+                0i16,
+                0isize,
+                0isize,
+            );
+            if !event.is_null() {
+                let _: () = send2(app, sel(c"postEvent:atStart:"), event, true);
+            }
+        }
+        objc_autoreleasePoolPop(pool);
+    }
+}
+
 /// Fires once per display refresh, on CoreVideo's own thread — never on the
-/// main thread, so the only safe thing to do here is wake it. Waking it is
-/// also the only thing needed: the main loop's own wait, once woken, finds no
-/// event pending and returns immediately (see `pump_events`), which is what
-/// turns this callback into "draw the next frame now" without this thread
-/// touching a single window, view, or `Canvas` it does not own.
+/// main thread, so the only safe thing to do here is wake it (see
+/// [`wake_main_run_loop`]). That is also the only thing this needs to do:
+/// once `pump_events`'s wait is broken, the frame it draws next is drawn from
+/// whatever the animation's own state is *then*, without this thread touching
+/// a single window, view, or `Canvas` it does not own.
 extern "C" fn display_link_tick(
     _link: *mut c_void,
     _now: *const c_void,
@@ -296,7 +331,7 @@ extern "C" fn display_link_tick(
     _flags_out: *mut u64,
     _context: *mut c_void,
 ) -> i32 {
-    unsafe { CFRunLoopWakeUp(CFRunLoopGetMain()) };
+    wake_main_run_loop();
     0 // kCVReturnSuccess
 }
 
@@ -476,6 +511,28 @@ unsafe fn send4<R, A, B, C, D>(receiver: Object, selector: Sel, a: A, b: B, c: C
     let dispatch: unsafe extern "C" fn(Object, Sel, A, B, C, D) -> R =
         unsafe { std::mem::transmute(objc_msgSend as *const ()) };
     unsafe { dispatch(receiver, selector, a, b, c, d) }
+}
+
+/// Sends a message taking nine arguments — needed for exactly one call, the
+/// synthetic event `wake_main_run_loop` posts (see there): NSEvent's own
+/// `+otherEventWithType:…` constructor has no shorter form.
+#[allow(clippy::too_many_arguments)]
+unsafe fn send9<R, A, B, C, D, E, F, G, H, I>(
+    receiver: Object,
+    selector: Sel,
+    a: A,
+    b: B,
+    c: C,
+    d: D,
+    e: E,
+    f: F,
+    g: G,
+    h: H,
+    i: I,
+) -> R {
+    let dispatch: unsafe extern "C" fn(Object, Sel, A, B, C, D, E, F, G, H, I) -> R =
+        unsafe { std::mem::transmute(objc_msgSend as *const ()) };
+    unsafe { dispatch(receiver, selector, a, b, c, d, e, f, g, h, i) }
 }
 
 /// `struct objc_super`: an object, and where in its ancestry to start dispatch.
