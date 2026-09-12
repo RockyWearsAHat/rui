@@ -82,6 +82,19 @@
 //! the last frame to each new size, so the window smears. So drawing a frame is
 //! not something only this loop can do: `Backend::pump` is handed a way to
 //! draw one, for a backend to call when the platform has taken over.
+//!
+//! # Every way out ends by the loop noticing
+//!
+//! The loop ends when its window is gone, when the application's own condition
+//! says so, or when the platform asked the whole process to quit and the
+//! application agreed (see [`App::on_quit`]). Nothing here ever ends the
+//! process from inside an event: a Quit that did would skip every destructor
+//! on the stack below `run`, and the selfhost console learnt what that costs —
+//! an `ssh -L` child left holding its port for ever. So a platform's quit is a
+//! *request*, written down by [`request_quit`] and read back by the loop on
+//! its own thread, where the application can confirm it, tear down what it
+//! owns, or refuse it — and `run` returns exactly as it does for a closed
+//! window.
 
 pub mod embedded_fonts;
 pub mod fonts;
@@ -96,6 +109,7 @@ use crate::input::{Event, Input};
 use crate::memory::Memory;
 use crate::text::{FontId, Fonts};
 use crate::theme::Appearance;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 // `std::time::Instant::now()` panics on wasm32-unknown-unknown: there is no
 // clock syscall for it to call. `web_time::Instant` is the drop-in
@@ -113,6 +127,40 @@ pub use fonts::{load_system_fonts, LoadedFonts};
 /// on latency and not a frame rate, so asking to come back more often costs
 /// nothing when nothing is moving, and halves the worst case when something is.
 const FRAME: Duration = Duration::from_millis(8);
+
+/// Whether the platform has asked the whole application to quit, and nobody
+/// has answered yet.
+///
+/// One for the process rather than one per window, because that is what the
+/// request is: macOS delivers `terminate:` to the application, not to any
+/// window, and the delegate that receives it is built once per process. A
+/// static is also what lets a backend raise it from a callback that has no
+/// handle on anything — an Objective-C method with a receiver and a selector
+/// and nothing else.
+static QUIT_REQUESTED: AtomicBool = AtomicBool::new(false);
+
+/// Writes down that the platform asked the application to quit.
+///
+/// For a backend to call from wherever the platform delivers that — and then
+/// to *refuse* the platform's own termination, so the process stays up for
+/// the loop to end it properly. Cheap and idempotent: ten requests between two
+/// turns of the loop are one question.
+///
+/// Only macOS delivers such a request today; every other backend simply never
+/// raises one, and the loop's read of it costs them one atomic per turn.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(crate) fn request_quit() {
+    QUIT_REQUESTED.store(true, Ordering::Release);
+}
+
+/// Whether the platform asked to quit since this was last asked, clearing the
+/// request.
+///
+/// Asked once per turn of the loop, by the loop, on its own thread — which is
+/// what lets the application answer with its state in hand.
+pub(crate) fn take_quit_request() -> bool {
+    QUIT_REQUESTED.swap(false, Ordering::AcqRel)
+}
 
 /// How a window should be opened.
 #[derive(Debug, Clone)]
@@ -677,6 +725,23 @@ pub(crate) fn run<S>(
             return Err(error);
         }
 
+        // The platform asked the whole application to quit — Command-Q, the
+        // Dock, an AppleEvent — during that pump. Answered here, on this
+        // thread, rather than closing anything from the delegate: with
+        // `close_hides` a closed window is only a hidden one, so closing was
+        // never a quit for a menu-bar app, and it took an unrelated `NSPanel`
+        // down with it. Ending the loop is the one shutdown there is, so it
+        // is the one Quit takes.
+        if take_quit_request() {
+            if app.answer_quit() {
+                break;
+            }
+            // The application put up a confirmation and the person declined.
+            // A second Command-Q pressed while that dialog was up was the same
+            // question, already answered — not a reason to ask again.
+            let _ = take_quit_request();
+        }
+
         // The request is taken unconditionally rather than as one term of the
         // decision, so that a request arriving in the same wait as an event is
         // cleared by the frame that answers both instead of provoking a second.
@@ -931,6 +996,20 @@ mod tests {
     #[test]
     fn a_no_op_off_wasm32_still_compiles_and_returns() {
         request_redraw();
+    }
+
+    /// The seam a platform's Quit comes through, driven headlessly: raised
+    /// from "the delegate", read once by "the loop", and gone after that.
+    /// The only test that touches the process-wide request, so nothing else
+    /// running beside it can raise one under it.
+    #[test]
+    fn a_platform_quit_is_a_request_the_loop_takes_exactly_once() {
+        assert!(!take_quit_request(), "nothing has asked to quit yet");
+        // Two presses between two turns of the loop are one question.
+        request_quit();
+        request_quit();
+        assert!(take_quit_request());
+        assert!(!take_quit_request(), "the request is cleared by being read");
     }
 
     /// A turn on which nothing at all happened.

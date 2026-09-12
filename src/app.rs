@@ -130,6 +130,14 @@ pub struct App<S> {
     /// Runs on the main thread in the frame context, so it can mutate state.
     #[allow(clippy::type_complexity)]
     frame_dispatch: Option<Box<dyn Fn(&mut S)>>,
+    /// Asked whether to end the loop when the platform asked the whole
+    /// application to quit — Command-Q, the Dock's Quit, an AppleEvent.
+    ///
+    /// `None` for an application that never asked to be consulted, which the
+    /// loop reads as "yes, quit": a plain Command-Q ends a plain program. See
+    /// [`App::on_quit`].
+    #[allow(clippy::type_complexity)]
+    quit: Option<Box<dyn Fn(&mut S) -> bool>>,
     /// Every [`crate::element::Node::Draw`] the last full frame found
     /// animating, kept so a later, animation-only frame can redraw just
     /// those rectangles instead of describing, laying out, and painting the
@@ -292,6 +300,7 @@ impl<S> App<S> {
             post_ready: None,
             keep_running: Arc::new(AtomicBool::new(true)),
             frame_dispatch: None,
+            quit: None,
             animated: Vec::new(),
         }
     }
@@ -578,6 +587,42 @@ impl<S> App<S> {
     /// ```
     pub fn on_frame(mut self, callback: impl Fn(&mut S) + 'static) -> Self {
         self.frame_dispatch = Some(Box::new(callback));
+        self
+    }
+
+    /// What to do when the platform asks the whole application to quit.
+    ///
+    /// Command-Q, the Quit item, the Dock's own Quit and the AppleEvent
+    /// `osascript` sends are all one request, and it arrives at the process,
+    /// not at a window. Without this it is answered the only way a plain
+    /// program wants: the loop ends, [`App::run`] returns, and everything on
+    /// the stack — a child process, a file being written — is dropped in
+    /// order. That is the default, and an application that never calls this
+    /// gets exactly it.
+    ///
+    /// An application whose window is not its life needs to be asked instead.
+    /// A menu-bar app running with [`App::close_hides`] has a tray icon and a
+    /// tunnel that outlive its window, so for it a quit is a real decision —
+    /// one worth a confirmation, and one that has to tear the tunnel down
+    /// before the process goes. `decide` is that decision, made on the loop's
+    /// own thread with the state in hand, so it can put up a dialog and take
+    /// things down in the same place a Quit button in the interface would.
+    /// Return `true` to end the loop, `false` to carry on as if nothing had
+    /// been pressed.
+    ///
+    /// ```ignore
+    /// App::new("VPN", panel, view)
+    ///     .close_hides(true)
+    ///     .on_quit(|panel: &mut Panel| panel.quit_with_confirmation())
+    ///     .run()
+    /// ```
+    ///
+    /// The request is consulted once per turn of the loop, after the events
+    /// that carried it, so `decide` runs at most once for one press even when
+    /// the platform delivers the request twice. A backend with no such request
+    /// (X11, Wayland, the browser) simply never raises it.
+    pub fn on_quit(mut self, decide: impl Fn(&mut S) -> bool + 'static) -> Self {
+        self.quit = Some(Box::new(decide));
         self
     }
 
@@ -909,6 +954,19 @@ impl<S> App<S> {
             callback(&mut self.state);
         }
     }
+
+    /// Whether the loop should end now that the platform has asked to quit.
+    ///
+    /// The application's own answer if it gave one with [`App::on_quit`], and
+    /// otherwise yes — which is what makes a plain Command-Q quit a plain
+    /// program, `close_hides` or not, without the program having to know the
+    /// request exists.
+    pub(crate) fn answer_quit(&mut self) -> bool {
+        match &self.quit {
+            Some(decide) => decide(&mut self.state),
+            None => true,
+        }
+    }
 }
 
 /// Hands every element of a laid-out tree, and what holds it, to `observe`.
@@ -1144,6 +1202,54 @@ mod tests {
 
         flag.store(false, Ordering::Relaxed);
         assert!(!app.is_running()); // is_running checks both the running condition and keep_running
+    }
+
+    #[test]
+    fn a_quit_nobody_asked_to_decide_ends_the_loop() {
+        // The default: a plain Command-Q quits a plain program, `close_hides`
+        // or not, without the program knowing the request exists.
+        let mut app = quiet().close_hides(true);
+        assert!(app.answer_quit());
+    }
+
+    #[test]
+    fn a_registered_quit_decides_with_the_state_in_hand() {
+        // The menu-bar case: the application confirms, tears down, and only
+        // then agrees — and a refusal leaves the loop running.
+        struct Panel {
+            confirmed: bool,
+            asked: u32,
+            torn_down: bool,
+        }
+        let mut app = App::new(
+            "test",
+            Panel {
+                confirmed: false,
+                asked: 0,
+                torn_down: false,
+            },
+            |_: &Panel| text("still"),
+        )
+        .close_hides(true)
+        .on_quit(|panel: &mut Panel| {
+            panel.asked += 1;
+            if panel.confirmed {
+                panel.torn_down = true;
+            }
+            panel.confirmed
+        });
+
+        assert!(!app.answer_quit(), "declined: the loop keeps running");
+        assert!(!app.state().torn_down);
+        assert!(app.is_running(), "a refused quit changes nothing else");
+
+        app.state_mut().confirmed = true;
+        assert!(app.answer_quit(), "confirmed: the loop ends");
+        assert!(
+            app.state().torn_down,
+            "teardown ran before the loop was told to end"
+        );
+        assert_eq!(app.state().asked, 2, "asked once per request, never more");
     }
 
     #[test]
