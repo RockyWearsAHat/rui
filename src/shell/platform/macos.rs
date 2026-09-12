@@ -230,6 +230,16 @@ unsafe extern "C" {
     fn CFRelease(object: *const c_void);
 
     fn CFRunLoopGetCurrent() -> *mut c_void;
+    /// The loop this process pumps its window on — the one a display link's
+    /// callback, firing on its own high-priority thread, has to reach in
+    /// order to end that loop's wait early. See [`start_display_link`].
+    fn CFRunLoopGetMain() -> *mut c_void;
+    /// Ends a run loop's current wait immediately, so a call blocked in
+    /// `nextEventMatchingMask:untilDate:` returns with no event rather than
+    /// sleeping out its deadline. This is the whole mechanism a display
+    /// link's callback uses to pace redraws off the real display refresh
+    /// instead of the software timer `pump_events` would otherwise wait on.
+    fn CFRunLoopWakeUp(loop_: *mut c_void);
     fn CFRunLoopObserverCreate(
         allocator: *const c_void,
         activities: u64,
@@ -245,6 +255,71 @@ unsafe extern "C" {
     /// resize runs the loop in `NSEventTrackingRunLoopMode`, and an observer
     /// registered only for the default mode would not fire once during a drag.
     static kCFRunLoopCommonModes: *const c_void;
+}
+
+// CoreVideo's display link: the one clock in the system that fires exactly
+// once per real display refresh, on its own dedicated thread, rather than an
+// approximation of one built out of a software timer. See
+// `start_display_link` for how it is wired into the redraw wait.
+//
+// The output callback's own two timestamp parameters (`CVTimeStamp`) are
+// never read — the callback only wakes the main loop — so they cross this
+// boundary as untyped pointers rather than the struct CoreVideo defines.
+unsafe extern "C" {
+    fn CVDisplayLinkCreateWithActiveCGDisplays(link_out: *mut *mut c_void) -> i32;
+    fn CVDisplayLinkSetOutputCallback(
+        link: *mut c_void,
+        callback: extern "C" fn(
+            *mut c_void,
+            *const c_void,
+            *const c_void,
+            u64,
+            *mut u64,
+            *mut c_void,
+        ) -> i32,
+        user_info: *mut c_void,
+    ) -> i32;
+    fn CVDisplayLinkStart(link: *mut c_void) -> i32;
+}
+
+/// Fires once per display refresh, on CoreVideo's own thread — never on the
+/// main thread, so the only safe thing to do here is wake it. Waking it is
+/// also the only thing needed: the main loop's own wait, once woken, finds no
+/// event pending and returns immediately (see `pump_events`), which is what
+/// turns this callback into "draw the next frame now" without this thread
+/// touching a single window, view, or `Canvas` it does not own.
+extern "C" fn display_link_tick(
+    _link: *mut c_void,
+    _now: *const c_void,
+    _output_time: *const c_void,
+    _flags_in: u64,
+    _flags_out: *mut u64,
+    _context: *mut c_void,
+) -> i32 {
+    unsafe { CFRunLoopWakeUp(CFRunLoopGetMain()) };
+    0 // kCVReturnSuccess
+}
+
+/// Starts a display link against whichever displays are active and lets it
+/// run for the rest of the process. Not stored, not stopped: this window, like
+/// [`Window::color_space`], lives exactly as long as the process does, so
+/// there is no later moment to release it into — see that field's own note.
+///
+/// A failure here is silent and leaves `pump_events` on its plain timeout
+/// fallback (see there): a display link is the difference between redraws
+/// paced by the real refresh and redraws paced by a software clock's
+/// approximation of it, not the difference between animating and not.
+fn start_display_link() {
+    unsafe {
+        let mut link: *mut c_void = std::ptr::null_mut();
+        if CVDisplayLinkCreateWithActiveCGDisplays(&mut link) != 0 || link.is_null() {
+            return;
+        }
+        if CVDisplayLinkSetOutputCallback(link, display_link_tick, std::ptr::null_mut()) != 0 {
+            return;
+        }
+        CVDisplayLinkStart(link);
+    }
 }
 
 /// `CFRunLoopObserverContext`: what the run loop hands back to a callback.
@@ -300,6 +375,8 @@ unsafe extern "C" {}
 #[link(name = "CoreGraphics", kind = "framework")]
 unsafe extern "C" {}
 #[link(name = "QuartzCore", kind = "framework")]
+unsafe extern "C" {}
+#[link(name = "CoreVideo", kind = "framework")]
 unsafe extern "C" {}
 
 /// A point or a size in Core Graphics' coordinates.
@@ -884,6 +961,10 @@ impl Backend for Window {
             };
             window.refresh_geometry();
             window.observe_live_resize();
+            // Ties every animated redraw to the display's real refresh instead
+            // of `pump_events`'s own software-timed guess at one; see
+            // `start_display_link`.
+            start_display_link();
             Ok(window)
         }
     }
@@ -1159,13 +1240,32 @@ impl Window {
             let pool = objc_autoreleasePoolPush();
 
             let mode = ns_string(c"kCFRunLoopDefaultMode");
+            // `timeout` below `ANIMATION_TIMEOUT_THRESHOLD` is the caller
+            // asking for the fast animating cadence (see `Options::wait` in
+            // shell/mod.rs — the only other value it ever passes is the much
+            // longer idle wait). That short a deadline, waited on in software,
+            // is exactly the imprecise "software timer" pacing a display link
+            // exists to replace: extended here to a safety net far longer than
+            // any real refresh period, so the actual pace comes from
+            // `display_link_tick` waking this wait on every real vsync instead
+            // of from this deadline expiring on its own on a fixed schedule.
+            // A window whose display link failed to start (see
+            // `start_display_link`) still redraws — just paced by this
+            // fallback rather than by hardware, and it says so.
+            const ANIMATION_TIMEOUT_THRESHOLD: Duration = Duration::from_millis(20);
+            const ANIMATION_SAFETY_NET: Duration = Duration::from_millis(250);
+            let effective_timeout = if timeout < ANIMATION_TIMEOUT_THRESHOLD {
+                ANIMATION_SAFETY_NET
+            } else {
+                timeout
+            };
             // The first wait blocks up to the timeout; once anything has
             // arrived, the rest of the queue is drained without waiting, so a
             // burst of movement becomes one frame rather than a dozen.
             let deadline: Object = send1(
                 class(c"NSDate"),
                 sel(c"dateWithTimeIntervalSinceNow:"),
-                timeout.as_secs_f64(),
+                effective_timeout.as_secs_f64(),
             );
             let immediate: Object = send(class(c"NSDate"), sel(c"distantPast"));
 
