@@ -231,6 +231,12 @@ impl PanelWindow {
         self.inner.set_enabled(widget, enabled)
     }
 
+    /// Tints a label's text (`red, green, blue`, each `0.0..=1.0`). A no-op
+    /// on a button, whose color follows the platform's control style.
+    pub fn set_text_color(&self, widget: &Widget, rgb: (f32, f32, f32)) -> Result<(), Error> {
+        self.inner.set_text_color(widget, rgb)
+    }
+
     /// Registers the callback every button on this panel reports its press
     /// to, carrying the tag it was created with. Replaces any callback
     /// registered earlier — there is one action sink per panel, not one per

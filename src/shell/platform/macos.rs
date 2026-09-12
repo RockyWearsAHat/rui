@@ -932,6 +932,10 @@ impl Backend for Window {
         self.open.get()
     }
 
+    fn is_visible(&self) -> bool {
+        unsafe { send(self.window, sel(c"isVisible")) }
+    }
+
     fn is_fullscreen(&self) -> bool {
         // AppKit's own answer, read from the style mask it maintains, rather
         // than a flag this program keeps: the person can leave a full screen

@@ -588,6 +588,29 @@ impl PanelWindowInner {
         }
     }
 
+    /// Tints a label's text (a no-op, harmlessly, on a button — a button's
+    /// color follows the platform's control style, not arbitrary tinting).
+    pub fn set_text_color(&self, widget: &Widget, rgb: (f32, f32, f32)) -> Result<(), Error> {
+        unsafe {
+            let class_name = send::<Object>(widget.0, sel(c"className"));
+            if from_ns_string(class_name) == "NSButton" {
+                return Ok(());
+            }
+            let pool = objc_autoreleasePoolPush();
+            let color: Object = send4(
+                class(c"NSColor"),
+                sel(c"colorWithSRGBRed:green:blue:alpha:"),
+                rgb.0 as f64,
+                rgb.1 as f64,
+                rgb.2 as f64,
+                1.0f64,
+            );
+            let _: () = send1(widget.0, sel(c"setTextColor:"), color);
+            objc_autoreleasePoolPop(pool);
+            Ok(())
+        }
+    }
+
     /// Registers the one callback every button on this panel reports its
     /// press to, carrying the tag it was created with. Replaces any callback
     /// registered earlier.

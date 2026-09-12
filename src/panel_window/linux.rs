@@ -113,6 +113,13 @@ impl PanelWindowInner {
         ))
     }
 
+    /// Tint a label's text (not yet implemented on Linux).
+    pub fn set_text_color(&self, _widget: &Widget, _rgb: (f32, f32, f32)) -> Result<(), Error> {
+        Err(Error::Platform(
+            "Panel windows are not yet implemented on Linux".into(),
+        ))
+    }
+
     /// Register the button-action callback (not yet implemented on Linux).
     pub fn on_action<F>(&self, _callback: F) -> Result<(), Error>
     where

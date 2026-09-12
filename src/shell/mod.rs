@@ -101,7 +101,6 @@ pub use fonts::{load_system_fonts, LoadedFonts};
 /// A hundred and twenty a second rather than sixty: the wait is an upper bound
 /// on latency and not a frame rate, so asking to come back more often costs
 /// nothing when nothing is moving, and halves the worst case when something is.
-#[cfg(not(target_arch = "wasm32"))]
 const FRAME: Duration = Duration::from_millis(8);
 
 /// How a window should be opened.
@@ -129,6 +128,21 @@ pub struct WindowOptions {
     /// where losing the window's visibility is exactly the shutdown signal
     /// `run` watches for — so every existing caller keeps working unchanged.
     pub close_hides: bool,
+    /// How long the loop waits between frames while [`Memory::is_animating`]
+    /// says something is still moving — a purely ambient animation (a
+    /// breathing glow, a slow pulse) included, which is what makes this
+    /// worth raising above the default.
+    ///
+    /// [`FRAME`]'s 8ms default is right for a gesture actually being tracked,
+    /// where the wait is a latency bound, not a frame rate — but it means an
+    /// idle window with nothing on screen but a slow ambient glow still
+    /// redraws (and, on most backends, repaints the GPU surface) 125 times a
+    /// second, forever, for an effect that changes meaningfully a few times a
+    /// second at most. Raising this for that case trades a bound on input
+    /// latency that ambient motion was never using anyway for a large,
+    /// direct cut in idle CPU and power draw — a period like 40-60ms (17-25
+    /// draws/second) is still a fluid-looking breathe or pulse.
+    pub animation_interval: Duration,
 }
 
 impl Default for WindowOptions {
@@ -140,6 +154,7 @@ impl Default for WindowOptions {
             min_width: 420.0,
             min_height: 320.0,
             close_hides: false,
+            animation_interval: FRAME,
         }
     }
 }
@@ -239,6 +254,18 @@ trait Backend: Sized {
 
     /// Whether the window is still on screen.
     fn is_open(&self) -> bool;
+
+    /// Whether the window is currently visible (on screen and not hidden by
+    /// a close button that only orders it out, a programmatic hide, or the
+    /// like) — as opposed to [`is_open`](Self::is_open), which stays true
+    /// through exactly that. Nobody can see a redraw of a window that answers
+    /// `false` here, so the loop uses it to skip the animation cadence
+    /// (`animation_interval`) while hidden rather than spend CPU animating
+    /// for an audience of none. Defaults to always visible, so a backend
+    /// that does not override this keeps its previous behavior exactly.
+    fn is_visible(&self) -> bool {
+        true
+    }
 
     /// Whether the window is currently filling the screen.
     ///
@@ -576,8 +603,12 @@ pub(crate) fn run<S>(
 
     while window.is_open() && app.is_running() {
         events.clear();
-        let wait = if surface.memory.is_animating() {
-            FRAME
+        // Ambient animation is for an audience: skip the fast cadence the
+        // instant the window is not visible (hidden behind close_hides, or
+        // simply not on screen), rather than pay full animation cost to
+        // redraw a surface nobody can see.
+        let wait = if surface.memory.is_animating() && window.is_visible() {
+            options.animation_interval
         } else {
             app.wait()
         };
@@ -619,7 +650,12 @@ pub(crate) fn run<S>(
         let turn = Turn {
             requested: told_app || app.take_redraw_request(),
             had_events: !events.is_empty(),
-            animating: surface.memory.is_animating(),
+            // Gated the same way `wait` was above: an animation is a reason
+            // to draw again promptly only for a window someone can actually
+            // see it in. Unguarded, a hidden window with an ambient animation
+            // still ran a full layout-and-paint every idle_timeout forever —
+            // the wait was longer, but never zero, so it never stopped.
+            animating: surface.memory.is_animating() && window.is_visible(),
             idle_elapsed: now >= idle_due,
         };
         if turn.is_due() {
@@ -627,7 +663,18 @@ pub(crate) fn run<S>(
             // This allows the app to drain and dispatch platform events (like tray menu clicks)
             // into the same event pathway as UI interactions, integrating them into the frame loop.
             app.dispatch_frame();
-            surface.draw(&window, &mut fonts, &mut app, &mut events)?;
+            // The expensive half — full relayout and paint — is worth doing
+            // only for a window someone can see. `idle_elapsed` alone would
+            // otherwise force one of these every `idle_timeout` forever, a
+            // menu-bar app's whole idle CPU cost, for a surface nobody is
+            // looking at. `dispatch_frame` still ran above, so tray/tunnel
+            // logic (an `on_frame` hook, tray events) stays live regardless;
+            // the moment the window is visible again, the very next due turn
+            // (at most one `idle_timeout` later) draws it, so nothing is ever
+            // shown stale.
+            if window.is_visible() {
+                surface.draw(&window, &mut fonts, &mut app, &mut events)?;
+            }
             idle_due = now + app.idle();
         }
         if surface.input.close_requested() {
