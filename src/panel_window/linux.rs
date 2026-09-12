@@ -120,6 +120,31 @@ impl PanelWindowInner {
         ))
     }
 
+    /// Set the panel's style (not yet implemented on Linux).
+    pub fn style(
+        &self,
+        _background: (f32, f32, f32),
+        _corner_radius: f64,
+        _border: (f32, f32, f32),
+        _border_width: f64,
+    ) -> Result<(), Error> {
+        Err(Error::Platform(
+            "Panel windows are not yet implemented on Linux".into(),
+        ))
+    }
+
+    /// Tint a button's bezel (not yet implemented on Linux).
+    pub fn set_button_tint(
+        &self,
+        _widget: &Widget,
+        _rgb: (f32, f32, f32),
+        _emphasis: bool,
+    ) -> Result<(), Error> {
+        Err(Error::Platform(
+            "Panel windows are not yet implemented on Linux".into(),
+        ))
+    }
+
     /// Register the button-action callback (not yet implemented on Linux).
     pub fn on_action<F>(&self, _callback: F) -> Result<(), Error>
     where

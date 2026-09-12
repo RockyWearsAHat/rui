@@ -229,6 +229,25 @@ impl PanelWindowInner {
             // Set the window level to floating (NSFloatingWindowLevel = 2).
             let _: () = send1(panel, sel(c"setLevel:"), 2i64);
 
+            // A borderless NSPanel is otherwise opaque white behind whatever
+            // the content view draws, which is exactly what makes a rounded
+            // content-view corner show square white corners poking out from
+            // behind it. Both of these together are what let the content
+            // view's own background and corner radius (set by the caller via
+            // `style`) actually show, edge to edge.
+            let _: () = send1(panel, sel(c"setOpaque:"), false);
+            let clear: Object = send(class(c"NSColor"), sel(c"clearColor"));
+            let _: () = send1(panel, sel(c"setBackgroundColor:"), clear);
+            // Dark, regardless of the system's own appearance setting: this
+            // panel's palette is fixed (it matches the app's own dark theme),
+            // and without this a light-system-appearance user would get
+            // light-mode default control colors — light NSButton bezels,
+            // light-on-light where text does not override its own color —
+            // fighting the dark background it sits on.
+            let dark_name = ns_string("NSAppearanceNameDarkAqua");
+            let dark: Object = send1(class(c"NSAppearance"), sel(c"appearanceNamed:"), dark_name);
+            let _: () = send1(panel, sel(c"setAppearance:"), dark);
+
             // Show the window without making it key or activating the app.
             // orderFront: brings the window to the front without stealing focus.
             let _: () = send1(panel, sel(c"orderFront:"), std::ptr::null_mut::<c_void>());
@@ -487,6 +506,36 @@ impl PanelWindowInner {
         }
     }
 
+    /// Sets the content view's background color, corner radius, and a
+    /// hairline border — the look of the panel as a whole, as opposed to any
+    /// one control on it. `background` and `border` are sRGB `(r, g, b)`,
+    /// each `0.0..=1.0`; `border_width` in points (`0.0` omits the border).
+    pub fn style(
+        &self,
+        background: (f32, f32, f32),
+        corner_radius: f64,
+        border: (f32, f32, f32),
+        border_width: f64,
+    ) -> Result<(), Error> {
+        unsafe {
+            let pool = objc_autoreleasePoolPush();
+            let content_view: Object = send(self.panel, sel(c"contentView"));
+            let _: () = send1(content_view, sel(c"setWantsLayer:"), true);
+            let layer: Object = send(content_view, sel(c"layer"));
+            let bg = cg_color(background, 1.0);
+            let _: () = send1(layer, sel(c"setBackgroundColor:"), bg);
+            let _: () = send1(layer, sel(c"setCornerRadius:"), corner_radius);
+            let _: () = send1(layer, sel(c"setMasksToBounds:"), true);
+            if border_width > 0.0 {
+                let border_color = cg_color(border, 1.0);
+                let _: () = send1(layer, sel(c"setBorderColor:"), border_color);
+                let _: () = send1(layer, sel(c"setBorderWidth:"), border_width);
+            }
+            objc_autoreleasePoolPop(pool);
+            Ok(())
+        }
+    }
+
     /// Adds a non-interactive line of text to the panel's content view.
     pub fn add_label(
         &self,
@@ -611,6 +660,49 @@ impl PanelWindowInner {
         }
     }
 
+    /// Tints a button's bezel (a no-op, harmlessly, on a label). `emphasis`
+    /// draws it filled in that color with a light title, matching a primary
+    /// action; otherwise it is a quieter outline in that color, for a
+    /// secondary one.
+    pub fn set_button_tint(
+        &self,
+        widget: &Widget,
+        rgb: (f32, f32, f32),
+        emphasis: bool,
+    ) -> Result<(), Error> {
+        unsafe {
+            let class_name = send::<Object>(widget.0, sel(c"className"));
+            if from_ns_string(class_name) != "NSButton" {
+                return Ok(());
+            }
+            let pool = objc_autoreleasePoolPush();
+            // The stock bezel chrome (rounded-rect bevel/highlight) draws over
+            // whatever the layer behind it shows, so a tint is only visible at
+            // all once the button stops drawing that chrome itself.
+            let _: () = send1(widget.0, sel(c"setBordered:"), false);
+            let _: () = send1(widget.0, sel(c"setWantsLayer:"), true);
+            let layer: Object = send(widget.0, sel(c"layer"));
+            let _: () = send1(layer, sel(c"setCornerRadius:"), 6.0f64);
+            let title_color = if emphasis {
+                let fill = cg_color(rgb, 1.0);
+                let _: () = send1(layer, sel(c"setBackgroundColor:"), fill);
+                // A light title on a filled, saturated bezel; not the tint
+                // color itself, which would vanish against its own fill.
+                (0.04, 0.05, 0.07)
+            } else {
+                let clear = cg_color((0.0, 0.0, 0.0), 0.0);
+                let _: () = send1(layer, sel(c"setBackgroundColor:"), clear);
+                let border = cg_color(rgb, 0.55);
+                let _: () = send1(layer, sel(c"setBorderColor:"), border);
+                let _: () = send1(layer, sel(c"setBorderWidth:"), 1.0f64);
+                rgb
+            };
+            set_button_title_color(widget.0, title_color);
+            objc_autoreleasePoolPop(pool);
+            Ok(())
+        }
+    }
+
     /// Registers the one callback every button on this panel reports its
     /// press to, carrying the tag it was created with. Replaces any callback
     /// registered earlier.
@@ -689,6 +781,74 @@ unsafe extern "C" {
     ) -> Object;
     fn objc_registerClassPair(class: Object);
     fn class_addMethod(class: Object, name: Sel, imp: *const c_void, types: *const c_char) -> bool;
+}
+
+/// A `CGColorRef` for `rgb` (sRGB, each channel `0.0..=1.0`) at `alpha`, valid
+/// until the pool is popped — layer properties (`backgroundColor`,
+/// `borderColor`) want a `CGColorRef` specifically, unlike a control's
+/// `NSColor`-typed properties (`setTextColor:` and the like).
+fn cg_color(rgb: (f32, f32, f32), alpha: f32) -> Object {
+    unsafe {
+        let ns_color: Object = send4(
+            class(c"NSColor"),
+            sel(c"colorWithSRGBRed:green:blue:alpha:"),
+            rgb.0 as f64,
+            rgb.1 as f64,
+            rgb.2 as f64,
+            alpha as f64,
+        );
+        send(ns_color, sel(c"CGColor"))
+    }
+}
+
+/// Recolors a button's current title in place, via an attributed string —
+/// `-setTitleColor:` does not exist on `NSButton`; this is the real way.
+///
+/// Only holds until the next plain `-setTitle:` (what [`PanelWindowInner::set_text`]
+/// uses), which resets the title to unattributed text and so back to the
+/// default (readable, under this panel's forced dark appearance) title
+/// color — acceptable for a button whose *label* changes state
+/// (Connect/Disconnect/Cancel) more often than its tint does.
+unsafe fn set_button_title_color(button: Object, rgb: (f32, f32, f32)) {
+    unsafe {
+        let title: Object = send(button, sel(c"title"));
+        let attributed: Object = send(class(c"NSMutableAttributedString"), sel(c"alloc"));
+        let attributed: Object = send1(attributed, sel(c"initWithString:"), title);
+        let color = {
+            let ns_color: Object = send4(
+                class(c"NSColor"),
+                sel(c"colorWithSRGBRed:green:blue:alpha:"),
+                rgb.0 as f64,
+                rgb.1 as f64,
+                rgb.2 as f64,
+                1.0f64,
+            );
+            ns_color
+        };
+        let key = ns_string("NSColor");
+        let length: i64 = send(title, sel(c"length"));
+        let range = NsRangeLocal {
+            location: 0,
+            length,
+        };
+        let _: () = send3(
+            attributed,
+            sel(c"addAttribute:value:range:"),
+            key,
+            color,
+            range,
+        );
+        let _: () = send1(button, sel(c"setAttributedTitle:"), attributed);
+    }
+}
+
+/// An `NSRange`, passed by value the same way the rest of this file's structs
+/// are — a local definition rather than importing the shell backend's, since
+/// this file has none of its own C-struct plumbing otherwise.
+#[repr(C)]
+struct NsRangeLocal {
+    location: i64,
+    length: i64,
 }
 
 /// An `NSString` holding `text`, valid until the pool is popped.
