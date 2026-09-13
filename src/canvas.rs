@@ -454,6 +454,29 @@ impl Canvas {
         RectSnapshot { bounds, pixels }
     }
 
+    /// Crops the pixels under `rect` into a new buffer, along with where they
+    /// sit in device pixels (left, top, width, height) — for a backend to
+    /// hand only a changed region to the compositor instead of the whole
+    /// canvas. The same cropping [`Self::snapshot`] already does; kept
+    /// separate because a snapshot exists to come back to *this* canvas
+    /// later, while this exists to leave the canvas for a backend instead.
+    /// `None` for a rect with no device pixels in it.
+    pub(crate) fn crop(&self, rect: Rect) -> Option<(u32, u32, u32, u32, Vec<u32>)> {
+        let bounds = self.device_bounds(rect);
+        if bounds.is_empty() {
+            return None;
+        }
+        let width = (bounds.right - bounds.left) as u32;
+        let height = (bounds.bottom - bounds.top) as u32;
+        let mut pixels = Vec::with_capacity((width * height) as usize);
+        for y in bounds.top..bounds.bottom {
+            let row = y as usize * self.width as usize;
+            let start = row + bounds.left as usize;
+            pixels.extend_from_slice(&self.pixels[start..start + width as usize]);
+        }
+        Some((bounds.left as u32, bounds.top as u32, width, height, pixels))
+    }
+
     /// The other half of [`Self::snapshot`]: puts those pixels back, exactly
     /// where they came from.
     pub(crate) fn restore(&mut self, snapshot: &RectSnapshot) {

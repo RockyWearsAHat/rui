@@ -358,6 +358,19 @@ pub(crate) fn redraw_animated(
         // additive glow effect into a flicker that brightened a little
         // further on every single replay.
         canvas.restore(&cell.background);
+        // Bracketed with `enter_draw`/`exit_draw` for exactly the reason
+        // `paint::draw`'s own call to this same closure is: without it,
+        // every `Painter::phase`/`ease` this replay calls marks
+        // `Memory::animating_outside_draw` instead of the per-drawing flag
+        // `exit_draw` reads — which is real motion the *next* full-frame
+        // decision cannot tell apart from a hover fade it truly cannot
+        // replay, so it forced a full frame back every single time. Confirmed
+        // live: a fast path that could never run twice in a row, alternating
+        // with a full relayout+paint on every other turn no matter how idle
+        // the interface otherwise was — cheap at panel size, and the reason
+        // a fullscreened window stayed expensive even once presenting less
+        // than the whole canvas got cheap.
+        memory.enter_draw();
         let mut painter = Painter {
             canvas,
             fonts,
@@ -367,6 +380,7 @@ pub(crate) fn redraw_animated(
             memory: Some(memory),
         };
         (cell.paint)(&mut painter, cell.rect);
+        memory.exit_draw();
     }
 }
 

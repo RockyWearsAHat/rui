@@ -780,6 +780,18 @@ impl<S> App<S> {
         !self.animated.is_empty()
     }
 
+    /// The smallest rectangle covering every [`Self::redraw_animated`] will
+    /// touch, for a backend that can present less than the whole window (see
+    /// [`crate::shell::Backend::present_partial`]) to know how little that
+    /// is. `None` when [`Self::has_animated_draws`] is `None` too — nothing
+    /// to bound.
+    pub(crate) fn animated_bounds(&self) -> Option<crate::geom::Rect> {
+        self.animated
+            .iter()
+            .map(|drawing| drawing.rect)
+            .reduce(crate::geom::Rect::union)
+    }
+
     /// Redraws only what [`Self::has_animated_draws`] found — see
     /// [`paint::redraw_animated`]. Far cheaper than [`Self::frame`], and
     /// correct only because nothing else about the interface has changed
