@@ -537,7 +537,30 @@ impl Surface {
         }
 
         if self.drawn.pixels() != self.presented.pixels() {
-            window.present(&self.drawn)?;
+            // A real event or an explicit request can still have changed
+            // only a small part of the screen (a button's hover highlight,
+            // most commonly) — the same reason `present_partial` exists for
+            // the animation fast path applies here too, and matters far more
+            // once the window is large: presenting the whole window on every
+            // mouse-moved event is what makes a fullscreened window lag while
+            // the fast path stays smooth. Use it whenever the changed region
+            // is meaningfully smaller than the whole window; fall back to a
+            // full present otherwise (a real full repaint, or a backend with
+            // no cheaper partial path — `present_partial`'s default already
+            // forwards to `present`, so this is never worse than before).
+            match self.drawn.diff_bounds(&self.presented) {
+                Some(dirty) => {
+                    let whole = self.drawn.bounds();
+                    let dirty_area = (dirty.w as f64) * (dirty.h as f64);
+                    let whole_area = (whole.w as f64) * (whole.h as f64);
+                    if whole_area > 0.0 && dirty_area < whole_area * 0.6 {
+                        window.present_partial(&self.drawn, dirty)?;
+                    } else {
+                        window.present(&self.drawn)?;
+                    }
+                }
+                None => window.present(&self.drawn)?,
+            }
             std::mem::swap(&mut self.drawn, &mut self.presented);
         }
         Ok(())
