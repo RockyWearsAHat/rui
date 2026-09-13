@@ -804,6 +804,12 @@ pub(crate) struct Window {
     scale: Cell<f64>,
     /// The scale the layer was last told about, so it is set only when it moves.
     presented_scale: Cell<f64>,
+    /// A sublayer of `layer`, sized and positioned to exactly the fast
+    /// path's dirty rect and given only that rect's pixels — see
+    /// [`Window::present_partial`]. Hidden whenever a full [`Window::present`]
+    /// last ran, since the base layer's own fresh contents already covers
+    /// whatever this was showing.
+    patch_layer: Object,
     /// What the run-loop observer needs to draw a frame. Boxed so its address
     /// is settled before the observer is given it, and so moving the window out
     /// of `open` does not move it.
@@ -1066,6 +1072,16 @@ impl Backend for Window {
             // space, which is the harmless half of this worth keeping.
             let color_space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
 
+            // See [`Window::present_partial`]: a sublayer the fast path can
+            // update on its own, without touching (or re-uploading) the base
+            // layer's full-window image. Hidden until the first partial
+            // present actually has something to show.
+            let patch_layer: Object = send(class(c"CALayer"), sel(c"alloc"));
+            let patch_layer: Object = send(patch_layer, sel(c"init"));
+            let _: () = send1(patch_layer, sel(c"setOpaque:"), true);
+            let _: () = send1(patch_layer, sel(c"setHidden:"), true);
+            let _: () = send1(layer, sel(c"addSublayer:"), patch_layer);
+
             install_menu(application, &options.title);
             // Before the window is shown, so a Quit pressed the instant it
             // appears is already an orderly one. A failure here is not fatal
@@ -1096,6 +1112,7 @@ impl Backend for Window {
                 size: Cell::new((options.width as f64, options.height as f64)),
                 scale: Cell::new(1.0),
                 presented_scale: Cell::new(0.0),
+                patch_layer,
                 live: Box::new(LiveResize::default()),
                 composer,
                 accessibility: Accessibility::new(elements),
@@ -1209,6 +1226,96 @@ impl Backend for Window {
                 self.presented_scale.set(scale);
             }
             let _: () = send1(self.layer, sel(c"setContents:"), image);
+            // The base layer's new image already covers whatever the patch
+            // layer was showing (a full frame draws everything, including
+            // wherever the fast path last touched), so a stale small tile
+            // left visible on top of it would cover fresh content with old
+            // pixels forever after. `present_partial` unhides it again the
+            // next time it actually has something to patch.
+            let _: () = send1(self.patch_layer, sel(c"setHidden:"), true);
+            let _: () = send(transaction, sel(c"commit"));
+
+            CGImageRelease(image);
+            CGDataProviderRelease(provider);
+            CFRelease(data);
+
+            objc_autoreleasePoolPop(pool);
+        }
+        Ok(())
+    }
+
+    fn present_partial(&self, canvas: &Canvas, dirty: Rect) -> Result<(), Error> {
+        let Some((dev_x, dev_y, width, height, pixels)) = canvas.crop(dirty) else {
+            return Ok(());
+        };
+        if width == 0 || height == 0 {
+            return Ok(());
+        }
+        let scale = canvas.scale() as f64;
+        let bytes = pixels.len() * 4;
+
+        unsafe {
+            let pool = objc_autoreleasePoolPush();
+
+            // Copied for the same reason `present` copies: the layer reads
+            // this whenever it next composites, which is not necessarily
+            // before this function returns.
+            let data = CFDataCreate(
+                std::ptr::null(),
+                pixels.as_ptr() as *const u8,
+                bytes as isize,
+            );
+            let provider = CGDataProviderCreateWithCFData(data);
+            let image = CGImageCreate(
+                width as usize,
+                height as usize,
+                8,
+                32,
+                width as usize * 4,
+                self.color_space,
+                BITMAP_INFO,
+                provider,
+                std::ptr::null(),
+                false,
+                0,
+            );
+
+            let logical_x = dev_x as f64 / scale;
+            let logical_y = dev_y as f64 / scale;
+            let logical_w = width as f64 / scale;
+            let logical_h = height as f64 / scale;
+            // `patch_layer`'s `frame` is positioned in `self.layer`'s own
+            // coordinate space, and nothing here has ever told that layer
+            // whether it is geometry-flipped (AppKit's own default for a
+            // view's auto backing layer is undocumented and has moved
+            // between releases before) — so this asks the layer itself
+            // rather than assuming, the same way [`Window::appearance`]
+            // asks the appearance rather than assuming light or dark.
+            let flipped: bool = send(self.layer, sel(c"isGeometryFlipped"));
+            let (_, parent_h) = self.size.get();
+            let origin_y = if flipped {
+                logical_y
+            } else {
+                parent_h - logical_y - logical_h
+            };
+
+            let transaction = class(c"CATransaction");
+            let _: () = send(transaction, sel(c"begin"));
+            let _: () = send1(transaction, sel(c"setDisableActions:"), true);
+            let _: () = send1(self.patch_layer, sel(c"setContentsScale:"), scale);
+            let frame = CgRect {
+                origin: CgPoint {
+                    x: logical_x,
+                    y: origin_y,
+                },
+                size: CgSize {
+                    width: logical_w,
+                    height: logical_h,
+                },
+            };
+            let _: () = send1(self.patch_layer, sel(c"setFrame:"), frame);
+            let _: () = send1(self.patch_layer, sel(c"setHidden:"), false);
+            let _: () = send1(self.patch_layer, sel(c"setContents:"), image);
             let _: () = send(transaction, sel(c"commit"));
 
             CGImageRelease(image);

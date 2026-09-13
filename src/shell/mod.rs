@@ -334,6 +334,22 @@ trait Backend: Sized {
     /// Copies a frame onto the screen.
     fn present(&self, canvas: &Canvas) -> Result<(), Error>;
 
+    /// Copies only `dirty` (this canvas's own logical units) onto the
+    /// screen, for a backend that can update less than the whole window
+    /// cheaper than [`Self::present`] can update all of it.
+    ///
+    /// Only ever called for [`Surface`]'s fast path — the ordinary full
+    /// frame always calls [`Self::present`], because a full frame can have
+    /// changed anywhere. The default forwards to [`Self::present`], so a
+    /// backend without a cheaper partial path stays exactly as correct as it
+    /// always was; only the backend that overrides this can get it wrong,
+    /// and only by presenting too *little* — too much is merely wasteful,
+    /// the same as never overriding it at all.
+    fn present_partial(&self, canvas: &Canvas, dirty: Rect) -> Result<(), Error> {
+        let _ = dirty;
+        self.present(canvas)
+    }
+
     /// Whether the window is still on screen.
     fn is_open(&self) -> bool;
 
@@ -490,7 +506,10 @@ impl Surface {
             // everywhere the fast path is not actively touching.
             app.redraw_animated(&mut self.presented, fonts, &theme, &mut self.memory);
             self.memory.end_frame(&self.input);
-            window.present(&self.presented)?;
+            match app.animated_bounds() {
+                Some(dirty) => window.present_partial(&self.presented, dirty)?,
+                None => window.present(&self.presented)?,
+            }
             return Ok(());
         }
 
