@@ -226,8 +226,32 @@ impl PanelWindowInner {
             // Set becomesKeyOnlyIfNeeded to true so it doesn't become key unless clicked.
             let _: () = send1(panel, sel(c"setBecomesKeyOnlyIfNeeded:"), true);
 
-            // Set the window level to floating (NSFloatingWindowLevel = 2).
-            let _: () = send1(panel, sel(c"setLevel:"), 2i64);
+            // NSPopUpMenuWindowLevel (101) — a menu-bar utility popup needs to
+            // float above ordinary floating panels and menus too, not just
+            // normal windows; the previous NSFloatingWindowLevel value used
+            // here (which is actually 3, not the 2 this comment claimed) sits
+            // too low for that.
+            let _: () = send1(panel, sel(c"setLevel:"), 101i64);
+
+            // Without this the panel is tied to whichever Space it was
+            // created on like an ordinary window: it will not follow the
+            // user to another Space, and will not appear at all while
+            // another app is in fullscreen (which macOS treats as its own
+            // separate Space) — exactly the "tethered to one screen instead
+            // of floating like a menu-bar utility" symptom this fixes.
+            // NSWindowCollectionBehaviorCanJoinAllSpaces    = 1 << 0 = 1
+            // NSWindowCollectionBehaviorTransient           = 1 << 3 = 8
+            // NSWindowCollectionBehaviorIgnoresCycle        = 1 << 6 = 64
+            // NSWindowCollectionBehaviorFullScreenAuxiliary = 1 << 8 = 256
+            const COLLECTION_BEHAVIOR: i64 = 1 | 8 | 64 | 256;
+            let _: () = send1(panel, sel(c"setCollectionBehavior:"), COLLECTION_BEHAVIOR);
+
+            // A panel's default hidesOnDeactivate is YES, which would hide
+            // this the instant another app becomes frontmost — also exactly
+            // the "tethered like an actual application" symptom, since a
+            // real menu-bar popup must stay visible regardless of which app
+            // is active.
+            let _: () = send1(panel, sel(c"setHidesOnDeactivate:"), false);
 
             // A borderless NSPanel is otherwise opaque white behind whatever
             // the content view draws, which is exactly what makes a rounded
