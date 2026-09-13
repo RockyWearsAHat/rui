@@ -223,6 +223,19 @@ pub struct WindowOptions {
     /// to the second display comes back there next time, and the first
     /// launch on a machine that has never seen it still opens centred.
     pub frame_name: Option<String>,
+    /// Runs the application with no Dock icon and no Cmd-Tab entry —
+    /// `NSApplicationActivationPolicyAccessory` on macOS — for a menu-bar-only
+    /// app rather than an ordinary foreground one. Defaults to `false`
+    /// (the original behavior: a regular, Dock-visible app), so every
+    /// existing caller keeps working unchanged.
+    ///
+    /// This is not only cosmetic: macOS's window server isolates a *regular*
+    /// app's windows from another app's fullscreen Space, no matter what
+    /// window level or collection behavior that window asks for. A tray
+    /// dropdown that needs to appear over a fullscreen app needs this set,
+    /// in addition to (not instead of) the right window level and
+    /// collection behavior on the window itself.
+    pub accessory: bool,
 }
 
 impl Default for WindowOptions {
@@ -237,6 +250,7 @@ impl Default for WindowOptions {
             animation_interval: FRAME,
             appearance: None,
             frame_name: None,
+            accessory: false,
         }
     }
 }
