@@ -273,8 +273,10 @@ impl PanelWindowInner {
             let _: () = send1(panel, sel(c"setAppearance:"), dark);
 
             // Show the window without making it key or activating the app.
-            // orderFront: brings the window to the front without stealing focus.
-            let _: () = send1(panel, sel(c"orderFront:"), std::ptr::null_mut::<c_void>());
+            // orderFrontRegardless brings the window to the front without
+            // stealing focus and without regard to whether this app is the
+            // active one — see the identical note on `PanelWindowInner::show`.
+            let _: () = send(panel, sel(c"orderFrontRegardless"));
 
             // Retain the panel so we own it.
             let _: Object = send(panel, sel(c"retain"));
@@ -414,11 +416,22 @@ impl PanelWindowInner {
     pub fn show(&self) -> Result<(), Error> {
         unsafe {
             let pool = objc_autoreleasePoolPush();
-            let _: () = send1(
-                self.panel,
-                sel(c"orderFront:"),
-                std::ptr::null_mut::<c_void>(),
-            );
+            // `-orderFront:` is app-activation-relative: AppKit is free to
+            // treat it as a no-op for a window belonging to an app that is
+            // not the frontmost one in the *current* Space — exactly the
+            // case for a menu-bar utility's popup shown while some other app
+            // is active (routinely true; that's the whole point of a
+            // menu-bar utility), and doubly so while that other app is in
+            // fullscreen (its own Space). `-orderFrontRegardless` is Apple's
+            // own documented answer for precisely this: bring the window
+            // forward without regard to whether this app is active, which is
+            // what every real menu-bar dropdown (Bartender, 1Password mini,
+            // the system's own) actually uses. Without it, the panel's
+            // window-level and collection-behavior fixes (see
+            // `PanelWindowInner::new`) are necessary but not sufficient: the
+            // panel can be correctly configured to float above and across
+            // every Space and still never actually come forward when shown.
+            let _: () = send(self.panel, sel(c"orderFrontRegardless"));
             objc_autoreleasePoolPop(pool);
             Ok(())
         }

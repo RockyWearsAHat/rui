@@ -537,30 +537,28 @@ impl Surface {
         }
 
         if self.drawn.pixels() != self.presented.pixels() {
-            // A real event or an explicit request can still have changed
-            // only a small part of the screen (a button's hover highlight,
-            // most commonly) — the same reason `present_partial` exists for
-            // the animation fast path applies here too, and matters far more
-            // once the window is large: presenting the whole window on every
-            // mouse-moved event is what makes a fullscreened window lag while
-            // the fast path stays smooth. Use it whenever the changed region
-            // is meaningfully smaller than the whole window; fall back to a
-            // full present otherwise (a real full repaint, or a backend with
-            // no cheaper partial path — `present_partial`'s default already
-            // forwards to `present`, so this is never worse than before).
-            match self.drawn.diff_bounds(&self.presented) {
-                Some(dirty) => {
-                    let whole = self.drawn.bounds();
-                    let dirty_area = (dirty.w as f64) * (dirty.h as f64);
-                    let whole_area = (whole.w as f64) * (whole.h as f64);
-                    if whole_area > 0.0 && dirty_area < whole_area * 0.6 {
-                        window.present_partial(&self.drawn, dirty)?;
-                    } else {
-                        window.present(&self.drawn)?;
-                    }
-                }
-                None => window.present(&self.drawn)?,
-            }
+            // Always the full present here, deliberately — see the reverted
+            // attempt at using `present_partial` for this branch, below.
+            //
+            // REVERTED (2026-09-13): a full frame's changed region was routed
+            // through `present_partial` too, on the theory that a small
+            // input-driven change (a hover highlight) is exactly the same
+            // shape of problem the animation fast path already solved. It
+            // is not: both paths were sharing the *same* macOS patch
+            // sublayer (see `Window::present_partial`), and vpn-ui's hero
+            // conduit animates continuously, so the fast path and this
+            // branch were fighting over that one sublayer constantly —
+            // confirmed live as "glitchy" animation, the fast path's own
+            // patch getting stolen and repositioned by an unrelated full
+            // frame's differently-placed dirty rect, and vice versa. A
+            // correct version of this optimization needs its own sublayer
+            // (or some other way to avoid the two paths colliding) rather
+            // than reusing the animation fast path's; left as a real, valid
+            // idea for whoever picks it up next, not as dead code — see
+            // `Canvas::diff_bounds`, since removed. Presenting the whole
+            // window on every full frame is the correct, if costlier,
+            // fallback in the meantime.
+            window.present(&self.drawn)?;
             std::mem::swap(&mut self.drawn, &mut self.presented);
         }
         Ok(())
