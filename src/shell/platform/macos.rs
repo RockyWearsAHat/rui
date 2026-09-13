@@ -729,6 +729,13 @@ const COLLECTION_FULLSCREEN_PRIMARY: u64 = 1 << 7;
 const BACKING_BUFFERED: u64 = 2;
 /// `NSApplicationActivationPolicyRegular`: a normal app with a Dock icon.
 const ACTIVATION_REGULAR: i64 = 0;
+/// `NSApplicationActivationPolicyAccessory`: no Dock icon, no Cmd-Tab entry —
+/// a menu-bar-only app. Also the policy macOS's window server requires for a
+/// window to actually appear over a *different* app's fullscreen Space: a
+/// regular (Dock-visible) app's windows are isolated from other apps'
+/// fullscreen Spaces regardless of window level or collection behavior — see
+/// [`WindowOptions::accessory`].
+const ACTIVATION_ACCESSORY: i64 = 1;
 
 // `NSEventType` values.
 const EVENT_LEFT_DOWN: u64 = 1;
@@ -927,7 +934,11 @@ impl Backend for Window {
             let _: bool = send1(
                 application,
                 sel(c"setActivationPolicy:"),
-                ACTIVATION_REGULAR,
+                if options.accessory {
+                    ACTIVATION_ACCESSORY
+                } else {
+                    ACTIVATION_REGULAR
+                },
             );
             // Before the window exists, so it — and every panel, menu and
             // alert the application later opens — inherits the pin rather

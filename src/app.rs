@@ -376,6 +376,18 @@ impl<S> App<S> {
         self
     }
 
+    /// Runs with no Dock icon and no Cmd-Tab entry — see
+    /// [`WindowOptions::accessory`]. For a menu-bar app: without this, a
+    /// tray dropdown window is correctly configured to float above and
+    /// across every Space and still never actually appear over a different
+    /// app's fullscreen one, because that isolation is keyed off whether
+    /// this app is a regular (Dock-visible) one, not anything the window
+    /// itself asks for.
+    pub fn accessory(mut self, accessory: bool) -> Self {
+        self.options.accessory = accessory;
+        self
+    }
+
     /// How long the loop waits between frames while something is animating —
     /// see [`WindowOptions::animation_interval`]. Once a window's [`Surface`]
     /// is only replaying [`App::has_animated_draws`] rather than repainting
