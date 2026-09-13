@@ -126,6 +126,7 @@ use crate::{Canvas, Event, Key, KeyCode, Modifiers, Point, PointerButton, Rect};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CStr};
+use std::sync::atomic::{AtomicPtr, AtomicU32, Ordering};
 use std::time::Duration;
 
 use crate::shell::{Backend, Error, WindowOptions};
@@ -270,7 +271,23 @@ unsafe extern "C" {
         user_info: *mut c_void,
     ) -> i32;
     fn CVDisplayLinkStart(link: *mut c_void) -> i32;
+    /// Retargets an already-running link at one specific display, so its tick
+    /// rate is that display's real refresh rate rather than whatever
+    /// `CVDisplayLinkCreateWithActiveCGDisplays` picked among every active
+    /// display. See [`sync_display_link_to_window`].
+    fn CVDisplayLinkSetCurrentCGDisplay(link: *mut c_void, display_id: u32) -> i32;
 }
+
+/// The link `start_display_link` created, kept so a later frame can retarget
+/// it — see [`sync_display_link_to_window`]. Null until `start_display_link`
+/// succeeds, and never cleared afterward: the link, like the window, lives
+/// for the rest of the process.
+static DISPLAY_LINK: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+
+/// The `CGDirectDisplayID` the link is currently paced to, or `u32::MAX`
+/// before the first sync — a real display ID never takes that value, so it
+/// can never be mistaken for "already synced to this display".
+static DISPLAY_LINK_DISPLAY_ID: AtomicU32 = AtomicU32::new(u32::MAX);
 
 /// `NSEventTypeApplicationDefined`: a synthetic event with no meaning of its
 /// own, existing only to be a real event `-nextEventMatchingMask:` is
@@ -336,9 +353,11 @@ extern "C" fn display_link_tick(
 }
 
 /// Starts a display link against whichever displays are active and lets it
-/// run for the rest of the process. Not stored, not stopped: this window, like
+/// run for the rest of the process. Not stopped: this window, like
 /// [`Window::color_space`], lives exactly as long as the process does, so
 /// there is no later moment to release it into — see that field's own note.
+/// The link pointer itself *is* stored, in [`DISPLAY_LINK`], so a later frame
+/// can retarget it — see [`sync_display_link_to_window`].
 ///
 /// A failure here is silent and leaves `pump_events` on its plain timeout
 /// fallback (see there): a display link is the difference between redraws
@@ -354,6 +373,71 @@ fn start_display_link() {
             return;
         }
         CVDisplayLinkStart(link);
+        DISPLAY_LINK.store(link, Ordering::Release);
+    }
+}
+
+/// The `CGDirectDisplayID` of the screen `window` is currently mostly on, or
+/// `None` if the window is offscreen (minimized, or not yet placed).
+///
+/// Reads `-[NSWindow screen]` rather than the window's frame against
+/// `[NSScreen screens]` by hand: AppKit already resolves "mostly on" for a
+/// window straddling two displays, including during a drag, and duplicating
+/// that logic here would be one more place it could disagree with AppKit's
+/// own answer.
+fn display_id_for_window(window: Object) -> Option<u32> {
+    unsafe {
+        let screen: Object = send(window, sel(c"screen"));
+        if screen.is_null() {
+            return None;
+        }
+        let description: Object = send(screen, sel(c"deviceDescription"));
+        if description.is_null() {
+            return None;
+        }
+        let key = ns_string(c"NSScreenNumber");
+        let number: Object = send1(description, sel(c"objectForKey:"), key);
+        if number.is_null() {
+            return None;
+        }
+        let id: u32 = send(number, sel(c"unsignedIntValue"));
+        Some(id)
+    }
+}
+
+/// Retargets [`DISPLAY_LINK`] at `window`'s current screen if that differs
+/// from what it is already paced to.
+///
+/// Called every turn of the loop (see `Window::pump`) rather than only once
+/// at window creation or from a screen-change notification: a window can move
+/// screens by a drag, by `Cmd-\``, or by a display disconnecting mid-drag, and
+/// checking on every turn costs a handful of Objective-C message sends —
+/// noise next to the frame it sits beside — while a notification would be one
+/// more Objective-C class to build and keep correct for a event this codebase
+/// already has a cheap poll point for (see `crates/app/cli/src/acme_task.rs`'s
+/// `run_sweep` for the same "re-read current state every pass" shape
+/// elsewhere in this workspace).
+///
+/// Without this, `CVDisplayLinkCreateWithActiveCGDisplays` leaves the link
+/// paced to whichever of the active displays CoreVideo happened to pick when
+/// the very first window opened — on a Mac with a ProMotion built-in display
+/// next to a 60Hz external one, or with the window dragged to a different
+/// display since, that is not necessarily the one actually showing this
+/// window, so animation is paced to the wrong display's refresh rate instead
+/// of following the window: not consistently the display's own maximum.
+fn sync_display_link_to_window(window: Object) {
+    let link = DISPLAY_LINK.load(Ordering::Acquire);
+    if link.is_null() {
+        return;
+    }
+    let Some(id) = display_id_for_window(window) else {
+        return;
+    };
+    if DISPLAY_LINK_DISPLAY_ID.swap(id, Ordering::AcqRel) == id {
+        return;
+    }
+    unsafe {
+        CVDisplayLinkSetCurrentCGDisplay(link, id);
     }
 }
 
@@ -1040,6 +1124,10 @@ impl Backend for Window {
         self.live
             .redraw
             .set(std::ptr::from_mut(&mut redraw).cast::<c_void>());
+        // Before waiting, not after: a window dragged to a different-refresh
+        // display during the *previous* wait should have its next wait paced
+        // by the display it landed on, not the one it left.
+        sync_display_link_to_window(self.window);
         let result = self.pump_events(timeout, events);
         self.live.window.set(std::ptr::null());
         self.live.redraw.set(std::ptr::null_mut());
