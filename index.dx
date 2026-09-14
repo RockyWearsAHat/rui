@@ -40,7 +40,7 @@ The working section — the designated first read of every turn, and its verdict
 - [x] [scout] [ask: charter-rui] [cap: cap-recipe-2-documented] Extract Recipe 2 documentation section (93 lines) from CLAUDE.md lines 302-395; restore to index.dx with phases, commits, and verification gates
 - [x] [scout] [ask: charter-rui] [cap: cap-recipe-2-documented] Run git show --name-only on each commit; verify src/shell/platform/x11.rs and src/shell/mod.rs appear in all 4 commits
 - [x] [scout] [ask: charter-rui] [defaults] Update the Recipes section of index.dx — recipes are now documented in CLAUDE.md: Recipe 2 (X11), Recipe 3 (Checkbox); extract these to index.dx so their detail is in two places (CLAUDE.md for long-form, index.dx as navigable reference)
-- [ ] [scout] [ask: charter-rui] [cap: cap-readme] Polish README — the description and examples are current, but quickstart should name the five platforms (macOS/Windows/Linux X11/Linux Wayland/Browser); call out zero dependencies; link to main examples
+- [x] [scout] [ask: charter-rui] [cap: cap-readme] Polish README — the description and examples are current, but quickstart should name the five platforms (macOS/Windows/Linux X11/Linux Wayland/Browser); call out zero dependencies; link to main examples
 - [x] [scout] [ask: charter-rui] [defaults] Item 9 — restore to index.dx with phases, commits, and verification gates (from CLAUDE.md lines 302-395, now inline in recipe section as md block)
 ::end
 
