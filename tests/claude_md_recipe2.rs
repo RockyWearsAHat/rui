@@ -579,3 +579,39 @@ fn step_5_recipe_2_analysis_md_exists_and_contains_all_phases() {
         "STEP_5_RECIPE_2_ANALYSIS.md should document which files changed per phase"
     );
 }
+
+#[test]
+fn recipe_2_commits_contain_both_required_files() {
+    // Verify that both src/shell/platform/x11.rs and src/shell/mod.rs
+    // appear in all 4 Recipe 2 commits as claimed in CLAUDE.md documentation
+    use std::process::Command;
+
+    let recipe_2_commits = [
+        "a67d578eea41560c26fd7a6548c0d089223f3d70", // Phase 1: Foundation
+        "c42c0f05b3d75976665377a16257c36c472debc1", // Phase 2: Enhancement
+        "80e3003563c26952e4d63c52d8eb8f5052cb463c", // Phase 3: Integration
+        "991167a3898d643199a6e0b9dfa461be31cae264", // Polish: star_rating exemplar
+    ];
+
+    let required_files = ["src/shell/platform/x11.rs", "src/shell/mod.rs"];
+
+    for commit_sha in &recipe_2_commits {
+        // Run git show --name-only for this commit
+        let output = Command::new("git")
+            .args(["show", "--name-only", "--pretty=format:", commit_sha])
+            .output()
+            .expect("Failed to run git show");
+
+        let files_in_commit = String::from_utf8_lossy(&output.stdout);
+
+        // Verify both required files appear in this commit
+        for required_file in &required_files {
+            assert!(
+                files_in_commit.lines().any(|line| line.trim() == *required_file),
+                "Commit {} should contain {} (Recipe 2 documentation requires both files in all commits)",
+                commit_sha,
+                required_file
+            );
+        }
+    }
+}
