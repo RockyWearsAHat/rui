@@ -272,3 +272,11 @@ cd "\D:/SARA/Desktop/rui/.sara/worktrees/wk-bulleted-list-7-9-5ef96901" && grep 
 ::output id=cap-recipe-2-documented-output
 Verification: Recipe 2 documentation extracted to index.dx
 ::end
+
+::code id=cap-recipe-2-git-verified lang=bash run
+cd "\D:/SARA/Desktop/rui/.sara/worktrees/wk-bulleted-list-7-9-5ef96901" && for commit in a67d578 c42c0f0 80e3003 991167a; do echo "=== Commit $commit ==="; git show --name-only $commit | grep -E "src/shell/platform/x11.rs|src/shell/mod.rs" | sort -u; done | grep -c "src/shell"
+::end
+
+::output id=cap-recipe-2-git-verified-output
+8
+::end

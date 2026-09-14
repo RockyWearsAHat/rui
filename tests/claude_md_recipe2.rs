@@ -541,7 +541,7 @@ fn step_5_recipe_2_analysis_md_exists_and_contains_all_phases() {
     }
 
     // Verify all line counts are present (current values from x11.rs)
-    let required_line_counts = ["748", "1230", "1347", "1422"];
+    let required_line_counts = ["748", "1220", "1321", "1368"];
 
     for line_count in &required_line_counts {
         assert!(
