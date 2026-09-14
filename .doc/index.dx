@@ -238,7 +238,7 @@ Recipes are step-by-step implementations of major features with verification gat
 **Files touched (ordered):**
 1. `src/shell/platform/x11.rs` — Core X11 implementation (1368 lines)
 2. `src/shell/mod.rs` — Platform selector and feature gating
-3. `src/input.rs` — Event → Input translation
+3. `src/shell/fonts.rs` — Font loading guards at platform boundary
 
 **Phases:**
 
@@ -263,6 +263,7 @@ Recipes are step-by-step implementations of major features with verification gat
 **Cross-module coordination:**
 - Backend trait pattern (`src/shell/mod.rs`) — All backends implement 12 trait methods uniformly
 - Clock abstraction (`src/shell/clock.rs`) — Platform-agnostic elapsed time, no wall-clock reads
+- Font loading guards (`src/shell/fonts.rs`) — Safe font file access at platform boundary with bounds checking
 - Coordinate transformation — Device pixels (scale_factor) → logical units via `canvas.rs`
 - Event translation flow — X11 events → rui Event types → Input handlers
 
