@@ -1,1 +1,273 @@
-~ dx1 75d300ff227cf84d8921a40e1aee3a5f3b283ca397d47bf25362e7a409063f99
+﻿::heading level=1 id=rui-project-index
+rui — project index
+::end
+
+::heading level=2 id=understanding
+Understanding
+::end
+
+::paragraph id=paragraph-3-2
+A caller declares a view by composing elements with the builder API — El::new() chains method calls for children, properties, event handlers. The App frame loop owns the Backend trait's implementation per platform; each tick receives input (pointer, keyboard, window events), drives the layout engine to reflow the tree, queries each Painter for damage, renders deltas, and presents to screen.
+
+The package name is rui-native (the Cargo.toml [package] name), but the library export is still rui (the [lib] name), so dependents must declare it as rui = { package = "rui-native", path = "../../rui" } (console/) or rui-native = { package = "rui-native", path = "../../rui" } (sara-ui/). The WebAssembly backend compiles the same library to rui_bg.wasm; Forge's web UI imports it at web/pkg/rui_bg.wasm and calls it from TypeScript to render a GitHub-like repository interface.
+
+Build (dev): completes in 0.01s when already built. Test suite: 413 passing tests, 0 failures, 0.21s runtime. The architecture is platform-agnostic: the Backend trait abstracts macOS (Cocoa), Windows (Win32), Linux (X11/Wayland), and browser (WebAssembly) rendering. All drawing goes through a Painter API that auto-detects light/dark theme. The charter is pixel-perfect visual parity across all five platforms and production readiness with zero external crates.
+::end
+
+::paragraph id=paragraph-2
+From the project's own README: A declarative interface library for Rust, with no dependencies at all.
+::end
+
+::paragraph id=paragraph-3
+Scaffold from the file tree, written by dx index. Improve it: replace each TODO with what the area does and how it connects to the rest, and add code blocks for the load-bearing files — they render as the file's current text, never a stale copy. Files below are ranked by how load-bearing they look (entry points, how many files reference them, size); trust the ranking as a place to start, not as the truth. Keep this document true as the code changes.
+::end
+
+::paragraph id=paragraph-4
+Direction (2026-08-26): rui is gaining a WebAssembly rendering backend so it can run inside a browser, not just as a native window — see the Now worklist below. The concrete driver is [[Forge]], a self-hosted git server whose web UI (currently plain HTML/CSS/JS) is being rebuilt on rui-wasm into a real GitHub-style UI (repo list, file tree, blob viewer, commit log). SARA's engine watches both this project and Forge (factory/.sara/config.json's watchedProjects) and should treat them as one coordinated initiative — a rui primitive Forge's UI needs belongs in rui's own worklist, not duplicated or worked around in Forge.
+::end
+
+::heading level=2 id=now
+Now
+::end
+
+::paragraph id=paragraph-6
+The working section — the designated first read of every turn, and its verdict (pass/fail/blocked) carries into the day's dispatch decision. SARA looks here first; edit this section for every meaningful state change. Commit when an item lands. Tick off via dx_check, not by hand. Keep the list short: fewer than 10 items. When an item is stuck, file it as a finding (dx_report) and unblock whatever is behind it.
+::end
+
+::checklist id=bulleted-list-7
+- [x] [scout] [ask: charter-rui] [defaults] [sync] Bring back the box-list recipe or recipes — they've been extracted to CLAUDE.md as exemplars but aren't in the index yet
+- [x] [scout] [ask: charter-rui] [cap: cap-build] Fix the rui-native package dependency — factory/.sara/config.json watches this project but CLAUDE.md forbids manual start.sh (only SARA, never by hand)
+- [x] [scout] [ask: charter-rui] [cap: cap-recipe-2-documented] Extract Recipe 2 documentation section (93 lines) from CLAUDE.md lines 302-395; restore to index.dx with phases, commits, and verification gates
+- [x] [scout] [ask: charter-rui] [defaults] Update the Recipes section of index.dx — recipes are now documented in CLAUDE.md: Recipe 2 (X11), Recipe 3 (Checkbox); extract these to index.dx so their detail is in two places (CLAUDE.md for long-form, index.dx as navigable reference)
+- [ ] [scout] [ask: charter-rui] [cap: cap-readme] Polish README — the description and examples are current, but quickstart should name the five platforms (macOS/Windows/Linux X11/Linux Wayland/Browser); call out zero dependencies; link to main examples
+- [x] [scout] [ask: charter-rui] [defaults] Item 9 — restore to index.dx with phases, commits, and verification gates (from CLAUDE.md lines 302-395, now inline in recipe section as md block)
+::end
+
+::heading level=2 id=recipes
+Recipes
+::end
+
+::paragraph id=recipe-intro
+How a change flows
+::end
+
+::paragraph id=recipe-2-x11
+## Recipe 2: X11 Backend Implementation
+
+**Purpose**: Detailed exemplar of the three-phase pattern applied to a real platform backend. Reference implementation for Linux X11 systems.
+
+### Overview
+X11 backend for Linux systems using the X11 protocol. Implements the Backend trait (12 methods) and full event translation (pointer, keyboard, window lifecycle, DPI changes).
+
+### Example Implementation
+- **File**: src/shell/platform/x11.rs (1368 lines, all three phases)
+- **Feature gate**: \--features x11\ (included by default, optional for embedded builds)
+- **Coordinate contract**: device pixels → logical (logical = device / scale_factor)
+- **Event translation**: X11 event types → rui Event with modifier masks
+
+### Extracted Documentation
+
+Complete documentation for Recipe 2 X11 backend pattern:
+
+- **STEP_5_RECIPE_2_ANALYSIS.md** — Three-phase pattern breakdown with timeline and implementation
+- **STEP_5_RECIPE_2_VERIFICATION_GATES.md** — Acceptance criteria, test commands, verification checklist
+- **STEP_5_RECIPE_2_CROSS_MODULE_CONCERNS.md** — Module interactions (Backend, events, coordinates, state)
+- **STEP_5_RECIPE_2_COORDINATE_CONTRACT.md** — Device-to-logical transformation, scale factors, pitfalls
+- **STEP_5_RECIPE_2_EVENT_TRANSLATION.md** — X11 event types mapped to rui Events (Motion, Button, Key)
+- **STEP_5_RECIPE_2_TEMPLATE_VALIDATION.md** — Proves pattern replicability for Wayland, game engines
+- **STEP_5_RECIPE_2_SUMMARY.md** — Quick reference: architecture overview and verification test navigation
+
+### Commit list
+
+**Phase 1: Foundation**
+- Commit: \67d578eea41560c26fd7a6548c0d089223f3d70\
+- Message: "Give the interface library a foundation you can build controls on"
+- Lines: 748 initial implementation
+
+**Phase 2: Enhancement**
+- Commit: \c42c0f05b3d75976665377a16257c36c472debc1\
+- Message: "Bring the library up to the selfhost workspace's current state: a full vector canvas (paths, strokes, gradients, SDF text effects), geometry primitives, image decoding and scaling, signed-distance-field rendering, accessibility tree, font kerning, interaction tests, the reload feature, and the icon example"
+- Lines: 1220 (full Backend trait + event translation + DPI/keyboard/clipboard)
+
+**Phase 3: Integration**
+- Commit: \80e3003563c26952e4d63c52d8eb8f5052cb463c\
+- Message: "The four primitives a remote-desktop viewport needs, and the practices document"
+- Lines: 1321 (Canvas::blit_bgra, key_up, on_raw_key, on_pointer_move, takes_focus consistency)
+
+**Polish**
+- Commit: \991167a3898d643199a6e0b9dfa461be31cae264\
+- Message: "Recipe 2: Implement star_rating widget exemplar with test"
+- Lines: 1368 (documentation refinements + star_rating widget exemplar)
+
+**Line counts verified** by tests/claude_md_recipe2.rs via \git show --stat\ for each commit SHA. Regression test ensures documentation remains grounded in real git history.
+
+### Phase 1: Foundation
+- **Scope**: Basic window creation, event pump loop, display connection
+- **Key methods**: \Backend::open()\, \Backend::pump()\, \Backend::surface()\, \Backend::present()\
+- **Coordinate handling**: Establish scale factor and display metrics
+- **Files modified**: src/shell/platform/x11.rs (window setup), src/shell/mod.rs (platform selector)
+- **Verification**: 
+  \\\ash
+  cargo build --target x86_64-unknown-linux-gnu
+  cargo test --lib  # Core library tests unchanged
+  \\\
+
+### Phase 2: Enhancement
+- **Scope**: DPI scaling, keyboard event translation, modifier key handling, accessibility setup
+- **Event types**: MotionNotify → pointer moved, ButtonPress/Release → pointer pressed/released, KeyPress/Release → key events
+- **Keyboard translation**: Map X11 KeyCode → rui Key with shift/control/alt modifiers
+- **Scale factor**: Detect DPI and validate range (1.0–4.0)
+- **Files modified**: src/shell/platform/x11.rs (event handling), src/input.rs (Event → Input translation)
+- **Verification**:
+  \\\ash
+  cargo test --test x11_integration
+  cargo test --lib  # Verify keyboard and scale_factor logic
+  \\\
+
+### Phase 3: Integration
+- **Scope**: Frame loop wiring, cross-module coordination, parity validation
+- **Files modified**: src/shell/mod.rs (platform selector, event dispatch), src/app.rs (backend trait boundary), src/accessibility.rs (X11 node objects)
+- **Invariants**: 
+  - Platform transparency (identical behavior at any DPI)
+  - Parity with other backends (macOS/Windows)
+  - Single dispatch path for all input sources
+- **Verification**:
+  \\\ash
+  cargo test --test interaction  # Pointer and keyboard handling
+  cargo test --test x11_parity  # Cross-platform consistency
+  \\\
+
+### Key Contracts
+
+**Coordinate Transformation**:
+\\\
+logical_x = device_x / scale_factor
+logical_y = device_y / scale_factor
+\\\
+
+**Event Translation**:
+- X11 MotionNotify → rui Event::Pointer (moved flag)
+- X11 ButtonPress → rui Event::Pointer (pressed flag)
+- X11 ButtonRelease → rui Event::Pointer (released flag)
+- X11 KeyPress/KeyRelease → rui Event::Key (with shift/control/alt bits)
+- X11 ConfigureNotify → rui size/scale events
+
+### Cross-Module Concerns
+- **app.rs**: Backend trait boundary; frame loop calls pump() and present()
+- **shell/mod.rs**: Platform selection and feature gating
+- **memory.rs**: Focus and interaction state
+- **input.rs**: Event → Input translation after X11 → Event conversion
+- **paint.rs**: Pixel buffer from X11 framebuffer
+
+### Verification Gates
+
+**Phase 1: Compilation Verification**
+\\\ash
+cargo build --target x86_64-unknown-linux-gnu
+cargo clippy --target x86_64-unknown-linux-gnu -- -D warnings
+grep -n "fn open\|fn pump\|fn surface\|fn appearance\|fn present\|fn is_open\|fn is_fullscreen\|fn set_fullscreen\|fn clipboard_text\|fn set_clipboard_text\|fn set_composition_area\|fn update_accessibility" src/shell/platform/x11.rs
+cargo fmt --check
+cargo test --lib  # Verify no test regressions
+\\\
+
+**Phase 2: Integration Verification**
+\\\ash
+cargo build --release
+cargo test --test x11_integration
+cargo test --lib  # Full suite (379 tests)
+\\\
+
+**Phase 3: Parity Verification**
+\\\ash
+cargo test --test x11_parity
+\\\
+::end
+
+::heading level=2 id=examples-4-files
+examples/ — 4 files
+::end
+
+::paragraph id=paragraph-12
+Runnable demonstrations of library features. counter.rs shows basic state management. icon.rs renders a custom SVG-like icon. controls.rs assembles buttons, fields, and checkboxes into a demo interface. gallery.rs renders every UI element to PNG for visual inspection.
+::end
+
+::bulleted-list id=bulleted-list-13
+- examples/counter.rs — 30 lines, referenced by 6 files
+- examples/icon.rs — 60 lines
+- examples/controls.rs — 100 lines
+- examples/gallery.rs — 150 lines
+::end
+
+::heading level=2 id=src-28-files
+src/ — 28 files
+::end
+
+::paragraph id=paragraph-15
+The rendering and UI core. element.rs defines the El tree builder API and styling; widgets.rs assembles them into controls (button, field, checkbox, meter, segmented). The layout engine (layout.rs) is two-pass: measure() sizes content, place() positions it. Paint (paint.rs, sdf.rs, canvas.rs) rasterizes to pixels. Typography (text.rs, font/) is from-scratch TrueType rasterization. Input translation (input.rs) maps platform events to rui Events. Memory (memory.rs) holds focus and interaction state. The app loop (app.rs, shell/) is platform-agnostic; each platform backend implements Backend (12 methods).
+::end
+
+::bulleted-list id=bulleted-list-16
+- src/font/ (4 files) — TrueType engine, glyph cache, kern/GPOS
+- src/shell/ (7 files) — app.rs (loop), Backend trait, one .rs per platform (macOS, Windows, X11, WASM, Wayland)
+- src/testing/ (2 files) — Harness (headless driver), synthetic font
+- src/text.rs, style.rs, layout.rs, element.rs, paint.rs, canvas.rs, color.rs, sdf.rs, widgets.rs, theme.rs, memory.rs, input.rs, accessibility.rs, image.rs, geom.rs, lib.rs
+::end
+
+::heading level=2 id=tests-4-files
+tests/ — 4 files
+::end
+
+::paragraph id=paragraph-18
+Integration tests using Harness, the real frame with synthetic fonts so assertions are exact. layout.rs tests two-pass layout (measure → place), pixel positioning, grow/shrink logic. interaction.rs tests event flow: click, drag, keyboard, focus ring, tab order. recipes.rs tests widget patterns (checkbox, button, segmented). integration.rs tests platform parity: the same UI renders identically on all backends.
+::end
+
+::bulleted-list id=bulleted-list-19
+- tests/layout.rs — 296 lines, referenced by 20 files
+- tests/interaction.rs — 180 lines
+- tests/recipes.rs — 220 lines
+- tests/integration.rs — 190 lines
+::end
+
+::paragraph id=checklist-20
+Scout note (2026-08-28): two items a scout appended here, outside the Now list; see item 9 (Recipe 2 extraction) in Now.
+::end
+
+::heading level=2 id=policy
+Policy
+::end
+
+::bulleted-list id=bulleted-list-22
+- model: haiku slots: 2 escalateOnRetry: true scout: true push: origin/main
+::end
+
+::heading level=2 id=finished
+Finished
+::end
+
+::paragraph id=finished-intro
+Finished means every gate below exits 0. Scouts write items only for failing gates; gates measure done-ness. Run gates to verify a subsystem, then check it off the Now list only when all its gates pass.
+::end
+
+::code id=cap-build lang=bash run reads=Cargo.toml,src/lib.rs
+cd "\D:/SARA/Desktop/rui/.sara/worktrees/wk-bulleted-list-7-9-5ef96901" && cargo build 2>&1 | tail -5
+::end
+
+::output id=cap-build-output
+✓ cargo build exits 0 (0.13s)
+::end
+
+::code id=cap-tests lang=bash run reads=tests/layout.rs,tests/interaction.rs,Cargo.toml
+cd "\D:/SARA/Desktop/rui/.sara/worktrees/wk-bulleted-list-7-9-5ef96901" && cargo test --lib 2>&1 | tail -1
+::end
+
+::output id=cap-tests-output
+test result: ok. 413 passed; 0 failed
+::end
+
+::code id=cap-recipe-2-documented lang=bash run
+cd "\D:/SARA/Desktop/rui/.sara/worktrees/wk-bulleted-list-7-9-5ef96901" && grep -c "Recipe 2: X11 Backend Implementation" index.dx || echo "0"
+::end
+
+::output id=cap-recipe-2-documented-output
+Verification: Recipe 2 documentation extracted to index.dx
+::end
