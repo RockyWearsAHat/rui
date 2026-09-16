@@ -48,6 +48,9 @@ pub mod windows;
 #[cfg(target_os = "linux")]
 pub mod linux;
 
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
 #[cfg(target_os = "macos")]
 use macos::PanelWindowInner;
 
@@ -57,6 +60,9 @@ use windows::PanelWindowInner;
 #[cfg(target_os = "linux")]
 use linux::PanelWindowInner;
 
+#[cfg(target_arch = "wasm32")]
+use wasm::PanelWindowInner;
+
 #[cfg(target_os = "macos")]
 pub use macos::Widget;
 
@@ -65,6 +71,9 @@ pub use windows::Widget;
 
 #[cfg(target_os = "linux")]
 pub use linux::Widget;
+
+#[cfg(target_arch = "wasm32")]
+pub use wasm::Widget;
 
 use crate::Error;
 
