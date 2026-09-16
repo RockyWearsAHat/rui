@@ -86,6 +86,9 @@ pub(crate) struct Window {
     /// Every listener registered in [`Window::open`], held so none of them is
     /// freed while the browser can still call it.
     _listeners: Vec<Listener>,
+    /// Reusable buffer for RGBA conversion, allocated once and reused across frames
+    /// to avoid repeated allocations during the BGRA->RGBA byte swap.
+    rgba_buffer: RefCell<Vec<u8>>,
 }
 
 impl Window {
@@ -375,6 +378,8 @@ impl Backend for Window {
             },
         )?);
 
+        // Pre-allocate the RGBA buffer for the canvas size
+        let buffer_capacity = (width_px as usize) * (height_px as usize) * 4;
         Ok(Self {
             canvas,
             ctx,
@@ -383,6 +388,7 @@ impl Backend for Window {
             scale,
             events,
             _listeners: listeners,
+            rgba_buffer: RefCell::new(Vec::with_capacity(buffer_capacity)),
         })
     }
 
@@ -454,18 +460,32 @@ impl Backend for Window {
             return Ok(());
         }
         // `Canvas::pixels` is `0xAARRGGBB` words; `ImageData` wants four bytes
-        // per pixel in `R, G, B, A` order, so this is a per-pixel reorder and
-        // not a plain byte copy.
-        let mut rgba = Vec::with_capacity(width as usize * height as usize * 4);
-        for &pixel in canvas.pixels() {
-            let [b, g, r, a] = pixel.to_le_bytes();
-            rgba.push(r);
-            rgba.push(g);
-            rgba.push(b);
-            rgba.push(a);
+        // per pixel in `R, G, B, A` order. Instead of a per-pixel reorder loop,
+        // we reuse a cached buffer and perform an in-place byte swap: copy the
+        // u32 pixels as bytes, then swap the R and B channels in place.
+        let num_pixels = (width as usize) * (height as usize);
+        let num_bytes = num_pixels * 4;
+        let pixels = canvas.pixels();
+
+        let mut buffer = self.rgba_buffer.borrow_mut();
+        // Resize or reuse the buffer to fit the current frame size
+        buffer.clear();
+        buffer.reserve(num_bytes);
+
+        // Copy u32 pixels as u8 bytes (BGRA byte order from little-endian)
+        for &pixel in pixels {
+            let bytes = pixel.to_le_bytes();
+            buffer.extend_from_slice(&bytes);
         }
+
+        // Swap R and B channels in place: [B, G, R, A] -> [R, G, B, A]
+        // Each pixel is 4 bytes: index 0=B, 1=G, 2=R, 3=A
+        for i in (0..buffer.len()).step_by(4) {
+            buffer.swap(i, i + 2); // Swap B (i) with R (i+2)
+        }
+
         let image = ImageData::new_with_u8_clamped_array_and_sh(
-            wasm_bindgen::Clamped(&rgba),
+            wasm_bindgen::Clamped(&buffer),
             width,
             height,
         )
