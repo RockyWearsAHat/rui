@@ -89,6 +89,47 @@ use windows::TrayInner;
 #[cfg(all(target_os = "linux", not(feature = "linux-tray")))]
 struct TrayInner;
 
+#[cfg(target_arch = "wasm32")]
+struct TrayInner;
+
+#[cfg(target_arch = "wasm32")]
+impl TrayInner {
+    pub fn new(
+        _icon_data: &[u8],
+        _tooltip: &str,
+        _event_queue: Arc<Mutex<Vec<TrayEvent>>>,
+        _use_panel: bool,
+    ) -> Result<Self, crate::Error> {
+        Err(crate::Error::Platform(
+            "system tray is not supported on wasm32 (browser targets)".into(),
+        ))
+    }
+
+    pub fn set_menu(&self, _items: Vec<TrayMenuItem>) -> Result<(), crate::Error> {
+        Err(crate::Error::Platform(
+            "system tray is not supported on wasm32 (browser targets)".into(),
+        ))
+    }
+
+    pub fn set_tooltip(&self, _text: &str) -> Result<(), crate::Error> {
+        Err(crate::Error::Platform(
+            "system tray is not supported on wasm32 (browser targets)".into(),
+        ))
+    }
+
+    pub fn set_icon(&self, _data: &[u8]) -> Result<(), crate::Error> {
+        Err(crate::Error::Platform(
+            "system tray is not supported on wasm32 (browser targets)".into(),
+        ))
+    }
+
+    pub fn set_panel_mode(&self, _enabled: bool) -> Result<(), crate::Error> {
+        Err(crate::Error::Platform(
+            "system tray is not supported on wasm32 (browser targets)".into(),
+        ))
+    }
+}
+
 #[cfg(all(target_os = "linux", not(feature = "linux-tray")))]
 impl TrayInner {
     pub fn new(
