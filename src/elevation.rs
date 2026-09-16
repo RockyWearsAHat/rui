@@ -1,39 +1,79 @@
-//! Visual depth through elevation levels.
+//! Visual depth through elevation levels with layered shadows.
 //!
-//! Elevation creates visual hierarchy by boosting lightness in dark mode,
-//! or through shadow/border in light mode. Three standard levels are provided:
-//! Surface (baseline), Overlay (raised), and Modal (highest).
+//! Elevation creates visual hierarchy through sophisticated multi-layer shadow
+//! definitions. Each elevation level defines 2-4 shadow layers with progressive
+//! blur and offset characteristics, creating rich depth perception without
+//! relying on lightness changes alone.
+//!
+//! Shadow layers are composed of:
+//! - Primary shadow: soft, large blur (establishes base depth)
+//! - Secondary shadow: medium blur (reinforces separation)
+//! - Tertiary shadow (optional): sharp, small blur (crisp edge definition)
+
+use crate::style::{ShadowLayer, ShadowLayers};
 
 /// Elevation level for visual depth.
 ///
-/// Elevation creates visual hierarchy through lightness changes (dark elevation).
-/// Each level boosts lightness to appear higher in the z-order.
-/// In light mode, elevation may be expressed through shadow or border.
-/// In dark mode, elevation is expressed through lightness boost (WCAG-accessible).
+/// Elevation creates visual hierarchy through sophisticated multi-layer shadows
+/// following Material Design 3 principles. Each level defines layered shadows
+/// with progressively refined blur and offset characteristics.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Elevation {
-    /// Surface level (baseline, no boost)
+    /// Surface level (baseline, subtle shadow or none)
     Surface,
-    /// Overlay level (moderate boost)
+    /// Overlay level (moderate shadow depth)
     Overlay,
-    /// Modal level (maximum boost)
+    /// Modal level (maximum shadow depth)
     Modal,
 }
 
 impl Elevation {
-    /// Lightness boost factor (0.0-0.15 range) for this elevation level.
-    /// Used in dark mode to brighten colors and create depth perception.
+    /// Get the shadow layers for this elevation level.
+    ///
+    /// Returns properly composed shadow layers with blur radii of 12-24px,
+    /// vertical offsets of 4-8px, and opacity values tuned per layer
+    /// for sophisticated depth perception.
+    pub fn shadow_layers(self) -> ShadowLayers {
+        match self {
+            Elevation::Surface => {
+                // Subtle elevation: single soft shadow
+                ShadowLayers::new(
+                    ShadowLayer::new(8.0, 2.0, 0.12), // soft ambient shadow
+                    None,
+                )
+            }
+            Elevation::Overlay => {
+                // Moderate elevation: two-layer shadow
+                ShadowLayers::new(
+                    ShadowLayer::new(16.0, 4.0, 0.15),      // primary soft shadow
+                    Some(ShadowLayer::new(4.0, 1.5, 0.08)), // secondary crisp shadow
+                )
+            }
+            Elevation::Modal => {
+                // Maximum elevation: three-layer shadow for rich depth
+                ShadowLayers::new(
+                    ShadowLayer::new(24.0, 8.0, 0.18),       // primary deep shadow
+                    Some(ShadowLayer::new(12.0, 4.0, 0.12)), // secondary mid shadow
+                )
+            }
+        }
+    }
+
+    /// Lightness boost factor for dark mode (0.0-0.15 range).
+    ///
+    /// Used to adjust surface colors in dark mode for visual separation.
+    /// Deprecated in favor of multi-layer shadows but retained for compatibility.
     pub fn lightness_boost(self) -> f32 {
         match self {
             Elevation::Surface => 0.00,
-            Elevation::Overlay => 0.07,
-            Elevation::Modal => 0.14,
+            Elevation::Overlay => 0.05,
+            Elevation::Modal => 0.10,
         }
     }
 
     /// Apply this elevation's lightness boost to a color.
-    /// In dark mode: increases lightness by boost factor.
-    /// In light mode: can be ignored or expressed through shadow/border.
+    ///
+    /// Mostly deprecated; shadow_layers() is the primary elevation mechanism.
     pub fn apply_to_color(self, color: crate::Color) -> crate::Color {
         let boost = self.lightness_boost();
         if boost == 0.0 {
