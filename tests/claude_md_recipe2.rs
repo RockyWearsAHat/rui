@@ -511,71 +511,39 @@ fn get_file_line_count(sha: &str, filepath: &str) -> usize {
     let content = String::from_utf8(output.stdout).expect("git output not valid UTF-8");
     content.lines().count()
 }
+
 #[test]
-fn step_5_recipe_2_analysis_md_exists_and_contains_all_phases() {
-    // RED test: Verify STEP_5_RECIPE_2_ANALYSIS.md exists with all phase data
-    use std::path::Path;
-    let filepath = "STEP_5_RECIPE_2_ANALYSIS.md";
+fn recipe_2_commits_contain_both_required_files() {
+    // Verify that both src/shell/platform/x11.rs and src/shell/mod.rs
+    // appear in all 4 Recipe 2 commits as claimed in CLAUDE.md documentation
+    use std::process::Command;
 
-    assert!(
-        Path::new(filepath).exists(),
-        "STEP_5_RECIPE_2_ANALYSIS.md should exist but not found"
-    );
-
-    let content = fs::read_to_string(filepath).expect("Failed to read STEP_5_RECIPE_2_ANALYSIS.md");
-
-    // Verify all 4 commit SHAs are present
-    let required_commits = [
-        "a67d578eea41560c26fd7a6548c0d089223f3d70", // Phase 1
-        "c42c0f05b3d75976665377a16257c36c472debc1", // Phase 2
-        "80e3003563c26952e4d63c52d8eb8f5052cb463c", // Phase 3
-        "991167a3898d643199a6e0b9dfa461be31cae264", // Polish
+    let recipe_2_commits = [
+        "a67d578eea41560c26fd7a6548c0d089223f3d70", // Phase 1: Foundation
+        "c42c0f05b3d75976665377a16257c36c472debc1", // Phase 2: Enhancement
+        "80e3003563c26952e4d63c52d8eb8f5052cb463c", // Phase 3: Integration
+        "991167a3898d643199a6e0b9dfa461be31cae264", // Polish: star_rating exemplar
     ];
 
-    for commit_sha in &required_commits {
-        assert!(
-            content.contains(commit_sha),
-            "STEP_5_RECIPE_2_ANALYSIS.md should contain commit SHA: {}",
-            commit_sha
-        );
+    let required_files = ["src/shell/platform/x11.rs", "src/shell/mod.rs"];
+
+    for commit_sha in &recipe_2_commits {
+        // Run git show --name-only for this commit
+        let output = Command::new("git")
+            .args(["show", "--name-only", "--pretty=format:", commit_sha])
+            .output()
+            .expect("Failed to run git show");
+
+        let files_in_commit = String::from_utf8_lossy(&output.stdout);
+
+        // Verify both required files appear in this commit
+        for required_file in &required_files {
+            assert!(
+                files_in_commit.lines().any(|line| line.trim() == *required_file),
+                "Commit {} should contain {} (Recipe 2 documentation requires both files in all commits)",
+                commit_sha,
+                required_file
+            );
+        }
     }
-
-    // Verify all line counts are present (current values from x11.rs)
-    let required_line_counts = ["748", "1230", "1347", "1422"];
-
-    for line_count in &required_line_counts {
-        assert!(
-            content.contains(line_count),
-            "STEP_5_RECIPE_2_ANALYSIS.md should contain line count: {}",
-            line_count
-        );
-    }
-
-    // Verify phases are documented
-    let phases = [
-        "### Phase 1: Foundation",
-        "### Phase 2: Enhancement",
-        "### Phase 3: Integration",
-        "### Phase 4: Polish",
-    ];
-
-    for phase in &phases {
-        assert!(
-            content.contains(phase),
-            "STEP_5_RECIPE_2_ANALYSIS.md should document: {}",
-            phase
-        );
-    }
-
-    // Verify verification gates section
-    assert!(
-        content.contains("Verification Gate"),
-        "STEP_5_RECIPE_2_ANALYSIS.md should contain Verification gate information"
-    );
-
-    // Verify file commits section exists
-    assert!(
-        content.contains("### Files Modified"),
-        "STEP_5_RECIPE_2_ANALYSIS.md should document which files changed per phase"
-    );
 }
