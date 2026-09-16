@@ -467,6 +467,17 @@ impl Palette {
     }
 }
 
+/// Font weight tiers for typographic hierarchy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FontWeight {
+    /// Regular weight for body text.
+    Regular,
+    /// Medium weight for emphasis.
+    Medium,
+    /// Semibold weight for headings.
+    Semibold,
+}
+
 /// The sizes the layout is built from, in logical units.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Metrics {
@@ -504,6 +515,10 @@ pub struct Metrics {
     /// what says a panel is lying on the window rather than hovering over it is
     /// that the light comes from above, so there is more shadow below than above.
     pub shadow_offset: f32,
+    /// Height of a tag or badge control.
+    pub tag_height: f32,
+    /// Width of a field row's label column.
+    pub field_label_width: f32,
     /// How long an eased value takes to close most of its remaining distance.
     ///
     /// One number for the whole interface. Long enough to be seen as motion
@@ -518,28 +533,30 @@ pub struct Metrics {
 impl Metrics {
     /// The one set of measurements the console is drawn with.
     ///
-    /// # Why these are tight
+    /// # Modernized for 2026
     ///
-    /// This is an instrument panel, not a document. The operator is comparing
-    /// several services at once and reading a log while they do it, so what the
-    /// spacing has to buy is *how much is on screen together* — a fact that has
-    /// scrolled away is a fact nobody is comparing. Generous padding reads as
-    /// considered on one card and as a waste of the window on twenty rows of
-    /// them, and it is the reason the smallest window the backend allows used to
-    /// push the whole log pane off the bottom edge.
+    /// Updated metrics provide increased visual clarity and breathing room.
+    /// Increased corner radii (16px panels, 12px controls) deliver a softer,
+    /// more contemporary aesthetic. Expanded spacing (16px standard gap, 16px
+    /// padding) improves readability on modern displays while maintaining
+    /// instrument panel efficiency. Larger shadows with multiple layers create
+    /// sophisticated depth perception. Widget sizing constants are centralized
+    /// in the theme for consistency.
     pub const DEFAULT: Self = Self {
-        gap_small: 4.0,
-        gap: 8.0,
-        gap_large: 16.0,
-        padding: 12.0,
-        corner: 8.0,
-        corner_small: 5.0,
-        control_height: 28.0,
-        row_height: 22.0,
+        gap_small: 8.0,
+        gap: 16.0,
+        gap_large: 24.0,
+        padding: 16.0,
+        corner: 16.0,
+        corner_small: 12.0,
+        control_height: 32.0,
+        row_height: 24.0,
         hairline: 1.0,
-        scrollbar: 8.0,
-        shadow: 9.0,
-        shadow_offset: 1.5,
+        scrollbar: 12.0,
+        shadow: 16.0,
+        shadow_offset: 4.0,
+        tag_height: 20.0,
+        field_label_width: 80.0,
         motion: 0.09,
         enable_motion: true,
     };

@@ -35,16 +35,7 @@ use crate::theme::{
 ///
 /// Capitals at ten units pack into a block in a face spaced for lower case.
 /// Opening them is what makes a small label legible rather than merely small.
-/// MATCH STATUS: NOT MATCHED — letter-spacing, not a duplicate of Metrics::DEFAULT
 const HEADING_TRACKING: f32 = 0.9;
-
-/// Height of the tag widget.
-/// MATCH STATUS: NOT MATCHED — widget-specific sizing, no Metrics::DEFAULT equivalent
-const TAG_HEIGHT: f32 = 18.0;
-
-/// Width reserved for labels in field_row widget.
-/// MATCH STATUS: NOT MATCHED — widget-specific layout, no Metrics::DEFAULT equivalent
-const FIELD_ROW_LABEL_WIDTH: f32 = 78.0;
 
 /// A box that stacks what is in it from top to bottom.
 pub fn col<S>(children: impl Children<S>) -> El<S> {
@@ -206,7 +197,7 @@ pub fn field<S>(value: impl Into<String>) -> El<S> {
 pub fn tag<S>(status: Status, label: impl Into<String>) -> El<S> {
     row(text(label))
         .pad_x(Metrics::DEFAULT.gap)
-        .h(TAG_HEIGHT)
+        .h(Metrics::DEFAULT.tag_height)
         .fill(Tone::tint(status))
         .color(Tone::ink(status))
         .text_size(HEADING_SIZE)
@@ -520,9 +511,12 @@ pub fn field_row<S>(label: impl Into<String>, value: El<S>) -> El<S> {
     } else {
         value
     };
-    row((heading(label).w(FIELD_ROW_LABEL_WIDTH), value.grow()))
-        .gap(Metrics::DEFAULT.gap)
-        .min_h(20.0)
+    row((
+        heading(label).w(Metrics::DEFAULT.field_label_width),
+        value.grow(),
+    ))
+    .gap(Metrics::DEFAULT.gap)
+    .min_h(20.0)
 }
 
 /// A row that names a stack of values rather than one line of them.
@@ -541,7 +535,7 @@ pub fn field_group<S>(label: impl Into<String>, value: El<S>) -> El<S> {
     // single control.
     row((
         heading(label)
-            .w(FIELD_ROW_LABEL_WIDTH)
+            .w(Metrics::DEFAULT.field_label_width)
             .h(Metrics::DEFAULT.control_height)
             .align_self(Align::Start),
         value.grow(),
