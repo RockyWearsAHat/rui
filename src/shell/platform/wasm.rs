@@ -245,13 +245,13 @@ impl Backend for Window {
         // size only matters for a sharper look, and here it cost text its own
         // layout — a run measured at one size and drawn into a canvas of
         // another. Logical and physical pixels are kept equal instead.
-        let scale = 1.0f32;
+        let scale = window.device_pixel_ratio().max(1.0) as f32;
         let (width_px, height_px) = live_window_size(&window).unwrap_or((
             options.width.round().max(1.0) as u32,
             options.height.round().max(1.0) as u32,
         ));
-        canvas.set_width(width_px);
-        canvas.set_height(height_px);
+        canvas.set_width((width_px as f32 * scale).round() as u32);
+        canvas.set_height((height_px as f32 * scale).round() as u32);
         let html_element = canvas
             .dyn_ref::<web_sys::HtmlElement>()
             .ok_or_else(|| Error::Platform("canvas is not an HtmlElement".into()))?;
@@ -270,7 +270,6 @@ impl Backend for Window {
         let events: Rc<RefCell<Vec<Event>>> = Rc::new(RefCell::new(Vec::new()));
         let mut listeners = Vec::new();
         let target: web_sys::EventTarget = canvas.clone().into();
-        let scale_for_events = scale;
 
         listeners.push(listen::<web_sys::MouseEvent, _>(
             &target,
@@ -375,7 +374,6 @@ impl Backend for Window {
                 (text.chars().count() == 1).then(|| Event::Text(text))
             },
         )?);
-        let _ = scale_for_events;
 
         Ok(Self {
             canvas,
@@ -415,9 +413,12 @@ impl Backend for Window {
             .and_then(live_window_size)
             .unwrap_or((self.width, self.height));
 
-        if self.canvas.width() != width || self.canvas.height() != height {
-            self.canvas.set_width(width);
-            self.canvas.set_height(height);
+        let scaled_width = (width as f32 * self.scale).round() as u32;
+        let scaled_height = (height as f32 * self.scale).round() as u32;
+
+        if self.canvas.width() != scaled_width || self.canvas.height() != scaled_height {
+            self.canvas.set_width(scaled_width);
+            self.canvas.set_height(scaled_height);
             if let Some(html_element) = self.canvas.dyn_ref::<web_sys::HtmlElement>() {
                 let style = html_element.style();
                 let _ = style.set_property("width", &format!("{width}px"));
