@@ -458,6 +458,12 @@ struct Surface {
     /// Kept so it is told only when the answer changes, for the same reason a
     /// frame is presented only when it differs from the one on screen.
     composition_area: Option<Rect>,
+    /// True when the frame needs to be redrawn (input events, layout invalidation,
+    /// or requests from request_redraw()). Set to false after a successful draw+present,
+    /// allowing idle frames to stop rescheduling when nothing is animating.
+    /// Only used in the wasm backend.
+    #[allow(dead_code)]
+    dirty: bool,
 }
 
 impl Surface {
@@ -755,6 +761,7 @@ pub(crate) fn run<S>(
         mono_font,
         failed: None,
         composition_area: None,
+        dirty: true,
     };
     let mut events = Vec::new();
     let mut fullscreen = FullscreenSync::new(window.is_fullscreen());
@@ -960,6 +967,7 @@ pub(crate) fn run_wasm<S: 'static>(
         mono_font,
         failed: None,
         composition_area: None,
+        dirty: true,
     };
     let mut events: Vec<Event> = Vec::new();
 
@@ -980,6 +988,10 @@ pub(crate) fn run_wasm<S: 'static>(
         // `begin_frame` — the same order every native backend's turn of `run`
         // uses, so applying them here first would both double-apply them and
         // apply them before the frame state they belong to has started.
+        // Mark dirty if we have events (will be cleared to false after successful draw).
+        if !events.is_empty() {
+            surface.dirty = true;
+        }
         // Always full: wasm has no separate hidden/animating-only state to
         // fast-path around (this loop only ever runs while visible), and a
         // browser's own `requestAnimationFrame` already paces this.
@@ -996,8 +1008,16 @@ pub(crate) fn run_wasm<S: 'static>(
         if !app.is_running() || surface.input.close_requested() {
             return;
         }
-        if let Some(handle) = tick_for_closure.borrow().as_ref() {
-            let _ = browser_for_closure.request_animation_frame(handle.as_ref().unchecked_ref());
+        // Mark dirty as false after successful draw (we just processed any pending events).
+        surface.dirty = false;
+        // Only reschedule if we're dirty (had external requests) or if something is animating.
+        let should_reschedule =
+            surface.dirty || (surface.memory.is_animating() && window.is_visible());
+        if should_reschedule {
+            if let Some(handle) = tick_for_closure.borrow().as_ref() {
+                let _ =
+                    browser_for_closure.request_animation_frame(handle.as_ref().unchecked_ref());
+            }
         }
     }) as Box<dyn FnMut()>);
 
