@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [package.metadata.wasm-pack]
-wasm-opt = false
+wasm-opt = ["-Os", "--enable-bulk-memory"]
 
 [lib]
 crate-type = ["cdylib"]
