@@ -54,65 +54,22 @@
     </div>
 
     <script type="module">
-        console.log('RUI Showcase: Initializing...');
-        try {
-            // Import the wasm module
-            import init from './rui_demo.js';
+        import init from './rui_demo.js';
 
-            // Fetch and decompress the gzipped wasm binary
-            async function loadWasmGzip() {
-                console.log('Fetching rui_demo_bg.wasm.gz...');
-                const response = await fetch('./rui_demo_bg.wasm.gz');
-
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch wasm.gz: ${response.status}`);
+        (async () => {
+            try {
+                console.log('RUI Showcase: Initializing...');
+                await init();
+                document.getElementById('loading')?.classList.add('hidden');
+                console.log('RUI Showcase: Ready');
+            } catch (err) {
+                console.error('RUI Showcase failed:', err);
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.textContent = 'Error: ' + err.message;
                 }
-
-                // Check if DecompressionStream is available
-                if (!('DecompressionStream' in globalThis)) {
-                    throw new Error(
-                        'DecompressionStream not available. Your browser does not support gzip decompression. ' +
-                        'Please use a modern browser (Chrome, Edge, Firefox 130+, Safari 17.2+).'
-                    );
-                }
-
-                console.log('Decompressing wasm binary...');
-                // Create a decompression stream and decompress the gzipped wasm
-                const decompressed = response.body.pipeThrough(new DecompressionStream('gzip'));
-                const decompressedArrayBuffer = await new Response(decompressed).arrayBuffer();
-
-                console.log(`Decompressed wasm size: ${decompressedArrayBuffer.byteLength} bytes`);
-                return decompressedArrayBuffer;
             }
-
-            // Load and initialize
-            (async () => {
-                try {
-                    const wasmBytes = await loadWasmGzip();
-                    console.log('Initializing wasm module...');
-                    await init(wasmBytes);
-
-                    // Hide loading indicator
-                    const loading = document.getElementById('loading');
-                    if (loading) {
-                        loading.classList.add('hidden');
-                    }
-                    console.log('RUI Showcase: Ready');
-                } catch (err) {
-                    console.error('RUI Showcase initialization failed:', err);
-                    const loading = document.getElementById('loading');
-                    if (loading) {
-                        loading.textContent = 'Error loading showcase: ' + err.message;
-                    }
-                }
-            })();
-        } catch (err) {
-            console.error('RUI Showcase failed to initialize:', err);
-            const loading = document.getElementById('loading');
-            if (loading) {
-                loading.textContent = 'Error loading showcase: ' + err.message;
-            }
-        }
+        })();
     </script>
 </body>
 </html>
