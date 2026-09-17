@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RUI Showcase</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #333;
+        }
+
+        #rui-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f5f5f5;
+            font-family: system-ui, -apple-system, sans-serif;
+            z-index: -1;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="rui-canvas"></canvas>
+    <div class="loading" id="loading">
+        <div>Loading RUI showcase…</div>
+    </div>
+
+    <script type="module">
+        console.log('RUI Showcase: Initializing...');
+        try {
+            // Boot the app using the chunked wasm loader
+            // The wasm binary is split into 22 chunks due to the ~1MB upload limit,
+            // so we use the wasm-chunk-loader to reconstruct it
+            console.log('Loading rui_demo module (chunked)...');
+            import('./wasm-chunk-loader.js').then(() => {
+                // Hide loading indicator
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.classList.add('hidden');
+                }
+                console.log('RUI Showcase: Ready');
+            });
+        } catch (err) {
+            console.error('RUI Showcase failed to initialize:', err);
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.textContent = 'Error loading showcase: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>
