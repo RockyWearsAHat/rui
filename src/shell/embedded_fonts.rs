@@ -8,6 +8,9 @@ use crate::shell::Error;
 /// Parses the embedded UI font (DejaVuSans).
 #[allow(dead_code)]
 pub fn embedded_ui_font() -> Result<Font, Error> {
+    #[cfg(target_arch = "wasm32")]
+    let bytes = include_bytes!("../../assets/fonts/subset-wasm/DejaVuSans-subset.ttf");
+    #[cfg(not(target_arch = "wasm32"))]
     let bytes = include_bytes!("../../assets/fonts/DejaVuSans.ttf");
     Font::parse(bytes.to_vec()).map_err(Error::Font)
 }
@@ -15,6 +18,9 @@ pub fn embedded_ui_font() -> Result<Font, Error> {
 /// Parses the embedded mono font (DejaVuSansMono).
 #[allow(dead_code)]
 pub fn embedded_mono_font() -> Result<Font, Error> {
+    #[cfg(target_arch = "wasm32")]
+    let bytes = include_bytes!("../../assets/fonts/subset-wasm/DejaVuSansMono-subset.ttf");
+    #[cfg(not(target_arch = "wasm32"))]
     let bytes = include_bytes!("../../assets/fonts/DejaVuSansMono.ttf");
     Font::parse(bytes.to_vec()).map_err(Error::Font)
 }
