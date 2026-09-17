@@ -14,22 +14,27 @@
 //! silent one is a bug report from a person who thought their keyboard was
 //! broken.
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "macos"))]
 #[path = "macos.rs"]
 #[allow(unsafe_code, reason = "AppKit and Core Graphics are C and Objective-C")]
 mod backend;
 
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", feature = "windows"))]
 #[path = "windows.rs"]
 #[allow(unsafe_code, reason = "the Win32 window and bitmap calls are C")]
 mod backend;
 
-#[cfg(all(unix, not(target_os = "macos"), not(feature = "wayland")))]
+#[cfg(all(
+    unix,
+    not(target_os = "macos"),
+    feature = "x11",
+    not(feature = "wayland-backend")
+))]
 #[path = "x11.rs"]
 #[allow(unsafe_code, reason = "Xlib is C")]
 mod backend;
 
-#[cfg(all(unix, not(target_os = "macos"), feature = "wayland"))]
+#[cfg(all(unix, not(target_os = "macos"), feature = "wayland-backend"))]
 #[path = "wayland.rs"]
 #[allow(unsafe_code, reason = "Wayland protocol and platform calls")]
 mod backend;
@@ -37,15 +42,21 @@ mod backend;
 // Matched before the fallback arm below: wasm32 is `not(unix)` and would
 // otherwise land in `unsupported.rs`, which is exactly the backend Forge's
 // web UI was silently getting.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
 #[path = "wasm.rs"]
 mod backend;
 
 #[cfg(not(any(
-    target_os = "macos",
-    target_os = "windows",
-    unix,
-    target_arch = "wasm32"
+    all(target_os = "macos", feature = "macos"),
+    all(target_os = "windows", feature = "windows"),
+    all(
+        unix,
+        not(target_os = "macos"),
+        feature = "x11",
+        not(feature = "wayland-backend")
+    ),
+    all(unix, not(target_os = "macos"), feature = "wayland-backend"),
+    all(target_arch = "wasm32", feature = "wasm")
 )))]
 #[path = "unsupported.rs"]
 mod backend;

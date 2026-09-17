@@ -18,10 +18,18 @@ crate-type = ["rlib"]
 [dependencies]
 
 [features]
-wayland = []
+default = ["macos", "windows", "x11", "wayland-backend"]
+# Native platform backends
+macos = []
+windows = []
+x11 = []
+wayland-backend = []
+wasm = []
 reload = []
 # Linux tray feature: requires D-Bus and system integration
 linux-tray = []
+# Wayland display server (legacy feature name for backward compat)
+wayland = ["wayland-backend"]
 
 # Except in a browser, where the platform is not callable from Rust at all: its
 # windows and its canvases are JavaScript objects, and `wasm-bindgen` *is* the
