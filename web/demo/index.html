@@ -56,10 +56,31 @@
     <script type="module">
         import init from './rui_demo.js';
 
+        const CHUNKS = ['aa', 'ab', 'ac', 'ad'];
+
+        async function loadWasmBytes() {
+            const parts = await Promise.all(
+                CHUNKS.map(async (suffix) => {
+                    const res = await fetch(`./rui_demo_bg.wasm.chunk.${suffix}`);
+                    if (!res.ok) throw new Error(`chunk ${suffix} failed: ${res.status}`);
+                    return new Uint8Array(await res.arrayBuffer());
+                })
+            );
+            const total = parts.reduce((n, p) => n + p.length, 0);
+            const bytes = new Uint8Array(total);
+            let offset = 0;
+            for (const p of parts) {
+                bytes.set(p, offset);
+                offset += p.length;
+            }
+            return bytes;
+        }
+
         (async () => {
             try {
                 console.log('RUI Showcase: Initializing...');
-                await init();
+                const wasmBytes = await loadWasmBytes();
+                await init({ module_or_path: wasmBytes });
                 document.getElementById('loading')?.classList.add('hidden');
                 console.log('RUI Showcase: Ready');
             } catch (err) {
