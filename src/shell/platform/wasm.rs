@@ -89,6 +89,8 @@ pub(crate) struct Window {
     /// Reusable buffer for RGBA conversion, allocated once and reused across frames
     /// to avoid repeated allocations during the BGRA->RGBA byte swap.
     rgba_buffer: RefCell<Vec<u8>>,
+    /// Hash of the previous frame's pixels for dirty-frame detection
+    previous_frame_hash: RefCell<u64>,
 }
 
 impl Window {
@@ -270,6 +272,9 @@ impl Backend for Window {
             .dyn_into::<CanvasRenderingContext2d>()
             .map_err(|_| Error::Platform("2d context was the wrong type".into()))?;
 
+        // Enable high-quality image rendering for better visual quality
+        ctx.set_image_smoothing_enabled(true);
+
         let events: Rc<RefCell<Vec<Event>>> = Rc::new(RefCell::new(Vec::new()));
         let mut listeners = Vec::new();
         let target: web_sys::EventTarget = canvas.clone().into();
@@ -389,6 +394,7 @@ impl Backend for Window {
             events,
             _listeners: listeners,
             rgba_buffer: RefCell::new(Vec::with_capacity(buffer_capacity)),
+            previous_frame_hash: RefCell::new(0),
         })
     }
 
@@ -459,29 +465,46 @@ impl Backend for Window {
         if width == 0 || height == 0 {
             return Ok(());
         }
-        // `Canvas::pixels` is `0xAARRGGBB` words; `ImageData` wants four bytes
-        // per pixel in `R, G, B, A` order. Instead of a per-pixel reorder loop,
-        // we reuse a cached buffer and perform an in-place byte swap: copy the
-        // u32 pixels as bytes, then swap the R and B channels in place.
+
+        let pixels = canvas.pixels();
         let num_pixels = (width as usize) * (height as usize);
         let num_bytes = num_pixels * 4;
-        let pixels = canvas.pixels();
 
+        // Quick hash-based dirty-frame detection: compute a simple hash of the
+        // pixel data to detect if the frame changed since the last present.
+        let mut frame_hash: u64 = 0;
+        for (i, &pixel) in pixels.iter().enumerate() {
+            frame_hash = frame_hash.wrapping_mul(31).wrapping_add(pixel as u64);
+            if i % 1000 == 0 {
+                frame_hash = frame_hash.wrapping_add((i as u64) * 73);
+            }
+        }
+
+        // Skip redraw if frame is identical to previous frame
+        let mut prev_hash = self.previous_frame_hash.borrow_mut();
+        if frame_hash == *prev_hash {
+            return Ok(());
+        }
+        *prev_hash = frame_hash;
+        drop(prev_hash); // Release the borrow
+
+        // Single-pass BGRA->RGBA conversion: extract bytes from u32 directly
+        // in R,G,B,A order into the destination buffer. This replaces the
+        // two-pass approach (copy + swap) with a single loop that writes
+        // directly to the output.
         let mut buffer = self.rgba_buffer.borrow_mut();
-        // Resize or reuse the buffer to fit the current frame size
         buffer.clear();
         buffer.reserve(num_bytes);
 
-        // Copy u32 pixels as u8 bytes (BGRA byte order from little-endian)
+        // Direct single-pass conversion: for each u32 pixel (0xAARRGGBB in
+        // little-endian, stored as [B, G, R, A] bytes), write [R, G, B, A]
         for &pixel in pixels {
             let bytes = pixel.to_le_bytes();
-            buffer.extend_from_slice(&bytes);
-        }
-
-        // Swap R and B channels in place: [B, G, R, A] -> [R, G, B, A]
-        // Each pixel is 4 bytes: index 0=B, 1=G, 2=R, 3=A
-        for i in (0..buffer.len()).step_by(4) {
-            buffer.swap(i, i + 2); // Swap B (i) with R (i+2)
+            // bytes = [B, G, R, A]; write as [R, G, B, A]
+            buffer.push(bytes[2]); // R
+            buffer.push(bytes[1]); // G
+            buffer.push(bytes[0]); // B
+            buffer.push(bytes[3]); // A
         }
 
         let image = ImageData::new_with_u8_clamped_array_and_sh(
