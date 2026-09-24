@@ -348,6 +348,13 @@ trait Backend: Sized {
     /// Copies a frame onto the screen.
     fn present(&self, canvas: &Canvas) -> Result<(), Error>;
 
+    /// Whether this backend draws a recorded frame on a GPU rather than
+    /// copying pixels; see [`crate::gpu`]. The surface's canvases record
+    /// instead of rasterising when it does.
+    fn records(&self) -> bool {
+        false
+    }
+
     /// Copies only `dirty` (this canvas's own logical units) onto the
     /// screen, for a backend that can update less than the whole window
     /// cheaper than [`Self::present`] can update all of it.
@@ -500,6 +507,9 @@ impl Surface {
             self.drawn.resize(width, height, scale);
             self.presented.resize(width, height, scale);
         }
+        let records = window.records();
+        self.drawn.set_recording(records);
+        self.presented.set_recording(records);
         fonts.set_scale(scale);
 
         // The application's own, if it supplied one — asked here rather than
@@ -556,7 +566,7 @@ impl Surface {
             window.update_accessibility(update)?;
         }
 
-        if self.drawn.pixels() != self.presented.pixels() {
+        if !self.drawn.same_picture(&self.presented) {
             // Always the full present here, deliberately — see the reverted
             // attempt at using `present_partial` for this branch, below.
             //
@@ -920,8 +930,30 @@ thread_local! {
     /// pass a fetch callback later. wasm is single-threaded, so a thread-local
     /// is exactly as global as this program is ever going to get, and there is
     /// only ever one browser window per program to hold here.
-    static WASM_TICK: std::cell::RefCell<Option<(web_sys::Window, std::rc::Rc<std::cell::RefCell<Option<wasm_bindgen::closure::Closure<dyn FnMut()>>>>)>> =
+    static WASM_TICK: std::cell::RefCell<Option<(web_sys::Window, std::rc::Rc<std::cell::RefCell<Option<wasm_bindgen::closure::Closure<dyn FnMut(wasm_bindgen::JsValue)>>>>)>> =
         std::cell::RefCell::new(None);
+
+    /// Whether a `requestAnimationFrame` turn of the loop is already queued.
+    ///
+    /// There must only ever be one. The loop reschedules itself while
+    /// something animates, and it is also entered synchronously from
+    /// [`request_redraw`] — so without this, every input event that arrived
+    /// during an animation started a *second* self-perpetuating chain, and a
+    /// burst of forty wheel events left forty chains each drawing a full frame
+    /// every vsync: a tab frozen solid by its own scroll.
+    static WASM_FRAME_PENDING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+
+    /// When the loop last drew, in `performance.now()` milliseconds.
+    static WASM_LAST_DRAW: std::cell::Cell<f64> = const { std::cell::Cell::new(f64::NEG_INFINITY) };
+}
+
+/// `performance.now()`, or 0 where there is none.
+#[cfg(target_arch = "wasm32")]
+fn wasm_now() -> f64 {
+    web_sys::window()
+        .and_then(|w| w.performance())
+        .map(|p| p.now())
+        .unwrap_or(0.0)
 }
 
 /// The wasm32 twin of [`run`].
@@ -975,13 +1007,19 @@ pub(crate) fn run_wasm<S: 'static>(
     // a handle to its own closure, which cannot exist until the closure does
     // — hence the shared, initially-empty cell every such loop in
     // `wasm-bindgen` code goes through.
-    let tick: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
+    let tick: Rc<RefCell<Option<Closure<dyn FnMut(JsValue)>>>> = Rc::new(RefCell::new(None));
     let tick_for_closure = Rc::clone(&tick);
 
     let browser = web_sys::window().ok_or_else(|| Error::Platform("no browser window".into()))?;
     let browser_for_closure = browser.clone();
 
-    let closure = Closure::wrap(Box::new(move || {
+    let closure = Closure::wrap(Box::new(move |stamp: JsValue| {
+        // `requestAnimationFrame` passes a timestamp; `request_redraw` calls
+        // this directly with none. Only the former consumes the queued turn.
+        if !stamp.is_undefined() {
+            WASM_FRAME_PENDING.with(|p| p.set(false));
+        }
+        WASM_LAST_DRAW.with(|t| t.set(wasm_now()));
         events.clear();
         events.append(&mut dom_events.borrow_mut());
         // `Surface::draw` folds `events` into `Input` itself, after its own
@@ -1013,17 +1051,22 @@ pub(crate) fn run_wasm<S: 'static>(
         // Only reschedule if we're dirty (had external requests) or if something is animating.
         let should_reschedule =
             surface.dirty || (surface.memory.is_animating() && window.is_visible());
-        if should_reschedule {
+        if should_reschedule && !WASM_FRAME_PENDING.with(|p| p.get()) {
             if let Some(handle) = tick_for_closure.borrow().as_ref() {
-                let _ =
-                    browser_for_closure.request_animation_frame(handle.as_ref().unchecked_ref());
+                if browser_for_closure
+                    .request_animation_frame(handle.as_ref().unchecked_ref())
+                    .is_ok()
+                {
+                    WASM_FRAME_PENDING.with(|p| p.set(true));
+                }
             }
         }
-    }) as Box<dyn FnMut()>);
+    }) as Box<dyn FnMut(JsValue)>);
 
     browser
         .request_animation_frame(closure.as_ref().unchecked_ref())
         .map_err(|_| Error::Platform("could not schedule the first frame".into()))?;
+    WASM_FRAME_PENDING.with(|p| p.set(true));
     *tick.borrow_mut() = Some(closure);
 
     // So `request_redraw` (below) can ask this same self-rescheduling chain
@@ -1058,8 +1101,26 @@ pub fn request_redraw() {
     {
         use wasm_bindgen::JsCast;
         WASM_TICK.with(|cell| {
-            if let Some((_browser, tick)) = cell.borrow().as_ref() {
+            if let Some((browser, tick)) = cell.borrow().as_ref() {
+                // A queued turn will pick this up; drawing now as well would
+                // draw twice in one vsync.
+                if WASM_FRAME_PENDING.with(|p| p.get()) {
+                    return;
+                }
                 if let Some(handle) = tick.borrow().as_ref() {
+                    // Drew within the last frame: queue one turn rather than
+                    // drawing again, so a burst of events (a trackpad sends
+                    // one every few milliseconds) costs one frame, not one
+                    // each.
+                    if wasm_now() - WASM_LAST_DRAW.with(|t| t.get()) < 12.0 {
+                        if browser
+                            .request_animation_frame(handle.as_ref().unchecked_ref())
+                            .is_ok()
+                        {
+                            WASM_FRAME_PENDING.with(|p| p.set(true));
+                        }
+                        return;
+                    }
                     // Called directly, synchronously, rather than scheduled
                     // through `requestAnimationFrame` or even `setTimeout`:
                     // both are answered on the browser's own paint/timer

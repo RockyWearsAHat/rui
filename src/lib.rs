@@ -139,6 +139,7 @@ pub mod element;
 pub mod elevation;
 pub mod font;
 pub mod geom;
+pub mod gpu;
 pub mod icon;
 pub mod image;
 pub mod input;

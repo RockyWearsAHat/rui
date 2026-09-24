@@ -40,6 +40,31 @@ use crate::shell::{Backend, Error, WindowOptions};
 use crate::theme::Appearance;
 use crate::Canvas;
 
+// The WebGPU presenter; see webgpu.js for why it is JS and when the device is
+// requested.
+#[cfg(feature = "webgpu")]
+#[wasm_bindgen(module = "/src/shell/platform/webgpu.js")]
+extern "C" {
+    fn rui_gpu_available() -> bool;
+    fn rui_gpu_attach(canvas: &HtmlCanvasElement, shader: &str) -> bool;
+    fn rui_gpu_atlas(x: u32, y: u32, w: u32, h: u32, bytes: &[u8]);
+    fn rui_gpu_image(id: u32, w: u32, h: u32, bytes: &[u8]);
+    fn rui_gpu_drop_image(id: u32);
+    fn rui_gpu_frame(width: u32, height: u32, shapes: &[f32], batches: &[u32], clear: &[f32]) -> bool;
+}
+
+/// Puts the canvas under WebGPU if the page has a device for it. A canvas
+/// holds one kind of context for life, so this is asked before the 2D one.
+#[cfg(feature = "webgpu")]
+fn attach_gpu(canvas: &HtmlCanvasElement) -> bool {
+    rui_gpu_available() && rui_gpu_attach(canvas, crate::gpu::SHADER)
+}
+
+#[cfg(not(feature = "webgpu"))]
+fn attach_gpu(_canvas: &HtmlCanvasElement) -> bool {
+    false
+}
+
 /// The id the canvas element must have, in the host page's HTML.
 ///
 /// Fixed rather than configurable: one program, one canvas, one obvious place
@@ -75,7 +100,12 @@ type Listener = Closure<dyn FnMut(DomEvent)>;
 /// The canvas backend.
 pub(crate) struct Window {
     canvas: HtmlCanvasElement,
-    ctx: CanvasRenderingContext2d,
+    /// The 2D context, when the frame is presented as pixels; `None` when it
+    /// is drawn by WebGPU instead.
+    ctx: Option<CanvasRenderingContext2d>,
+    /// Reused across GPU frames: the flat instance list and batch words.
+    gpu_floats: RefCell<Vec<f32>>,
+    gpu_words: RefCell<Vec<u32>>,
     /// Device pixels; kept apart from the canvas's own attributes so `surface`
     /// need not round-trip through the DOM every frame.
     width: u32,
@@ -214,6 +244,56 @@ pub(crate) fn with_window<T>(f: impl FnOnce(&mut Window) -> Result<T, Error>) ->
     })
 }
 
+impl Window {
+    /// Draws a recorded frame with WebGPU: uploads whatever textures it newly
+    /// needs, then the instance list, then one draw per batch.
+    #[cfg(feature = "webgpu")]
+    fn present_gpu(&self, canvas: &Canvas) -> Result<(), Error> {
+        let Some(rec) = canvas.recording() else {
+            return Ok(());
+        };
+        let (glyphs, images, drops, generation) = crate::gpu::with_textures(|t| {
+            t.begin_frame();
+            (
+                t.take_atlas_uploads(),
+                t.take_image_uploads(),
+                t.take_image_drops(),
+                t.atlas_generation(),
+            )
+        });
+        for id in drops {
+            rui_gpu_drop_image(id);
+        }
+        for (x, y, w, h, bytes) in glyphs {
+            rui_gpu_atlas(x, y, w, h, &bytes);
+        }
+        for (id, w, h, bytes) in images {
+            rui_gpu_image(id, w, h, &bytes);
+        }
+        let mut floats = self.gpu_floats.borrow_mut();
+        rec.floats_into(&mut floats);
+        let mut words = self.gpu_words.borrow_mut();
+        words.clear();
+        for batch in &rec.batches {
+            let add = u32::from(batch.blend == crate::gpu::Blend::Add);
+            words.extend_from_slice(&[batch.first, batch.count, add, batch.image]);
+        }
+        let clear = rec.clear.map(|c| c.to_vec()).unwrap_or_default();
+        rui_gpu_frame(canvas.width(), canvas.height(), &floats, &words, &clear);
+        // The atlas filled and was emptied while this frame was recorded, so
+        // some of its glyphs point at masks that are gone: draw it again.
+        if rec.atlas_generation != generation {
+            crate::shell::request_redraw();
+        }
+        Ok(())
+    }
+
+    #[cfg(not(feature = "webgpu"))]
+    fn present_gpu(&self, _canvas: &Canvas) -> Result<(), Error> {
+        Ok(())
+    }
+}
+
 impl Backend for Window {
     fn open(options: &WindowOptions) -> Result<Self, Error> {
         let window =
@@ -265,15 +345,18 @@ impl Backend for Window {
         let _ = style.set_property("height", &format!("{}px", height_px));
         let _ = canvas.set_attribute("tabindex", "0");
 
-        let ctx = canvas
-            .get_context("2d")
-            .map_err(|_| Error::Platform("could not get 2d context".into()))?
-            .ok_or_else(|| Error::Platform("no 2d context available".into()))?
-            .dyn_into::<CanvasRenderingContext2d>()
-            .map_err(|_| Error::Platform("2d context was the wrong type".into()))?;
-
-        // Enable high-quality image rendering for better visual quality
-        ctx.set_image_smoothing_enabled(true);
+        let ctx = if attach_gpu(&canvas) {
+            None
+        } else {
+            let ctx = canvas
+                .get_context("2d")
+                .map_err(|_| Error::Platform("could not get 2d context".into()))?
+                .ok_or_else(|| Error::Platform("no 2d context available".into()))?
+                .dyn_into::<CanvasRenderingContext2d>()
+                .map_err(|_| Error::Platform("2d context was the wrong type".into()))?;
+            ctx.set_image_smoothing_enabled(true);
+            Some(ctx)
+        };
 
         let events: Rc<RefCell<Vec<Event>>> = Rc::new(RefCell::new(Vec::new()));
         let mut listeners = Vec::new();
@@ -329,9 +412,18 @@ impl Backend for Window {
             "wheel",
             Rc::clone(&events),
             move |wheel| {
+                // The DOM's delta is how far the *viewport* moves (positive =
+                // down the page); rui's, like the native backends', is how far
+                // the *content* moves. Opposite signs. Line-mode deltas (Firefox
+                // with a notched wheel) come in lines, not pixels.
+                let unit = match wheel.delta_mode() {
+                    1 => 16.0,
+                    2 => 400.0,
+                    _ => 1.0,
+                };
                 Some(Event::Scrolled {
-                    x: wheel.delta_x() as f32,
-                    y: wheel.delta_y() as f32,
+                    x: -(wheel.delta_x() as f32) * unit,
+                    y: -(wheel.delta_y() as f32) * unit,
                 })
             },
         )?);
@@ -388,6 +480,8 @@ impl Backend for Window {
         Ok(Self {
             canvas,
             ctx,
+            gpu_floats: RefCell::new(Vec::new()),
+            gpu_words: RefCell::new(Vec::new()),
             width: width_px,
             height: height_px,
             scale,
@@ -438,7 +532,9 @@ impl Backend for Window {
             }
         }
 
-        (width, height, self.scale)
+        // Device pixels, like every other backend: the shell divides by
+        // `scale` to get the logical size it lays out in.
+        (scaled_width, scaled_height, self.scale)
     }
 
     fn appearance(&self) -> Appearance {
@@ -459,12 +555,19 @@ impl Backend for Window {
             .unwrap_or(Appearance::Light)
     }
 
+    fn records(&self) -> bool {
+        self.ctx.is_none()
+    }
+
     fn present(&self, canvas: &Canvas) -> Result<(), Error> {
         let width = canvas.width();
         let height = canvas.height();
         if width == 0 || height == 0 {
             return Ok(());
         }
+        let Some(ctx) = &self.ctx else {
+            return self.present_gpu(canvas);
+        };
 
         let pixels = canvas.pixels();
         let num_pixels = (width as usize) * (height as usize);
@@ -513,7 +616,7 @@ impl Backend for Window {
             height,
         )
         .map_err(|_| Error::Platform("could not build ImageData".into()))?;
-        self.ctx
+        ctx
             .put_image_data(&image, 0.0, 0.0)
             .map_err(|_| Error::Platform("could not present the frame".into()))?;
         let _ = &self.canvas;

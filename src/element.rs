@@ -79,6 +79,9 @@ pub type ScrollAction<S> = Box<dyn Fn(&mut S, f32, f32)>;
 /// What the pointer arriving or leaving does, given which of the two it was.
 pub type HoverAction<S> = Box<dyn Fn(&mut S, bool)>;
 
+/// What an element landing somewhere new does, given where it now is.
+pub type PlacedAction<S> = Box<dyn Fn(&mut S, Rect)>;
+
 /// What a pointer moving over an element does, given where within it it now is.
 pub type PointerAction<S> = Box<dyn Fn(&mut S, Pointing)>;
 
@@ -192,6 +195,7 @@ pub struct El<S> {
     pub(crate) on_scroll: Option<ScrollAction<S>>,
     pub(crate) on_hover: Option<HoverAction<S>>,
     pub(crate) on_pointer_move: Option<PointerAction<S>>,
+    pub(crate) on_placed: Option<PlacedAction<S>>,
     /// Whether it takes the keyboard, and takes a place in the tab order.
     pub(crate) focusable: bool,
     /// Whether it lightens under the pointer and darkens under a press.
@@ -272,6 +276,7 @@ impl<S> El<S> {
             on_scroll: None,
             on_hover: None,
             on_pointer_move: None,
+            on_placed: None,
             focusable: false,
             reactive: false,
             disabled: false,
@@ -778,6 +783,21 @@ impl<S> El<S> {
     /// something only the application can describe.
     pub fn on_hover(mut self, action: impl Fn(&mut S, bool) + 'static) -> Self {
         self.on_hover = Some(Box::new(action));
+        self
+    }
+
+    /// Runs `action` when the element lands somewhere new, told the rectangle it
+    /// now occupies in window coordinates.
+    ///
+    /// Called when the rectangle *changes* — the window resized, content above
+    /// it grew, or a scrolling area around it moved — and on the first frame,
+    /// never every frame it merely stays put. It fires whether or not the
+    /// element is on screen, which is the point: it is how something outside
+    /// the interface follows it. A page that drives a scene behind itself from
+    /// how far it has scrolled, or a table of contents that marks the section
+    /// in view, reads positions this way instead of guessing them.
+    pub fn on_placed(mut self, action: impl Fn(&mut S, Rect) + 'static) -> Self {
+        self.on_placed = Some(Box::new(action));
         self
     }
 

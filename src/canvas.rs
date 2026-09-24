@@ -76,6 +76,7 @@
 
 use crate::color::{blend_add, blend_over, Color};
 use crate::geom::{Insets, Point, Rect};
+use crate::gpu::{self, Blend, Instance, Recording};
 use crate::sdf::{Sculpt, Shape};
 use std::f32::consts::TAU;
 
@@ -335,6 +336,9 @@ pub struct Canvas {
     height: u32,
     scale: f32,
     clip: PixelBounds,
+    /// When set, drawing is recorded for a GPU instead of rasterised here, and
+    /// `pixels` stays empty; see [`crate::gpu`].
+    rec: Option<Box<Recording>>,
 }
 
 impl Canvas {
@@ -357,6 +361,7 @@ impl Canvas {
                 right: 0,
                 bottom: 0,
             },
+            rec: None,
         };
         canvas.resize(width, height, scale);
         canvas
@@ -389,8 +394,33 @@ impl Canvas {
             bottom: height as i32,
         };
         self.pixels.clear();
+        if let Some(rec) = &mut self.rec {
+            rec.reset();
+            return;
+        }
         self.pixels
             .resize((width as usize) * (height as usize), OPAQUE_BLACK);
+    }
+
+    /// Switches between rasterising here and recording for a GPU, discarding
+    /// the contents either way. See [`crate::gpu`].
+    pub fn set_recording(&mut self, on: bool) {
+        if on == self.rec.is_some() {
+            return;
+        }
+        self.rec = on.then(|| Box::new(Recording::default()));
+        self.resize(self.width, self.height, self.scale);
+    }
+
+    /// The recorded frame, when this canvas records rather than rasterises.
+    pub fn recording(&self) -> Option<&Recording> {
+        self.rec.as_deref()
+    }
+
+    /// Whether two canvases hold the same picture: the same pixels, or the
+    /// same recording.
+    pub fn same_picture(&self, other: &Self) -> bool {
+        self.pixels == other.pixels && self.rec == other.rec
     }
 
     /// Width in device pixels.
@@ -438,7 +468,7 @@ impl Canvas {
     /// flickering a ton."
     pub(crate) fn snapshot(&self, rect: Rect) -> RectSnapshot {
         let bounds = self.device_bounds(rect);
-        if bounds.is_empty() {
+        if bounds.is_empty() || self.rec.is_some() {
             return RectSnapshot {
                 bounds,
                 pixels: Vec::new(),
@@ -463,7 +493,7 @@ impl Canvas {
     /// `None` for a rect with no device pixels in it.
     pub(crate) fn crop(&self, rect: Rect) -> Option<(u32, u32, u32, u32, Vec<u32>)> {
         let bounds = self.device_bounds(rect);
-        if bounds.is_empty() {
+        if bounds.is_empty() || self.rec.is_some() {
             return None;
         }
         let width = (bounds.right - bounds.left) as u32;
@@ -481,7 +511,7 @@ impl Canvas {
     /// where they came from.
     pub(crate) fn restore(&mut self, snapshot: &RectSnapshot) {
         let bounds = snapshot.bounds;
-        if bounds.is_empty() {
+        if bounds.is_empty() || snapshot.pixels.is_empty() {
             return;
         }
         let width = (bounds.right - bounds.left) as usize;
@@ -536,6 +566,13 @@ impl Canvas {
 
     /// Paints the entire surface, ignoring the clip.
     pub fn clear(&mut self, color: Color) {
+        if let Some(rec) = &mut self.rec {
+            // Unlike the software buffer, a GPU surface keeps the alpha, so a
+            // transparent clear shows the page beneath.
+            rec.reset();
+            rec.clear = Some(gpu::rgba(color));
+            return;
+        }
         self.pixels.fill(color.to_argb() | 0xff00_0000);
     }
 
@@ -546,6 +583,20 @@ impl Canvas {
     /// to be lit against. This replaces the flat clear rather than being drawn
     /// over it, so it costs a single pass exactly as the flat one does.
     pub fn clear_vertical(&mut self, top: Color, bottom: Color) {
+        if self.rec.is_some() {
+            let (w, h) = (self.width as f32, self.height as f32);
+            let device = Rect::new(0.0, 0.0, w, h);
+            if let Some(rec) = &mut self.rec {
+                rec.reset();
+            }
+            let saved = self.clip;
+            self.clip = PixelBounds { left: 0, top: 0, right: self.width as i32, bottom: self.height as i32 };
+            let last = (h - 1.0).max(1.0);
+            self.rec_rect(device, Corner::Square, 0.0, gpu::style::FILL, 0.0, top, bottom,
+                gpu::paint::VERTICAL, [0.5, 1.0 / last, 0.0, 0.0], Blend::Over);
+            self.clip = saved;
+            return;
+        }
         if self.height == 0 {
             return;
         }
@@ -882,6 +933,9 @@ impl Canvas {
     /// distance about the edge, and a [`Sculpt::Glow`] adds light through
     /// [`blend_add`] so overlapping glows bloom.
     pub fn sculpt(&mut self, shape: &Shape, paint: &crate::sdf::Paint, style: Sculpt) {
+        if self.rec.is_some() {
+            return self.rec_sculpt(shape, paint, style);
+        }
         let scale = self.scale;
         // Grow the shape's own bounds by whatever the style reaches past the
         // edge, plus a pixel of antialiasing, all in logical units.
@@ -999,6 +1053,9 @@ impl Canvas {
         if !color.is_visible() || mask.is_empty() {
             return;
         }
+        if self.rec.is_some() {
+            return self.rec_glyph(left, top, mask, color);
+        }
         let bounds = self.clip.intersect(PixelBounds {
             left,
             top,
@@ -1059,6 +1116,9 @@ impl Canvas {
     pub fn blit_bgra(&mut self, dest: Rect, source: &Bgra<'_>) {
         if source.is_empty() {
             return;
+        }
+        if self.rec.is_some() {
+            return self.rec_picture(dest, source);
         }
         let device = self.device_rect(dest);
         // Rounded rather than truncated: truncation moves toward zero, so a
@@ -1164,6 +1224,9 @@ impl Canvas {
     /// This is the common case — panel backgrounds, table rows, separators —
     /// and it is a row-wise fill with no arithmetic per pixel.
     fn fill_aligned_opaque(&mut self, device: Rect, color: Color) {
+        if self.rec.is_some() {
+            return self.fill_shape(device, Corner::Square, Paint::solid(color));
+        }
         let bounds = self.clip.intersect(PixelBounds {
             left: device.min_x() as i32,
             top: device.min_y() as i32,
@@ -1195,6 +1258,14 @@ impl Canvas {
     /// For the panels this console is made of, that is the difference between a
     /// frame costing tens of milliseconds and costing one.
     fn fill_shape(&mut self, device: Rect, corner: Corner, paint: Paint) {
+        if self.rec.is_some() {
+            let (mode, g) = if paint.inverse_height == 0.0 {
+                (gpu::paint::SOLID, [0.0; 4])
+            } else {
+                (gpu::paint::VERTICAL, [paint.y, paint.inverse_height, 0.0, 0.0])
+            };
+            return self.rec_rect(device, corner, 1.0, gpu::style::FILL, 0.0, paint.top, paint.bottom, mode, g, Blend::Over);
+        }
         let bounds = self.clip.intersect(PixelBounds {
             left: (device.min_x() - 1.0).floor() as i32,
             top: (device.min_y() - 1.0).floor() as i32,
@@ -1255,6 +1326,13 @@ impl Canvas {
     /// one value per row, so each interior pixel is written from the shade —
     /// opaque pixels straight, translucent ones through [`blend_over`].
     fn fill_shaded(&mut self, device: Rect, corner: Corner, shade: Shade) {
+        if self.rec.is_some() {
+            let (mode, c0, c1, g) = match shade {
+                Shade::Linear { c0, c1, ox, oy, gx, gy } => (gpu::paint::LINEAR, c0, c1, [ox, oy, gx, gy]),
+                Shade::Radial { inner, outer, cx, cy, inv_radius } => (gpu::paint::RADIAL, inner, outer, [cx, cy, inv_radius, 0.0]),
+            };
+            return self.rec_rect(device, corner, 1.0, gpu::style::FILL, 0.0, c0, c1, mode, g, Blend::Over);
+        }
         let bounds = self.clip.intersect(PixelBounds {
             left: (device.min_x() - 1.0).floor() as i32,
             top: (device.min_y() - 1.0).floor() as i32,
@@ -1335,6 +1413,9 @@ impl Canvas {
     /// between the corners the only marked pixels are the two vertical strips
     /// beside the shape, and everything between them is inside it and untouched.
     fn glow_shape(&mut self, device: Rect, corner: Corner, blur: f32, color: Color) {
+        if self.rec.is_some() {
+            return self.rec_rect(device, corner, blur, gpu::style::GLOW, blur, color, color, gpu::paint::SOLID, [0.0; 4], Blend::Over);
+        }
         let bounds = self.clip.intersect(PixelBounds {
             left: (device.min_x() - blur).floor() as i32,
             top: (device.min_y() - blur).floor() as i32,
@@ -1395,6 +1476,10 @@ impl Canvas {
     /// panel to mark its perimeter, which for the outlines here was most of the
     /// work in a frame.
     fn stroke_shape(&mut self, device: Rect, corner: Corner, thickness: f32, color: Color) {
+        if self.rec.is_some() {
+            let half = thickness / 2.0;
+            return self.rec_rect(device, corner, half + 1.0, gpu::style::STROKE, half, color, color, gpu::paint::SOLID, [0.0; 4], Blend::Over);
+        }
         // Half a line width to each side of the edge, plus a pixel of
         // antialiasing, is everything the stroke can touch.
         let reach = thickness / 2.0 + 1.0;
@@ -1514,6 +1599,9 @@ impl Canvas {
     /// rather than one long one, so a gauge costs its own line and never the
     /// area it encircles.
     fn band_shape(&mut self, band: &Band, color: Color) {
+        if self.rec.is_some() {
+            return self.rec_band(band, band.half + 1.0, gpu::style::FILL, 0.0, color);
+        }
         let reach = band.half + 1.0;
         let bounds = self.band_bounds(band, reach);
         if bounds.is_empty() {
@@ -1542,6 +1630,9 @@ impl Canvas {
     /// The falloff is quadratic for the reason [`Canvas::glow_span`] gives: a
     /// linear ramp ends visibly, and a glow with an outline is not a glow.
     fn band_glow(&mut self, band: &Band, blur: f32, color: Color) {
+        if self.rec.is_some() {
+            return self.rec_band(band, band.half + blur, gpu::style::GLOW, blur, color);
+        }
         let bounds = self.band_bounds(band, band.half + blur);
         if bounds.is_empty() {
             return;
@@ -1587,6 +1678,9 @@ impl Canvas {
     /// diagonal across a window costs its own length rather than the area of
     /// the box it spans.
     fn segment_shape(&mut self, segment: &Segment, color: Color) {
+        if self.rec.is_some() {
+            return self.rec_segment(segment, segment.half + 1.0, gpu::style::FILL, 0.0, color, Blend::Over);
+        }
         let reach = segment.half + 1.0;
         let bounds = self.clip.intersect(segment.bounds(reach));
         if bounds.is_empty() {
@@ -1619,6 +1713,9 @@ impl Canvas {
     /// composites with [`blend_add`] so overlapping
     /// beams brighten toward white instead of the later one hiding the earlier.
     fn segment_glow(&mut self, segment: &Segment, blur: f32, color: Color) {
+        if self.rec.is_some() {
+            return self.rec_segment(segment, segment.half + blur + 1.0, gpu::style::BEAM, blur, color, Blend::Add);
+        }
         let reach = segment.half + blur + 1.0;
         let bounds = self.clip.intersect(segment.bounds(reach));
         if bounds.is_empty() {
@@ -2127,6 +2224,281 @@ fn runs(spans: [Option<(f32, f32)>; 2], bounds: PixelBounds) -> impl Iterator<It
 fn is_pixel_aligned(rect: Rect) -> bool {
     let whole = |value: f32| (value - value.round()).abs() < 1.0 / 512.0;
     whole(rect.x) && whole(rect.y) && whole(rect.w) && whole(rect.h)
+}
+
+/// Recording, for [`crate::gpu`]: each device-space helper above hands its
+/// shape here instead of scanning it, when the canvas records.
+impl Canvas {
+    /// The whole pixels `(left, top, right, bottom)` can touch, clipped; `None`
+    /// when that is nothing.
+    fn rec_quad(&self, left: f32, top: f32, right: f32, bottom: f32) -> Option<[f32; 4]> {
+        let bounds = self.clip.intersect(PixelBounds {
+            left: left.floor() as i32,
+            top: top.floor() as i32,
+            right: right.ceil() as i32,
+            bottom: bottom.ceil() as i32,
+        });
+        (!bounds.is_empty()).then(|| {
+            [bounds.left as f32, bounds.top as f32, bounds.right as f32, bounds.bottom as f32]
+        })
+    }
+
+    fn rec_push(&mut self, instance: Instance, blend: Blend, image: u32) {
+        if let Some(rec) = &mut self.rec {
+            rec.push(instance, blend, image);
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn rec_rect(
+        &mut self,
+        device: Rect,
+        corner: Corner,
+        reach: f32,
+        style: f32,
+        extra: f32,
+        c0: Color,
+        c1: Color,
+        mode: f32,
+        g: [f32; 4],
+        blend: Blend,
+    ) {
+        if !c0.is_visible() && !c1.is_visible() {
+            return;
+        }
+        let Some(quad) = self.rec_quad(
+            device.min_x() - reach,
+            device.min_y() - reach,
+            device.max_x() + reach,
+            device.max_y() + reach,
+        ) else {
+            return;
+        };
+        let (hx, hy) = (device.w / 2.0, device.h / 2.0);
+        let cut = if matches!(corner, Corner::Cut(_)) { 1.0 } else { 0.0 };
+        self.rec_push(
+            Instance {
+                quad,
+                c0: gpu::rgba(c0),
+                c1: gpu::rgba(c1),
+                a: [device.x + hx, device.y + hy, hx, hy],
+                b: [corner.size(), cut, 0.0, 0.0],
+                g,
+                meta: [gpu::kind::RECT, style, mode, extra],
+            },
+            blend,
+            0,
+        );
+    }
+
+    fn rec_band(&mut self, band: &Band, reach: f32, style: f32, extra: f32, color: Color) {
+        let outer = band.radius + reach;
+        let Some(quad) = self.rec_quad(
+            band.center_x - outer,
+            band.center_y - outer,
+            band.center_x + outer,
+            band.center_y + outer,
+        ) else {
+            return;
+        };
+        let ends = if band.ends.is_some() { 1.0 } else { 0.0 };
+        self.rec_push(
+            Instance {
+                quad,
+                c0: gpu::rgba(color),
+                c1: gpu::rgba(color),
+                a: [band.center_x, band.center_y, band.radius, band.half],
+                b: [band.start, band.sweep, ends, 0.0],
+                g: [0.0; 4],
+                meta: [gpu::kind::BAND, style, gpu::paint::SOLID, extra],
+            },
+            Blend::Over,
+            0,
+        );
+    }
+
+    fn rec_segment(
+        &mut self,
+        segment: &Segment,
+        reach: f32,
+        style: f32,
+        extra: f32,
+        color: Color,
+        blend: Blend,
+    ) {
+        let (bx, by) = (segment.ax + segment.dx, segment.ay + segment.dy);
+        let Some(quad) = self.rec_quad(
+            segment.ax.min(bx) - reach,
+            segment.ay.min(by) - reach,
+            segment.ax.max(bx) + reach,
+            segment.ay.max(by) + reach,
+        ) else {
+            return;
+        };
+        self.rec_push(
+            Instance {
+                quad,
+                c0: gpu::rgba(color),
+                c1: gpu::rgba(color),
+                a: [segment.ax, segment.ay, bx, by],
+                b: [segment.half, 0.0, 0.0, 0.0],
+                g: [0.0; 4],
+                meta: [gpu::kind::SEGMENT, style, gpu::paint::SOLID, extra],
+            },
+            blend,
+            0,
+        );
+    }
+
+    fn rec_glyph(&mut self, left: i32, top: i32, mask: &Mask, color: Color) {
+        let (l, t) = (left as f32, top as f32);
+        let Some(quad) = self.rec_quad(l, t, l + mask.width as f32, t + mask.height as f32) else {
+            return;
+        };
+        let Some((u, v)) = gpu::place_glyph(mask.width, mask.height, &mask.coverage) else {
+            return;
+        };
+        self.rec_push(
+            Instance {
+                quad,
+                c0: gpu::rgba(color),
+                c1: gpu::rgba(color),
+                a: [l, t, u as f32, v as f32],
+                b: [mask.width as f32, mask.height as f32, 0.0, 0.0],
+                g: [0.0; 4],
+                meta: [gpu::kind::GLYPH, 0.0, gpu::paint::SOLID, 0.0],
+            },
+            Blend::Over,
+            0,
+        );
+    }
+
+    /// Pushes a premultiplied RGBA picture `width` by `height`, its top-left at
+    /// device `(left, top)`, confined to `quad`.
+    #[allow(clippy::too_many_arguments)]
+    fn rec_image(
+        &mut self,
+        quad: [f32; 4],
+        left: f32,
+        top: f32,
+        width: u32,
+        height: u32,
+        key: u64,
+        blend: Blend,
+        make: impl FnOnce() -> Vec<u8>,
+    ) {
+        let id = gpu::with_textures(|t| t.images.id(key, width, height, make));
+        self.rec_push(
+            Instance {
+                quad,
+                c0: [1.0; 4],
+                c1: [1.0; 4],
+                a: [left, top, 0.0, 0.0],
+                b: [width as f32, height as f32, 0.0, 0.0],
+                g: [0.0; 4],
+                meta: [gpu::kind::IMAGE, 0.0, gpu::paint::SOLID, 0.0],
+            },
+            blend,
+            id,
+        );
+    }
+
+    fn rec_picture(&mut self, dest: Rect, source: &Bgra<'_>) {
+        let device = self.device_rect(dest);
+        let left = device.min_x().round();
+        let top = device.min_y().round();
+        let (w, h) = (source.width(), source.height());
+        let dest_bounds = self.device_bounds(dest);
+        let Some(quad) = self.rec_quad(
+            left.max(dest_bounds.left as f32),
+            top.max(dest_bounds.top as f32),
+            (left + w as f32).min(dest_bounds.right as f32),
+            (top + h as f32).min(dest_bounds.bottom as f32),
+        ) else {
+            return;
+        };
+        // Every row for a small picture; a sample of rows for a large one, so
+        // a full-window picture drawn every frame is not hashed whole.
+        let step = if (w as usize) * (h as usize) > 262_144 { 7 } else { 1 };
+        let mut key = ((w as u64) << 32) | h as u64;
+        for y in (0..h).step_by(step) {
+            if let Some(row) = source.row(y) {
+                key = gpu::hash_bytes(key, &row[..(w as usize * 4).min(row.len())]);
+            }
+        }
+        self.rec_image(quad, left, top, w, h, key, Blend::Over, || {
+            let mut out = Vec::with_capacity(w as usize * h as usize * 4);
+            for y in 0..h {
+                let row = source.row(y).unwrap_or(&[]);
+                for x in 0..w as usize {
+                    let px = row.get(x * 4..x * 4 + 4).unwrap_or(&[0, 0, 0, 0]);
+                    out.extend_from_slice(&[px[2], px[1], px[0], 255]);
+                }
+            }
+            out
+        });
+    }
+
+    /// A sculpted shape is an arbitrary tree no shader knows, so it is
+    /// rasterised here, into a picture of its own bounds, exactly as
+    /// [`Canvas::sculpt`] would scan it, and drawn as that picture.
+    fn rec_sculpt(&mut self, shape: &Shape, paint: &crate::sdf::Paint, style: Sculpt) {
+        let scale = self.scale;
+        let margin = 1.0
+            + match style {
+                Sculpt::Fill => 0.0,
+                Sculpt::Stroke { width } => width.max(0.0) / 2.0,
+                Sculpt::Glow { radius, .. } => radius.max(0.0),
+            };
+        let bounds = self
+            .clip
+            .intersect(self.device_bounds(shape.bbox().expand(Insets::uniform(margin))));
+        if bounds.is_empty() {
+            return;
+        }
+        let (w, h) = ((bounds.right - bounds.left) as u32, (bounds.bottom - bounds.top) as u32);
+        let mut out = vec![0u8; w as usize * h as usize * 4];
+        for y in bounds.top..bounds.bottom {
+            let py = (y as f32 + 0.5) / scale;
+            for x in bounds.left..bounds.right {
+                let p = Point::new((x as f32 + 0.5) / scale, py);
+                let d = shape.sd(p);
+                let dd = d * scale;
+                let coverage = match style {
+                    Sculpt::Fill => (0.5 - dd).clamp(0.0, 1.0),
+                    Sculpt::Stroke { width } => {
+                        (0.5 - (dd.abs() - width.max(0.0) * scale / 2.0)).clamp(0.0, 1.0)
+                    }
+                    Sculpt::Glow { radius, intensity } => {
+                        let blur = radius.max(0.0) * scale;
+                        let core = (0.5 - dd).clamp(0.0, 1.0);
+                        let halo = if blur > 0.0 && dd > 0.0 && dd < blur {
+                            let r = 1.0 - dd / blur;
+                            r * r
+                        } else {
+                            0.0
+                        };
+                        (core.max(halo) * intensity).clamp(0.0, 1.0)
+                    }
+                };
+                if coverage <= 0.0 {
+                    continue;
+                }
+                let color = paint.at(shape, p, d);
+                let alpha = color.a as f32 / 255.0 * coverage;
+                let i = (((y - bounds.top) as u32 * w + (x - bounds.left) as u32) * 4) as usize;
+                out[i] = (color.r as f32 * alpha).round() as u8;
+                out[i + 1] = (color.g as f32 * alpha).round() as u8;
+                out[i + 2] = (color.b as f32 * alpha).round() as u8;
+                out[i + 3] = (alpha * 255.0).round() as u8;
+            }
+        }
+        let key = gpu::hash_bytes(((w as u64) << 32) | h as u64 | 1 << 63, &out);
+        let blend = if matches!(style, Sculpt::Glow { .. }) { Blend::Add } else { Blend::Over };
+        let (l, t) = (bounds.left as f32, bounds.top as f32);
+        let quad = [l, t, bounds.right as f32, bounds.bottom as f32];
+        self.rec_image(quad, l, t, w, h, key, blend, move || out);
+    }
 }
 
 #[cfg(test)]

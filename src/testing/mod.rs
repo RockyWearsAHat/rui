@@ -900,6 +900,45 @@ mod tests {
         ))
     }
 
+    /// Where the marker at the end of a long scrolled page was last told it is,
+    /// and how many times it was told.
+    #[derive(Default)]
+    struct Placed {
+        y: f32,
+        told: usize,
+    }
+
+    fn long_page(_: &Placed) -> El<Placed> {
+        let mut page = col(()).gap(40.0);
+        for n in 0..40 {
+            page = page.add(text(format!("line {n}")));
+        }
+        page.add(text("end").on_placed(|placed: &mut Placed, rect| {
+            placed.y = rect.y;
+            placed.told += 1;
+        }))
+        .w(crate::style::Length::Fill(1.0))
+        .h(crate::style::Length::Fill(1.0))
+        .scroll()
+    }
+
+    #[test]
+    fn on_placed_follows_an_element_off_screen_and_only_when_it_moves() {
+        let mut harness = Harness::new(Placed::default(), long_page).size(400.0, 300.0);
+        harness.frames(3);
+        let (at_rest, told) = (harness.state().y, harness.state().told);
+        assert!(at_rest > 300.0, "the marker starts below the window, at {at_rest}");
+        assert_eq!(told, 1, "a resting page reports once, not every frame");
+        harness.move_pointer(crate::geom::Point::new(200.0, 150.0));
+        // The wheel's sign is the platform's: negative turns the page down.
+        harness.scroll(-200.0).frames(3);
+        let scrolled = harness.state().y;
+        assert!(
+            (at_rest - scrolled - 200.0).abs() < 1.0,
+            "scrolling 200 moves it up by 200: {at_rest} -> {scrolled}"
+        );
+    }
+
     #[test]
     fn a_harness_draws_without_a_window_and_answers_what_it_drew() {
         let mut harness = Harness::new(Counter::default(), counter);

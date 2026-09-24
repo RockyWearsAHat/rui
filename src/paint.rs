@@ -553,6 +553,13 @@ fn draw<'tree, S>(
         }
     }
 
+    if let Some(action) = &el.on_placed {
+        if frame.memory.note_placed(el.id, el.rect) {
+            let placed = el.rect;
+            actions.push(Box::new(move |state| action(state, placed)));
+        }
+    }
+
     if el.children.is_empty() {
         return;
     }
