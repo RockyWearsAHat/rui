@@ -358,6 +358,8 @@ pub struct Memory {
     focus_source: FocusSource,
     scroll: HashMap<Id, f32>,
     content_height: HashMap<Id, f32>,
+    /// Where each element watched by [`crate::El::on_placed`] was last reported.
+    placed: HashMap<Id, Rect>,
     carets: HashMap<Id, Caret>,
     /// Every focusable element drawn this frame, in the order it was drawn.
     focus_order: Vec<Id>,
@@ -601,6 +603,12 @@ impl Memory {
     /// that the pointer is still where it was would write to its own state
     /// every frame, and an interface that writes every frame is one that
     /// redraws for ever.
+    /// Notes where an element landed, and answers whether that has changed
+    /// since it was last noted — see [`crate::El::on_placed`].
+    pub(crate) fn note_placed(&mut self, id: Id, rect: Rect) -> bool {
+        self.placed.insert(id, rect) != Some(rect)
+    }
+
     pub(crate) fn note_hover(&mut self, id: Id, hovered: bool) -> bool {
         if hovered {
             self.hovered.insert(id);

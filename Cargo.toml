@@ -25,6 +25,9 @@ windows = []
 x11 = []
 wayland-backend = []
 wasm = []
+# Draws the wasm backend's frames with WebGPU when the browser has it,
+# falling back to the 2D canvas when it does not. See src/gpu.rs.
+webgpu = ["wasm"]
 reload = []
 # Linux tray feature: requires D-Bus and system integration
 linux-tray = []
